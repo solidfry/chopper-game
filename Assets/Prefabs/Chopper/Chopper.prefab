@@ -141,6 +141,8 @@ Transform:
   - {fileID: 458073269764173629}
   - {fileID: 5273773055433807091}
   - {fileID: 2250240806573139545}
+  - {fileID: 8839048139457999682}
+  - {fileID: 3734004481926237905}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -284,7 +286,19 @@ MonoBehaviour:
     m_ActionId: 9a937198-6a0b-4197-bc8a-f0bfaf9c2464
     m_ActionName: Flight/Roll[/Keyboard/leftArrow,/Keyboard/rightArrow]
   - m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1632664233}
+        m_TargetAssemblyTypeName: Player.PlayerAttackManager, Assembly-CSharp
+        m_MethodName: Fire1
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
     m_ActionId: bfaf7ea9-2dfb-46da-9c69-13991d043079
     m_ActionName: Flight/Fire1[/Mouse/leftButton]
   - m_PersistentCalls:
@@ -300,9 +314,25 @@ MonoBehaviour:
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
-        m_CallState: 0
+        m_CallState: 2
     m_ActionId: 30b4e662-2e07-4bef-9234-eb8e6b48f24c
     m_ActionName: Flight/Fire2[/Mouse/rightButton]
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1632664233}
+        m_TargetAssemblyTypeName: Player.PlayerAttackManager, Assembly-CSharp
+        m_MethodName: Fire3
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 5af2b6d7-918f-4202-8b1a-07ff293f235b
+    m_ActionName: Flight/Fire3[/Keyboard/space]
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Flight
@@ -338,8 +368,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponSlotOne: {fileID: 11400000, guid: 5de769aae783b3a4b97a774542bc5dc0, type: 2}
   weaponSlotTwo: {fileID: 11400000, guid: 5de769aae783b3a4b97a774542bc5dc0, type: 2}
+  weaponSlotThree: {fileID: 11400000, guid: 3a2c375d8f2ca1745a7978afd133c7dd, type: 2}
+  weaponSlotFour: {fileID: 11400000, guid: 3a2c375d8f2ca1745a7978afd133c7dd, type: 2}
   weaponSlotOnePosition: {fileID: 2250240806573139545}
   weaponSlotTwoPosition: {fileID: 5273773055433807091}
+  weaponSlotThreePosition: {fileID: 3734004481926237905}
+  weaponSlotFourPosition: {fileID: 8839048139457999682}
 --- !u!1 &548169383289600993
 GameObject:
   m_ObjectHideFlags: 0
@@ -654,7 +688,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1482773964609774560}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.5, y: -1, z: -0.125}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -685,13 +719,44 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2837908575596781388}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -1.5, y: -1, z: -0.125}
   m_LocalScale: {x: -1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 548169382991786596}
   m_RootOrder: 8
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2839096837683456155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3734004481926237905}
+  m_Layer: 0
+  m_Name: WeaponSlotFrontLeft
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3734004481926237905
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2839096837683456155}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.25, y: -1.25, z: 0.875}
+  m_LocalScale: {x: -1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 548169382991786596}
+  m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3418560922541658050
 GameObject:
@@ -704,7 +769,6 @@ GameObject:
   - component: {fileID: 458073269764173629}
   - component: {fileID: 2011546530376818889}
   - component: {fileID: 3852856007494518133}
-  - component: {fileID: 7621645866235933329}
   m_Layer: 0
   m_Name: WingLeft
   m_TagString: Untagged
@@ -777,19 +841,37 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &7621645866235933329
-BoxCollider:
+--- !u!1 &4184026761498554750
+GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3418560922541658050}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8839048139457999682}
+  m_Layer: 0
+  m_Name: WeaponSlotFrontRight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8839048139457999682
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4184026761498554750}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.25, y: -1.25, z: 0.875}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 548169382991786596}
+  m_RootOrder: 9
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8735487668415514243
 GameObject:
   m_ObjectHideFlags: 0
@@ -801,7 +883,6 @@ GameObject:
   - component: {fileID: 5265648187729009187}
   - component: {fileID: 7038186084218136604}
   - component: {fileID: 8616109523270686821}
-  - component: {fileID: 2019645170027530368}
   m_Layer: 0
   m_Name: WingRight
   m_TagString: Untagged
@@ -874,19 +955,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &2019645170027530368
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8735487668415514243}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1001 &3147228322537739885
 PrefabInstance:
   m_ObjectHideFlags: 0

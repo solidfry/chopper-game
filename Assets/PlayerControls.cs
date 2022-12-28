@@ -80,6 +80,15 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Fire3"",
+                    ""type"": ""Button"",
+                    ""id"": ""5af2b6d7-918f-4202-8b1a-07ff293f235b"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -412,6 +421,28 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                     ""action"": ""Fire2"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""71a40fad-c029-4439-9758-c37f3f5cb1ac"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Fire3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ce8ee408-5416-430b-a1cd-f1979615a2b2"",
+                    ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Fire3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -426,6 +457,7 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
         m_Flight_Roll = m_Flight.FindAction("Roll", throwIfNotFound: true);
         m_Flight_Fire1 = m_Flight.FindAction("Fire1", throwIfNotFound: true);
         m_Flight_Fire2 = m_Flight.FindAction("Fire2", throwIfNotFound: true);
+        m_Flight_Fire3 = m_Flight.FindAction("Fire3", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -491,6 +523,7 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
     private readonly InputAction m_Flight_Roll;
     private readonly InputAction m_Flight_Fire1;
     private readonly InputAction m_Flight_Fire2;
+    private readonly InputAction m_Flight_Fire3;
     public struct FlightActions
     {
         private @PlayerControls m_Wrapper;
@@ -501,6 +534,7 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
         public InputAction @Roll => m_Wrapper.m_Flight_Roll;
         public InputAction @Fire1 => m_Wrapper.m_Flight_Fire1;
         public InputAction @Fire2 => m_Wrapper.m_Flight_Fire2;
+        public InputAction @Fire3 => m_Wrapper.m_Flight_Fire3;
         public InputActionMap Get() { return m_Wrapper.m_Flight; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -528,6 +562,9 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                 @Fire2.started -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
                 @Fire2.performed -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
                 @Fire2.canceled -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
+                @Fire3.started -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire3;
+                @Fire3.performed -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire3;
+                @Fire3.canceled -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire3;
             }
             m_Wrapper.m_FlightActionsCallbackInterface = instance;
             if (instance != null)
@@ -550,6 +587,9 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                 @Fire2.started += instance.OnFire2;
                 @Fire2.performed += instance.OnFire2;
                 @Fire2.canceled += instance.OnFire2;
+                @Fire3.started += instance.OnFire3;
+                @Fire3.performed += instance.OnFire3;
+                @Fire3.canceled += instance.OnFire3;
             }
         }
     }
@@ -562,5 +602,6 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
         void OnRoll(InputAction.CallbackContext context);
         void OnFire1(InputAction.CallbackContext context);
         void OnFire2(InputAction.CallbackContext context);
+        void OnFire3(InputAction.CallbackContext context);
     }
 }
