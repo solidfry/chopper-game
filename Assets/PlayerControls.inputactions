@@ -40,6 +40,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Fire1",
+                    "type": "Button",
+                    "id": "bfaf7ea9-2dfb-46da-9c69-13991d043079",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Fire2",
+                    "type": "Button",
+                    "id": "30b4e662-2e07-4bef-9234-eb8e6b48f24c",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -306,76 +324,70 @@
                     "action": "Roll",
                     "isComposite": false,
                     "isPartOfComposite": true
-                }
-            ]
-        },
-        {
-            "name": "Attacking",
-            "id": "19a99ba1-c854-4e46-b75f-b531d4d17ffc",
-            "actions": [
-                {
-                    "name": "Fire",
-                    "type": "Button",
-                    "id": "19bb0b8e-b773-490d-a4aa-26bd5e48eb0e",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                }
-            ],
-            "bindings": [
+                },
                 {
                     "name": "",
-                    "id": "d99d7820-5437-4afc-b6e3-643bad092097",
+                    "id": "f28edebe-a139-47e1-8a38-65aba054ddf2",
                     "path": "<Gamepad>/rightTrigger",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Fire",
+                    "action": "Fire1",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "528070f7-3d11-49f5-b4ce-56147b6def74",
+                    "id": "6aa53ea9-74d5-4909-b101-3385a0efeb21",
                     "path": "<Mouse>/leftButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Fire",
+                    "action": "Fire1",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "74ad947d-3005-4b61-9af5-078d8464a70e",
-                    "path": "<Touchscreen>/primaryTouch/tap",
+                    "id": "f925e9dc-bcef-4305-b42e-851217e52fa1",
+                    "path": "<Keyboard>/q",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Fire",
+                    "action": "Fire1",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "0d48d5f1-1422-43cd-8054-872e923c294b",
-                    "path": "<Joystick>/trigger",
+                    "id": "3170b46f-f4b4-4bc5-a81d-21250f88dce1",
+                    "path": "<Gamepad>/leftTrigger",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Fire",
+                    "action": "Fire2",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
-                    "id": "d8aac289-5bbc-4db9-b3a3-12afff152488",
-                    "path": "<XRController>/{PrimaryAction}",
+                    "id": "ac4a917e-52a1-4f94-9e69-966b832494ed",
+                    "path": "<Mouse>/rightButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Fire",
+                    "action": "Fire2",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "57816684-9556-4533-ae10-0048f205f510",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Fire2",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

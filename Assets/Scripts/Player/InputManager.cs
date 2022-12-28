@@ -16,6 +16,6 @@ namespace Player
         public void OnYaw(InputAction.CallbackContext context) => yaw = context.ReadValue<float>();
         public void OnRoll (InputAction.CallbackContext context) => roll = context.ReadValue<float>();
         #endregion
-   
+        
     }
 }

@@ -62,6 +62,24 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""Fire1"",
+                    ""type"": ""Button"",
+                    ""id"": ""bfaf7ea9-2dfb-46da-9c69-13991d043079"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Fire2"",
+                    ""type"": ""Button"",
+                    ""id"": ""30b4e662-2e07-4bef-9234-eb8e6b48f24c"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -328,76 +346,70 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                     ""action"": ""Roll"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
-                }
-            ]
-        },
-        {
-            ""name"": ""Attacking"",
-            ""id"": ""19a99ba1-c854-4e46-b75f-b531d4d17ffc"",
-            ""actions"": [
-                {
-                    ""name"": ""Fire"",
-                    ""type"": ""Button"",
-                    ""id"": ""19bb0b8e-b773-490d-a4aa-26bd5e48eb0e"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                }
-            ],
-            ""bindings"": [
+                },
                 {
                     ""name"": """",
-                    ""id"": ""d99d7820-5437-4afc-b6e3-643bad092097"",
+                    ""id"": ""f28edebe-a139-47e1-8a38-65aba054ddf2"",
                     ""path"": ""<Gamepad>/rightTrigger"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Fire"",
+                    ""action"": ""Fire1"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""528070f7-3d11-49f5-b4ce-56147b6def74"",
+                    ""id"": ""6aa53ea9-74d5-4909-b101-3385a0efeb21"",
                     ""path"": ""<Mouse>/leftButton"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Fire"",
+                    ""action"": ""Fire1"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""74ad947d-3005-4b61-9af5-078d8464a70e"",
-                    ""path"": ""<Touchscreen>/primaryTouch/tap"",
+                    ""id"": ""f925e9dc-bcef-4305-b42e-851217e52fa1"",
+                    ""path"": ""<Keyboard>/q"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Fire"",
+                    ""action"": ""Fire1"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""0d48d5f1-1422-43cd-8054-872e923c294b"",
-                    ""path"": ""<Joystick>/trigger"",
+                    ""id"": ""3170b46f-f4b4-4bc5-a81d-21250f88dce1"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Fire"",
+                    ""action"": ""Fire2"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""d8aac289-5bbc-4db9-b3a3-12afff152488"",
-                    ""path"": ""<XRController>/{PrimaryAction}"",
+                    ""id"": ""ac4a917e-52a1-4f94-9e69-966b832494ed"",
+                    ""path"": ""<Mouse>/rightButton"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Fire"",
+                    ""action"": ""Fire2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""57816684-9556-4533-ae10-0048f205f510"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Fire2"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -412,9 +424,8 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
         m_Flight_Pitch = m_Flight.FindAction("Pitch", throwIfNotFound: true);
         m_Flight_Yaw = m_Flight.FindAction("Yaw", throwIfNotFound: true);
         m_Flight_Roll = m_Flight.FindAction("Roll", throwIfNotFound: true);
-        // Attacking
-        m_Attacking = asset.FindActionMap("Attacking", throwIfNotFound: true);
-        m_Attacking_Fire = m_Attacking.FindAction("Fire", throwIfNotFound: true);
+        m_Flight_Fire1 = m_Flight.FindAction("Fire1", throwIfNotFound: true);
+        m_Flight_Fire2 = m_Flight.FindAction("Fire2", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -478,6 +489,8 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
     private readonly InputAction m_Flight_Pitch;
     private readonly InputAction m_Flight_Yaw;
     private readonly InputAction m_Flight_Roll;
+    private readonly InputAction m_Flight_Fire1;
+    private readonly InputAction m_Flight_Fire2;
     public struct FlightActions
     {
         private @PlayerControls m_Wrapper;
@@ -486,6 +499,8 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
         public InputAction @Pitch => m_Wrapper.m_Flight_Pitch;
         public InputAction @Yaw => m_Wrapper.m_Flight_Yaw;
         public InputAction @Roll => m_Wrapper.m_Flight_Roll;
+        public InputAction @Fire1 => m_Wrapper.m_Flight_Fire1;
+        public InputAction @Fire2 => m_Wrapper.m_Flight_Fire2;
         public InputActionMap Get() { return m_Wrapper.m_Flight; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -507,6 +522,12 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                 @Roll.started -= m_Wrapper.m_FlightActionsCallbackInterface.OnRoll;
                 @Roll.performed -= m_Wrapper.m_FlightActionsCallbackInterface.OnRoll;
                 @Roll.canceled -= m_Wrapper.m_FlightActionsCallbackInterface.OnRoll;
+                @Fire1.started -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire1;
+                @Fire1.performed -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire1;
+                @Fire1.canceled -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire1;
+                @Fire2.started -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
+                @Fire2.performed -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
+                @Fire2.canceled -= m_Wrapper.m_FlightActionsCallbackInterface.OnFire2;
             }
             m_Wrapper.m_FlightActionsCallbackInterface = instance;
             if (instance != null)
@@ -523,52 +544,23 @@ public partial class @PlayerControls : IInputActionCollection2, IDisposable
                 @Roll.started += instance.OnRoll;
                 @Roll.performed += instance.OnRoll;
                 @Roll.canceled += instance.OnRoll;
+                @Fire1.started += instance.OnFire1;
+                @Fire1.performed += instance.OnFire1;
+                @Fire1.canceled += instance.OnFire1;
+                @Fire2.started += instance.OnFire2;
+                @Fire2.performed += instance.OnFire2;
+                @Fire2.canceled += instance.OnFire2;
             }
         }
     }
     public FlightActions @Flight => new FlightActions(this);
-
-    // Attacking
-    private readonly InputActionMap m_Attacking;
-    private IAttackingActions m_AttackingActionsCallbackInterface;
-    private readonly InputAction m_Attacking_Fire;
-    public struct AttackingActions
-    {
-        private @PlayerControls m_Wrapper;
-        public AttackingActions(@PlayerControls wrapper) { m_Wrapper = wrapper; }
-        public InputAction @Fire => m_Wrapper.m_Attacking_Fire;
-        public InputActionMap Get() { return m_Wrapper.m_Attacking; }
-        public void Enable() { Get().Enable(); }
-        public void Disable() { Get().Disable(); }
-        public bool enabled => Get().enabled;
-        public static implicit operator InputActionMap(AttackingActions set) { return set.Get(); }
-        public void SetCallbacks(IAttackingActions instance)
-        {
-            if (m_Wrapper.m_AttackingActionsCallbackInterface != null)
-            {
-                @Fire.started -= m_Wrapper.m_AttackingActionsCallbackInterface.OnFire;
-                @Fire.performed -= m_Wrapper.m_AttackingActionsCallbackInterface.OnFire;
-                @Fire.canceled -= m_Wrapper.m_AttackingActionsCallbackInterface.OnFire;
-            }
-            m_Wrapper.m_AttackingActionsCallbackInterface = instance;
-            if (instance != null)
-            {
-                @Fire.started += instance.OnFire;
-                @Fire.performed += instance.OnFire;
-                @Fire.canceled += instance.OnFire;
-            }
-        }
-    }
-    public AttackingActions @Attacking => new AttackingActions(this);
     public interface IFlightActions
     {
         void OnThrust(InputAction.CallbackContext context);
         void OnPitch(InputAction.CallbackContext context);
         void OnYaw(InputAction.CallbackContext context);
         void OnRoll(InputAction.CallbackContext context);
-    }
-    public interface IAttackingActions
-    {
-        void OnFire(InputAction.CallbackContext context);
+        void OnFire1(InputAction.CallbackContext context);
+        void OnFire2(InputAction.CallbackContext context);
     }
 }
