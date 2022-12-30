@@ -12,5 +12,15 @@ namespace Weapons.ScriptableObjects
         public TrailRenderer Trails => trails;
         public GameObject DeathParticles => deathParticles;
         public GameObject Prefab => prefab;
+
+
+        public void InstantiateDeathParticles(Transform transform)
+        {
+            var particle = Instantiate(deathParticles, transform.position, Quaternion.identity);
+            // if(particle.TryGetComponent(typeof(AmmoEffect), out var effect))
+            // {
+            //     effect.Trail = trails;
+            // }
+        }
     }
 }
