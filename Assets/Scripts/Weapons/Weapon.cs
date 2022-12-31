@@ -13,7 +13,7 @@ namespace Weapons
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
         
-        private WeaponStats stats;
+        [SerializeField] private WeaponStats stats;
         
         private float firingCooldown;
         private float firingCooldownTimer;
@@ -58,23 +58,16 @@ namespace Weapons
             StopCoroutine(firingCoroutine); 
         }
         
-        public void Fire(Transform firePoint, float speed, float damage, float range, float spread = 0f)
+        public void Fire(Transform firePoint)
         {
-            Debug.Log($"Firing weapon {name}");
-            var projectile = Instantiate(weaponType.AmmoType.Prefab, firePoint.position, firePoint.rotation);
-            
-            var projectileRb = projectile.GetComponent<Rigidbody>();
-            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
-            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            projectileRb.velocity = firePoint.transform.forward * speed;
-            
+            weaponType.Fire(firePoint);
         }
 
         IEnumerator Firing(float fireRate)
         {
             while (isFiring)
             {
-                Fire(firePointTr, stats.ProjectileSpeed, stats.Damage, stats.RangeInMetres);
+                Fire(firePointTr);
                 firingCooldownTimer = firingCooldown;
                 yield return new WaitForSeconds(fireRate);
             }

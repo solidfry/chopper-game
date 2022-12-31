@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using Weapons;
 using Weapons.ScriptableObjects;
@@ -7,60 +8,28 @@ namespace Player
 {
     public class PlayerAttackManager : MonoBehaviour
     {
+        // All of these should be arrays probably
+        [SerializeField] private WeaponType[] weaponSlots;
+        [SerializeField] private Transform[] weaponSlotPositions;
         
-        [SerializeField] private WeaponType weaponSlotOne;
-        [SerializeField] private WeaponType weaponSlotTwo;
-        [SerializeField] private WeaponType weaponSlotThree;
-        [SerializeField] private WeaponType weaponSlotFour;
-       
-        [SerializeField] private Transform weaponSlotOnePosition;
-        [SerializeField] private Transform weaponSlotTwoPosition;
-        [SerializeField] private Transform weaponSlotThreePosition;
-        [SerializeField] private Transform weaponSlotFourPosition;
-        
-        private Weapon weaponOne;
-        private Weapon weaponTwo;
-        private Weapon weaponThree;
-        private Weapon weaponFour;
+        private List<Weapon> weapons;
 
         private void Awake()
         {
-            if (weaponSlotOne == null && weaponSlotTwo == null) return;
-            
-            if (weaponSlotOne != null)
-            {
-                weaponOne = InstantiateWeapon(weaponSlotOne, weaponSlotOnePosition);
-                weaponOne.name = "Weapon 1";
-            }
-            
-            if (weaponSlotTwo != null)
-            {
-                weaponTwo = InstantiateWeapon(weaponSlotTwo, weaponSlotTwoPosition);
-                weaponTwo.name = "Weapon 2";
-            }
-            
-            if(weaponSlotThree != null)
-            {
-                weaponThree = InstantiateWeapon(weaponSlotThree, weaponSlotThreePosition);
-                weaponThree.name = "Weapon 3";
-            }
-            
-            if(weaponSlotFour != null)
-            {
-                weaponFour = InstantiateWeapon(weaponSlotFour, weaponSlotFourPosition);
-                weaponFour.name = "Weapon 4";
-            }
+            if (weaponSlots == null || weaponSlotPositions == null || weaponSlots.Length == 0 || weaponSlotPositions.Length == 0) return;
 
+            AssignWeaponSlots();
         }
-        
-        public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weaponOne, ctx);
 
-        public void Fire2(InputAction.CallbackContext ctx) => FireWeapon(weaponTwo, ctx);
+        public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weapons[0], ctx);
+
+        public void Fire2(InputAction.CallbackContext ctx) => FireWeapon(weapons[1], ctx);
 
         public void Fire3(InputAction.CallbackContext ctx)
         {
-            FireWeapon(weaponThree, ctx);
-            FireWeapon(weaponFour, ctx);
+            // For now this is the main machine gun
+            FireWeapon(weapons[2], ctx);
+            FireWeapon(weapons[3], ctx);
         }
 
         private void FireWeapon(Weapon weapon, InputAction.CallbackContext ctx)
@@ -74,10 +43,18 @@ namespace Player
                 weapon.StopAttack();
             }
         }
-
-        Weapon InstantiateWeapon(WeaponType weaponType, Transform weaponPosition)
+        
+        private void AssignWeaponSlots()
         {
-            return Instantiate(weaponType.WeaponPrefab, weaponPosition.position, Quaternion.identity, weaponPosition);
+            weapons = new List<Weapon>();
+            for (int i = 0; i < weaponSlots.Length; i++)
+            {
+                if (weaponSlots[i] == null) continue;
+                
+                var weapon = weaponSlots[i].InstantiateWeapon(weaponSlotPositions[i]);
+                weapon.name = $"Weapon {i + 1}";
+                weapons.Add(weapon);
+            }
         }
     }
 }

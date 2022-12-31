@@ -33,9 +33,16 @@ namespace Weapons.ScriptableObjects
             private set => weaponMesh = value;
         }
 
-        // public void Fire(Transform firePoint)
-        // {
-        //     Instantiate(AmmoType.AmmoPrefab, stats.FirePoint.position, stats.FirePoint.rotation);
-        // }
+        public void Fire(Transform firePoint)
+        {
+            Debug.Log($"Firing weapon {name}");
+            var projectile = AmmoType.InstantiateAmmo(firePoint, Stats.RangeInMetres);
+            var projectileRb = projectile.GetComponent<Rigidbody>();
+            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
+            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            projectileRb.velocity = firePoint.transform.forward * Stats.ProjectileSpeed;
+        }
+        
+        public Weapon InstantiateWeapon(Transform weaponPosition) => Instantiate(weaponPrefab, weaponPosition.position, Quaternion.identity, weaponPosition);
     }
 }
