@@ -23,11 +23,8 @@ namespace Weapons
 
         private void FixedUpdate() => CheckDistanceTravelled();
 
-        public void SetAmmoType(AmmoType ammoType)
-        {
-            this.ammoType = ammoType;
-        }
-        
+        public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
+
         public void SetMaxRange(float maxRange) => maximumRange = maxRange;
 
         private void CheckDistanceTravelled()
