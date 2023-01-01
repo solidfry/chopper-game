@@ -9,11 +9,16 @@ namespace Weapons
         [SerializeField] float maximumRange, distanceTraveled = 0;
         [SerializeField] private Vector3 previousPosition;
         [SerializeField] private Collider collider3D;
+        [SerializeField] private LayerMask ignoreCollisionsOnLayer;
 
         private void Awake()
         {
-            if(collider3D != null)
+            if (collider3D != null)
+            { 
                 collider3D = GetComponent<Collider>();
+            }
+            ignoreCollisionsOnLayer = LayerMask.NameToLayer("Ignore Player");
+            gameObject.layer = ignoreCollisionsOnLayer;
         }
 
         private void Start()

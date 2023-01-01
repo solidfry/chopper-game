@@ -12,6 +12,7 @@ namespace Weapons
         [SerializeField] private GameObject prefabLocation;
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
+        [SerializeField] private LayerMask layerToIgnore;
         
         [SerializeField] private WeaponStats stats;
         
