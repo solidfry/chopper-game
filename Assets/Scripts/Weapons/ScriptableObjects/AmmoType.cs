@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Interfaces;
+using UnityEngine;
 
 namespace Weapons.ScriptableObjects
 {
@@ -22,9 +23,28 @@ namespace Weapons.ScriptableObjects
             return ammo;
         }
 
-        public GameObject InstantiateDeathParticles(Transform transform)
+        public GameObject InstantiateDeathParticles(Transform transform, float explosionRadius, int damage)
         {
             return Instantiate(deathParticles, transform.position, Quaternion.identity);
+        }
+
+        public void CreateRayCastExplosion(Transform transform, float explosionRadius, int damage)
+        {
+            if (explosionRadius <= 0) return;
+            // var colliders = Physics.OverlapSphere(transform.position, explosionRadius);
+            // Raycast sphere to find targets hit by the explosion
+            var hits = Physics.SphereCastAll(transform.position, explosionRadius, Vector3.up, 0f);
+            
+            if (hits.Length == 0) return;
+            
+            foreach (var hit in hits)
+            {
+                var target = hit.collider.GetComponent<IDamageable>();
+                if (target != null)
+                {
+                    target.TakeDamage(damage);
+                }
+            }
         }
     }
 }

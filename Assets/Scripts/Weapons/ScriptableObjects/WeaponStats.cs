@@ -11,9 +11,10 @@ namespace Weapons.ScriptableObjects
         [SerializeField] private float rangeInMetres;
         [SerializeField] private float spread;
         [SerializeField] private float reloadTimeInSeconds;
+        [SerializeField] private float projectileSpeed;
         [SerializeField] private int magazineSize;
         [SerializeField] private int maxAmmo;
-        [SerializeField] private float projectileSpeed;
+        [SerializeField] private float explosionRadius;
         
         public float FireRateInSeconds => fireRateInSeconds;
         public float Damage => damage;
@@ -23,5 +24,6 @@ namespace Weapons.ScriptableObjects
         public int MagazineSize => magazineSize;
         public int MaxAmmo => maxAmmo;
         public float ProjectileSpeed => projectileSpeed;
+        public float ExplosionRadius => explosionRadius;
     }
 }
