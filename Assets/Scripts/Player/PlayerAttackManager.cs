@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using Weapons;
 using Weapons.ScriptableObjects;
 
@@ -9,51 +10,44 @@ namespace Player
     public class PlayerAttackManager : MonoBehaviour
     {
         // All of these should be arrays probably
-        [SerializeField] private WeaponType[] weaponSlots;
-        [SerializeField] private Transform[] weaponSlotPositions;
+        // [SerializeField] private WeaponType[] weaponSlots;
+        // [SerializeField] private Transform[] weaponSlotPositions;
+        [SerializeField] private WeaponSlot[] weaponSlots;
         
-        private List<Weapon> weapons;
+        private void Awake() => AssignWeaponSlots();
 
-        private void Awake()
-        {
-            if (weaponSlots == null || weaponSlotPositions == null || weaponSlots.Length == 0 || weaponSlotPositions.Length == 0) return;
+        public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weaponSlots[0], ctx);
 
-            AssignWeaponSlots();
-        }
-
-        public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weapons[0], ctx);
-
-        public void Fire2(InputAction.CallbackContext ctx) => FireWeapon(weapons[1], ctx);
+        public void Fire2(InputAction.CallbackContext ctx) => FireWeapon(weaponSlots[1], ctx);
 
         public void Fire3(InputAction.CallbackContext ctx)
         {
             // For now this is the main machine gun
-            FireWeapon(weapons[2], ctx);
-            FireWeapon(weapons[3], ctx);
+            FireWeapon(weaponSlots[2], ctx);
+            FireWeapon(weaponSlots[3], ctx);
         }
 
-        private void FireWeapon(Weapon weapon, InputAction.CallbackContext ctx)
+        private void FireWeapon(WeaponSlot weapon, InputAction.CallbackContext ctx)
         {
             if (ctx.performed)
             {
-                weapon.DoAttack();
+                weapon.WeaponGameObject.DoAttack();
             }
             else if (ctx.canceled)
             {
-                weapon.StopAttack();
+                weapon.WeaponGameObject.StopAttack();
             }
         }
         
         private void AssignWeaponSlots()
         {
-            weapons = new List<Weapon>();
+            if (weaponSlots == null) return;
+
             for (int i = 0; i < weaponSlots.Length; i++)
             {
-                if (weaponSlots[i] == null) continue;
-                
-                var weapon = weaponSlots[i].InstantiateWeapon(weaponSlotPositions[i]);
+                var weapon = weaponSlots[i].Data.InstantiateWeapon(weaponSlots[i].Transform);
+                weaponSlots[i].WeaponGameObject = weapon;
                 weapon.name = $"Weapon {i + 1}";
-                weapons.Add(weapon);
             }
         }
     }

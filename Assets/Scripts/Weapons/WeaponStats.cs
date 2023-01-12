@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace Weapons.ScriptableObjects
+namespace Weapons
 {
     [Serializable]
     public struct WeaponStats
