@@ -1,27 +1,21 @@
 ﻿using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Player
 {
     public class PlayerManager : MonoBehaviour
     {
-        private InputManager inputManager;
-        private ChopperController playerMovement;
-
-        private void Awake()
-        {
-            inputManager = GetComponent<InputManager>();
-            playerMovement = GetComponent<ChopperController>();
-        }
-
+        [SerializeField] PlayerArgs playerArgs;
+        
         private void FixedUpdate() => HandleAllMovement();
 
         void HandleAllMovement()
         {
-            playerMovement.HandleThrust();
-            playerMovement.HandleRoll();
-            playerMovement.HandleYaw();
-            playerMovement.HandlePitch();
+            playerArgs.chopperController.HandleThrust();
+            playerArgs.chopperController.HandleRoll();
+            playerArgs.chopperController.HandleYaw();
+            playerArgs.chopperController.HandlePitch();
         }
+        
+        public PlayerArgs GetPlayerArgs() => playerArgs;
     }
 }

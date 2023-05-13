@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 using Weapons;
-using Weapons.ScriptableObjects;
 
 namespace Player
 {

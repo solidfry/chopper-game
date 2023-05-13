@@ -1,77 +1,79 @@
+using Abilities;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Player
 {
     public class ChopperController : MonoBehaviour
     {
         [SerializeField] GameObject rotor;
-        [SerializeField] private Rigidbody rb;
         [SerializeField] float rotorForce = 1000f;
         [SerializeField] private float yawTorque = 500f;
         [SerializeField] private float pitchTorque = 1000f;
         [SerializeField] private float rollTorque = 1000f;
         [SerializeField] private float thrustForce = 2f;
-
         [SerializeField] [Range(0,1)] private float upwardThrustVectorOffset = 0.5f;
+        
         Vector3 thrustVector;
-        // [SerializeField] private float constantThrust = 35f;
-        private Rigidbody rotorRb;
-        private InputManager inputManager;
-        private Transform tr;
-        private float velocityY;
+        
+        PlayerArgs playerArgs;
+  
+        
         [SerializeField] private float currentSpeed;
+        
+        [SerializeField] Dash dash = new Dash();
+        
         private void Awake()
         {
-            if (rb == null) rb = GetComponent<Rigidbody>();
-            inputManager = GetComponent<InputManager>();
-            tr = GetComponent<Transform>();
+            playerArgs = GetComponent<PlayerManager>().GetPlayerArgs();
+            dash.OnStart(playerArgs.transform);
         }
 
         private void Update()
         {
+            dash.OnUpdate();
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
         }
 
         private void FixedUpdate()
         {
-            currentSpeed = rb.velocity.magnitude;
+            currentSpeed = playerArgs.rigidbody.velocity.magnitude;
         }
 
         public void HandleThrust()
         {
-            thrustVector = (tr.up + tr.forward) * upwardThrustVectorOffset;
+            thrustVector = (playerArgs.transform.up + playerArgs.transform.forward) * upwardThrustVectorOffset;
 
-            if (inputManager.thrust > 0.1f)
+            if (playerArgs.inputManager.thrust > 0.1f)
             {
-                rb.AddForce(thrustVector * (thrustForce * inputManager.thrust));
+                playerArgs.rigidbody.AddForce(thrustVector * (thrustForce * playerArgs.inputManager.thrust));
             }
-            else if (inputManager.thrust < -0.1f)
+            else if (playerArgs.inputManager.thrust < -0.1f)
             {
 
-                rb.AddForce(Vector3.up * (thrustForce * inputManager.thrust));
+                playerArgs.rigidbody.AddForce(Vector3.up * (thrustForce * playerArgs.inputManager.thrust));
             }
         }
 
         public void HandleYaw()
         {
-            Vector3 yawAxis = new Vector3(0, inputManager.yaw * yawTorque, 0);
-            rb.AddRelativeTorque(yawAxis);
+            Vector3 yawAxis = new Vector3(0, playerArgs.inputManager.yaw * yawTorque, 0);
+            playerArgs.rigidbody.AddRelativeTorque(yawAxis);
         }
 
 
         public void HandleRoll()
         {
-            Vector3 rollAxis = new Vector3(0, 0, -inputManager.roll * rollTorque);
-            rb.AddRelativeTorque(rollAxis);
+            Vector3 rollAxis = new Vector3(0, 0, -playerArgs.inputManager.roll * rollTorque);
+            playerArgs.rigidbody.AddRelativeTorque(rollAxis);
         }
         
         public void HandlePitch()
         {
-            velocityY = rb.velocity.y;
-            Vector3 pitchAxis = new Vector3(inputManager.pitch * pitchTorque, 0, 0);
-            rb.AddRelativeTorque(pitchAxis);
+            Vector3 pitchAxis = new Vector3(playerArgs.inputManager.pitch * pitchTorque, 0, 0);
+            playerArgs.rigidbody.AddRelativeTorque(pitchAxis);
         }
+        
+        public void HandleDash() => dash.DoAbility();
 
         private void OnDrawGizmos()
         {

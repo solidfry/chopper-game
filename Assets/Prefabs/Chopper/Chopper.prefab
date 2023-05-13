@@ -158,6 +158,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerArgs:
+    transform: {fileID: 548169382991786596}
+    rigidbody: {fileID: 548169382991786599}
+    inputManager: {fileID: 1378939668428707430}
+    chopperController: {fileID: 1211631705733180463}
 --- !u!54 &548169382991786599
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -187,7 +192,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rotor: {fileID: 548169382550063356}
-  rb: {fileID: 548169382991786599}
   rotorForce: 1000
   yawTorque: 250
   pitchTorque: 250
@@ -195,6 +199,10 @@ MonoBehaviour:
   thrustForce: 7000
   upwardThrustVectorOffset: 0.8
   currentSpeed: 0
+  dash:
+    force: 1000
+    cooldown: 1
+    canDash: 1
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -367,15 +375,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponSlots:
-  - {fileID: 11400000, guid: 5de769aae783b3a4b97a774542bc5dc0, type: 2}
-  - {fileID: 11400000, guid: 5de769aae783b3a4b97a774542bc5dc0, type: 2}
-  - {fileID: 11400000, guid: 3a2c375d8f2ca1745a7978afd133c7dd, type: 2}
-  - {fileID: 11400000, guid: 3a2c375d8f2ca1745a7978afd133c7dd, type: 2}
-  weaponSlotPositions:
-  - {fileID: 2250240806573139545}
-  - {fileID: 5273773055433807091}
-  - {fileID: 3734004481926237905}
-  - {fileID: 8839048139457999682}
+  - transform: {fileID: 0}
+    data: {fileID: 0}
+  - transform: {fileID: 0}
+    data: {fileID: 0}
+  - transform: {fileID: 0}
+    data: {fileID: 0}
+  - transform: {fileID: 0}
+    data: {fileID: 0}
 --- !u!1 &548169383289600993
 GameObject:
   m_ObjectHideFlags: 0
