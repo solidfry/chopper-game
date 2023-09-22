@@ -11,17 +11,17 @@ namespace Player
         [SerializeField] private float pitchTorque = 1000f;
         [SerializeField] private float rollTorque = 1000f;
         [SerializeField] private float thrustForce = 2f;
-        [SerializeField] [Range(0,1)] private float upwardThrustVectorOffset = 0.5f;
-        
+        [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
+
         Vector3 thrustVector;
-        
+
         PlayerArgs playerArgs;
-  
-        
+
+
         [SerializeField] private float currentSpeed;
-        
+
         [SerializeField] Dash dash = new Dash();
-        
+
         private void Awake()
         {
             playerArgs = GetComponent<PlayerManager>().GetPlayerArgs();
@@ -41,7 +41,11 @@ namespace Player
 
         public void HandleThrust()
         {
-            thrustVector = (playerArgs.transform.up + playerArgs.transform.forward) * upwardThrustVectorOffset;
+
+            // I want to add force in the direction of the players upward vector with a minor offset in the direction of the players forward vector
+
+
+            thrustVector = playerArgs.transform.up + playerArgs.transform.forward * upwardThrustVectorOffset;
 
             if (playerArgs.inputManager.thrust > 0.1f)
             {
@@ -49,7 +53,6 @@ namespace Player
             }
             else if (playerArgs.inputManager.thrust < -0.1f)
             {
-
                 playerArgs.rigidbody.AddForce(Vector3.up * (thrustForce * playerArgs.inputManager.thrust));
             }
         }
@@ -66,13 +69,13 @@ namespace Player
             Vector3 rollAxis = new Vector3(0, 0, -playerArgs.inputManager.roll * rollTorque);
             playerArgs.rigidbody.AddRelativeTorque(rollAxis);
         }
-        
+
         public void HandlePitch()
         {
             Vector3 pitchAxis = new Vector3(playerArgs.inputManager.pitch * pitchTorque, 0, 0);
             playerArgs.rigidbody.AddRelativeTorque(pitchAxis);
         }
-        
+
         public void HandleDash() => dash.DoAbility();
 
         private void OnDrawGizmos()
@@ -81,23 +84,23 @@ namespace Player
             color = Color.green;
             // local up
             DrawHelperAtCenter(this.transform.up, Color.magenta, 2f);
-         
+
             color.g -= 0.5f;
             // global up
             DrawHelperAtCenter(Vector3.up, color, 1f);
-         
+
             color = Color.blue;
             // local forward
             DrawHelperAtCenter(this.transform.forward, color, 2f);
-         
+
             color.b -= 0.5f;
             // global forward
             DrawHelperAtCenter(Vector3.forward, color, 1f);
-         
+
             color = Color.red;
             // local right
             DrawHelperAtCenter(this.transform.right, color, 2f);
-         
+
             color.r -= 0.5f;
             // global right
             DrawHelperAtCenter(Vector3.right, color, 1f);
