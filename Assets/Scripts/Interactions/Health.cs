@@ -6,7 +6,7 @@ namespace Interactions
     public class Health : MonoBehaviour, IDamageable
     {
         [SerializeField] private int health = 100;
-        
+
         public void TakeDamage(int damageAmount)
         {
             health -= damageAmount;

@@ -6,11 +6,8 @@ namespace Player
 {
     public class PlayerAttackManager : MonoBehaviour
     {
-        // All of these should be arrays probably
-        // [SerializeField] private WeaponType[] weaponSlots;
-        // [SerializeField] private Transform[] weaponSlotPositions;
         [SerializeField] private WeaponSlot[] weaponSlots;
-        
+
         private void Awake() => AssignWeaponSlots();
 
         public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weaponSlots[0], ctx);
@@ -35,7 +32,7 @@ namespace Player
                 weapon.WeaponGameObject.StopAttack();
             }
         }
-        
+
         private void AssignWeaponSlots()
         {
             if (weaponSlots == null) return;

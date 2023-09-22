@@ -14,9 +14,8 @@ namespace Weapons
         private void Awake()
         {
             if (collider3D != null)
-            { 
                 collider3D = GetComponent<Collider>();
-            }
+
             ignoreCollisionsOnLayer = LayerMask.NameToLayer("Ignore Player");
             gameObject.layer = ignoreCollisionsOnLayer;
         }
@@ -36,22 +35,16 @@ namespace Weapons
         {
             distanceTraveled += Vector3.Distance(transform.position, previousPosition);
             previousPosition = transform.position;
-            
-            if(distanceTraveled >= maximumRange)
-            {
-                Destroy(gameObject);
-            }
+
+            if (distanceTraveled >= maximumRange)
+                Destroy(gameObject); // Pool this object instead
+
         }
 
-        private void OnCollisionEnter(Collision collision)
-        {
-            DestructionEffect();
-        }
+        private void OnCollisionEnter(Collision collision) => DestructionEffect();
 
-        void DestructionEffect()
-        {
+        void DestructionEffect() =>
             //Instantiate some sort of particle effect and a trigger area for damage and physics impacts
             Destroy(gameObject);
-        }
     }
 }
