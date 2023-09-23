@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Interfaces;
+using UnityEngine;
 using Weapons.ScriptableObjects;
 
 namespace Weapons
@@ -33,18 +34,31 @@ namespace Weapons
 
         private void CheckDistanceTravelled()
         {
-            distanceTraveled += Vector3.Distance(transform.position, previousPosition);
-            previousPosition = transform.position;
+            var position = transform.position;
+            distanceTraveled += Vector3.Distance(position, previousPosition);
+            previousPosition = position;
 
             if (distanceTraveled >= maximumRange)
                 Destroy(gameObject); // Pool this object instead
 
         }
 
-        private void OnCollisionEnter(Collision collision) => DestructionEffect();
+        private void OnCollisionEnter(Collision collision)
+        {
+            var target = collision.collider.GetComponent<IDamageable>();
+            if (target != null)
+            {
+                target.TakeDamage(ammoType.stats.Damage);
+            }
+            DestructionEffect();
+        }
 
-        void DestructionEffect() =>
-            //Instantiate some sort of particle effect and a trigger area for damage and physics impacts
+        void DestructionEffect() 
+        {
+            Debug.Log("Destruction effect");
             Destroy(gameObject);
+        }
+            //Instantiate some sort of particle effect and a trigger area for damage and physics impacts
+            
     }
 }

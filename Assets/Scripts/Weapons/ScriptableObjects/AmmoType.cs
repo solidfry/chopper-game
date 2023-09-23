@@ -6,6 +6,8 @@ namespace Weapons.ScriptableObjects
     [CreateAssetMenu(fileName = "_AmmoType", menuName = "Weapons/New Ammo", order = 0)]
     public class AmmoType : ScriptableObject
     {
+        public AmmoStats stats;
+        
         [SerializeField] private TrailRenderer trails;
         [SerializeField] private GameObject deathParticles;
         [SerializeField] private GameObject prefab;

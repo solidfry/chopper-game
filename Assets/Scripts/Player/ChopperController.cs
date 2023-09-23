@@ -34,10 +34,7 @@ namespace Player
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
         }
 
-        private void FixedUpdate()
-        {
-            currentSpeed = playerArgs.rigidbody.velocity.magnitude;
-        }
+        private void FixedUpdate() => currentSpeed = playerArgs.rigidbody.velocity.magnitude;
 
         public void HandleThrust()
         {

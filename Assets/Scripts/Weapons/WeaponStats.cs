@@ -7,7 +7,6 @@ namespace Weapons
     public struct WeaponStats
     {
         [SerializeField] private float fireRateInSeconds;
-        [SerializeField] private float damage;
         [SerializeField] private float rangeInMetres;
         [SerializeField] private float spread;
         [SerializeField] private float reloadTimeInSeconds;
@@ -17,7 +16,6 @@ namespace Weapons
         [SerializeField] private float explosionRadius;
         
         public float FireRateInSeconds => fireRateInSeconds;
-        public float Damage => damage;
         public float RangeInMetres => rangeInMetres; 
         public float Spread => spread;
         public float ReloadTimeInSeconds => reloadTimeInSeconds;
