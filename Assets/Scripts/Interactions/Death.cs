@@ -37,7 +37,7 @@ namespace Interactions
             PlayAudio();
 
             ApplyForceExplosion();
-
+            
         }
 
         private void PlayParticles()
@@ -61,6 +61,14 @@ namespace Interactions
             var rb = parent.GetComponent<Rigidbody>();
             rb.isKinematic = false;
             rb.AddForceAtPosition(Vector3.up * rb.mass * 1000, parent.position);
+        }
+        
+        public void PlayEffects()
+        {
+            foreach (var effect in deathEffects)
+            {
+                effect.DoDeathEffect();
+            }
         }
     }
 }

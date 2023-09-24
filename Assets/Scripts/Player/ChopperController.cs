@@ -1,3 +1,4 @@
+using System;
 using Abilities;
 using UnityEngine;
 
@@ -12,15 +13,16 @@ namespace Player
         [SerializeField] private float rollTorque = 1000f;
         [SerializeField] private float thrustForce = 2f;
         [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
-
+        
+        public Action<Vector3> forwardVector;
+        
         Vector3 thrustVector;
 
         PlayerArgs playerArgs;
 
-
         [SerializeField] private float currentSpeed;
 
-        [SerializeField] Dash dash = new Dash();
+        [SerializeField] Dash dash = new ();
 
         private void Awake()
         {
@@ -34,7 +36,11 @@ namespace Player
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
         }
 
-        private void FixedUpdate() => currentSpeed = playerArgs.rigidbody.velocity.magnitude;
+        private void FixedUpdate()
+        {
+            currentSpeed = playerArgs.rigidbody.velocity.magnitude;
+            forwardVector?.Invoke(playerArgs.transform.forward);
+        }
 
         public void HandleThrust()
         {
