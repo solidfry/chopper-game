@@ -66,7 +66,7 @@ namespace Weapons
 
         IEnumerator Firing(float fireRate)
         {
-            while (isFiring)
+            while (IsFiring)
             {
                 Fire(firePointTr);
                 firingCooldownTimer = firingCooldown;

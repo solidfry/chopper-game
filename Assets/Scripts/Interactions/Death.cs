@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Interactions.ScriptableObjects;
 using Interfaces;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Interactions
 {
@@ -14,7 +15,7 @@ namespace Interactions
         [SerializeField] AudioClip audioClip;
         private Transform parent;
         [SerializeField] bool isExplosive;
-        [SerializeField] List<DeathEffect> deathEffects;
+        // [SerializeField] List<DeathEffect> deathEffects;
     
         // An array of death effects that can be of type Particle, Audio, Animation, Apply Force Explosion, etc.
         // This is a good example of the Strategy Pattern.
@@ -35,16 +36,15 @@ namespace Interactions
             if (particles.isPlaying || audioSource.isPlaying) return;
             PlayParticles();
             PlayAudio();
-
             ApplyForceExplosion();
-            
         }
 
         private void PlayParticles()
         {
             if (particles != null)
             {
-                ParticleSystem.Instantiate(particles, parent);
+                var activeParticles =  Object.Instantiate(particles, parent);
+                activeParticles.transform.localScale = Vector3.one * 3;
             }
         }
 
@@ -63,13 +63,14 @@ namespace Interactions
             rb.AddForceAtPosition(Vector3.up * rb.mass * 1000, parent.position);
         }
         
-        public void PlayEffects()
-        {
-            foreach (var effect in deathEffects)
-            {
-                effect.DoDeathEffect();
-            }
-        }
+        
+        // public void PlayEffects()
+        // {
+        //     foreach (var effect in deathEffects)
+        //     {
+        //         effect.DoDeathEffect();
+        //     }
+        // }
     }
 }
 

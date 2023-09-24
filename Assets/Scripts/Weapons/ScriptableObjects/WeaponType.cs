@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Weapons.ScriptableObjects
 {
@@ -9,6 +10,7 @@ namespace Weapons.ScriptableObjects
         [SerializeField] private WeaponStats stats;
         [SerializeField] private Weapon weaponPrefab;
         [SerializeField] private GameObject weaponMesh;
+        [SerializeField] List<AudioClip> weaponFireClips; // Need to use these and remove any extra audio sources on the ammo prefab
 
         public AmmoType AmmoType
         {
@@ -42,6 +44,8 @@ namespace Weapons.ScriptableObjects
             projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             projectileRb.velocity = firePoint.transform.forward * Stats.ProjectileSpeed;
         }
+        
+        AudioClip GetRandomFireClip() => weaponFireClips[Random.Range(0, weaponFireClips.Count)];
         
         public Weapon InstantiateWeapon(Transform weaponPosition) => Instantiate(weaponPrefab, weaponPosition.position, Quaternion.identity, weaponPosition);
     }

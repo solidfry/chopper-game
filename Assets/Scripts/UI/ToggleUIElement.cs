@@ -8,8 +8,8 @@ namespace UI
     {
         [SerializeField] GameObject uiPrefab;
         [SerializeField] InputAction button;
-        [SerializeField] private float animationDuration = .2f;
-        [SerializeField] private float scaleFactor = 1.1f;
+        // [SerializeField] private float animationDuration = .2f;
+        // [SerializeField] private float scaleFactor = 1.1f;
         // private Tween _fadeIn;
         // private Tween _fadeOut;
         // private Tween _scale;
