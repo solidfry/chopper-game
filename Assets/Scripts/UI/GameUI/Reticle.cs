@@ -6,13 +6,14 @@ namespace UI.GameUI
     {
         [SerializeField] GameObject objectToFollow;
         private Camera cam;
+        private RectTransform rectTransform; 
         
         private void Start()
         {
             cam = Camera.main;
+            rectTransform = GetComponent<RectTransform>(); 
         }
         
-
         private void Update()
         {
             if(cam != null)
@@ -22,15 +23,15 @@ namespace UI.GameUI
         private void UpdateReticle(Vector3 obj)
         {
             var screenPoint = WorldpointToScreenpoint(obj);
-            transform.position = new Vector3(screenPoint.x, screenPoint.y, 0);
+            rectTransform.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y); 
         }
         
         private Vector3 WorldpointToScreenpoint(Vector3 worldPoint)
         {
+            var screenW = Screen.width / 2;
+            var screenH = Screen.height / 2;
             var screenPoint = cam.WorldToScreenPoint(worldPoint);
-            screenPoint.z = 0;
-            return screenPoint;
+            return new Vector3(screenPoint.x - screenW, screenPoint.y - screenH, screenPoint.z); // consider screen center as origin
         }
-        
     }
 }
