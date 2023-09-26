@@ -9,7 +9,7 @@ namespace Interactions
     {
         [SerializeField] private int health = 100;
         [SerializeField] private Death onDeath;
-        [SerializeField] bool isDead = false;
+        [SerializeField][ReadOnly] bool isDead;
         
         [SerializeField] Collider collider3d;
         Coroutine cleanup;
