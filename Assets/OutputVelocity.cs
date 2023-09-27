@@ -6,7 +6,8 @@ using UnityEngine;
 public class OutputVelocity : MonoBehaviour
 {
     Rigidbody rb;
-    [SerializeField] [ReadOnly] float speed, speedKmh, frameCount;
+    [SerializeField] [ReadOnly] float speed, speedKmh;
+    int frameCount = 0;  // Frames counter
     public static Action<float> onSpeedChanged;
     private void Start()
     {

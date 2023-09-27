@@ -1,5 +1,5 @@
+using Effects.Structs;
 using Enums;
-using Structs;
 using UnityEngine;
 
 namespace Events

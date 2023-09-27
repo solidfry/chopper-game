@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Effects.Structs;
 using UnityEngine;
 
 namespace Weapons.ScriptableObjects
@@ -9,6 +10,7 @@ namespace Weapons.ScriptableObjects
         [SerializeField] private AmmoType ammoType;
         [SerializeField] private WeaponStats stats;
         [SerializeField] private Weapon weaponPrefab;
+        [SerializeField] public CameraShakeEvent shakeEvent;
         [SerializeField] private GameObject weaponMesh;
         [SerializeField] List<AudioClip> weaponFireClips; // Need to use these and remove any extra audio sources on the ammo prefab
 

@@ -2,7 +2,7 @@
 using Events;
 using UnityEngine;
 
-namespace Structs
+namespace Effects.Structs
 {
     [Serializable]
     public struct ParticleEvent

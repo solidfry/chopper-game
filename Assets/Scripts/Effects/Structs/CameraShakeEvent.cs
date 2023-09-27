@@ -1,15 +1,16 @@
 ﻿using System;
 using Enums;
 using Events;
+using UnityEngine;
 
-namespace Structs
+namespace Effects.Structs
 {
     [Serializable]
     public struct CameraShakeEvent
     {
-        public Strength strength;
-        public float duration;
-        public bool doShake;
+        [SerializeField] Strength strength;
+        [SerializeField] float duration;
+        [SerializeField] bool doShake;
 
         public CameraShakeEvent(Strength strength, float duration, bool doShake)
         {

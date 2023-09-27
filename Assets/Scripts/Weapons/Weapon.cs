@@ -68,6 +68,7 @@ namespace Weapons
         {
             while (IsFiring)
             {
+                weaponType.shakeEvent.Invoke();
                 Fire(firePointTr);
                 firingCooldownTimer = firingCooldown;
                 yield return new WaitForSeconds(fireRate);

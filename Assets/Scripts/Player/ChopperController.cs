@@ -46,8 +46,6 @@ namespace Player
         {
 
             // I want to add force in the direction of the players upward vector with a minor offset in the direction of the players forward vector
-
-
             thrustVector = playerArgs.transform.up + playerArgs.transform.forward * upwardThrustVectorOffset;
 
             if (playerArgs.inputManager.thrust > 0.1f)
@@ -80,7 +78,8 @@ namespace Player
         }
 
         public void HandleDash() => dash.DoAbility();
-
+        
+        // Editor only
         private void OnDrawGizmos()
         {
             Color color;

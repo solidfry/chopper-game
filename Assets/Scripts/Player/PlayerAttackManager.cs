@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Effects.Structs;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using Weapons;
 
@@ -7,7 +8,7 @@ namespace Player
     public class PlayerAttackManager : MonoBehaviour
     {
         [SerializeField] private WeaponSlot[] weaponSlots;
-
+        
         private void Awake() => AssignWeaponSlots();
 
         public void Fire1(InputAction.CallbackContext ctx) => FireWeapon(weaponSlots[0], ctx);
