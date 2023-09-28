@@ -14,7 +14,6 @@ namespace UI
         {
             button = GetComponent<Button>();
             text = GetComponentInChildren<TMP_Text>();
-          
         }
 
         private void Update()

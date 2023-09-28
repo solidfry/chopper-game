@@ -15,6 +15,8 @@ namespace Interactions
         [SerializeField] AudioClip audioClip;
         private Transform parent;
         [SerializeField] bool isExplosive;
+        public static event Action OnDeath; // We need to remove this as it is only for the first playtest
+        
         // [SerializeField] List<DeathEffect> deathEffects;
     
         // An array of death effects that can be of type Particle, Audio, Animation, Apply Force Explosion, etc.
@@ -37,6 +39,7 @@ namespace Interactions
             PlayParticles();
             PlayAudio();
             ApplyForceExplosion();
+            OnDeath?.Invoke();
         }
 
         private void PlayParticles()
