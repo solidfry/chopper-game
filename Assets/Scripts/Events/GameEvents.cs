@@ -14,7 +14,7 @@ namespace Events
         public static UnPause onUnPauseGame;
 
         #endregion
-        
+
         #region Player Events
         public delegate void PlayerKill();
         public delegate void PlayerTakeDamage(int amount);
@@ -40,7 +40,7 @@ namespace Events
         // #endregion
 
         #region UI Events
-        
+
         public delegate void SetValue(int value);
         public delegate void PlayerHealthUIChange(float normalisedCurrentHealth);
         public delegate void PlayerManaUIChange(float normalisedCurrentMana);
@@ -66,29 +66,18 @@ namespace Events
         public delegate void ScreenShake(Strength str, float lengthInSeconds = 0.2f);
         public delegate void ParticleEffect(ParticleEvent particleEvent);
         public delegate void LoadLevel();
-        public delegate void SendCamera(Camera cam);
+        public delegate void SendPlayer(Transform player);
+        public delegate void SendCamera(Camera camera);
 
         public static ScreenShake onScreenShakeEvent;
         public static SceneTransitionOut onSceneTransitionOutEvent;
         public static SceneTransitionStart onSceneTransitionStartEvent;
         public static SceneTransitionIn onSceneTransitionInEvent;
         public static SceneTransitionEnd onSceneTransitionEndEvent;
+        public static SendPlayer onSendPlayerEvent;
         public static SendCamera onSendCameraEvent;
         public static ParticleEffect onParticleEvent;
         public static LoadLevel onLevelLoadEvent;
-        #endregion
-
-        #region Score
-        public delegate void ScoreChange(int score);
-        public delegate void MultiplierIncrease();
-        public delegate void MultiplierReset();
-        public delegate void MultiplierDecrease();
-
-        public static ScoreChange onScoreChangeEvent;
-        public static MultiplierIncrease onMultiplierIncreaseEvent;
-        public static MultiplierReset onMultiplierResetEvent;
-        public static MultiplierDecrease onMultiplierDecreaseEvent;
-
         #endregion
     }
 }
