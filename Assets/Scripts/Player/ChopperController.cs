@@ -1,10 +1,11 @@
 using System;
 using Abilities;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Player
 {
-    public class ChopperController : MonoBehaviour
+    public class ChopperController : NetworkBehaviour
     {
         [SerializeField] GameObject rotor;
         [SerializeField] float rotorForce = 1000f;
@@ -13,16 +14,16 @@ namespace Player
         [SerializeField] private float rollTorque = 1000f;
         [SerializeField] private float thrustForce = 2f;
         [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
-        
+
         public Action<Vector3> forwardVector;
-        
+
         Vector3 thrustVector;
 
         PlayerArgs playerArgs;
 
         [SerializeField] private float currentSpeed;
 
-        [SerializeField] Dash dash = new ();
+        [SerializeField] Dash dash = new();
 
         private void Awake()
         {
@@ -78,7 +79,7 @@ namespace Player
         }
 
         public void HandleDash() => dash.DoAbility();
-        
+
         // Editor only
         private void OnDrawGizmos()
         {
