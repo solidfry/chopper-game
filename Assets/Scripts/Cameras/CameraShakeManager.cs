@@ -10,12 +10,18 @@ namespace Cameras
     {
         [SerializeField] CinemachineVirtualCamera cam;
         [SerializeField] private CinemachineBasicMultiChannelPerlin noise;
+        float defaultAmplitude;
+        float defaultFrequency;
         
         private void Start()
         {
             cam = FindObjectOfType<CinemachineVirtualCamera>();
             noise = cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
-            SetCameraValues(0, 0, noise);
+            
+            defaultFrequency = noise.m_FrequencyGain;
+            defaultAmplitude = noise.m_AmplitudeGain;
+            
+            SetCameraValues(defaultAmplitude, defaultFrequency, noise);
         }
         
         private void OnEnable() => GameEvents.onScreenShakeEvent += Shake;
@@ -68,8 +74,8 @@ namespace Cameras
         IEnumerator ResetCamera(float lengthInSeconds, CinemachineBasicMultiChannelPerlin _noise)
         {
             yield return new WaitForSeconds(lengthInSeconds);
-            _noise.m_AmplitudeGain = 0;
-            _noise.m_FrequencyGain = 0;
+            _noise.m_AmplitudeGain = defaultAmplitude;
+            _noise.m_FrequencyGain = defaultFrequency;
         }
         
 

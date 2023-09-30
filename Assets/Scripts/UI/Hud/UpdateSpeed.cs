@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UI.GameUI;
+using UI.Hud;
 using UnityEngine;
 
 public class UpdateSpeed : MonoBehaviour

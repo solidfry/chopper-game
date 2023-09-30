@@ -9,7 +9,7 @@ namespace Player
         public float roll;
         public float pitch;
         public float yaw;
-
+        
         #region Input Handling
         public void OnThrust(InputAction.CallbackContext context) => thrust = context.ReadValue<float>();
         public void OnPitch(InputAction.CallbackContext context) => pitch = context.ReadValue<float>();

@@ -116,9 +116,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 548169382991786596}
-  - component: {fileID: 210267188}
-  - component: {fileID: 1378939668428707430}
   - component: {fileID: 7360639563048435297}
+  - component: {fileID: 1378939668428707430}
+  - component: {fileID: 210267188}
   - component: {fileID: 548169382991786599}
   - component: {fileID: 1211631705733180463}
   - component: {fileID: 1632664233}
@@ -127,7 +127,6 @@ GameObject:
   - component: {fileID: -6685095215381333017}
   - component: {fileID: 859256209052803531}
   - component: {fileID: 2933340856286241396}
-  - component: {fileID: 7475013713431856488}
   m_Layer: 6
   m_Name: ChopperNetworked
   m_TagString: Untagged
@@ -160,6 +159,39 @@ Transform:
   - {fileID: 6354153028954672455}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7360639563048435297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 548169382991786597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerArgs:
+    transform: {fileID: 548169382991786596}
+    rigidbody: {fileID: 548169382991786599}
+    inputManager: {fileID: 1378939668428707430}
+    movementController: {fileID: 0}
+--- !u!114 &1378939668428707430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 548169382991786597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf5866fca52040f0aabed879e1e4fbd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  thrust: 0
+  roll: 0
+  pitch: 0
+  yaw: 0
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -319,47 +351,6 @@ MonoBehaviour:
   m_DefaultActionMap: Flight
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &1378939668428707430
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bf5866fca52040f0aabed879e1e4fbd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  thrust: 0
-  roll: 0
-  pitch: 0
-  yaw: 0
---- !u!114 &7360639563048435297
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerArgs:
-    transform: {fileID: 548169382991786596}
-    rigidbody: {fileID: 548169382991786599}
-    inputManager: {fileID: 1378939668428707430}
-    chopperController: {fileID: 1211631705733180463}
-  networkPosition:
-    m_InternalValue: {x: 0, y: 0, z: 0}
-  networkRotation:
-    m_InternalValue: {x: 0, y: 0, z: 0, w: 0}
-  networkVelocity:
-    m_InternalValue: {x: 0, y: 0, z: 0}
-  networkAngularVelocity:
-    m_InternalValue: {x: 0, y: 0, z: 0}
 --- !u!54 &548169382991786599
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -368,9 +359,9 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 548169382991786597}
   serializedVersion: 4
-  m_Mass: 300
+  m_Mass: 400
   m_Drag: 0.75
-  m_AngularDrag: 1
+  m_AngularDrag: 0.9
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -404,8 +395,8 @@ MonoBehaviour:
   yawTorque: 250
   pitchTorque: 250
   rollTorque: 250
-  thrustForce: 10000
-  upwardThrustVectorOffset: 0.85
+  thrustForce: 8000
+  upwardThrustVectorOffset: 0.5
   currentSpeed: 0
   dash:
     force: 5000
@@ -580,9 +571,9 @@ MonoBehaviour:
   SyncRotAngleX: 1
   SyncRotAngleY: 1
   SyncRotAngleZ: 1
-  SyncScaleX: 1
-  SyncScaleY: 1
-  SyncScaleZ: 1
+  SyncScaleX: 0
+  SyncScaleY: 0
+  SyncScaleZ: 0
   PositionThreshold: 0.001
   RotAngleThreshold: 0.01
   ScaleThreshold: 0.01
@@ -602,18 +593,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &7475013713431856488
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f35981a461316014baa55d51fd925f73, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &548169383289600993
@@ -1335,17 +1314,17 @@ PrefabInstance:
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.01558265
+      value: 0.015582649
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.00405306
+      value: -0.0040515903
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00006316559
+      value: 0.00006314269
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
@@ -1545,17 +1524,17 @@ PrefabInstance:
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.01558265
+      value: 0.015582649
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.00405306
+      value: -0.0040515903
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00006316559
+      value: 0.00006314269
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
@@ -1602,6 +1581,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 548169382991786596}
     m_Modifications:
+    - target: {fileID: 1365379838165238277, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 951099334
+      objectReference: {fileID: 0}
     - target: {fileID: 2454351902714255719, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_SizeDelta.y
@@ -1797,8 +1781,7 @@ PrefabInstance:
       propertyPath: helicopter
       value: 
       objectReference: {fileID: 548169382991786597}
-    m_RemovedComponents:
-    - {fileID: 848631618328851782, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

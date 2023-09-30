@@ -1,11 +1,12 @@
 using System;
 using Abilities;
+using Player.Networking;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace Player
 {
-    public class ChopperController : MonoBehaviour
+    public class MovementController : NetworkBehaviour
     {
         [SerializeField] GameObject rotor;
         [SerializeField] float rotorForce = 1000f;
@@ -15,24 +16,30 @@ namespace Player
         [SerializeField] private float thrustForce = 2f;
         [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
 
-        public Action<Vector3> forwardVector;
-
-        Vector3 thrustVector;
-
+        public event Action<Vector3> SendForwardVectorToUI;
+        
         PlayerArgs playerArgs;
 
-        [SerializeField] private float currentSpeed;
+        [SerializeField] private float currentSpeed = new();
 
         [SerializeField] Dash dash = new();
 
-        private void Awake()
+        public override void OnNetworkSpawn()
         {
-            playerArgs = GetComponent<PlayerManager>().GetPlayerArgs();
-            dash.OnStart(playerArgs.transform);
+            if(!IsOwner) return;
+
+            if(IsLocalPlayer)
+            {
+                playerArgs = GetComponent<PlayerManager>().GetPlayerArgs();
+                currentSpeed = playerArgs.rigidbody.velocity.magnitude;
+
+                dash.OnStart(playerArgs.transform);
+            }
         }
 
         private void Update()
         {
+            
             dash.OnUpdate();
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
         }
@@ -40,41 +47,40 @@ namespace Player
         private void FixedUpdate()
         {
             currentSpeed = playerArgs.rigidbody.velocity.magnitude;
-            forwardVector?.Invoke(playerArgs.transform.forward);
+            SendForwardVectorToUI?.Invoke(playerArgs.transform.forward);
         }
 
-        public void HandleThrust()
+        public void HandleThrust(float thrustInput, Vector3 up, Vector3 forward)
         {
-
             // I want to add force in the direction of the players upward vector with a minor offset in the direction of the players forward vector
-            thrustVector = playerArgs.transform.up + playerArgs.transform.forward * upwardThrustVectorOffset;
+            var thrustVector = up + forward * upwardThrustVectorOffset;
 
-            if (playerArgs.inputManager.thrust > 0.1f)
+            if (thrustInput > 0.1f)
             {
-                playerArgs.rigidbody.AddForce(thrustVector * (thrustForce * playerArgs.inputManager.thrust));
+                playerArgs.rigidbody.AddForce(thrustVector * (thrustForce * thrustInput));
             }
-            else if (playerArgs.inputManager.thrust < -0.1f)
+            else if (thrustInput < -0.1f)
             {
-                playerArgs.rigidbody.AddForce(Vector3.up * (thrustForce * playerArgs.inputManager.thrust));
+                playerArgs.rigidbody.AddForce(Vector3.up * (thrustForce * thrustInput));
             }
         }
 
-        public void HandleYaw()
+        public void HandleYaw(float yawInput)
         {
-            Vector3 yawAxis = new Vector3(0, playerArgs.inputManager.yaw * yawTorque, 0);
+            Vector3 yawAxis = new Vector3(0, yawInput * yawTorque, 0);
             playerArgs.rigidbody.AddRelativeTorque(yawAxis);
         }
 
 
-        public void HandleRoll()
+        public void HandleRoll(float rollInput)
         {
-            Vector3 rollAxis = new Vector3(0, 0, -playerArgs.inputManager.roll * rollTorque);
+            Vector3 rollAxis = new Vector3(0, 0, -rollInput * rollTorque);
             playerArgs.rigidbody.AddRelativeTorque(rollAxis);
         }
 
-        public void HandlePitch()
+        public void HandlePitch(float pitchInput)
         {
-            Vector3 pitchAxis = new Vector3(playerArgs.inputManager.pitch * pitchTorque, 0, 0);
+            Vector3 pitchAxis = new Vector3(pitchInput * pitchTorque, 0, 0);
             playerArgs.rigidbody.AddRelativeTorque(pitchAxis);
         }
 
