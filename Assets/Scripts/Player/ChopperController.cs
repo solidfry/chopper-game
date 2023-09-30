@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Player
 {
-    public class ChopperController : NetworkBehaviour
+    public class ChopperController : MonoBehaviour
     {
         [SerializeField] GameObject rotor;
         [SerializeField] float rotorForce = 1000f;
