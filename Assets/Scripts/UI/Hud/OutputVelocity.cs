@@ -9,7 +9,7 @@ namespace UI.Hud
         Rigidbody rb;
         [SerializeField] [ReadOnly] float speed, speedKmh;
         int frameCount = 0;  // Frames counter
-        public static Action<float> onSpeedChanged;
+        public event Action<float> OnSpeedChanged;
         private void Start()
         {
             rb = GetComponent<Rigidbody>();
@@ -30,7 +30,7 @@ namespace UI.Hud
                 // Log the speeds
                 Debug.Log("Speed in m/s: " + speed);
                 Debug.Log("Speed in km/h: " + speedKmh);
-                onSpeedChanged?.Invoke(speedKmh);
+                OnSpeedChanged?.Invoke(speedKmh);
                 frameCount = 0;  // Reset frame counter
             }
         }

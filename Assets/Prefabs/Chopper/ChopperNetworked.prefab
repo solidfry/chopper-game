@@ -171,11 +171,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerArgs:
-    transform: {fileID: 548169382991786596}
-    rigidbody: {fileID: 548169382991786599}
-    inputManager: {fileID: 1378939668428707430}
-    movementController: {fileID: 0}
 --- !u!114 &1378939668428707430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -188,10 +183,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf5866fca52040f0aabed879e1e4fbd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  thrust: 0
-  roll: 0
-  pitch: 0
-  yaw: 0
+  networkThrust:
+    m_InternalValue: 0
+  networkRoll:
+    m_InternalValue: 0
+  networkPitch:
+    m_InternalValue: 0
+  networkYaw:
+    m_InternalValue: 0
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -390,14 +389,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92974e03e8b84724f94db5c13909ed21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerManager: {fileID: 0}
   rotor: {fileID: 548169382550063356}
   rotorForce: 1000
   yawTorque: 250
   pitchTorque: 250
   rollTorque: 250
   thrustForce: 8000
-  upwardThrustVectorOffset: 0.5
-  currentSpeed: 0
+  upwardThrustVectorOffset: 0.615
+  rb: {fileID: 548169382991786599}
+  tr: {fileID: 548169382991786596}
   dash:
     force: 5000
     cooldown: 1
@@ -1319,12 +1320,12 @@ PrefabInstance:
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.0040515903
+      value: -0.004051252
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00006314269
+      value: 0.000063137406
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
@@ -1529,12 +1530,12 @@ PrefabInstance:
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.0040515903
+      value: -0.004051252
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00006314269
+      value: 0.000063137406
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
@@ -1601,6 +1602,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: HUD
       objectReference: {fileID: 0}
+    - target: {fileID: 3415252243573351251, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: outputVelocity
+      value: 
+      objectReference: {fileID: 5468480333737548721}
     - target: {fileID: 4119239944457826358, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_Pivot.x

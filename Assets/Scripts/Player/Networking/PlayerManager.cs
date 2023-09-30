@@ -6,94 +6,54 @@ namespace Player.Networking
 {
     public class PlayerManager : NetworkBehaviour
     {
-        // Canonical location for player args
-        [SerializeField] PlayerArgs playerArgs;
-        private Vector4 movementData;
-        private Vector3 upVec;
-        private Vector3 forwardVec;
+        
+        public Transform VehicleTransform { get; private set; }
+        public InputManager InputManager { get; private set; }
+        public Rigidbody Rb { get; private set; }
+        public MovementController MovementController { get; private set; }
+        
         // readonly NetworkVariable<Vector3> networkPosition = new();
         // readonly NetworkVariable<Quaternion> networkRotation = new();
         // readonly NetworkVariable<Vector3> networkVelocity = new();
         // readonly NetworkVariable<Vector3> networkAngularVelocity = new();
         
-
         private void Start()
         {
-            playerArgs = new PlayerArgs
-            {
-                transform = GetComponent<Transform>(),
-                rigidbody = GetComponent<Rigidbody>(),
-                inputManager = GetComponent<InputManager>(),
-                movementController = GetComponent<MovementController>()
-            };
-            
-            movementData = new(playerArgs.inputManager.thrust, playerArgs.inputManager.yaw, playerArgs.inputManager.pitch, playerArgs.inputManager.roll);
-            upVec = playerArgs.transform.up;
-            forwardVec = playerArgs.transform.forward;
+            VehicleTransform = GetComponent<Transform>();
+            InputManager = GetComponent<InputManager>();
+            MovementController = GetComponent<MovementController>();
+            Rb = GetComponent<Rigidbody>();
         }
-
-        // public override void OnNetworkSpawn()
-        // {
-        //     if(IsOwner)
-        //         AssignNetworkValues();
-        //     
-        // }
-        
-        // void Update()
-        // {
-        //     if(IsOwner)
-        //     {
-        //         playerArgs.transform.position = networkPosition.Value;
-        //         playerArgs.transform.rotation = networkRotation.Value;
-        //         playerArgs.rigidbody.velocity = networkVelocity.Value;
-        //         playerArgs.rigidbody.angularVelocity = networkAngularVelocity.Value;
-        //     }
-        // }
         
         private void FixedUpdate()
         {
             if(!IsOwner) return;
            
-            if(IsLocalPlayer) 
+            if(IsServer && IsLocalPlayer) 
                 HandleAllMovement();
                 
             if (IsClient && IsLocalPlayer)
-            {
                 HandleAllMovementServerRPC();
-            }
+            
         }
-        
-        // private void AssignNetworkValues()
-        // {
-        //     networkPosition.Value = playerArgs.transform.position;
-        //     networkRotation.Value = playerArgs.transform.rotation;
-        //     networkVelocity.Value = playerArgs.rigidbody.velocity;
-        //     networkAngularVelocity.Value = playerArgs.rigidbody.angularVelocity;
-        // }
+ 
         
         void HandleAllMovement()
         {
-            var thrust = playerArgs.inputManager.thrust;
-            var yaw = playerArgs.inputManager.yaw;
-            var pitch = playerArgs.inputManager.pitch;
-            var roll = playerArgs.inputManager.roll;
-            var upwardVector = playerArgs.transform.up;
-            var forwardVector = playerArgs.transform.forward;
-
-            
-            playerArgs.movementController.HandleThrust(thrust, upwardVector, forwardVector);
-            playerArgs.movementController.HandleYaw(yaw);
-            playerArgs.movementController.HandlePitch(pitch);
-            playerArgs.movementController.HandleRoll(roll);
+            MovementController.HandleThrust(InputManager.networkThrust.Value);
+            MovementController.HandleYaw(InputManager.networkYaw.Value);
+            MovementController.HandlePitch(InputManager.networkPitch.Value);
+            MovementController.HandleRoll(InputManager.networkRoll.Value);
         }
         
-        public PlayerArgs GetPlayerArgs() => playerArgs;
-        
-       [ServerRpc]
-       private void HandleAllMovementServerRPC()
-       {
-           HandleAllMovement();
-       }
+        [ServerRpc]
+        private void HandleAllMovementServerRPC()
+        {
+            MovementController.HandleThrustServerRPC(InputManager.networkThrust.Value);
+            MovementController.HandleYawServerRPC(InputManager.networkYaw.Value);
+            MovementController.HandlePitchServerRPC(InputManager.networkPitch.Value);
+            MovementController.HandleRollServerRPC(InputManager.networkRoll.Value);
+        }
        
        
        

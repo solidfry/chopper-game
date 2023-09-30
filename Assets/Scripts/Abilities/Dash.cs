@@ -11,15 +11,13 @@ namespace Abilities
         [SerializeField] float cooldown = 1f;
         [SerializeField] bool canDash = true;
         
-        Transform tr;
         private Rigidbody rb;
         
         float cooldownTimer = 0f;
         
-        public void OnStart(Transform transform)
+        public void OnStart(Rigidbody _rb = null)
         {
-            tr = transform;
-            rb = tr.GetComponent<Rigidbody>();
+            rb = _rb;
         }
 
         public void OnUpdate()
@@ -41,7 +39,7 @@ namespace Abilities
 
         public void DoAbility()
         {
-            if(!canDash) return;
+            if(!canDash && rb != null) return;
             
             rb.AddForce(rb.velocity * force);
             canDash = false;

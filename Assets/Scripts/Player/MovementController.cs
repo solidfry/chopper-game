@@ -1,6 +1,5 @@
 using System;
 using Abilities;
-using Player.Networking;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -15,73 +14,81 @@ namespace Player
         [SerializeField] private float rollTorque = 1000f;
         [SerializeField] private float thrustForce = 2f;
         [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
-
-        public event Action<Vector3> SendForwardVectorToUI;
-        
-        PlayerArgs playerArgs;
-
-        [SerializeField] private float currentSpeed = new();
+        [SerializeField] private Rigidbody rb;
+        [SerializeField] private Transform tr;
 
         [SerializeField] Dash dash = new();
 
-        public override void OnNetworkSpawn()
+        private void Start()
         {
             if(!IsOwner) return;
-
-            if(IsLocalPlayer)
+            
+            if(IsLocalPlayer && IsClient)
             {
-                playerArgs = GetComponent<PlayerManager>().GetPlayerArgs();
-                currentSpeed = playerArgs.rigidbody.velocity.magnitude;
-
-                dash.OnStart(playerArgs.transform);
+                if(rb == null)
+                    rb = GetComponent<Rigidbody>();
+                
+                if(tr == null)
+                    tr = GetComponent<Transform>();
+                
+                // currentSpeed = rb.velocity.magnitude;
+                dash.OnStart(rb);
             }
         }
 
         private void Update()
         {
-            
+            if(!IsOwner) return;
+
             dash.OnUpdate();
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
         }
 
         private void FixedUpdate()
         {
-            currentSpeed = playerArgs.rigidbody.velocity.magnitude;
-            SendForwardVectorToUI?.Invoke(playerArgs.transform.forward);
+            if(!IsOwner) return;
+
+            if(IsLocalPlayer && IsClient || IsLocalPlayer && IsHost)
+            {
+                // currentSpeed = rb.velocity.magnitude;
+                // SendForwardVectorToUI?.Invoke(tr.forward);
+            }
         }
 
-        public void HandleThrust(float thrustInput, Vector3 up, Vector3 forward)
+        public void HandleThrust(float thrustInput)
         {
+            Vector3 up = tr.up;
+            Vector3 forward = tr.forward;
+            
             // I want to add force in the direction of the players upward vector with a minor offset in the direction of the players forward vector
-            var thrustVector = up + forward * upwardThrustVectorOffset;
+            Vector3 thrustVector = up + forward * upwardThrustVectorOffset;
 
             if (thrustInput > 0.1f)
             {
-                playerArgs.rigidbody.AddForce(thrustVector * (thrustForce * thrustInput));
+                rb.AddForce(thrustVector * (thrustForce * thrustInput));
             }
             else if (thrustInput < -0.1f)
             {
-                playerArgs.rigidbody.AddForce(Vector3.up * (thrustForce * thrustInput));
+                rb.AddForce(Vector3.up * (thrustForce * thrustInput));
             }
         }
 
         public void HandleYaw(float yawInput)
         {
             Vector3 yawAxis = new Vector3(0, yawInput * yawTorque, 0);
-            playerArgs.rigidbody.AddRelativeTorque(yawAxis);
+            rb.AddRelativeTorque(yawAxis);
         }
-
-
+        
         public void HandleRoll(float rollInput)
         {
             Vector3 rollAxis = new Vector3(0, 0, -rollInput * rollTorque);
-            playerArgs.rigidbody.AddRelativeTorque(rollAxis);
+            rb.AddRelativeTorque(rollAxis);
         }
 
         public void HandlePitch(float pitchInput)
         {
             Vector3 pitchAxis = new Vector3(pitchInput * pitchTorque, 0, 0);
-            playerArgs.rigidbody.AddRelativeTorque(pitchAxis);
+            rb.AddRelativeTorque(pitchAxis);
         }
 
         public void HandleDash() => dash.DoAbility();
@@ -120,5 +127,38 @@ namespace Player
             Vector3 destination = transform.position + direction * scale;
             Gizmos.DrawLine(transform.position, destination);
         }
+        
+        
+        [ServerRpc]
+        public void HandleDashServerRPC()
+        {
+            HandleDash();
+        }
+        
+        [ServerRpc]
+        public void HandleThrustServerRPC(float thrustInput)
+        {
+            HandleThrust(thrustInput);
+        }
+        
+        [ServerRpc]
+        public void HandleYawServerRPC(float yawInput)
+        {
+            HandleYaw(yawInput);
+        }
+        
+        [ServerRpc]
+        public void HandleRollServerRPC(float rollInput)
+        {
+            HandleRoll(rollInput);
+        }
+        
+        [ServerRpc]
+        public void HandlePitchServerRPC(float pitchInput)
+        {
+            HandlePitch(pitchInput);
+        }
+        
+        
     }
 }

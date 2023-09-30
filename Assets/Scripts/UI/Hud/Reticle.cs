@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace UI.GameUI
+namespace UI.Hud
 {
     public class Reticle : MonoBehaviour
     {

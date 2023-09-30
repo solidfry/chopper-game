@@ -1,31 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
-using UI.GameUI;
-using UI.Hud;
 using UnityEngine;
 
-public class UpdateSpeed : MonoBehaviour
+namespace UI.Hud
 {
-    TMP_Text text;
-    // Start is called before the first frame update
-    void Start()
+    public class UpdateSpeed : MonoBehaviour
     {
-        text = GetComponent<TMP_Text>();
-    }
+        [SerializeField] TMP_Text text;
+        [SerializeField] OutputVelocity outputVelocity;
 
-    private void OnEnable()
-    {
-        OutputVelocity.onSpeedChanged += UpdateText;
-    }
+        void Start()
+        {
+            if (outputVelocity is null) return; 
+           
+            if (text is null) GetComponentInChildren<TMP_Text>();
+        }
+
+        private void OnEnable()
+        {
+            outputVelocity.OnSpeedChanged += UpdateText;
+        }
     
-    private void OnDisable()
-    {
-        OutputVelocity.onSpeedChanged -= UpdateText;
-    }
+        private void OnDisable()
+        {
+            outputVelocity.OnSpeedChanged -= UpdateText;
+        }
     
-    void UpdateText(float speed)
-    {
-        text.text = speed.ToString("F0");
+        void UpdateText(float speed)
+        {
+            text.text = speed.ToString("F0");
+        }
     }
 }

@@ -1,20 +1,24 @@
-﻿using UnityEngine;
+﻿using Unity.Netcode;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Player
 {
-    public class InputManager : MonoBehaviour
+    public class InputManager : NetworkBehaviour
     {
-        public float thrust;
-        public float roll;
-        public float pitch;
-        public float yaw;
-        
+        public NetworkVariable<float> networkThrust = new ();
+        public NetworkVariable<float> networkRoll = new ();
+        public NetworkVariable<float> networkPitch = new ();
+        public NetworkVariable<float> networkYaw = new ();
+
+       
+
+
         #region Input Handling
-        public void OnThrust(InputAction.CallbackContext context) => thrust = context.ReadValue<float>();
-        public void OnPitch(InputAction.CallbackContext context) => pitch = context.ReadValue<float>();
-        public void OnYaw(InputAction.CallbackContext context) => yaw = context.ReadValue<float>();
-        public void OnRoll (InputAction.CallbackContext context) => roll = context.ReadValue<float>();
+        public void OnThrust(InputAction.CallbackContext context) => networkThrust.Value = context.ReadValue<float>();
+        public void OnPitch(InputAction.CallbackContext context) => networkPitch.Value = context.ReadValue<float>();
+        public void OnYaw(InputAction.CallbackContext context) => networkYaw.Value = context.ReadValue<float>();
+        public void OnRoll (InputAction.CallbackContext context) => networkRoll.Value = context.ReadValue<float>();
         #endregion
         
     }
