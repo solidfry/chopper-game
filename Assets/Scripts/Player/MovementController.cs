@@ -70,13 +70,5 @@ namespace Player
             _thrustVector = _up + _forward * _upwardThrustVectorOffset;
         }
         
-        public void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
-        {
-            HandleThrust(thrustInput);
-            HandleYaw(yawInput);
-            HandlePitch(pitchInput);
-            HandleRoll(rollInput);
-        }
-        
     }
 }

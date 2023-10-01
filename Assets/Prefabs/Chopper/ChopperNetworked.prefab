@@ -169,9 +169,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <PlayerTransform>k__BackingField: {fileID: 548169382991786596}
-  <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
   <PlayerInput>k__BackingField: {fileID: 210267188}
+  <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
   <InputController>k__BackingField:
     thrust: 0
     roll: 0
@@ -402,8 +401,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 082facd78dfdb0c4b839da7f9a66717f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ignorePlayers:
+    serializedVersion: 2
+    m_Bits: 64
+  altitudeCheckRange: 10000
   speed: 0
   speedKmh: 0
+  altitudeInMetres: 0
 --- !u!82 &6082360959239746859
 AudioSource:
   m_ObjectHideFlags: 0
@@ -1547,6 +1551,11 @@ PrefabInstance:
       propertyPath: GlobalObjectIdHash
       value: 951099334
       objectReference: {fileID: 0}
+    - target: {fileID: 1903044571837913870, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: outputHudValues
+      value: 
+      objectReference: {fileID: 5468480333737548721}
     - target: {fileID: 2454351902714255719, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_SizeDelta.y
@@ -1732,11 +1741,66 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5975446254133160876, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6706176064659277704, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6706176064659277704, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6706176064659277704, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6706176064659277704, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6706176064659277704, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6735819347799434985, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: helicopterTransform
       value: 
       objectReference: {fileID: 3132799750971468266}
+    - target: {fileID: 7007162466651151219, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7007162466651151219, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7007162466651151219, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7007162466651151219, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7007162466651151219, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7073253736985958336, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: objectToFollow
@@ -1747,7 +1811,8 @@ PrefabInstance:
       propertyPath: helicopter
       value: 
       objectReference: {fileID: 548169382991786597}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3415252243573351251, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
