@@ -1,109 +1,75 @@
 using System;
-using Abilities;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Player
 {
-    public class MovementController : NetworkBehaviour // Changed MonoBehaviour to NetworkBehaviour
+    /// <summary>
+    /// Takes input from the InputController and applies it to the vehicle
+    /// </summary>
+    [Serializable]
+    public class MovementController 
     {
-        [SerializeField] private InputManager inputManager; // Reference to InputManager
-        [SerializeField] GameObject rotor;
-        [SerializeField] float rotorForce = 1000f;
-        [SerializeField] private float yawTorque = 500f;
-        [SerializeField] private float pitchTorque = 1000f;
-        [SerializeField] private float rollTorque = 1000f;
-        [SerializeField] private float thrustForce = 2f;
-        [SerializeField][Range(0, 1)] private float upwardThrustVectorOffset = 0.5f;
-        [SerializeField] private Rigidbody rb;
-        [SerializeField] private Transform tr;
+        private float _upwardThrustVectorOffset;
+        private Rigidbody _rigidbody;
+        VehicleValues _physicsValues;
+        Quaternion _rotation;
+        Vector3 _position;
+        Vector3 _up;
+        Vector3 _forward;
+        Vector3 _thrustVector;
 
-        [SerializeField] Dash dash = new();
-
-        private void Start()
+        public MovementController(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
-            if (!IsOwner) return;
-
-            if (inputManager == null)
-                inputManager = FindObjectOfType<InputManager>();
-
-            if (rb == null)
-                rb = GetComponent<Rigidbody>();
-            
-            if (tr == null)
-                tr = GetComponent<Transform>();
-            
-            dash.OnStart(rb);
+            _physicsValues = physicsValues;
+            _rigidbody = rigidbody;
+            _rotation = rotation;
+            _position = position;
+            _upwardThrustVectorOffset = physicsValues.thrustVectorOffset;
         }
-
-        private void Update()
-        {
-            if (!IsOwner) return;
-
-            if (inputManager != null)
-            {
-                if (IsServer && IsLocalPlayer)
-                {
-                    // Fetch input from network variables and pass it to Handle methods
-                    HandleAllMovement(
-                        inputManager.networkThrust.Value,
-                        inputManager.networkYaw.Value,
-                        inputManager.networkPitch.Value,
-                        inputManager.networkRoll.Value);
-                }
-
-                if (IsClient && IsLocalPlayer)
-                {
-                    // Fetch input from network variables and pass it to Handle methods
-                    HandleAllMovementServerRPC(
-                        inputManager.networkThrust.Value,
-                        inputManager.networkYaw.Value,
-                        inputManager.networkPitch.Value,
-                        inputManager.networkRoll.Value);
-                }
-            }
-            
-
-            dash.OnUpdate();
-            rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
-        }
-
-        public void HandleThrust(float thrustInput)
-        {
-            Vector3 up = tr.up;
-            Vector3 forward = tr.forward;
-            Vector3 thrustVector = up + forward * upwardThrustVectorOffset;
-
-            if (thrustInput > 0.1f)
-            {
-                rb.AddForce(thrustVector * (thrustForce * thrustInput));
-            }
-            else if (thrustInput < -0.1f)
-            {
-                rb.AddForce(Vector3.up * (thrustForce * thrustInput));
-            }
-        }
+        
+        public void OnStart() {}
+        
+        public void OnUpdate(Quaternion rotation, Vector3 position) => UpdateMovementVariables(rotation, position);
 
         public void HandleYaw(float yawInput)
         {
-            Vector3 yawAxis = new Vector3(0, yawInput * yawTorque, 0);
-            rb.AddRelativeTorque(yawAxis);
+            Vector3 yawAxis = new Vector3(0, yawInput * _physicsValues.yawTorque, 0);
+            _rigidbody.AddRelativeTorque(yawAxis);
+        }
+        
+        public void HandlePitch(float pitchInput)
+        {
+            Vector3 pitchAxis = new Vector3(pitchInput * _physicsValues.pitchTorque, 0, 0);
+            _rigidbody.AddRelativeTorque(pitchAxis);
         }
 
         public void HandleRoll(float rollInput)
         {
-            Vector3 rollAxis = new Vector3(0, 0, -rollInput * rollTorque);
-            rb.AddRelativeTorque(rollAxis);
+            Vector3 rollAxis = new Vector3(0, 0, -rollInput * _physicsValues.rollTorque);
+            _rigidbody.AddRelativeTorque(rollAxis);
         }
-
-        public void HandlePitch(float pitchInput)
+        
+        public void HandleThrust(float thrustInput)
         {
-            Vector3 pitchAxis = new Vector3(pitchInput * pitchTorque, 0, 0);
-            rb.AddRelativeTorque(pitchAxis);
+            if (thrustInput > 0.1f)
+            {
+                _rigidbody.AddForce(_thrustVector * (_physicsValues.thrustForce * thrustInput));
+            }
+            else if (thrustInput < -0.1f)
+            {
+                _rigidbody.AddForce(Vector3.up * (_physicsValues.thrustForce * thrustInput));
+            }
         }
-
-        public void HandleDash() => dash.DoAbility();
-
+        
+        private void UpdateMovementVariables(Quaternion rotation, Vector3 position)
+        {
+            _position = position;
+            _rotation = rotation;
+            _up = _rotation * Vector3.up;
+            _forward = _rotation * Vector3.forward;
+            _thrustVector = _up + _forward * _upwardThrustVectorOffset;
+        }
+        
         public void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
             HandleThrust(thrustInput);
@@ -112,10 +78,5 @@ namespace Player
             HandleRoll(rollInput);
         }
         
-        [ServerRpc]
-        void HandleAllMovementServerRPC(float thrustInput, float yawInput, float pitchInput, float rollInput)
-        {
-            HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
-        }
     }
 }

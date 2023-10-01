@@ -14,10 +14,15 @@ namespace Abilities
         private Rigidbody rb;
         
         float cooldownTimer = 0f;
-        
-        public void OnStart(Rigidbody _rb = null)
-        {
+
+        public Dash(Rigidbody _rb)
+        { 
             rb = _rb;
+        }
+
+        public void OnStart()
+        {
+            canDash = true;
         }
 
         public void OnUpdate()

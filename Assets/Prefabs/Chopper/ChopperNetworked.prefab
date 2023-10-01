@@ -117,10 +117,8 @@ GameObject:
   m_Component:
   - component: {fileID: 548169382991786596}
   - component: {fileID: 7360639563048435297}
-  - component: {fileID: 1378939668428707430}
   - component: {fileID: 210267188}
   - component: {fileID: 548169382991786599}
-  - component: {fileID: 1211631705733180463}
   - component: {fileID: 1632664233}
   - component: {fileID: 5468480333737548721}
   - component: {fileID: 6082360959239746859}
@@ -171,26 +169,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1378939668428707430
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bf5866fca52040f0aabed879e1e4fbd8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  networkThrust:
-    m_InternalValue: 0
-  networkRoll:
-    m_InternalValue: 0
-  networkPitch:
-    m_InternalValue: 0
-  networkYaw:
-    m_InternalValue: 0
+  <PlayerTransform>k__BackingField: {fileID: 548169382991786596}
+  <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
+  <PlayerInput>k__BackingField: {fileID: 210267188}
+  <InputController>k__BackingField:
+    thrust: 0
+    roll: 0
+    pitch: 0
+    yaw: 0
+  physicsValues:
+    yawTorque: 300
+    pitchTorque: 300
+    rollTorque: 300
+    thrustForce: 10000
+    thrustVectorOffset: 0.437
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -219,8 +211,8 @@ MonoBehaviour:
   m_ActionEvents:
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1378939668428707430}
-        m_TargetAssemblyTypeName: Player.InputManager, Assembly-CSharp
+      - m_Target: {fileID: 7360639563048435297}
+        m_TargetAssemblyTypeName: Player.Networking.PlayerManager, Assembly-CSharp
         m_MethodName: OnThrust
         m_Mode: 0
         m_Arguments:
@@ -235,8 +227,8 @@ MonoBehaviour:
     m_ActionName: Flight/Thrust[/Keyboard/s,/Keyboard/w]
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1378939668428707430}
-        m_TargetAssemblyTypeName: Player.InputManager, Assembly-CSharp
+      - m_Target: {fileID: 7360639563048435297}
+        m_TargetAssemblyTypeName: Player.Networking.PlayerManager, Assembly-CSharp
         m_MethodName: OnPitch
         m_Mode: 0
         m_Arguments:
@@ -251,8 +243,8 @@ MonoBehaviour:
     m_ActionName: Flight/Pitch[/Keyboard/upArrow,/Keyboard/downArrow]
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1378939668428707430}
-        m_TargetAssemblyTypeName: Player.InputManager, Assembly-CSharp
+      - m_Target: {fileID: 7360639563048435297}
+        m_TargetAssemblyTypeName: Player.Networking.PlayerManager, Assembly-CSharp
         m_MethodName: OnYaw
         m_Mode: 0
         m_Arguments:
@@ -267,8 +259,8 @@ MonoBehaviour:
     m_ActionName: Flight/Yaw[/Keyboard/a,/Keyboard/d]
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1378939668428707430}
-        m_TargetAssemblyTypeName: Player.InputManager, Assembly-CSharp
+      - m_Target: {fileID: 7360639563048435297}
+        m_TargetAssemblyTypeName: Player.Networking.PlayerManager, Assembly-CSharp
         m_MethodName: OnRoll
         m_Mode: 0
         m_Arguments:
@@ -331,7 +323,7 @@ MonoBehaviour:
     m_ActionName: Flight/Fire3[/Keyboard/space]
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1211631705733180463}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: Player.ChopperController, Assembly-CSharp
         m_MethodName: HandleDash
         m_Mode: 1
@@ -358,7 +350,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 548169382991786597}
   serializedVersion: 4
-  m_Mass: 400
+  m_Mass: 300
   m_Drag: 0.75
   m_AngularDrag: 0.9
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -377,32 +369,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 1
---- !u!114 &1211631705733180463
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 92974e03e8b84724f94db5c13909ed21, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerManager: {fileID: 0}
-  rotor: {fileID: 548169382550063356}
-  rotorForce: 1000
-  yawTorque: 250
-  pitchTorque: 250
-  rollTorque: 250
-  thrustForce: 8000
-  upwardThrustVectorOffset: 0.615
-  rb: {fileID: 548169382991786599}
-  tr: {fileID: 548169382991786596}
-  dash:
-    force: 5000
-    cooldown: 1
-    canDash: 1
 --- !u!114 &1632664233
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1477,12 +1443,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ac4d27631c4515443bc86232ec9b2ebd, type: 3}
---- !u!1 &548169382550063356 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3185819935474278033, guid: ac4d27631c4515443bc86232ec9b2ebd,
-    type: 3}
-  m_PrefabInstance: {fileID: 3147228322537739885}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &548169382550063359 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3185819935474278034, guid: ac4d27631c4515443bc86232ec9b2ebd,

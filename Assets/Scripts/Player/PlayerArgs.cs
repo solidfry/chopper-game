@@ -9,14 +9,14 @@ namespace Player
     {
         public Transform transform;
         public Rigidbody rigidbody;
-        public InputManager inputManager;
+        [FormerlySerializedAs("rawInputManager")] [FormerlySerializedAs("inputManager")] public InputController inputController;
         public MovementController movementController;
 
-        public PlayerArgs(Transform _transform, Rigidbody _rigidbody, InputManager _inputManager, MovementController _movementController)
+        public PlayerArgs(Transform _transform, Rigidbody _rigidbody, InputController inputController, MovementController _movementController)
         {
             transform = _transform;
             rigidbody = _rigidbody;
-            inputManager = _inputManager;
+            this.inputController = inputController;
             movementController = _movementController;
         }
       
