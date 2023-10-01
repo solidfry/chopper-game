@@ -1,5 +1,4 @@
-﻿using System;
-using Unity.Netcode;
+﻿using Unity.Netcode;
 using UnityEngine;
 
 namespace Player.Networking
@@ -12,12 +11,26 @@ namespace Player.Networking
         public Rigidbody Rb { get; private set; }
         public MovementController MovementController { get; private set; }
         
-        // readonly NetworkVariable<Vector3> networkPosition = new();
-        // readonly NetworkVariable<Quaternion> networkRotation = new();
-        // readonly NetworkVariable<Vector3> networkVelocity = new();
-        // readonly NetworkVariable<Vector3> networkAngularVelocity = new();
-        
         private void Start()
+        {
+            if (IsOwner || IsServer)
+            {
+                InitializeComponents();
+            }
+        }
+        
+        private void FixedUpdate()
+        {
+            if (!IsOwner) return;
+
+            if (IsServer)
+                HandleAllMovement(InputManager.networkThrust.Value, InputManager.networkYaw.Value, InputManager.networkPitch.Value, InputManager.networkRoll.Value);
+
+            if (IsClient)
+                HandleAllMovementServerRpc(InputManager.networkThrust.Value, InputManager.networkYaw.Value, InputManager.networkPitch.Value, InputManager.networkRoll.Value);
+        }
+        
+        private void InitializeComponents()
         {
             VehicleTransform = GetComponent<Transform>();
             InputManager = GetComponent<InputManager>();
@@ -25,38 +38,29 @@ namespace Player.Networking
             Rb = GetComponent<Rigidbody>();
         }
         
-        private void FixedUpdate()
+        //Wrap Handle all movement
+        void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
-            if(!IsOwner) return;
-           
-            if(IsServer && IsLocalPlayer) 
-                HandleAllMovement();
-                
-            if (IsClient && IsLocalPlayer)
-                HandleAllMovementServerRPC();
+            if (MovementController is null)
+            {
+                Debug.Log("Is MovementController null? " + (MovementController == null));
+                return;
+            }
             
+            MovementController.HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
         }
- 
-        
-        void HandleAllMovement()
-        {
-            MovementController.HandleThrust(InputManager.networkThrust.Value);
-            MovementController.HandleYaw(InputManager.networkYaw.Value);
-            MovementController.HandlePitch(InputManager.networkPitch.Value);
-            MovementController.HandleRoll(InputManager.networkRoll.Value);
-        }
-        
+
         [ServerRpc]
-        private void HandleAllMovementServerRPC()
+        // Handle all movement
+        void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
-            MovementController.HandleThrustServerRPC(InputManager.networkThrust.Value);
-            MovementController.HandleYawServerRPC(InputManager.networkYaw.Value);
-            MovementController.HandlePitchServerRPC(InputManager.networkPitch.Value);
-            MovementController.HandleRollServerRPC(InputManager.networkRoll.Value);
+            if (MovementController is null)
+            {
+                
+                Debug.LogError("MovementController is null in HandleAllMovementServerRPC");
+                return;
+            }
+            MovementController.HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
         }
-       
-       
-       
-       
     }
 }

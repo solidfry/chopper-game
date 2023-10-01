@@ -5,8 +5,9 @@ using UnityEngine;
 
 namespace Player
 {
-    public class MovementController : NetworkBehaviour
+    public class MovementController : NetworkBehaviour // Changed MonoBehaviour to NetworkBehaviour
     {
+        [SerializeField] private InputManager inputManager; // Reference to InputManager
         [SerializeField] GameObject rotor;
         [SerializeField] float rotorForce = 1000f;
         [SerializeField] private float yawTorque = 500f;
@@ -21,46 +22,56 @@ namespace Player
 
         private void Start()
         {
-            if(!IsOwner) return;
+            if (!IsOwner) return;
+
+            if (inputManager == null)
+                inputManager = FindObjectOfType<InputManager>();
+
+            if (rb == null)
+                rb = GetComponent<Rigidbody>();
             
-            if(IsLocalPlayer && IsClient)
-            {
-                if(rb == null)
-                    rb = GetComponent<Rigidbody>();
-                
-                if(tr == null)
-                    tr = GetComponent<Transform>();
-                
-                // currentSpeed = rb.velocity.magnitude;
-                dash.OnStart(rb);
-            }
+            if (tr == null)
+                tr = GetComponent<Transform>();
+            
+            dash.OnStart(rb);
         }
 
         private void Update()
         {
-            if(!IsOwner) return;
+            if (!IsOwner) return;
+
+            if (inputManager != null)
+            {
+                if (IsServer && IsLocalPlayer)
+                {
+                    // Fetch input from network variables and pass it to Handle methods
+                    HandleAllMovement(
+                        inputManager.networkThrust.Value,
+                        inputManager.networkYaw.Value,
+                        inputManager.networkPitch.Value,
+                        inputManager.networkRoll.Value);
+                }
+
+                if (IsClient && IsLocalPlayer)
+                {
+                    // Fetch input from network variables and pass it to Handle methods
+                    HandleAllMovementServerRPC(
+                        inputManager.networkThrust.Value,
+                        inputManager.networkYaw.Value,
+                        inputManager.networkPitch.Value,
+                        inputManager.networkRoll.Value);
+                }
+            }
+            
 
             dash.OnUpdate();
             rotor.transform.RotateAround(rotor.transform.position, rotor.transform.up, rotorForce * Time.deltaTime);
-        }
-
-        private void FixedUpdate()
-        {
-            if(!IsOwner) return;
-
-            if(IsLocalPlayer && IsClient || IsLocalPlayer && IsHost)
-            {
-                // currentSpeed = rb.velocity.magnitude;
-                // SendForwardVectorToUI?.Invoke(tr.forward);
-            }
         }
 
         public void HandleThrust(float thrustInput)
         {
             Vector3 up = tr.up;
             Vector3 forward = tr.forward;
-            
-            // I want to add force in the direction of the players upward vector with a minor offset in the direction of the players forward vector
             Vector3 thrustVector = up + forward * upwardThrustVectorOffset;
 
             if (thrustInput > 0.1f)
@@ -78,7 +89,7 @@ namespace Player
             Vector3 yawAxis = new Vector3(0, yawInput * yawTorque, 0);
             rb.AddRelativeTorque(yawAxis);
         }
-        
+
         public void HandleRoll(float rollInput)
         {
             Vector3 rollAxis = new Vector3(0, 0, -rollInput * rollTorque);
@@ -93,72 +104,18 @@ namespace Player
 
         public void HandleDash() => dash.DoAbility();
 
-        // Editor only
-        private void OnDrawGizmos()
-        {
-            Color color;
-            color = Color.green;
-            // local up
-            DrawHelperAtCenter(this.transform.up, Color.magenta, 2f);
-
-            color.g -= 0.5f;
-            // global up
-            DrawHelperAtCenter(Vector3.up, color, 1f);
-
-            color = Color.blue;
-            // local forward
-            DrawHelperAtCenter(this.transform.forward, color, 2f);
-
-            color.b -= 0.5f;
-            // global forward
-            DrawHelperAtCenter(Vector3.forward, color, 1f);
-
-            color = Color.red;
-            // local right
-            DrawHelperAtCenter(this.transform.right, color, 2f);
-
-            color.r -= 0.5f;
-            // global right
-            DrawHelperAtCenter(Vector3.right, color, 1f);
-        }
-        private void DrawHelperAtCenter(Vector3 direction, Color color, float scale)
-        {
-            Gizmos.color = color;
-            Vector3 destination = transform.position + direction * scale;
-            Gizmos.DrawLine(transform.position, destination);
-        }
-        
-        
-        [ServerRpc]
-        public void HandleDashServerRPC()
-        {
-            HandleDash();
-        }
-        
-        [ServerRpc]
-        public void HandleThrustServerRPC(float thrustInput)
+        public void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
             HandleThrust(thrustInput);
-        }
-        
-        [ServerRpc]
-        public void HandleYawServerRPC(float yawInput)
-        {
             HandleYaw(yawInput);
-        }
-        
-        [ServerRpc]
-        public void HandleRollServerRPC(float rollInput)
-        {
+            HandlePitch(pitchInput);
             HandleRoll(rollInput);
         }
         
         [ServerRpc]
-        public void HandlePitchServerRPC(float pitchInput)
+        void HandleAllMovementServerRPC(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
-            HandlePitch(pitchInput);
+            HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
         }
-        
-        
     }
 }
