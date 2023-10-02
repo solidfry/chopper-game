@@ -8,22 +8,21 @@ namespace Cameras
 {
     public class CameraShakeManager : MonoBehaviour
     {
-        [SerializeField] CinemachineVirtualCamera cam;
+        [SerializeField] private CinemachineVirtualCamera cam;
         [SerializeField] private CinemachineBasicMultiChannelPerlin noise;
-        float defaultAmplitude;
-        float defaultFrequency;
+        
+        float _defaultAmplitude, _defaultFrequency;
         
         private void Start()
         {
-            cam = FindObjectOfType<CinemachineVirtualCamera>();
-            noise = cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
+            CheckCamera();
+            CheckNoise();
             
-            defaultFrequency = noise.m_FrequencyGain;
-            defaultAmplitude = noise.m_AmplitudeGain;
-            
-            SetCameraValues(defaultAmplitude, defaultFrequency, noise);
+            SetDefaultNoiseValues();
+
+            SetCameraValues(_defaultAmplitude, _defaultFrequency, noise);
         }
-        
+
         private void OnEnable() => GameEvents.onScreenShakeEvent += Shake;
         
         private void OnDisable() => GameEvents.onScreenShakeEvent -= Shake;
@@ -38,27 +37,22 @@ namespace Cameras
                 case Strength.VeryLow:
                     SetCameraValues(.2f, 5f, noise);
                     StartCoroutine(ResetCamera(lengthInSeconds, noise));
-                    // Debug.Log("Very Low");
                     break;
                 case Strength.Low:
                     SetCameraValues(.6f, 10f, noise);
                     StartCoroutine(ResetCamera(lengthInSeconds, noise));
-                    // Debug.Log("Low");
                     break;
                 case Strength.Medium:
                     SetCameraValues(1.4f, 40f, noise);
                     StartCoroutine(ResetCamera(lengthInSeconds, noise));
-                    Debug.Log("Medium");
                     break;
                 case Strength.High:
                     SetCameraValues(1.8f, 60f, noise);
                     StartCoroutine(ResetCamera(lengthInSeconds, noise));
-                    // Debug.Log("High");
                     break;
                 case Strength.VeryHigh:
                     SetCameraValues(2f, 100f, noise);
                     StartCoroutine(ResetCamera(lengthInSeconds, noise));
-                    // Debug.Log("Very High");
                     break;
                 default:
                     break;
@@ -74,11 +68,18 @@ namespace Cameras
         IEnumerator ResetCamera(float lengthInSeconds, CinemachineBasicMultiChannelPerlin _noise)
         {
             yield return new WaitForSeconds(lengthInSeconds);
-            _noise.m_AmplitudeGain = defaultAmplitude;
-            _noise.m_FrequencyGain = defaultFrequency;
+            _noise.m_AmplitudeGain = _defaultAmplitude;
+            _noise.m_FrequencyGain = _defaultFrequency;
         }
+
+        private void CheckNoise() => noise = noise == null ? cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>() : noise;
+
+        private void CheckCamera() => cam = cam == null ? GetComponent<CinemachineVirtualCamera>() : cam;
         
-
-
+        private void SetDefaultNoiseValues()
+        {
+            _defaultFrequency = noise.m_FrequencyGain;
+            _defaultAmplitude = noise.m_AmplitudeGain;
+        }
     }
 }

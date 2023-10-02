@@ -169,6 +169,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed49d37d9914440686f7f6b1744c1db6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerVirtualCamera: {fileID: 1798750486326240021}
+  playerAudioListener: {fileID: 702692961193230429}
   <PlayerInput>k__BackingField: {fileID: 210267188}
   <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
   <InputController>k__BackingField:
@@ -1317,6 +1319,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6beb9861c4df10f46a758c1002bcffd6, type: 3}
+--- !u!114 &1798750486326240021 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4499109546721392900, guid: 6beb9861c4df10f46a758c1002bcffd6,
+    type: 3}
+  m_PrefabInstance: {fileID: 2776045042805824017}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45e653bab7fb20e499bda25e1b646fea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &7074860290372271784 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
@@ -1516,6 +1530,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5925418032089608763, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8878565823841900880, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_Name
@@ -1526,6 +1545,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ffa2e7bf106e0ca4f8648fc06dfe3459, type: 3}
+--- !u!81 &702692961193230429 stripped
+AudioListener:
+  m_CorrespondingSourceObject: {fileID: 5925418032089608763, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
+    type: 3}
+  m_PrefabInstance: {fileID: 6627935017197777510}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6673114790634328676 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
@@ -1571,6 +1596,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: HUD
       objectReference: {fileID: 0}
+    - target: {fileID: 3178995434094898728, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 6869031951152510936}
+    - target: {fileID: 3178995434094898728, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: objectToFollow
+      value: 
+      objectReference: {fileID: 7635141666094576767}
     - target: {fileID: 3415252243573351251, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: outputVelocity
@@ -1801,6 +1836,11 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7073253736985958336, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 6869031951152510936}
     - target: {fileID: 7073253736985958336, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: objectToFollow

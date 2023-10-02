@@ -1,4 +1,5 @@
-﻿using Unity.Netcode;
+﻿using Cinemachine;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,15 +8,21 @@ namespace Player.Networking
     [RequireComponent(typeof(Rigidbody), typeof(PlayerInput))]
     public class PlayerManager : NetworkBehaviour
     {
+        [SerializeField] private CinemachineVirtualCamera playerVirtualCamera;
+        [SerializeField] private AudioListener playerAudioListener;
+        
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
+        [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
 
         [SerializeField] VehicleValues physicsValues = new();
 
         private void Start()
         {
+            SetupAV();
+            
             if (IsClient || IsServer)
             {
                 InitializeComponents();
@@ -78,6 +85,17 @@ namespace Player.Networking
             MovementController.HandleYaw(yawInput);
             MovementController.HandlePitch(pitchInput);
             MovementController.HandleRoll(rollInput);
+        }
+        
+        private void SetupAV()
+        {
+            if (IsOwner && playerVirtualCamera is not null)
+            {
+                PlayerCameraManager.Initialize(playerVirtualCamera, 10);
+                playerAudioListener.enabled = true;
+            }
+            else
+                PlayerCameraManager.Initialize(playerVirtualCamera, 0);
         }
         
         [ServerRpc]
