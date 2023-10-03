@@ -1,12 +1,13 @@
 ﻿using System;
 using Cinemachine;
+using UnityEngine;
 
 namespace Player
 {
     [Serializable]
     public class PlayerCameraManager
     {
-        public CinemachineVirtualCamera Vcam { get; private set; }
+        [field:SerializeField] public CinemachineVirtualCamera Vcam { get; private set; }
         
         public void Initialize(CinemachineVirtualCamera vcam, int priority)
         {

@@ -52,7 +52,7 @@ namespace UI.Hud
 
         private void UpdateSpeed()
         {
-            speed = Vector3.Dot(_rb.velocity, transform.forward);
+            speed = _rb.velocity.magnitude;
             speed = Mathf.Max(0, speed);
             speedKmh = speed * 3600 / 1000;
         }

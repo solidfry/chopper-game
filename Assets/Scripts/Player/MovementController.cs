@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Player
 {
@@ -16,7 +17,11 @@ namespace Player
         Vector3 _position;
         Vector3 _up;
         Vector3 _forward;
-        Vector3 _thrustVector;
+        [SerializeField][ReadOnly] Vector3 thrustVector;
+        
+        [Header("Stabiliser")]
+        [SerializeField] VehicleStabiliser stabiliser = new();
+    
 
         public MovementController(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
@@ -26,8 +31,11 @@ namespace Player
             _position = position;
             _upwardThrustVectorOffset = physicsValues.thrustVectorOffset;
         }
-        
-        public void OnStart() {}
+
+        public void OnStart()
+        {
+            stabiliser.OnStart();
+        }
         
         public void OnUpdate(Quaternion rotation, Vector3 position) => UpdateMovementVariables(rotation, position);
 
@@ -53,7 +61,7 @@ namespace Player
         {
             if (thrustInput > 0.1f)
             {
-                _rigidbody.AddForce(_thrustVector * (_physicsValues.thrustForce * thrustInput));
+                _rigidbody.AddForce(thrustVector * (_physicsValues.thrustForce * thrustInput));
             }
             else if (thrustInput < -0.1f)
             {
@@ -67,8 +75,11 @@ namespace Player
             _rotation = rotation;
             _up = _rotation * Vector3.up;
             _forward = _rotation * Vector3.forward;
-            _thrustVector = _up + _forward * _upwardThrustVectorOffset;
+            thrustVector = _up + _forward * _upwardThrustVectorOffset;
+
+            stabiliser.UpdateStabiliser(_rigidbody, _up);
         }
+
         
     }
 }

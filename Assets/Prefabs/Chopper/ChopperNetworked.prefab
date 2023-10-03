@@ -178,12 +178,21 @@ MonoBehaviour:
     roll: 0
     pitch: 0
     yaw: 0
+  <MovementController>k__BackingField:
+    thrustVector: {x: 0, y: 0, z: 0}
+    stabiliser:
+      useStabiliser: 1
+      strength: 0.5
+      isActive: 0
+      speedThreshold: 40
+  <PlayerCameraManager>k__BackingField:
+    <Vcam>k__BackingField: {fileID: 0}
   physicsValues:
     yawTorque: 300
     pitchTorque: 300
     rollTorque: 300
     thrustForce: 10000
-    thrustVectorOffset: 0.437
+    thrustVectorOffset: 0.3
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -351,9 +360,9 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 548169382991786597}
   serializedVersion: 4
-  m_Mass: 300
-  m_Drag: 0.75
-  m_AngularDrag: 0.9
+  m_Mass: 325
+  m_Drag: 0.6
+  m_AngularDrag: 0.5
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -1741,6 +1750,16 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4158318115714061078, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 6869031951152510936}
+    - target: {fileID: 4480807327369561098, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5697744165332642937, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -1846,14 +1865,26 @@ PrefabInstance:
       propertyPath: objectToFollow
       value: 
       objectReference: {fileID: 7635141666094576767}
+    - target: {fileID: 7081804345029945235, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: m_Name
+      value: LockonZone
+      objectReference: {fileID: 0}
     - target: {fileID: 7713911198686651010, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: helicopter
       value: 
       objectReference: {fileID: 548169382991786597}
+    - target: {fileID: 7988253058664826991, guid: 8ec454c5b95a2f44c93c2c8edea44076,
+        type: 3}
+      propertyPath: helicopterTransform
+      value: 
+      objectReference: {fileID: 548169382991786596}
     m_RemovedComponents:
     - {fileID: 3415252243573351251, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
-    m_RemovedGameObjects: []
+    - {fileID: 6735819347799434985, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
+    m_RemovedGameObjects:
+    - {fileID: 16005400901628580, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8ec454c5b95a2f44c93c2c8edea44076, type: 3}
