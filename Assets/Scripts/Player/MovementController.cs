@@ -18,8 +18,6 @@ namespace Player
         Vector3 _up;
         Vector3 _forward;
         [SerializeField][ReadOnly] Vector3 thrustVector;
-        
-        [Header("Stabiliser")]
         [SerializeField] VehicleStabiliser stabiliser = new();
     
 
