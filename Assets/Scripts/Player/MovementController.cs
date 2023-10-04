@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Player
 {
@@ -18,7 +17,7 @@ namespace Player
         Vector3 _up;
         Vector3 _forward;
         [SerializeField][ReadOnly] Vector3 thrustVector;
-        [SerializeField] VehicleStabiliser stabiliser = new();
+        [SerializeField] VehicleStabiliser stabiliser;
     
 
         public MovementController(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)

@@ -6,10 +6,10 @@ namespace Networking
 {
     public class NetworkCommandLine : MonoBehaviour
     {
-        private NetworkManager netManager;
+        private NetworkManager _netManager;
         void Start()
         {
-            netManager = GetComponentInParent<NetworkManager>();
+            _netManager = GetComponentInParent<NetworkManager>();
             
             if(Application.isEditor) return;
         
@@ -25,13 +25,13 @@ namespace Networking
             switch (mode)
             {
                 case "server":
-                    netManager.StartServer();
+                    _netManager.StartServer();
                     break;
                 case "client":
-                    netManager.StartClient();
+                    _netManager.StartClient();
                     break;
                 case "host":
-                    netManager.StartHost();
+                    _netManager.StartHost();
                     break;
             }
         }

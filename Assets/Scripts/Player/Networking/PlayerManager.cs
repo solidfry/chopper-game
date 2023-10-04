@@ -19,16 +19,16 @@ namespace Player.Networking
 
         [SerializeField] VehicleValues physicsValues = new();
 
-        private void Start()
+        public override void OnNetworkSpawn()
         {
-            SetupAV();
+            SetupAudioVisual();
             
             if (IsClient || IsServer)
             {
                 InitializeComponents();
             }
 
-            if (IsLocalPlayer || (IsServer && !IsLocalPlayer))
+            if (IsLocalPlayer || IsServer && !IsLocalPlayer)
             {
                 PlayerRigidbody.isKinematic = false;
             }
@@ -41,7 +41,7 @@ namespace Player.Networking
 
         private void Update()
         {
-            if (IsClient || IsServer)
+            if (IsClient && IsOwner || IsServer)
             {
                 MovementController.OnUpdate(PlayerRigidbody.rotation, PlayerRigidbody.position);
             }
@@ -55,6 +55,7 @@ namespace Player.Networking
             if (PlayerRigidbody is null)
                 PlayerRigidbody = GetComponent<Rigidbody>();
           
+            // TODO: Issue here with the Stabiliser because this is a new MovementController, i think it's resetting the values in the Stabiliser
             MovementController = new MovementController(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
             MovementController.OnStart();
         }
@@ -87,7 +88,7 @@ namespace Player.Networking
             MovementController.HandleRoll(rollInput);
         }
         
-        private void SetupAV()
+        private void SetupAudioVisual()
         {
             if (IsOwner && playerVirtualCamera is not null)
             {

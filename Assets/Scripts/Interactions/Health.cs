@@ -2,14 +2,13 @@
 using DG.Tweening;
 using Interfaces;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Interactions
 {
     public class Health : MonoBehaviour, IDamageable
     {
         [SerializeField] private int health = 100;
-        [FormerlySerializedAs("onDeath")] [SerializeField] private Death death;
+        [SerializeField] private Death death;
         [SerializeField][ReadOnly] bool isDead;
         
         [SerializeField] Collider collider3d;
@@ -40,16 +39,9 @@ namespace Interactions
                 death?.Play();
                 collider3d.enabled = false;
                 Debug.Log($"{this.transform.name} died.");
-                cleanup = StartCoroutine(Cleanup());
+                
+                cleanup = death is not null ? StartCoroutine(death.Cleanup(this.transform)) : cleanup = null;
             }
-        }
-
-        IEnumerator Cleanup()
-        {
-            yield return new WaitForSeconds(5f);
-            transform.DOScale(Vector3.zero, .25f).SetEase(Ease.OutCirc);
-            yield return new WaitForSeconds(.5f);
-            Destroy(this.gameObject);
         }
         
         private void OnDestroy()

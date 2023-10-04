@@ -4,13 +4,20 @@ using Utilities;
 
 namespace Player
 {
+    /// <summary>
+    /// In theory this class helps the vehicle stay upright when flying at very low speeds slightly above 1 km/h
+    /// </summary>
     [Serializable]
     public class VehicleStabiliser
     {
         [SerializeField] private bool useStabiliser = true;
-        [SerializeField] private float strength;
-        [SerializeField][ReadOnly] private bool isActive;
-        [SerializeField] float speedThreshold;
+        [SerializeField] private float strength = 2f;
+        [SerializeField] private float speedThreshold = 20f;
+        [ReadOnly] 
+        [SerializeField] private bool isActive;
+
+        private Vector3 _correctiveTorque;
+        
         // [SerializeField] private bool debug = false;
         
         public void OnStart()
@@ -51,7 +58,8 @@ namespace Player
             //     Debug.Log($"Axis: {axis}, Angle: {angle}, Torque: {correctiveTorque}");
 
             // Apply the corrective torque
-            rigidbody.AddRelativeTorque(CorrectiveTorque(axis, angle), ForceMode.Acceleration);
+            _correctiveTorque = CorrectiveTorque(axis, angle);
+            rigidbody.AddRelativeTorque(_correctiveTorque, ForceMode.Acceleration);
         }
 
         private bool CheckIsActive(float currentSpeed) => isActive = currentSpeed <= speedThreshold;

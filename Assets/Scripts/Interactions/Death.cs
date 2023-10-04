@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using Interactions.ScriptableObjects;
 using Interfaces;
 using UnityEngine;
@@ -15,6 +17,8 @@ namespace Interactions
         [SerializeField] AudioClip audioClip;
         private Transform parent;
         [SerializeField] bool isExplosive;
+        float ClipLength => audioClip.length;
+        
         public static event Action OnDeath; // We need to remove this as it is only for the first playtest
         
         // [SerializeField] List<DeathEffect> deathEffects;
@@ -38,8 +42,8 @@ namespace Interactions
             if (particles.isPlaying || audioSource.isPlaying) return;
             PlayParticles();
             PlayAudio();
-            ApplyForceExplosion();
             OnDeath?.Invoke();
+            
         }
 
         private void PlayParticles()
@@ -56,16 +60,17 @@ namespace Interactions
             if (audioClip != null && audioSource != null)
                 audioSource.PlayOneShot(audioClip);
         }
-
-        private void ApplyForceExplosion()
-        {
-            if (!isExplosive) return;
-
-            var rb = parent.GetComponent<Rigidbody>();
-            rb.isKinematic = false;
-            rb.AddForceAtPosition(Vector3.up * rb.mass * 1000, parent.position);
-        }
         
+        public IEnumerator Cleanup(Transform transform)
+        {
+            yield return new WaitForSeconds(1f);
+            transform.DOScale(Vector3.zero, .25f).SetEase(Ease.OutCirc);
+            
+            if (audioClip != null)
+                yield return new WaitForSeconds(ClipLength);
+            Object.Destroy(transform.gameObject);
+            
+        }
         
         // public void PlayEffects()
         // {
