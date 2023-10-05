@@ -91,6 +91,8 @@ namespace Player.Networking
             } 
             else if (IsClient && IsLocalPlayer)
             {
+                // TODO: This used to be the ServerRpc, but it was causing issues with the Server Reconciliation and Authorization so
+                // TODO: for now ill leave it like this until i can figure out a better way
                 HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll);
             }
         }
