@@ -29,8 +29,7 @@ namespace Cameras
         
         void Shake(Strength str = Strength.Medium, float lengthInSeconds = .2f)
         {
-            if (noise == null)
-                noise = cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
+            CheckNoise();
         
             switch (str)
             {
@@ -72,7 +71,10 @@ namespace Cameras
             _noise.m_FrequencyGain = _defaultFrequency;
         }
 
-        private void CheckNoise() => noise = noise == null ? cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>() : noise;
+        private void CheckNoise()
+        {
+            noise = noise == null ? cam.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>() : noise;
+        }
 
         private void CheckCamera() => cam = cam == null ? GetComponent<CinemachineVirtualCamera>() : cam;
         

@@ -123,8 +123,8 @@ GameObject:
   - component: {fileID: 5468480333737548721}
   - component: {fileID: 6082360959239746859}
   - component: {fileID: -6685095215381333017}
-  - component: {fileID: 859256209052803531}
-  - component: {fileID: 2933340856286241396}
+  - component: {fileID: 4610435670189703469}
+  - component: {fileID: 6867290223082287519}
   m_Layer: 6
   m_Name: ChopperNetworked
   m_TagString: Untagged
@@ -173,6 +173,7 @@ MonoBehaviour:
   playerAudioListener: {fileID: 702692961193230429}
   <PlayerInput>k__BackingField: {fileID: 210267188}
   <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
+  <OutputHudValues>k__BackingField: {fileID: 5468480333737548721}
   <InputController>k__BackingField:
     thrust: 0
     roll: 0
@@ -181,6 +182,7 @@ MonoBehaviour:
   <MovementController>k__BackingField:
     thrustVector: {x: 0, y: 0, z: 0}
     stabiliser:
+      rigidbody: {fileID: 0}
       useStabiliser: 1
       strength: 0.5
       speedThreshold: 40
@@ -407,18 +409,19 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 548169382991786597}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 082facd78dfdb0c4b839da7f9a66717f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ignorePlayers:
+  altitudeRaycastIgnore:
     serializedVersion: 2
     m_Bits: 64
   altitudeCheckRange: 10000
   speed: 0
   speedKmh: 0
   altitudeInMetres: 0
+  _frameCount: 0
 --- !u!82 &6082360959239746859
 AudioSource:
   m_ObjectHideFlags: 0
@@ -535,7 +538,7 @@ MonoBehaviour:
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
---- !u!114 &859256209052803531
+--- !u!114 &4610435670189703469
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -544,7 +547,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 548169382991786597}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Script: {fileID: 11500000, guid: 6529509778f912942b1ac1ba3102d8e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   SyncPositionX: 1
@@ -565,7 +568,7 @@ MonoBehaviour:
   InLocalSpace: 0
   Interpolate: 1
   SlerpPosition: 0
---- !u!114 &2933340856286241396
+--- !u!114 &6867290223082287519
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1301,12 +1304,12 @@ PrefabInstance:
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.004051252
+      value: -0.004052502
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.000063137406
+      value: 0.0000631569
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
@@ -1517,12 +1520,12 @@ PrefabInstance:
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.004051252
+      value: -0.004052502
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.000063137406
+      value: 0.0000631569
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}

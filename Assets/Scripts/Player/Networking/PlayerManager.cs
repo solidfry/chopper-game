@@ -1,4 +1,5 @@
 ﻿using Cinemachine;
+using UI.Hud;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,6 +14,7 @@ namespace Player.Networking
         
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
+        [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
@@ -23,16 +25,21 @@ namespace Player.Networking
         {
             SetupAudioVisual();
             
-            if (IsClient || IsServer)
+            if (IsClient && IsOwner || IsServer && !IsLocalPlayer)
             {
                 InitializeComponents();
             }
 
-            if (IsLocalPlayer || IsServer && !IsLocalPlayer)
-            {
-                PlayerRigidbody.isKinematic = false;
-            }
+            // if(IsClient && IsOwner)
+            //     RequestSetIsKinematicServerRpc(false);
+            // else if (IsServer && !IsLocalPlayer)
+            //     SetIsKinematicClientRpc(false);
+            // else if (IsServer && IsLocalPlayer)
+            //     SetPlayerRbNonKinematic(true);
+            
         }
+
+      
 
         private void FixedUpdate()
         {
@@ -54,10 +61,23 @@ namespace Player.Networking
             
             if (PlayerRigidbody is null)
                 PlayerRigidbody = GetComponent<Rigidbody>();
+            
+            
+            if (OutputHudValues is null)
+            {
+                Debug.Log("OutputHudValues was Null");
+                OutputHudValues = GetComponent<OutputHudValues>();
+                OutputHudValues.Initialise();
+            }
+            else
+            {
+                OutputHudValues.Initialise();
+            }
+            
+            
           
             // TODO: Issue here with the Stabiliser because this is a new MovementController, i think it's resetting the values in the Stabiliser
-            MovementController = new MovementController(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
-            MovementController.OnStart();
+            MovementController.OnStart(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
         }
 
         private void HandleMovement()
@@ -71,7 +91,7 @@ namespace Player.Networking
             } 
             else if (IsClient && IsLocalPlayer)
             {
-                HandleAllMovementServerRpc(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll);
+                HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll);
             }
         }
 
@@ -99,7 +119,25 @@ namespace Player.Networking
                 PlayerCameraManager.Initialize(playerVirtualCamera, 0);
         }
         
+        void SetPlayerRbNonKinematic(bool value) => PlayerRigidbody.isKinematic = value;
+        
         [ServerRpc]
         void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
+        
+        
+        [ClientRpc]
+        public void SetIsKinematicClientRpc(bool value)
+        {
+            if (PlayerRigidbody != null)
+            {
+                SetPlayerRbNonKinematic(value);
+            }
+        }
+
+        [ServerRpc]
+        public void RequestSetIsKinematicServerRpc(bool value)
+        {
+            SetIsKinematicClientRpc(value);
+        }
     }
 }

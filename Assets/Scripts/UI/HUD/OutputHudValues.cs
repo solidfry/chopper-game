@@ -1,25 +1,35 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
+using Utilities;
 
 namespace UI.Hud
 {
     [RequireComponent(typeof(Rigidbody))]
     public class OutputHudValues : MonoBehaviour
     {
-        [SerializeField] LayerMask ignorePlayers;
+        [SerializeField] LayerMask altitudeRaycastIgnore;
         [SerializeField] float altitudeCheckRange;
-        Rigidbody _rb;
+        Rigidbody _rigidbody;
         [SerializeField] [ReadOnly] float speed, speedKmh, altitudeInMetres;
-        int _frameCount = 0;  // Frames counter
+        [SerializeField] int _frameCount = 0;
+        
+        bool _isInitialised;
+        
         public event Action<int> OnSpeedChanged;
         public event Action<int> OnAltitudeChanged;
-        
-        private void Start() => _rb = GetComponent<Rigidbody>();
+
+        public void Initialise()
+        {
+            Debug.Log("HudValues Init");
+            _rigidbody = GetComponent<Rigidbody>();
+            enabled = true;
+            _isInitialised = true;
+        }
 
         // Update is called once per frame
         void LateUpdate()
         {
+            if (!_isInitialised) return;
             UpdateSpeed();
             UpdateAltitude();
             DelayEvents();
@@ -38,9 +48,9 @@ namespace UI.Hud
         }
 
         private void UpdateAltitude()
-        {            
+        {    
             // Raycast to the ground
-            if (Physics.Raycast(new Ray(_rb.position, Vector3.down), out RaycastHit hit, altitudeCheckRange, ~ignorePlayers))
+            if (Physics.Raycast(new Ray(_rigidbody.position, Vector3.down), out RaycastHit hit, altitudeCheckRange, ~altitudeRaycastIgnore))
             {
                 altitudeInMetres = hit.distance;
             }
@@ -52,9 +62,9 @@ namespace UI.Hud
 
         private void UpdateSpeed()
         {
-            speed = _rb.velocity.magnitude;
+            speed = _rigidbody.velocity.magnitude;
             speed = Mathf.Max(0, speed);
-            speedKmh = speed * 3600 / 1000;
+            speedKmh = Speed.MetersPerSecondToKilometersPerHour(speed);
         }
         
         // private void OnDrawGizmos()

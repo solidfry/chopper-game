@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Utilities;
 
 namespace Player
@@ -10,6 +11,7 @@ namespace Player
     [Serializable]
     public class VehicleStabiliser
     {
+        [SerializeField] [ReadOnly] Rigidbody rigidbody;
         [SerializeField] private bool useStabiliser = true;
         [SerializeField] private float strength = 2f;
         [SerializeField] private float speedThreshold = 20f;
@@ -20,15 +22,17 @@ namespace Player
         
         // [SerializeField] private bool debug = false;
         
-        public void OnStart()
+        public void OnStart(Rigidbody rigidbody)
         {
+            this.rigidbody = rigidbody;
+            if(this.rigidbody is null) return;
             isActive = false;
         }
         
-        public void UpdateStabiliser(Rigidbody rigidbody, Vector3 currentUp)
+        public void UpdateStabiliser(Vector3 currentUp)
         {
-            if (!useStabiliser) return;
-
+            if (!useStabiliser || rigidbody is null) return;
+            
             if (GetCurrentSpeed(rigidbody) <= 1)
             {
                 isActive = false;
@@ -37,11 +41,11 @@ namespace Player
             
             if (CheckIsActive(GetCurrentSpeed(rigidbody)))
             {
-                DoStabilisation(rigidbody, currentUp);
+                DoStabilisation(currentUp);
             }
         }
 
-        private void DoStabilisation(Rigidbody rigidbody, Vector3 currentUp)
+        private void DoStabilisation(Vector3 currentUp)
         {
             // Calculate the axis and angle of the current tilt
             Quaternion tilt = Quaternion.FromToRotation(currentUp, Vector3.up);

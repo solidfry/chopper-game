@@ -9,8 +9,8 @@ namespace Player
     [Serializable]
     public class MovementController 
     {
-        private float _upwardThrustVectorOffset;
         private Rigidbody _rigidbody;
+        private float _upwardThrustVectorOffset;
         VehicleValues _physicsValues;
         Quaternion _rotation;
         Vector3 _position;
@@ -18,20 +18,15 @@ namespace Player
         Vector3 _forward;
         [SerializeField][ReadOnly] Vector3 thrustVector;
         [SerializeField] VehicleStabiliser stabiliser;
-    
 
-        public MovementController(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
+        public void OnStart(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
             _physicsValues = physicsValues;
             _rigidbody = rigidbody;
             _rotation = rotation;
             _position = position;
             _upwardThrustVectorOffset = physicsValues.thrustVectorOffset;
-        }
-
-        public void OnStart()
-        {
-            stabiliser.OnStart();
+            stabiliser.OnStart(_rigidbody);
         }
         
         public void OnUpdate(Quaternion rotation, Vector3 position) => UpdateMovementVariables(rotation, position);
@@ -73,8 +68,8 @@ namespace Player
             _up = _rotation * Vector3.up;
             _forward = _rotation * Vector3.forward;
             thrustVector = _up + _forward * _upwardThrustVectorOffset;
-
-            stabiliser.UpdateStabiliser(_rigidbody, _up);
+            
+            // stabiliser.UpdateStabiliser(_up);
         }
 
         
