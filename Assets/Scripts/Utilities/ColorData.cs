@@ -10,7 +10,13 @@ namespace Utilities
     {
         [field: SerializeField] public List<ColourSlot> Colours { get; private set; }
     
-        public Color GetColourByName(string color) => Colours.Find(x => x.ColorName == name).Color;
+        public Color GetColourByName(string color)
+        {
+            ColourSlot colour = Colours.Find(x => x.ColorName == color);
+            Color newColour = new Color(colour.Color.r, colour.Color.g, colour.Color.b, colour.Color.a);
+            return newColour;
+        }
+
         public Color GetAccessibleColourByName(string color) => Colours.Find(x => x.ColorName == name).AccessibleColor;
         
         public Color GetColourByIndex(int index) => Colours[index].Color;
