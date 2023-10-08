@@ -20,7 +20,7 @@ namespace Player.Networking.ScriptableObjects
         [field: SerializeField] public int Draws { get; private set; }
         [field: SerializeField] public int MatchesPlayed { get; private set; }
 
-        [field: SerializeField] public Team CurrentTeam {get; private set;} = Team.None;
+        // [field: SerializeField] public Team CurrentTeam {get; private set;} = Team.None;
      
         
         
@@ -79,10 +79,10 @@ namespace Player.Networking.ScriptableObjects
             MatchesPlayed = matchesPlayed;
         }
         
-        public void SetPlayerTeam(Team team)
-        {
-            CurrentTeam = team;
-        }
+        // public void SetPlayerTeam(Team team)
+        // {
+        //     CurrentTeam = team;
+        // }
         
         public string GetChassisName()
         {

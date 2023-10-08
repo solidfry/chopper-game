@@ -4,17 +4,13 @@ using Enums;
 using Player.Networking.ScriptableObjects;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
-using Utilities;
-
 public class PlayerProfileUI : MonoBehaviour
 {
     [SerializeField] [ReadOnly] private Color teamColor = new ();
     [Header("Player Data")]
     [SerializeField] Team team;
     [SerializeField] PlayerData playerData;
-    [SerializeField] ColorData colours;
     
     [Header("Text Components")]
     [SerializeField] TMP_Text playerName;
@@ -24,7 +20,7 @@ public class PlayerProfileUI : MonoBehaviour
     
     private List<TMP_Text> _textComponents;
     [Header("Image Components")]
-    [SerializeField] RawImage avatar;
+    [SerializeField] PlayerAvatarImage playerAvatarImage;
     [SerializeField] Image background;
     
     [Header("Animation values")]
@@ -42,46 +38,56 @@ public class PlayerProfileUI : MonoBehaviour
     
     private void Start()
     {
-        _canvasGroup = GetComponent<CanvasGroup>();
-        _canvasGroup.alpha = 0;
-        if(playerData != null)
-        {
-            CompileTextComponents();
-            SetPlayerValues(playerData);
-            UpdateColours();
-            
-            if(Initialised)
-                Show();
-        }
+        // Initialise(playerData);
     }
     
     private void OnDisable() => DOTween.KillAll();
 
+    public void Initialise(PlayerData data, Team currentTeam, Color color)
+    {
+        _canvasGroup = GetComponent<CanvasGroup>();
+        _canvasGroup.alpha = 0;
+        CompileTextComponents();
+
+        if(data != null)
+        {
+            teamColor = color;
+            SetPlayerValues(data);
+            UpdateColours(teamColor);
+            
+            if(Initialised)
+                Show();
+        }
+        else
+        {
+            // empty placeholder version of the UI
+            Debug.Log("No player data found");
+            ShowWaitingState();
+            Show();
+        }
+    }
+    
     private void SetPlayerValues(PlayerData data)
     {
         SetPlayerName(data.Name);
         SetPlayerClass(data.GetChassisName());
         SetPlayerLevel(data.Level);
         SetAvatar(data.Avatar);
-        SetTeam(data.CurrentTeam);
+        SetTeam(team);
         isInitialised = true;
     }
     
-    public void UpdateColours()
+    public void UpdateColours(Color color)
     {
         if (!isInitialised) return;
-
-        var teamName = team.ToString();
-        teamColor = colours.GetColourByName(teamName);
         
         foreach (var text in _textComponents)
         {
-            text.color = teamColor;
-            Debug.Log(teamColor);
+            text.color = color;
         }
 
         if (background != null) 
-            background.color = teamColor;
+            background.color = color;
         
         colourIsSet = true;
     }
@@ -103,10 +109,7 @@ public class PlayerProfileUI : MonoBehaviour
         playerLevel.text = level.ToString();
     }
     
-    private void SetAvatar(Texture image)
-    {
-        avatar.texture = image;
-    }
+    private void SetAvatar(Texture image) => playerAvatarImage.SetAvatar(image);
 
     private void SetTeam(Team currentTeam) => team = currentTeam;
 
@@ -114,5 +117,10 @@ public class PlayerProfileUI : MonoBehaviour
     {
         _canvasGroup.DOFade(1, animationDuration).SetDelay(animationDelay).From(0);
         transform.DOLocalMoveX(0, animationDuration).SetDelay(animationDelay).From(animationXOffset).SetEase(animationEase);
+    }
+    
+    private void ShowWaitingState()
+    {
+        
     }
 }

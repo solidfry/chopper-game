@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4291765791803651591}
   - component: {fileID: 1198807166974678889}
   - component: {fileID: 948450217874066654}
+  - component: {fileID: 5670177556032205092}
   m_Layer: 5
   m_Name: PlayerAvatar
   m_TagString: Untagged
@@ -90,6 +91,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_ShowMaskGraphic: 1
+--- !u!114 &5670177556032205092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2323932981824027056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad0bf33a965c1984d936f2c3069fbfb6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultAvatar: {fileID: 2800000, guid: 70694eb4634fb5d478b43ef4231bbb33, type: 3}
+  avatarImage: {fileID: 8104638613774427534}
 --- !u!1 &4254559480399052761
 GameObject:
   m_ObjectHideFlags: 0
@@ -155,7 +170,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 0}
+  m_Texture: {fileID: 2800000, guid: 70694eb4634fb5d478b43ef4231bbb33, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0

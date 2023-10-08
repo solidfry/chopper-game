@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.8745098, b: 0.41960785, a: 1}
+  m_Color: {r: 0, g: 1, b: 0.6, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -229,13 +229,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   teamColor: {r: 0, g: 0, b: 0, a: 0}
   team: 0
-  playerData: {fileID: 11400000, guid: 98955493b310b7149b552de05edbad47, type: 2}
-  colours: {fileID: 11400000, guid: a1eac5385f3215f418f1e33ff7572f31, type: 2}
+  playerData: {fileID: 0}
   playerName: {fileID: 5508798642707913727}
   playerClass: {fileID: 7289152251669668190}
   playerLevel: {fileID: 6381801731753922344}
   levelLabel: {fileID: 6760538545107983549}
-  avatar: {fileID: 3980386771544679087}
+  playerAvatarImage: {fileID: 717441494802560517}
   background: {fileID: 5135994776687858225}
   animationDuration: 1
   animationDelay: 0.5
@@ -927,6 +926,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8104638613774427534, guid: ca99a4c4b6b52eb419f67314d7eede5d,
         type: 3}
+      propertyPath: m_Texture
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8104638613774427534, guid: ca99a4c4b6b52eb419f67314d7eede5d,
+        type: 3}
       propertyPath: m_RaycastTarget
       value: 0
       objectReference: {fileID: 0}
@@ -935,21 +939,21 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ca99a4c4b6b52eb419f67314d7eede5d, type: 3}
---- !u!224 &2408415319890417408 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 7361188249123459105, guid: ca99a4c4b6b52eb419f67314d7eede5d,
-    type: 3}
-  m_PrefabInstance: {fileID: 5135327671020275489}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &3980386771544679087 stripped
+--- !u!114 &717441494802560517 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 8104638613774427534, guid: ca99a4c4b6b52eb419f67314d7eede5d,
+  m_CorrespondingSourceObject: {fileID: 5670177556032205092, guid: ca99a4c4b6b52eb419f67314d7eede5d,
     type: 3}
   m_PrefabInstance: {fileID: 5135327671020275489}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
+  m_Script: {fileID: 11500000, guid: ad0bf33a965c1984d936f2c3069fbfb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!224 &2408415319890417408 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7361188249123459105, guid: ca99a4c4b6b52eb419f67314d7eede5d,
+    type: 3}
+  m_PrefabInstance: {fileID: 5135327671020275489}
+  m_PrefabAsset: {fileID: 0}
