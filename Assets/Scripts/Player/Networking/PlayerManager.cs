@@ -29,6 +29,11 @@ namespace Player.Networking
             {
                 InitializeComponents();
             }
+            
+            if (IsClient && IsOwner || IsHost && IsLocalPlayer)
+            {
+                SetPlayerRbNonKinematic(true);
+            }
 
             // if(IsClient && IsOwner)
             //     RequestSetIsKinematicServerRpc(false);
