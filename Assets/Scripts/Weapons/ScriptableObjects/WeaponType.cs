@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Effects.Structs;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Weapons.ScriptableObjects
@@ -40,10 +41,19 @@ namespace Weapons.ScriptableObjects
         public void Fire(Transform firePoint)
         {
             Debug.Log($"Firing weapon {name}");
-            var projectile = AmmoType.InstantiateAmmo(firePoint, Stats.RangeInMetres);
+            AmmoEffect projectile = AmmoType.InstantiateAmmo(firePoint, Stats.RangeInMetres);
             var projectileRb = projectile.GetComponent<Rigidbody>();
             projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
             projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            if (projectile.TryGetComponent(out NetworkObject no))
+                no.Spawn();
+            else
+            {
+                projectile.SetNetworkObject();
+                projectile.ProjectileNetworkObject.Spawn();
+            }
+            
+            
             projectileRb.velocity = firePoint.transform.forward * Stats.ProjectileSpeed;
         }
         
