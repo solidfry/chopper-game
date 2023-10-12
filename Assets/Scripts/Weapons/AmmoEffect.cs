@@ -14,20 +14,17 @@ namespace Weapons
         [SerializeField] private LayerMask ignoreCollisionsOnLayer;
         [field: SerializeField] public NetworkObject ProjectileNetworkObject { get; private set; }
         private Vector3 _position;
-        private void Awake()
+
+        public override void OnNetworkSpawn()
         {
             if (collider3D == null)
                 collider3D = GetComponent<Collider>();
-
-            ignoreCollisionsOnLayer = LayerMask.NameToLayer("Ignore Player");
-            gameObject.layer = ignoreCollisionsOnLayer;
+            
+            gameObject.layer = LayerMask.NameToLayer("Ammo");
             
             if(ProjectileNetworkObject == null)
                 ProjectileNetworkObject = GetComponent<NetworkObject>();
-        }
-
-        private void Start()
-        {
+            
             previousPosition = transform.position;
         }
 

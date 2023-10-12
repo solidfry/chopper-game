@@ -12,7 +12,6 @@ namespace Weapons
         [SerializeField] private GameObject prefabLocation;
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
-        [SerializeField] private LayerMask layerToIgnore;
         
         [SerializeField] private WeaponStats stats;
         
@@ -41,7 +40,8 @@ namespace Weapons
         private void Start() => firingCooldownTimer = firingCooldown;
 
         private void Update() => firingCooldownTimer -= Time.deltaTime;
-
+        
+        [ContextMenu("Fire Attack")]
         public void DoAttack() 
         {
             // Check if the firing cooldown timer is greater than or equal to the firing cooldown
@@ -61,6 +61,7 @@ namespace Weapons
         
         public void Fire(Transform firePoint)
         {
+            firePoint= firePointTr;
             weaponType.Fire(firePoint);
         }
 

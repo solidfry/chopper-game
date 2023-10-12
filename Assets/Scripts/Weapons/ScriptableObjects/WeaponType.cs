@@ -43,6 +43,7 @@ namespace Weapons.ScriptableObjects
             Debug.Log($"Firing weapon {name}");
             AmmoEffect projectile = AmmoType.InstantiateAmmo(firePoint, Stats.RangeInMetres);
             var projectileRb = projectile.GetComponent<Rigidbody>();
+            projectileRb.excludeLayers = LayerMask.GetMask("Weapon");
             projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
             projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             if (projectile.TryGetComponent(out NetworkObject no))

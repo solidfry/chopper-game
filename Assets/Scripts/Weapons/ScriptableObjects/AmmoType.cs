@@ -1,5 +1,6 @@
 ﻿using Interfaces;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Weapons.ScriptableObjects
 {
@@ -10,20 +11,24 @@ namespace Weapons.ScriptableObjects
         
         [SerializeField] private TrailRenderer trails;
         [SerializeField] private GameObject deathParticles;
-        [SerializeField] private GameObject prefab;
+        [SerializeField] private AmmoEffect ammoBasePrefab;
+        [SerializeField] private GameObject graphicsPrefab;
         
         public TrailRenderer Trails => trails;
         public GameObject DeathParticles => deathParticles;
-        public GameObject Prefab => prefab;
+        public GameObject GraphicsPrefab => graphicsPrefab;
 
         public AmmoEffect InstantiateAmmo(Transform transform, float rangeInMetres = 50f)
         {
-            var ammo = Instantiate(prefab, transform.position, transform.rotation);
-            var effect = ammo.AddComponent<AmmoEffect>();
+            var ammo = Instantiate(ammoBasePrefab, transform.position, transform.rotation);
+            var effect = ammo.GetComponent<AmmoEffect>();
             effect.SetAmmoType(this);
             effect.SetMaxRange(rangeInMetres);
+            InstantiateGraphicsPrefab(effect.transform);
             return effect;
         }
+        
+        public GameObject InstantiateGraphicsPrefab(Transform transform) => Instantiate(graphicsPrefab, transform.position, transform.rotation, parent: transform);
 
         public GameObject InstantiateDeathParticles(Transform transform) => Instantiate(deathParticles, transform.position, Quaternion.identity);
 
