@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace Player
+namespace PlayerInteraction
 {
     [Serializable]
     public struct VehicleValues : IEquatable<VehicleValues>, IFormattable

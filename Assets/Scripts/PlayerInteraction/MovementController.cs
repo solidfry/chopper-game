@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Player
+namespace PlayerInteraction
 {
     /// <summary>
     /// Takes input from the InputController and applies it to the vehicle

@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Utilities;
 
-namespace Player
+namespace PlayerInteraction
 {
     /// <summary>
     /// In theory this class helps the vehicle stay upright when flying at very low speeds slightly above 1 km/h

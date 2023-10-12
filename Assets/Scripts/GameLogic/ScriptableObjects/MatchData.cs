@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Player.Networking;
+using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 using System.Linq;

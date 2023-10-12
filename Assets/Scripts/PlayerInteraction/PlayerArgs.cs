@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Player
+namespace PlayerInteraction
 {
     [Serializable]
     public struct PlayerArgs

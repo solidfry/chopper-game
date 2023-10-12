@@ -1,7 +1,7 @@
 using System;
 using DG.Tweening;
 using Enums;
-using Player.Networking.ScriptableObjects;
+using PlayerInteraction.Networking.ScriptableObjects;
 using UnityEngine;
 
 public class ProfileLoader : MonoBehaviour

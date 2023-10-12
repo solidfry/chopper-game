@@ -2,7 +2,7 @@
 using UnityEngine.InputSystem;
 using Unity.Netcode;
 
-namespace Player
+namespace PlayerInteraction
 {
     public class InputManagerNetworked : NetworkBehaviour
     {

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using Enums;
-using Player.Networking.ScriptableObjects;
+using PlayerInteraction.Networking.ScriptableObjects;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

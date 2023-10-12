@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Weapons;
 
-namespace Player
+namespace PlayerInteraction
 {
     public class PlayerAttackManager : MonoBehaviour
     {

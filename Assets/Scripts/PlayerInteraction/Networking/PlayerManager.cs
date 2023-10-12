@@ -4,7 +4,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Player.Networking
+namespace PlayerInteraction.Networking
 {
     [RequireComponent(typeof(Rigidbody), typeof(PlayerInput))]
     public class PlayerManager : NetworkBehaviour

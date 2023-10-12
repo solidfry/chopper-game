@@ -4,15 +4,15 @@ using UnityEngine;
 namespace Networking
 {
     [Serializable]
-    public record SpawnLocation(Transform Transform, bool IsUsed)
+    public record SpawnLocation
     {
-        [field:SerializeField] public Transform Transform { get; private set; }
-        [field:SerializeField] public bool IsUsed { get; private set; }   
+        [field: SerializeField] public Transform Transform { get; private set; } = null;
+        [field: SerializeField] public bool IsUsed { get; private set; } = false;
         
         public Transform UsePosition()
         {
             IsUsed = true;
-            return this.Transform;
+            return Transform;
         }
         
         public void ReleasePosition()

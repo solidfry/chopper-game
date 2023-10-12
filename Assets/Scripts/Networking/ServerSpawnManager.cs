@@ -12,8 +12,10 @@ namespace Networking
         [SerializeField] List<SpawnLocation> teamBSpawnLocations = new(6);
         
 
-        private void Start()
+        public override void Awake()
         {
+            base.Awake();
+            
             _networkManager = NetworkManager.Singleton;
             if (_networkManager != null)
             {
@@ -54,7 +56,7 @@ namespace Networking
         }
 
 
-        private Transform UseSpawnLocation()
+        public Transform UseSpawnLocation()
         {
             foreach (var spawnLocation in teamASpawnLocations)
             {

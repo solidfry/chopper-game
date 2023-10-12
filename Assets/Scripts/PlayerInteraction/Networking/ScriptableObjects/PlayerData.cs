@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Player.Networking.ScriptableObjects
+namespace PlayerInteraction.Networking.ScriptableObjects
 {
     [CreateAssetMenu(fileName = "PlayerData", menuName = "PlayerData", order = 1)]
     public class PlayerData : ScriptableObject

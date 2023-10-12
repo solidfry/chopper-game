@@ -21,12 +21,12 @@ namespace GameLogic
     
         public void StartButtons()
         {
-            if(GUILayout.Button("Host"))
-                NetworkManager.Singleton.StartHost();
-
-            if (GUILayout.Button("Server"))
-                NetworkManager.Singleton.StartServer();
-        
+            // if(GUILayout.Button("Host"))
+            //     NetworkManager.Singleton.StartHost();
+            //
+            // if (GUILayout.Button("Server"))
+            //     NetworkManager.Singleton.StartServer();
+            //
             if (GUILayout.Button("Client"))
                 NetworkManager.Singleton.StartClient();
         }

@@ -2,7 +2,7 @@
 using Cinemachine;
 using UnityEngine;
 
-namespace Player
+namespace PlayerInteraction
 {
     [Serializable]
     public class PlayerCameraManager

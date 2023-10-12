@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Player
+namespace PlayerInteraction
 { 
     /// <summary>
     /// Handles the raw input from the player. Is used in conjunction with the MovementController to apply movement

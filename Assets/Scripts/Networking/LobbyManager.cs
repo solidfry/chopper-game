@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Enums;
 using GameLogic;
-using Player.Networking.ScriptableObjects;
+using PlayerInteraction.Networking.ScriptableObjects;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Utilities;
