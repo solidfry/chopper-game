@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using Interfaces;
+using Unity.Netcode;
 using UnityEngine;
 using Weapons.ScriptableObjects;
 
@@ -26,20 +27,21 @@ namespace Weapons
             set => isFiring = value;
         }
         
-        private void Awake()
+        private void Start()
         {
             if(weaponType == null) return;
             stats = weaponType.Stats;
             if (weaponType && weaponModel == null) weaponModel = Instantiate(weaponType.WeaponMesh, prefabLocation.transform);
             firingCooldown = weaponType.Stats.FireRateInSeconds;
             firingCoroutine = Firing(weaponType.Stats.FireRateInSeconds);
+            firingCooldownTimer = firingCooldown;
         }
-        
         private void OnDisable() => StopAllCoroutines();
         
-        private void Start() => firingCooldownTimer = firingCooldown;
-
         private void Update() => firingCooldownTimer -= Time.deltaTime;
+        
+        // private void Start() => firingCooldownTimer = firingCooldown;
+
         
         [ContextMenu("Fire Attack")]
         public void DoAttack() 
@@ -75,6 +77,5 @@ namespace Weapons
                 yield return new WaitForSeconds(fireRate);
             }
         }
-
     }
 }

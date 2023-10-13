@@ -42,8 +42,10 @@ namespace Weapons
 
             if (distanceTraveled >= maximumRange)
             {
-                ProjectileNetworkObject.Despawn();
-                Destroy(gameObject); // Pool this object instead
+                if(IsClient)
+                    DestroyServerRpc();
+                else 
+                    DestructionEffect();
             }
         }
 
@@ -54,12 +56,16 @@ namespace Weapons
             {
                 target.TakeDamage(ammoType.stats.Damage);
             }
-            DestructionEffect();
+            
+            if(IsClient)
+                DestroyServerRpc();
+            else 
+                DestructionEffect();
         }
 
         void DestructionEffect() 
         {
-            Debug.Log("Destruction effect");
+            // Debug.Log("Destruction effect");
             ProjectileNetworkObject.Despawn();
             Destroy(gameObject);
         }
@@ -71,5 +77,9 @@ namespace Weapons
             else
                 ProjectileNetworkObject = gameObject.AddComponent<NetworkObject>();
         }
+        
+        
+        [ServerRpc]
+        public void DestroyServerRpc() => DestructionEffect();
     }
 }

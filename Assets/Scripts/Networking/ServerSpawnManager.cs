@@ -1,14 +1,11 @@
-using System;
 using System.Collections.Generic;
 using Networking.Spawns;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Networking
 {
     public class ServerSpawnManager : SingletonNetwork<ServerSpawnManager>
     {
-        // private NetworkManager _networkManager;
         [SerializeField] List<TeamSpawnLocations> teamSpawnLocations = new();
 
         public Transform UseSpawnLocation()

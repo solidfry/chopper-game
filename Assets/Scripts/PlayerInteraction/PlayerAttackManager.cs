@@ -1,11 +1,12 @@
 ﻿using Effects.Structs;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Weapons;
 
 namespace PlayerInteraction
 {
-    public class PlayerAttackManager : MonoBehaviour
+    public class PlayerAttackManager : NetworkBehaviour
     {
         [SerializeField] private WeaponSlot[] weaponSlots;
         
@@ -45,5 +46,6 @@ namespace PlayerInteraction
                 weapon.name = $"Weapon {i + 1}";
             }
         }
+   
     }
 }

@@ -8,6 +8,13 @@ namespace Utilities
     {
 
         [SerializeField] ColorData teamColours;
+        public ColorData TeamColours
+        {
+            get => teamColours;
+            set => teamColours = value;
+        }
+        
+        public ColorData GetTeamColours => TeamColours;
 
     }
 }

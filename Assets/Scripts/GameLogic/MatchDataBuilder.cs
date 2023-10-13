@@ -28,7 +28,7 @@ namespace GameLogic
             return matchData;
         }
 
-        public static MatchData SetGameMode(this MatchData matchData, GameMode gameMode)
+        public static MatchData SetGameMode(this MatchData matchData, GameMode gameMode) 
         {
             matchData.SetGameMode(gameMode);
             return matchData;

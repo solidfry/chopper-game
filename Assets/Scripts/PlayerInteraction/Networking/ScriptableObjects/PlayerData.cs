@@ -1,6 +1,5 @@
 ﻿using Enums;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace PlayerInteraction.Networking.ScriptableObjects
 {
