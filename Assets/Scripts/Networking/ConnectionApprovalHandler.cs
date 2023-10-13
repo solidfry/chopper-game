@@ -7,18 +7,29 @@ namespace Networking
     {
         public static int MaxPlayers = 12;
 
-        private void Awake()
+        NetworkManager NetworkManager => NetworkManager.Singleton ? NetworkManager.Singleton : null;
+        ServerSpawnManager SpawnManager => ServerSpawnManager.Instance ? ServerSpawnManager.Instance : null;
+
+        private void Start()
         {
-            NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+            NetworkManager.ConnectionApprovalCallback = ApprovalCheck;
         }
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
-            if (NetworkManager.Singleton.ConnectedClients.Count >= MaxPlayers)
+            if (SpawnManager == null)
             {
-                var id= request.ClientNetworkId;
-                var tr = ServerSpawnManager.Instance.UseSpawnLocation();
-            
+                Debug.LogError("Spawn Manager is null");
+                response.Approved = false;
+                response.Reason = "Spawn Manager is null";
+                return;
+            }
+
+            if (PlayersCanJoin())
+            {
+                var id = request.ClientNetworkId;
+                var tr = SpawnManager.UseSpawnLocation();
+
 
                 if (tr != null)
                 {
@@ -34,12 +45,17 @@ namespace Networking
                     response.Approved = false;
                     response.Reason = "No spawn location available";
                 }
-            } else
+            }
+            else
             {
                 response.Approved = false;
                 response.Reason = "Server is full";
             }
-
         }
+
+        // <summary>
+        // Checks if the number of players connected is less than the max players
+        // </summary>
+        bool PlayersCanJoin() => NetworkManager.ConnectedClients.Count < MaxPlayers;
     }
 }
