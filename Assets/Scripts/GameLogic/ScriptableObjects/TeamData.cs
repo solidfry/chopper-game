@@ -10,29 +10,29 @@ namespace GameLogic.ScriptableObjects
     {
         [field: SerializeField] public int TeamID { get; private set; }
         [field: SerializeField] public Color TeamColor { get; private set; }
-        public HashSet<NetworkObject> Players { get; private set; }
-        
-        public void AddPlayer(NetworkObject player)
+        public List<NetworkClient> Players { get; private set; }
+
+        public void AddPlayer(NetworkClient player)
         {
             Players.Add(player);
         }
-        
-        public void RemovePlayer(NetworkObject player)
+
+        public void RemovePlayer(NetworkClient player)
         {
             Players.Remove(player);
         }
-        
+
         public void SetTeamColor(Color color)
         {
             TeamColor = color;
         }
-        
+
         public void SetTeamID(int id)
         {
             TeamID = id;
         }
-        
-        public void SetPlayers(HashSet<NetworkObject> players)
+
+        public void SetPlayers(List<NetworkClient> players)
         {
             Players = players;
         }

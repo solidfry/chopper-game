@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using GameLogic.MatchStateMachine;
+using GameLogic.ScriptableObjects;
+using PlayerInteraction.Networking;
 using StateMachine;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,6 +10,7 @@ namespace GameLogic
 {
     public class NetworkMatchStateMachine : NetworkBehaviour, IStateMachine
     {
+
         private MatchState CurrentState { get; set; }
         [SerializeField][ReadOnly] string matchStateName;
 
@@ -17,7 +21,7 @@ namespace GameLogic
                 ChangeState(new PreGame());
             }
         }
-        
+
         private void Update()
         {
             if (IsServer)
@@ -33,7 +37,7 @@ namespace GameLogic
             {
                 CurrentState.OnExit();
             }
-            
+
             CurrentState = (MatchState)newState;
             CurrentState.OnEnter(this);
         }
@@ -42,5 +46,6 @@ namespace GameLogic
         {
             return CurrentState.GetType().Name;
         }
+
     }
 }
