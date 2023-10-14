@@ -9,7 +9,7 @@ using UnityEngine;
 public class GameManager : SingletonNetworkPersistent<GameManager>
 {
     [SerializeField] MatchData matchData;
-
+    
     public void SetMatchData(MatchData data) => matchData = data;
     public ushort GetMaxPlayersPerTeam() => matchData.GameMode.MaxPlayersPerTeam;
     public ushort GetMaxTeams() => matchData.GameMode.MaxTeams;

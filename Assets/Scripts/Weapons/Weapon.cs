@@ -6,7 +6,7 @@ using Weapons.ScriptableObjects;
 
 namespace Weapons
 {
-    public class Weapon : MonoBehaviour, IFireWeapon
+    public class Weapon : NetworkBehaviour, IFireWeapon
     {
         [SerializeField] private WeaponType weaponType;
         [SerializeField] private Transform firePointTr;
@@ -14,12 +14,16 @@ namespace Weapons
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
         
+        Vector3 _firePointPosition;
+        Quaternion _firePointRotation;
+        
         [SerializeField] private WeaponStats stats;
+        [SerializeField] private AmmoType ammoType;
         
-        private float firingCooldown;
-        private float firingCooldownTimer;
+        private float _firingCooldown;
+        private float _firingCooldownTimer;
         
-        IEnumerator firingCoroutine;
+        IEnumerator _firingCoroutine;
         
         public bool IsFiring
         {
@@ -31,49 +35,69 @@ namespace Weapons
         {
             if(weaponType == null) return;
             stats = weaponType.Stats;
+            ammoType = weaponType.AmmoType;
             if (weaponType && weaponModel == null) weaponModel = Instantiate(weaponType.WeaponMesh, prefabLocation.transform);
-            firingCooldown = weaponType.Stats.FireRateInSeconds;
-            firingCoroutine = Firing(weaponType.Stats.FireRateInSeconds);
-            firingCooldownTimer = firingCooldown;
+            _firingCooldown = weaponType.Stats.FireRateInSeconds;
+            _firingCoroutine = Firing(weaponType.Stats.FireRateInSeconds);
+            _firingCooldownTimer = _firingCooldown;
         }
         private void OnDisable() => StopAllCoroutines();
         
-        private void Update() => firingCooldownTimer -= Time.deltaTime;
+        private void Update() => _firingCooldownTimer -= Time.deltaTime;
         
-        // private void Start() => firingCooldownTimer = firingCooldown;
-
         
         [ContextMenu("Fire Attack")]
         public void DoAttack() 
         {
             // Check if the firing cooldown timer is greater than or equal to the firing cooldown
-            if (firingCooldownTimer <= 0)
+            if (_firingCooldownTimer <= 0)
             {
                 // If the conditions are met, start firing and reset the firing cooldown timer
                 IsFiring = true;
-                StartCoroutine(firingCoroutine);
+                StartCoroutine(_firingCoroutine);
             }
         }
         
         public void StopAttack()
         {
             IsFiring = false;
-            StopCoroutine(firingCoroutine); 
+            StopCoroutine(_firingCoroutine); 
         }
         
-        public void Fire(Transform firePoint)
+        public void Fire(Vector3 position, Quaternion rotation)
         {
-            firePoint= firePointTr;
-            weaponType.Fire(firePoint);
+            AmmoEffect projectile = weaponType.InstantiateAmmoFromWeapon(position, rotation, out Rigidbody projectileRb);
+            var forward = rotation * Vector3.forward;
+            projectileRb.velocity = weaponType.SetProjectileVelocity(forward, stats.ProjectileSpeed);
+            HandleNetworkObject(projectile);
+        }
+
+        private void HandleNetworkObject(AmmoEffect projectile)
+        {
+            if (!IsServer) return;
+
+            if (projectile.TryGetComponent(out NetworkObject no))
+            {
+                no.Spawn();
+                Debug.Log($"{ammoType.name} Projectile spawned");
+            }
+            else
+            {
+                Debug.Log("Else Proj spawned");
+
+                projectile.ProjectileNetworkObject.Spawn();
+            }
         }
 
         IEnumerator Firing(float fireRate)
         {
             while (IsFiring)
             {
+                _firePointPosition = firePointTr.position; 
+                _firePointRotation = firePointTr.rotation;
                 weaponType.shakeEvent.Invoke();
-                Fire(firePointTr);
-                firingCooldownTimer = firingCooldown;
+                Fire(_firePointPosition, _firePointRotation);
+                _firingCooldownTimer = _firingCooldown;
                 yield return new WaitForSeconds(fireRate);
             }
         }

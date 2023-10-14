@@ -14,7 +14,7 @@ namespace Weapons.ScriptableObjects
         [SerializeField] public CameraShakeEvent shakeEvent;
         [SerializeField] private GameObject weaponMesh;
         [SerializeField] List<AudioClip> weaponFireClips; // Need to use these and remove any extra audio sources on the ammo prefab
-
+    
         public AmmoType AmmoType
         {
             get => ammoType;
@@ -38,26 +38,19 @@ namespace Weapons.ScriptableObjects
             private set => weaponMesh = value;
         }
 
-        public void Fire(Transform firePoint)
+        public AmmoEffect InstantiateAmmoFromWeapon(Vector3 position, Quaternion rotation, out Rigidbody rigidbody)
         {
-            Debug.Log($"Firing weapon {name}");
-            AmmoEffect projectile = AmmoType.InstantiateAmmo(firePoint, Stats.RangeInMetres);
-            var projectileRb = projectile.GetComponent<Rigidbody>();
-            projectileRb.excludeLayers = LayerMask.GetMask("Weapon");
-            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
-            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            if (projectile.TryGetComponent(out NetworkObject no))
-                no.Spawn();
-            else
-            {
-                projectile.SetNetworkObject();
-                projectile.ProjectileNetworkObject.Spawn();
-            }
-            
-            
-            projectileRb.velocity = firePoint.transform.forward * Stats.ProjectileSpeed;
+            // Debug.Log($"Firing weapon {name}");
+            AmmoEffect projectile = AmmoType.InstantiateAmmo(position, rotation, Stats.RangeInMetres);
+            rigidbody = projectile.Rigidbody;
+            rigidbody.excludeLayers = LayerMask.GetMask("Weapon");
+            rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            return projectile;
         }
-        
+
+        public Vector3 SetProjectileVelocity(Vector3 forward, float speed) => forward * speed;
+
         AudioClip GetRandomFireClip() => weaponFireClips[Random.Range(0, weaponFireClips.Count)];
         
         public Weapon InstantiateWeapon(Transform weaponPosition) => Instantiate(weaponPrefab, weaponPosition.position, Quaternion.identity, weaponPosition);

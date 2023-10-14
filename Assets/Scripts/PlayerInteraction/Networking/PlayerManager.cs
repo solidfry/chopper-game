@@ -30,18 +30,10 @@ namespace PlayerInteraction.Networking
                 InitializeComponents();
             }
             
-            if (IsClient && IsOwner || IsHost && IsLocalPlayer)
+            if (IsClient && IsOwner && IsLocalPlayer)
             {
                 SetPlayerRbNonKinematic(true);
             }
-
-            // if(IsClient && IsOwner)
-            //     RequestSetIsKinematicServerRpc(false);
-            // else if (IsServer && !IsLocalPlayer)
-            //     SetIsKinematicClientRpc(false);
-            // else if (IsServer && IsLocalPlayer)
-            //     SetPlayerRbNonKinematic(true);
-            
         }
 
       
@@ -90,7 +82,7 @@ namespace PlayerInteraction.Networking
             if (!IsOwner) return;
 
             // Server Reconciliation and Authorization
-            if (IsServer && IsLocalPlayer)
+            if (IsServer)
             {
                HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll);
             } 

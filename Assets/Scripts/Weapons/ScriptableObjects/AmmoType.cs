@@ -18,14 +18,13 @@ namespace Weapons.ScriptableObjects
         public GameObject DeathParticles => deathParticles;
         public GameObject GraphicsPrefab => graphicsPrefab;
 
-        public AmmoEffect InstantiateAmmo(Transform transform, float rangeInMetres = 50f)
+        public AmmoEffect InstantiateAmmo(Vector3 position, Quaternion rotation, float rangeInMetres = 50f)
         {
-            var ammo = Instantiate(ammoBasePrefab, transform.position, transform.rotation);
-            var effect = ammo.GetComponent<AmmoEffect>();
-            effect.SetAmmoType(this);
-            effect.SetMaxRange(rangeInMetres);
-            InstantiateGraphicsPrefab(effect.transform);
-            return effect;
+            AmmoEffect ammo = Instantiate(ammoBasePrefab, position, rotation);
+            ammo.SetAmmoType(this);
+            ammo.SetMaxRange(rangeInMetres);
+            InstantiateGraphicsPrefab(ammo.transform);
+            return ammo;
         }
         
         public GameObject InstantiateGraphicsPrefab(Transform transform) => Instantiate(graphicsPrefab, transform.position, transform.rotation, parent: transform);

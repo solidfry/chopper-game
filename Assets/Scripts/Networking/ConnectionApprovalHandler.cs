@@ -7,55 +7,58 @@ namespace Networking
     {
         public static int MaxPlayers = 12;
 
-        NetworkManager NetworkManager => NetworkManager.Singleton ? NetworkManager.Singleton : null;
-        ServerSpawnManager SpawnManager => ServerSpawnManager.Instance ? ServerSpawnManager.Instance : null;
+        NetworkManager NManager => NetworkManager.Singleton != null ? NetworkManager.Singleton : null;
+        ServerSpawnManager SpawnManager => ServerSpawnManager.Instance != null ? ServerSpawnManager.Instance : null;
 
-        private void Start()
+        public void Start()
         {
-            NetworkManager.ConnectionApprovalCallback = ApprovalCheck;
+            if(NetworkManager.Singleton && NetworkManager.Singleton.IsServer)
+                NManager.ConnectionApprovalCallback = ApprovalCheck;
         }
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             if (SpawnManager == null)
             {
-                Debug.LogError("Spawn Manager is null");
+                Debug.LogError("Spawn Manager not available");
                 response.Approved = false;
-                response.Reason = "Spawn Manager is null";
+                response.Reason = "Spawn Manager is not available";
+                return;
+            }
+            
+            if(!PlayersCanJoin()) 
+            {
+                response.Approved = false;
+                response.Reason = "Server is full";
                 return;
             }
 
-            if (PlayersCanJoin())
+          
+            // var id = request.ClientNetworkId;
+            SpawnManager.GetSpawnLocation(out var spawnLocation);
+            
+            if (spawnLocation != null)
             {
-                var id = request.ClientNetworkId;
-                var tr = SpawnManager.UseSpawnLocation();
-
-
-                if (tr != null)
-                {
-                    response.Approved = true;
-                    response.CreatePlayerObject = true;
-                    response.Position = tr.position;
-                    response.Rotation = tr.rotation;
-                    Debug.Log(response.Position + " The position");
-                    response.Reason = "Testing the Approved approval message";
-                }
-                else
-                {
-                    response.Approved = false;
-                    response.Reason = "No spawn location available";
-                }
+                response.Approved = true;
+                response.CreatePlayerObject = true;
+                response.Position = spawnLocation.position;
+                response.Rotation = spawnLocation.rotation;
+                Debug.Log(response.Position + " The position");
+                response.Reason = "Testing the Approved message";
             }
             else
             {
                 response.Approved = false;
-                response.Reason = "Server is full";
+                response.Reason = "No spawn location available";
             }
+            
         }
+        
+        
 
         // <summary>
         // Checks if the number of players connected is less than the max players
         // </summary>
-        bool PlayersCanJoin() => NetworkManager.ConnectedClients.Count < MaxPlayers;
+        bool PlayersCanJoin() => NManager.ConnectedClients.Count < MaxPlayers;
     }
 }

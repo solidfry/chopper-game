@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.U2D;
 
 namespace Interfaces
 {
@@ -7,6 +6,6 @@ namespace Interfaces
     {
         public void DoAttack();
         public void StopAttack();
-        public void Fire(Transform firePoint);
+        public void Fire(Vector3 firePoint, Quaternion rotation);
     }
 }

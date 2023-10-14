@@ -66,6 +66,14 @@ namespace GameLogic.ScriptableObjects
         {
             MatchID = id;
         }
+        
+        void AddPlayerToTeam(NetworkClient player)
+        {
+            if (Teams == null || Teams.Length == 0) return;
+
+            var teamWithLeastPlayers = Teams.OrderBy(team => team.Players.Count).First();
+            teamWithLeastPlayers.AddPlayer(player);
+        }
 
     }
 }

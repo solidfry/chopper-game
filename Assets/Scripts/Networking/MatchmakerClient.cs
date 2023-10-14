@@ -123,10 +123,12 @@ namespace Networking
                         case StatusOptions.InProgress:
                             break;
                         case StatusOptions.Failed:
+                            gotAssignment = true; // just to stop the polling
                             Debug.LogError($"Failed to get ticket status. Error: {multiplayAssignment.Message}");
                             break;
                         case StatusOptions.Timeout:
                             Debug.LogError("Failed to get ticket status. Ticket timed out.");
+                            gotAssignment = true; // just to stop the polling
                             break;
                         default:
                             throw new InvalidOperationException();

@@ -13,7 +13,11 @@ namespace Weapons
         [SerializeField] private Collider collider3D;
         [SerializeField] private LayerMask ignoreCollisionsOnLayer;
         [field: SerializeField] public NetworkObject ProjectileNetworkObject { get; private set; }
+        public Rigidbody Rigidbody { get; set; }
         private Vector3 _position;
+        private bool _despawnHasBeenRequested = false;
+
+        private void Awake() => Rigidbody = GetComponent<Rigidbody>();
 
         public override void OnNetworkSpawn()
         {
@@ -28,7 +32,7 @@ namespace Weapons
             previousPosition = transform.position;
         }
 
-        private void FixedUpdate() => CheckDistanceTravelled();
+        private void Update() => CheckDistanceTravelled();
 
         public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
 
@@ -40,42 +44,37 @@ namespace Weapons
             distanceTraveled += Vector3.Distance(_position, previousPosition);
             previousPosition = _position;
 
-            if (distanceTraveled >= maximumRange)
-            {
-                if(IsClient)
-                    DestroyServerRpc();
-                else 
-                    DestructionEffect();
-            }
+            if (distanceTraveled >= maximumRange && !_despawnHasBeenRequested) 
+                DoDestroy();
         }
 
         private void OnCollisionEnter(Collision collision)
         {
-            var target = collision.collider.GetComponent<IDamageable>();
-            if (target != null)
-            {
-                target.TakeDamage(ammoType.stats.Damage);
-            }
-            
-            if(IsClient)
-                DestroyServerRpc();
-            else 
-                DestructionEffect();
+            if (collision.collider.TryGetComponent(out IDamageable damageable))
+                damageable.TakeDamage(ammoType.stats.Damage);
+
+            if (!_despawnHasBeenRequested) 
+                DoDestroy();
         }
 
         void DestructionEffect() 
         {
             // Debug.Log("Destruction effect");
-            ProjectileNetworkObject.Despawn();
+            if(IsServer && ProjectileNetworkObject.IsSpawned)
+            {
+                ProjectileNetworkObject.Despawn();
+            }
+
             Destroy(gameObject);
         }
-        
-        public void SetNetworkObject()
+
+        void DoDestroy()
         {
-            if (ProjectileNetworkObject == null && TryGetComponent(out NetworkObject no))
-                ProjectileNetworkObject = no;
+            _despawnHasBeenRequested = true;
+            if(IsClient && IsOwner)
+                DestroyServerRpc();
             else
-                ProjectileNetworkObject = gameObject.AddComponent<NetworkObject>();
+                DestructionEffect();
         }
         
         
