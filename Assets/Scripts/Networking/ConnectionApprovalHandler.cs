@@ -3,22 +3,20 @@ using UnityEngine;
 
 namespace Networking
 {
-    public class ConnectionApprovalHandler : MonoBehaviour
+    public class ConnectionApprovalHandler : NetworkBehaviour
     {
         public static int MaxPlayers = 12;
+        private ServerSpawnManager _spawnManager;
 
-        NetworkManager NManager => NetworkManager.Singleton != null ? NetworkManager.Singleton : null;
-        ServerSpawnManager SpawnManager => ServerSpawnManager.Instance != null ? ServerSpawnManager.Instance : null;
-
-        public void Start()
+        private void Start()
         {
-            if(NetworkManager.Singleton && NetworkManager.Singleton.IsServer)
-                NManager.ConnectionApprovalCallback = ApprovalCheck;
+            _spawnManager = GetComponent<ServerSpawnManager>();
+            AssignConnectionCallback();
         }
-
+        
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
-            if (SpawnManager == null)
+            if (_spawnManager == null)
             {
                 Debug.LogError("Spawn Manager not available");
                 response.Approved = false;
@@ -29,13 +27,13 @@ namespace Networking
             if(!PlayersCanJoin()) 
             {
                 response.Approved = false;
-                response.Reason = "Server is full";
+                response.Reason = "Serve    r is full";
                 return;
             }
 
           
             // var id = request.ClientNetworkId;
-            SpawnManager.GetSpawnLocation(out var spawnLocation);
+            _spawnManager.GetSpawnLocation(out var spawnLocation);
             
             if (spawnLocation != null)
             {
@@ -53,12 +51,13 @@ namespace Networking
             }
             
         }
-        
-        
+            
+        void AssignConnectionCallback() => NetworkManager.ConnectionApprovalCallback = ApprovalCheck;
+
 
         // <summary>
         // Checks if the number of players connected is less than the max players
         // </summary>
-        bool PlayersCanJoin() => NManager.ConnectedClients.Count < MaxPlayers;
+        bool PlayersCanJoin() => NetworkManager.Singleton.ConnectedClients.Count < MaxPlayers;
     }
 }

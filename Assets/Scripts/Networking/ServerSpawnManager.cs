@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Networking.Spawns;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Networking
@@ -8,9 +7,8 @@ namespace Networking
     public class ServerSpawnManager : SingletonNetwork<ServerSpawnManager>
     {
         [SerializeField] List<TeamSpawnLocations> teamSpawnLocations = new();
-        NetworkManager NManager => NetworkManager.Singleton != null ? NetworkManager.Singleton : null;
-        
-        public Transform UseSpawnLocation()
+
+        private Transform UseSpawnLocation()
         {
             foreach (var team in teamSpawnLocations)
             {
@@ -25,13 +23,15 @@ namespace Networking
         public void GetSpawnLocation(out Transform spawnLocation)
         {
             spawnLocation = null;
-            if (!NManager.IsServer) return;
+            
+            if (!NetworkManager.IsServer) return;
+            
             spawnLocation = UseSpawnLocation();
         }
 
         public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);
 
-        public void ReleaseSpawnLocation(Transform transform) => teamSpawnLocations.ForEach(team => team.ReleasePositionByTransform(transform));
+        public void ReleaseSpawnLocation(Transform tr) => teamSpawnLocations.ForEach(team => team.ReleasePositionByTransform(tr));
 
         public void ReleaseAllSpawnLocations() => teamSpawnLocations.ForEach(team => team.ReleaseAllPositions());
 

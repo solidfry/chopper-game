@@ -2,6 +2,9 @@
 
 namespace Interfaces
 {
+    /// <summary>
+    /// Interface for firing weapons
+    /// </summary>
     public interface IFireWeapon
     {
         public void DoAttack();

@@ -8,7 +8,8 @@ namespace Weapons
 {
     public class Weapon : NetworkBehaviour, IFireWeapon
     {
-        [SerializeField] private WeaponType weaponType;
+        [field: SerializeField] public WeaponType WeaponType { get; private set; }
+        [field: SerializeField] public AmmoType AmmoType { get; private set; }
         [SerializeField] private Transform firePointTr;
         [SerializeField] private GameObject prefabLocation;
         [SerializeField] private GameObject weaponModel;
@@ -18,8 +19,7 @@ namespace Weapons
         Quaternion _firePointRotation;
         
         [SerializeField] private WeaponStats stats;
-        [SerializeField] private AmmoType ammoType;
-        
+
         private float _firingCooldown;
         private float _firingCooldownTimer;
         
@@ -33,14 +33,38 @@ namespace Weapons
         
         private void Start()
         {
-            if(weaponType == null) return;
-            stats = weaponType.Stats;
-            ammoType = weaponType.AmmoType;
-            if (weaponType && weaponModel == null) weaponModel = Instantiate(weaponType.WeaponMesh, prefabLocation.transform);
-            _firingCooldown = weaponType.Stats.FireRateInSeconds;
-            _firingCoroutine = Firing(weaponType.Stats.FireRateInSeconds);
+            SpawnNetworkObjectIfApplicable();
+            InitialiseWeaponProperties();
+            InitialiseWeaponObject();
+            InitialiseFiringMechanics();
+        }
+
+        private void SpawnNetworkObjectIfApplicable()
+        {
+            if (IsServer || IsClient && IsOwner)
+                if(IsSpawned == false)
+                    NetworkObject.Spawn();
+        }
+
+        private void InitialiseWeaponProperties()
+        {
+            if(WeaponType == null) return;
+            stats = WeaponType.Stats;
+            SetAmmoType(WeaponType.AmmoType);
+        }
+
+        private void InitialiseWeaponObject()
+        {
+            if (WeaponType && weaponModel == null) weaponModel = Instantiate(WeaponType.WeaponMesh, prefabLocation.transform);
+        }
+
+        private void InitialiseFiringMechanics()
+        {
+            _firingCooldown = WeaponType.Stats.FireRateInSeconds;
+            _firingCoroutine = Firing(WeaponType.Stats.FireRateInSeconds);
             _firingCooldownTimer = _firingCooldown;
         }
+
         private void OnDisable() => StopAllCoroutines();
         
         private void Update() => _firingCooldownTimer -= Time.deltaTime;
@@ -49,6 +73,7 @@ namespace Weapons
         [ContextMenu("Fire Attack")]
         public void DoAttack() 
         {
+            
             // Check if the firing cooldown timer is greater than or equal to the firing cooldown
             if (_firingCooldownTimer <= 0)
             {
@@ -66,27 +91,11 @@ namespace Weapons
         
         public void Fire(Vector3 position, Quaternion rotation)
         {
-            AmmoEffect projectile = weaponType.InstantiateAmmoFromWeapon(position, rotation, out Rigidbody projectileRb);
+            AmmoEffect projectile = WeaponType.InstantiateAmmoFromWeapon(position, rotation, out Rigidbody projectileRb);
             var forward = rotation * Vector3.forward;
-            projectileRb.velocity = weaponType.SetProjectileVelocity(forward, stats.ProjectileSpeed);
+            if(IsClient && IsOwner || IsServer)
+                projectileRb.velocity = WeaponType.SetProjectileVelocity(forward, stats.ProjectileSpeed);
             HandleNetworkObject(projectile);
-        }
-
-        private void HandleNetworkObject(AmmoEffect projectile)
-        {
-            if (!IsServer) return;
-
-            if (projectile.TryGetComponent(out NetworkObject no))
-            {
-                no.Spawn();
-                Debug.Log($"{ammoType.name} Projectile spawned");
-            }
-            else
-            {
-                Debug.Log("Else Proj spawned");
-
-                projectile.ProjectileNetworkObject.Spawn();
-            }
         }
 
         IEnumerator Firing(float fireRate)
@@ -95,11 +104,34 @@ namespace Weapons
             {
                 _firePointPosition = firePointTr.position; 
                 _firePointRotation = firePointTr.rotation;
-                weaponType.shakeEvent.Invoke();
+                WeaponType.shakeEvent.Invoke();
                 Fire(_firePointPosition, _firePointRotation);
                 _firingCooldownTimer = _firingCooldown;
                 yield return new WaitForSeconds(fireRate);
             }
         }
+        
+        private void HandleNetworkObject(AmmoEffect projectile)
+        {
+            if (!IsServer) return;
+            
+            if (projectile.TryGetComponent(out NetworkObject no)) no.Spawn();
+        }
+        
+        public void SetAmmoType (AmmoType ammoTypeToSet) => AmmoType = ammoTypeToSet; 
+        public void SetWeaponType(WeaponType weaponTypeToSet) => WeaponType = weaponTypeToSet;
+        
+        #if UNITY_EDITOR
+        private void OnDrawGizmos()
+        {
+            if (WeaponType == null) return;
+
+            float offset = WeaponType.FirePointOffset;  // Make sure to expose FirePointOffset with a public getter in your ScriptableObject
+            Vector3 firePoint = transform.position + transform.forward * offset;
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(firePoint, 0.2f);  // Draw a small red sphere at the fire point
+        }
+        #endif
     }
 }

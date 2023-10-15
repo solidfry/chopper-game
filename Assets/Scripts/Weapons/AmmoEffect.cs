@@ -56,6 +56,15 @@ namespace Weapons
             if (!_despawnHasBeenRequested) 
                 DoDestroy();
         }
+        
+        private void OnTriggerEnter(Collider collision)
+        {
+            if (collision.TryGetComponent(out IDamageable damageable))
+                damageable.TakeDamage(ammoType.stats.Damage);
+
+            if (!_despawnHasBeenRequested) 
+                DoDestroy();
+        }
 
         void DestructionEffect() 
         {
@@ -79,6 +88,6 @@ namespace Weapons
         
         
         [ServerRpc]
-        public void DestroyServerRpc() => DestructionEffect();
+        void DestroyServerRpc() => DestructionEffect();
     }
 }

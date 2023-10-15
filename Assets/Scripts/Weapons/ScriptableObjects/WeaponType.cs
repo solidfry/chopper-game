@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using Effects.Structs;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Weapons.ScriptableObjects
@@ -9,6 +8,7 @@ namespace Weapons.ScriptableObjects
     public class WeaponType : ScriptableObject
     {
         [SerializeField] private AmmoType ammoType;
+        [field: SerializeField] public float FirePointOffset { get; private set; } = 2f;
         [SerializeField] private WeaponStats stats;
         [SerializeField] private Weapon weaponPrefab;
         [SerializeField] public CameraShakeEvent shakeEvent;
@@ -41,11 +41,14 @@ namespace Weapons.ScriptableObjects
         public AmmoEffect InstantiateAmmoFromWeapon(Vector3 position, Quaternion rotation, out Rigidbody rigidbody)
         {
             // Debug.Log($"Firing weapon {name}");
+            Vector3 forward = rotation * Vector3.forward;
+            position += forward * FirePointOffset;
             AmmoEffect projectile = AmmoType.InstantiateAmmo(position, rotation, Stats.RangeInMetres);
             rigidbody = projectile.Rigidbody;
             rigidbody.excludeLayers = LayerMask.GetMask("Weapon");
             rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
             rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rigidbody.isKinematic = false;
             return projectile;
         }
 
@@ -53,6 +56,12 @@ namespace Weapons.ScriptableObjects
 
         AudioClip GetRandomFireClip() => weaponFireClips[Random.Range(0, weaponFireClips.Count)];
         
-        public Weapon InstantiateWeapon(Transform weaponPosition) => Instantiate(weaponPrefab, weaponPosition.position, Quaternion.identity, weaponPosition);
+        public Weapon InstantiateWeapon(Transform weaponPosition, Transform parent)
+        {
+            Weapon weapon = Instantiate(weaponPrefab, weaponPosition.position, weaponPosition.rotation, parent);
+            Debug.Log("Instance of weapon created");
+            weapon.SetWeaponType(this);
+            return weapon;
+        }
     }
 }

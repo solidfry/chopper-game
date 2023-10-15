@@ -6,7 +6,7 @@ using Weapons.ScriptableObjects;
 namespace Weapons
 {
     [Serializable]
-    public class WeaponSlot
+    public class WeaponSlot : IAttackable
     {
         [SerializeField] private Transform transform;
         [SerializeField] private WeaponType data;
@@ -21,5 +21,10 @@ namespace Weapons
             set => _weaponGameObject = value;
         }
 
+        public void DoAttack() => WeaponGameObject.DoAttack();
+
+        public void StopAttack() => WeaponGameObject.StopAttack();
+
+        public void InstantiateAttackable(Transform tr, Transform parent) => Data.InstantiateWeapon(tr, parent);
     }
 }
