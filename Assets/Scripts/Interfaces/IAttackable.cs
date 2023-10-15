@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using Weapons;
 
 namespace Interfaces
 {
@@ -10,6 +11,6 @@ namespace Interfaces
         void DoAttack();
         void StopAttack();
         void InstantiateAttackable(Transform transform, Transform parent);
-        IFireWeapon WeaponGameObject { get; set; }
+        Weapon WeaponGameObject { get; set; }
     }
 }

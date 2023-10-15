@@ -10,12 +10,12 @@ namespace Weapons
     {
         [SerializeField] private Transform transform;
         [SerializeField] private WeaponType data;
-        private IFireWeapon _weaponGameObject;
+        private Weapon _weaponGameObject;
         
         public Transform Transform => transform;
         public WeaponType Data => data;
 
-        public IFireWeapon WeaponGameObject
+        public Weapon WeaponGameObject
         {
             get => _weaponGameObject; 
             set => _weaponGameObject = value;

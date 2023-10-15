@@ -61,6 +61,8 @@ namespace Weapons.ScriptableObjects
             Weapon weapon = Instantiate(weaponPrefab, weaponPosition.position, weaponPosition.rotation, parent);
             Debug.Log("Instance of weapon created");
             weapon.SetWeaponType(this);
+            weapon.Stats = Stats;
+            weapon.SetAmmoType(AmmoType);
             return weapon;
         }
     }

@@ -80,14 +80,9 @@ namespace Weapons
         void DoDestroy()
         {
             _despawnHasBeenRequested = true;
-            if(IsClient && IsOwner)
-                DestroyServerRpc();
-            else
+            if(IsServer)
                 DestructionEffect();
         }
         
-        
-        [ServerRpc]
-        void DestroyServerRpc() => DestructionEffect();
     }
 }
