@@ -9,14 +9,24 @@ namespace Weapons
     public class Weapon : NetworkBehaviour, IFireWeapon
     {
         [field: SerializeField] public WeaponType WeaponType { get; private set; }
-        public AmmoType ammoType;
+        public AmmoType AmmoType { get; private set; }
+        public AmmoEffect AmmoEffect { get; private set; }
         [SerializeField] private Transform firePointTr;
+        [SerializeField] private Transform parent;
         [SerializeField] private GameObject prefabLocation;
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
-
-        public WeaponStats Stats;
+        [SerializeField] private ulong ownerId;
         
+        public void Initialise(ulong _ownerIdToSet, Transform _parent)
+        {
+            parent = _parent;
+            ownerId = _ownerIdToSet;
+            NetworkObject.SpawnWithOwnership(ownerId);
+            NetworkObject.TrySetParent(parent);
+        }
+
+        WeaponStats _stats;
         Vector3 _firePointPosition;
         Quaternion _firePointRotation;
 
@@ -30,45 +40,50 @@ namespace Weapons
             get => isFiring; 
             set => isFiring = value;
         }
-        
+
+        // public override void OnNetworkSpawn()
+        // {
+        //         Debug.Log("Networkspawn ran");
+        //     if (IsClient || IsOwner)
+        //     {
+        //         InitialiseFiringMechanics();
+        //         InitialiseWeaponObject();
+        //     }
+        // }
+
         public override void OnNetworkSpawn()
         {
-            // SpawnNetworkObjectIfApplicable();
-            InitialiseFiringMechanics();
-            InitialiseWeaponObject();
-        }
-
-        private void SpawnNetworkObjectIfApplicable()
-        {
-            if (IsServer)
-                if(!IsSpawned)
-                    NetworkObject.Spawn();
-        }
-        
-        public void SpawnNetworkObjectOwnerViaOwnerClientID(ulong ownerClientId)
-        {
-            if(IsSpawned && ownerClientId != OwnerClientId)
+            if (IsClient || IsLocalPlayer)
             {
-                NetworkObject.ChangeOwnership(ownerClientId);
-                Debug.Log("Changed ownership of weapon");
+                Debug.Log("Start ran");
+                InitialiseFiringMechanics();
+                InitialiseWeaponObject();
             }
-            else
-            {
-                NetworkObject.SpawnWithOwnership(ownerClientId);
-                Debug.Log("Spawned with ownership of weapon");
-            }
+            //
+            // if (IsServer)
+            // {
+            //    NetworkObject.SpawnWithOwnership(ownerId);
+            //    NetworkObject.TrySetParent(parent);
+            // }
+            
         }
         
         private void InitialiseWeaponObject()
         {
-            if(WeaponType == null) return;
-            if (weaponModel == null) weaponModel = Instantiate(WeaponType.WeaponMesh, prefabLocation.transform);
+            if (WeaponType != null)
+            {
+                Debug.Log("Weapon type was not null");
+                AmmoType = WeaponType.AmmoType;
+                AmmoEffect = AmmoType.GetAmmoEffectPrefab();
+                weaponModel = Instantiate(WeaponType.WeaponMesh, prefabLocation.transform);
+            }
+            
         }
 
         private void InitialiseFiringMechanics()
         {
-            _firingCooldown = Stats.FireRateInSeconds;
-            _firingCoroutine = Firing(Stats.FireRateInSeconds);
+            _firingCooldown = _stats.FireRateInSeconds;
+            _firingCoroutine = Firing(_stats.FireRateInSeconds);
             _firingCooldownTimer = _firingCooldown;
         }
 
@@ -80,6 +95,7 @@ namespace Weapons
         [ContextMenu("Fire Attack")]
         public void DoAttack() 
         {
+            if(!IsOwner) return; 
             
             // Check if the firing cooldown timer is greater than or equal to the firing cooldown
             if (_firingCooldownTimer <= 0)
@@ -92,25 +108,32 @@ namespace Weapons
         
         public void StopAttack()
         {
+            if(!IsOwner) return; 
+
             IsFiring = false;
-            StopCoroutine(_firingCoroutine); 
+            if(_firingCoroutine != null)
+                StopCoroutine(_firingCoroutine); 
         }
         
         public void Fire(Vector3 position, Quaternion rotation)
         {
-            AmmoEffect projectile = WeaponType.InstantiateAmmoFromWeapon(position, rotation, out Rigidbody projectileRb);
+            AmmoEffect projectile = WeaponType.InstantiateAmmoFromWeapon(position, rotation);
+            Instantiate(AmmoType.GetGraphicsPrefab(), 
+                position, 
+                rotation, 
+                projectile.transform);
+            projectile.SetAmmoType(AmmoType);
+            projectile.SetMaxRange(_stats.RangeInMetres);
+            Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
             var forward = rotation * Vector3.forward;
-            
-            if(IsServer)
-            {
-                HandleNetworkObject(projectile);
-                projectileRb.velocity = WeaponType.SetProjectileVelocity(forward, WeaponType.Stats.ProjectileSpeed);
-            }
-            
-            // if(IsClient && IsOwner || IsServer)
-                projectileRb.velocity = WeaponType.SetProjectileVelocity(forward, WeaponType.Stats.ProjectileSpeed);
+            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
+            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            projectileRb.isKinematic = false;
+            projectileRb.AddForce(forward * _stats.ProjectileSpeed, ForceMode.VelocityChange);
+            projectileRb.excludeLayers = LayerMask.GetMask("Ammo","Weapon","LocalPlayer");
+            projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
         }
-
+        
         IEnumerator Firing(float fireRate)
         {
             while (IsFiring)
@@ -121,23 +144,15 @@ namespace Weapons
                 
                 if(IsClient && IsOwner)
                     FireServerRpc(_firePointPosition, _firePointRotation);
-                
-                if(IsServer)
-                    Fire(_firePointPosition, _firePointRotation);
+                    
                 
                 _firingCooldownTimer = _firingCooldown;
                 yield return new WaitForSeconds(fireRate);
             }
         }
         
-        private void HandleNetworkObject(AmmoEffect projectile)
-        {
-            if (!IsServer) return;
-            
-            if (projectile.TryGetComponent(out NetworkObject no)) no.Spawn();
-        }
-        
-        public void SetAmmoType(AmmoType ammoTypeToSet) => ammoType = ammoTypeToSet; 
+        public void SetAmmoType(AmmoType ammoTypeToSet) => AmmoType = ammoTypeToSet; 
+        public void SetStats(WeaponStats statsToSet) => _stats = statsToSet;
         public void SetWeaponType(WeaponType weaponTypeToSet) => WeaponType = weaponTypeToSet;
 
         public override void OnDestroy()
@@ -149,7 +164,7 @@ namespace Weapons
         [ServerRpc] 
         void FireServerRpc(Vector3 position, Quaternion rotation) => Fire(position, rotation);
 
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (WeaponType == null) return;

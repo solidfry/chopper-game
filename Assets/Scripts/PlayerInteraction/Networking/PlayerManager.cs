@@ -33,8 +33,11 @@ namespace PlayerInteraction.Networking
             if (IsClient && IsOwner && IsLocalPlayer)
             {
                 SetPlayerRbNonKinematic(true);
+                SetLocalPlayerLayerByName();
             }
         }
+        
+        
 
       
 
@@ -119,6 +122,8 @@ namespace PlayerInteraction.Networking
         }
         
         void SetPlayerRbNonKinematic(bool value) => PlayerRigidbody.isKinematic = value;
+        
+        void SetLocalPlayerLayerByName() => gameObject.layer = LayerMask.NameToLayer("LocalPlayer");
         
         [ServerRpc]
         void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);

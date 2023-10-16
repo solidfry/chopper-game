@@ -50,6 +50,7 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
+            Debug.Log($"collider3D with {collision.gameObject.name}");
             if (collision.collider.TryGetComponent(out IDamageable damageable))
                 damageable.TakeDamage(ammoType.stats.Damage);
 
@@ -73,7 +74,7 @@ namespace Weapons
             {
                 ProjectileNetworkObject.Despawn();
             }
-
+            //TODO this needs to be looked into to see if the destroy actually needs to be there
             Destroy(gameObject);
         }
 
@@ -83,6 +84,7 @@ namespace Weapons
             if(IsServer)
                 DestructionEffect();
         }
-        
+
+        public AmmoType GetAmmoType() => ammoType;
     }
 }

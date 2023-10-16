@@ -1,6 +1,7 @@
 ﻿using System;
 using Interfaces;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Weapons.ScriptableObjects;
 
 namespace Weapons
@@ -9,11 +10,11 @@ namespace Weapons
     public class WeaponSlot : IAttackable
     {
         [SerializeField] private Transform transform;
-        [SerializeField] private WeaponType data;
+        [SerializeField] private WeaponType weaponType;
         private Weapon _weaponGameObject;
         
         public Transform Transform => transform;
-        public WeaponType Data => data;
+        public WeaponType WeaponType => weaponType;
 
         public Weapon WeaponGameObject
         {
@@ -25,6 +26,5 @@ namespace Weapons
 
         public void StopAttack() => WeaponGameObject.StopAttack();
 
-        public void InstantiateAttackable(Transform tr, Transform parent) => Data.InstantiateWeapon(tr, parent);
     }
 }

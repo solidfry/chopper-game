@@ -18,17 +18,15 @@ namespace Weapons.ScriptableObjects
         public GameObject DeathParticles => deathParticles;
         public GameObject GraphicsPrefab => graphicsPrefab;
 
-        public AmmoEffect InstantiateAmmo(Vector3 position, Quaternion rotation, float rangeInMetres = 50f)
+        public AmmoEffect InstantiateAmmo(Vector3 position, Quaternion rotation)
         {
             AmmoEffect ammo = Instantiate(ammoBasePrefab, position, rotation);
-            ammo.SetAmmoType(this);
-            ammo.SetMaxRange(rangeInMetres);
-            InstantiateGraphicsPrefab(ammo.transform);
             return ammo;
         }
         
-        public GameObject InstantiateGraphicsPrefab(Transform transform) => Instantiate(graphicsPrefab, transform.position, transform.rotation, parent: transform);
-
+        public GameObject InstantiateGraphicsPrefab(Transform parent) => Instantiate(graphicsPrefab, parent.position, parent.rotation);
+        public GameObject GetGraphicsPrefab() => graphicsPrefab;
+        public AmmoEffect GetAmmoEffectPrefab() => ammoBasePrefab;
         public GameObject InstantiateDeathParticles(Transform transform) => Instantiate(deathParticles, transform.position, Quaternion.identity);
 
         public void CreateRayCastExplosion(Transform transform, float explosionRadius, int damage)
