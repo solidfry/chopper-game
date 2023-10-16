@@ -13,6 +13,7 @@ namespace PlayerInteraction
 
         public void Start()
         {
+            if (IsServer) return;
             AssignWeaponSlots();
         }
 
@@ -68,7 +69,7 @@ namespace PlayerInteraction
 
         private void AssignWeaponSlots()
         {
-            if (_weaponsAssigned || weaponSlots == null) return;
+            // if (_weaponsAssigned || weaponSlots == null) return;
 
             for (int i = 0; i < weaponSlots.Length; i++)
             {
@@ -90,7 +91,7 @@ namespace PlayerInteraction
                 }
 
             }
-            _weaponsAssigned = true;
+            // _weaponsAssigned = true;
         } 
    
   
