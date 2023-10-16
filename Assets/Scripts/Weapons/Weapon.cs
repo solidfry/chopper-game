@@ -17,14 +17,6 @@ namespace Weapons
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
         [SerializeField] private ulong ownerId;
-        
-        public void Initialise(ulong _ownerIdToSet, Transform _parent)
-        {
-            parent = _parent;
-            ownerId = _ownerIdToSet;
-            NetworkObject.SpawnWithOwnership(ownerId);
-            NetworkObject.TrySetParent(parent);
-        }
 
         WeaponStats _stats;
         Vector3 _firePointPosition;
@@ -41,17 +33,7 @@ namespace Weapons
             set => isFiring = value;
         }
 
-        // public override void OnNetworkSpawn()
-        // {
-        //         Debug.Log("Networkspawn ran");
-        //     if (IsClient || IsOwner)
-        //     {
-        //         InitialiseFiringMechanics();
-        //         InitialiseWeaponObject();
-        //     }
-        // }
-
-        public override void OnNetworkSpawn()
+        public override void OnNetworkSpawn() 
         {
             if (IsClient || IsLocalPlayer)
             {
@@ -59,12 +41,6 @@ namespace Weapons
                 InitialiseFiringMechanics();
                 InitialiseWeaponObject();
             }
-            //
-            // if (IsServer)
-            // {
-            //    NetworkObject.SpawnWithOwnership(ownerId);
-            //    NetworkObject.TrySetParent(parent);
-            // }
             
         }
         
@@ -118,20 +94,25 @@ namespace Weapons
         public void Fire(Vector3 position, Quaternion rotation)
         {
             AmmoEffect projectile = WeaponType.InstantiateAmmoFromWeapon(position, rotation);
-            Instantiate(AmmoType.GetGraphicsPrefab(), 
-                position, 
-                rotation, 
-                projectile.transform);
-            projectile.SetAmmoType(AmmoType);
-            projectile.SetMaxRange(_stats.RangeInMetres);
-            Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
-            var forward = rotation * Vector3.forward;
-            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
-            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            projectileRb.isKinematic = false;
-            projectileRb.AddForce(forward * _stats.ProjectileSpeed, ForceMode.VelocityChange);
-            projectileRb.excludeLayers = LayerMask.GetMask("Ammo","Weapon","LocalPlayer");
-            projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
+            if(IsClient && IsOwner)
+            {
+                Instantiate(AmmoType.GetGraphicsPrefab(),
+                    position,
+                    rotation,
+                    projectile.transform);
+                projectile.SetAmmoType(AmmoType);
+                projectile.SetMaxRange(_stats.RangeInMetres);
+                Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+                var forward = rotation * Vector3.forward;
+                projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
+                projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                projectileRb.isKinematic = false;
+                projectileRb.AddForce(forward * _stats.ProjectileSpeed, ForceMode.VelocityChange);
+                projectileRb.excludeLayers = LayerMask.GetMask("Ammo", "Weapon", "LocalPlayer");
+            }
+            
+            if(IsServer && !IsLocalPlayer)
+                projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
         }
         
         IEnumerator Firing(float fireRate)
@@ -143,8 +124,13 @@ namespace Weapons
                 WeaponType.shakeEvent.Invoke();
                 
                 if(IsClient && IsOwner)
+                {
                     FireServerRpc(_firePointPosition, _firePointRotation);
-                    
+                }
+                else
+                {
+                    Fire(_firePointPosition, _firePointRotation);
+                }
                 
                 _firingCooldownTimer = _firingCooldown;
                 yield return new WaitForSeconds(fireRate);

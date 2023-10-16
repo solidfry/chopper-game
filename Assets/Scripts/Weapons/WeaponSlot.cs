@@ -1,7 +1,6 @@
 ﻿using System;
 using Interfaces;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Weapons.ScriptableObjects;
 
 namespace Weapons
@@ -11,15 +10,15 @@ namespace Weapons
     {
         [SerializeField] private Transform transform;
         [SerializeField] private WeaponType weaponType;
-        private Weapon _weaponGameObject;
+        [SerializeField] private Weapon weaponGameObject;
         
         public Transform Transform => transform;
         public WeaponType WeaponType => weaponType;
 
         public Weapon WeaponGameObject
         {
-            get => _weaponGameObject; 
-            set => _weaponGameObject = value;
+            get => weaponGameObject; 
+            set => weaponGameObject = value;
         }
 
         public void DoAttack() => WeaponGameObject.DoAttack();

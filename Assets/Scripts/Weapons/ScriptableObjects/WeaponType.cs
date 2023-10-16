@@ -53,11 +53,11 @@ namespace Weapons.ScriptableObjects
         
         public Weapon InstantiateWeapon(Transform weaponPosition, Transform parent)
         {
-            Weapon weapon = Instantiate(weaponPrefab, weaponPosition.position, weaponPosition.rotation, parent);
+            Weapon weapon = Instantiate(WeaponPrefab, weaponPosition.position, weaponPosition.rotation, parent);
             Debug.Log("Instance of weapon created");
-            weapon.SetWeaponType(_weaponType);
-            weapon.SetStats(Stats);
-            weapon.SetAmmoType(AmmoType);
+            // weapon.SetWeaponType(_weaponType);
+            // weapon.SetStats(Stats);
+            // weapon.SetAmmoType(AmmoType);
             return weapon;
         }
     }

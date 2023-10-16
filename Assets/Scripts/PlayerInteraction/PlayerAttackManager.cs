@@ -9,20 +9,11 @@ namespace PlayerInteraction
     public class PlayerAttackManager : NetworkBehaviour
     {
         [SerializeField] private WeaponSlot[] weaponSlots;
-        List<Weapon> _weapons = new ();
         private bool _weaponsAssigned = false;
 
-        public override void OnNetworkSpawn()
+        public void Start()
         {
-            if(IsClient && IsOwner && IsLocalPlayer)
-            {
-                AssignWeaponSlotsServerRpc();
-            }
-            
-            if (IsServer)
-            {
-                AssignWeaponSlots();
-            }
+            AssignWeaponSlots();
         }
 
    
@@ -81,32 +72,27 @@ namespace PlayerInteraction
 
             for (int i = 0; i < weaponSlots.Length; i++)
             {
-                var weapon = weaponSlots[i].WeaponType.InstantiateWeapon(weaponSlots[i].Transform, transform);
-                weaponSlots[i].WeaponGameObject = weapon;
-                weapon.name = $"Weapon {i + 1}";
-                weapon.Initialise(OwnerClientId, weaponSlots[i].Transform);
-                _weapons.Add(weapon);
-            }
-            _weaponsAssigned = true;
-        } 
-        
-        [ServerRpc]
-        private void AssignWeaponSlotsServerRpc()
-        {
-            if (_weaponsAssigned || weaponSlots == null) return;
+                if(IsClient && IsOwner)
+                {
+                    var t = weaponSlots[i].Transform;
+                    var weapon = Instantiate(weaponSlots[i].WeaponType.WeaponPrefab, t.position, t.rotation, transform);
+                    weaponSlots[i].WeaponGameObject = weapon;
+                    weapon.SetWeaponType(weaponSlots[i].WeaponType);
+                    weapon.SetStats(weaponSlots[i].WeaponType.Stats);
+                    weapon.SetAmmoType(weaponSlots[i].WeaponType.AmmoType);
+                    weapon.name = $"Weapon {i + 1}";
+                }
+                
+                if (IsServer)
+                {
+                    weaponSlots[i].WeaponGameObject.NetworkObject.SpawnWithOwnership(OwnerClientId);
+                    weaponSlots[i].WeaponGameObject.NetworkObject.TrySetParent(transform);
+                }
 
-            for (int i = 0; i < weaponSlots.Length; i++)
-            {
-                var weapon = weaponSlots[i].WeaponType.InstantiateWeapon(weaponSlots[i].Transform, transform);
-                weaponSlots[i].WeaponGameObject = weapon;
-                weapon.name = $"Weapon {i + 1}";
-                // weapon.Initialise(OwnerClientId, weaponSlots[i].Transform);
-                weapon.NetworkObject.SpawnWithOwnership(OwnerClientId);
-                weapon.NetworkObject.TrySetParent(transform);
-                _weapons.Add(weapon);
             }
             _weaponsAssigned = true;
         } 
+   
   
         [ServerRpc]
         void PerformAttackServerRpc(int weaponIndex) => PerformAttack(weaponIndex);
