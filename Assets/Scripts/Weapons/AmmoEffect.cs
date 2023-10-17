@@ -28,8 +28,9 @@ namespace Weapons
             
             if(ProjectileNetworkObject == null)
                 ProjectileNetworkObject = GetComponent<NetworkObject>();
-            
-            previousPosition = transform.position;
+
+            var tr = transform;
+            previousPosition = tr.position;
         }
 
         private void Update() => CheckDistanceTravelled();

@@ -1,29 +1,57 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using Interfaces;
 using UnityEngine;
-using Weapons.ScriptableObjects;
 
 namespace Weapons
 {
-    [Serializable]
-    public class WeaponSlot : IAttackable
+    public class WeaponSlot : MonoBehaviour, IAttackable
     {
-        [SerializeField] private Transform transform;
-        [SerializeField] private WeaponType weaponType;
-        [SerializeField] private Weapon weaponGameObject;
-        
-        public Transform Transform => transform;
-        public WeaponType WeaponType => weaponType;
+        public Weapon weaponGameObjectInstance;
+        IEnumerator _firingCoroutine;
+        public event Action<WeaponSlot, Vector3, Quaternion> OnAttack;
 
-        public Weapon WeaponGameObject
+        private void Start()
         {
-            get => weaponGameObject; 
-            set => weaponGameObject = value;
+            Debug.Log($"Fire rate is {weaponGameObjectInstance.stats.FireRateInSeconds}");
+            _firingCoroutine = Firing(weaponGameObjectInstance.stats.FireRateInSeconds);
         }
 
-        public void DoAttack() => WeaponGameObject.DoAttack();
-
-        public void StopAttack() => WeaponGameObject.StopAttack();
-
+        public void DoAttack() 
+        {
+            weaponGameObjectInstance.IsFiring = true;
+            StartCoroutine(_firingCoroutine);
+        }
+        
+        public void StopAttack()
+        {
+            weaponGameObjectInstance.IsFiring = false;
+            if(_firingCoroutine != null)
+                StopCoroutine(_firingCoroutine); 
+        }
+        
+        public AmmoEffect Fire(Vector3 position, Quaternion rotation)
+        {
+            AmmoEffect projectile = weaponGameObjectInstance.weaponType.InstantiateAmmoFromWeapon(position, rotation);
+            
+            projectile.SetAmmoType(weaponGameObjectInstance.ammoType);
+            projectile.SetMaxRange(weaponGameObjectInstance.stats.RangeInMetres);
+            return projectile;
+        }
+        
+        IEnumerator Firing(float fireRate)
+        {
+            while (weaponGameObjectInstance.IsFiring)
+            {
+                
+                weaponGameObjectInstance.weaponType.shakeEvent.Invoke();
+                OnAttack?.Invoke(this, weaponGameObjectInstance.firePointPosition, transform.rotation);
+                weaponGameObjectInstance.firingCooldownTimer = weaponGameObjectInstance.firingCooldown;
+                yield return new WaitForSeconds(fireRate);
+            }
+        }
+        
+        
     }
 }

@@ -24,8 +24,8 @@ namespace Weapons.ScriptableObjects
             return ammo;
         }
         
-        public GameObject InstantiateGraphicsPrefab(Transform parent) => Instantiate(graphicsPrefab, parent.position, parent.rotation);
-        public GameObject GetGraphicsPrefab() => graphicsPrefab;
+        // public GameObject InstantiateGraphicsPrefab(Transform parent) => Instantiate(graphicsPrefab, parent.position, parent.rotation, parent);
+        // public GameObject GetGraphicsPrefab() => graphicsPrefab;
         public AmmoEffect GetAmmoEffectPrefab() => ammoBasePrefab;
         public GameObject InstantiateDeathParticles(Transform transform) => Instantiate(deathParticles, transform.position, Quaternion.identity);
 

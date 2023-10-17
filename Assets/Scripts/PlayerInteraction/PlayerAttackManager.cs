@@ -1,23 +1,34 @@
-﻿using System.Collections.Generic;
-using Unity.Netcode;
+﻿using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using Weapons;
 
 namespace PlayerInteraction
 {
     public class PlayerAttackManager : NetworkBehaviour
     {
+        [FormerlySerializedAs("layerMask")] [SerializeField] LayerMask ignoreCollisionMask;
         [SerializeField] private WeaponSlot[] weaponSlots;
-        private bool _weaponsAssigned = false;
-
-        public void Start()
+        
+        public override void OnNetworkSpawn()
         {
-            if (IsServer) return;
-            AssignWeaponSlots();
+            foreach (var weapon in weaponSlots)
+            {
+                weapon.OnAttack += Fire;
+            }
+        }
+        
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+            foreach (var weapon in weaponSlots)
+            {
+                weapon.OnAttack -= Fire;
+            }
         }
 
-   
+
         public void Fire1(InputAction.CallbackContext ctx) => HandleInput(0, ctx);
 
         public void Fire2(InputAction.CallbackContext ctx) => HandleInput(1, ctx);
@@ -63,37 +74,32 @@ namespace PlayerInteraction
                 PerformAttack(weaponIndex);
         }
 
-        private void PerformAttack(int weaponIndex) => weaponSlots[weaponIndex].DoAttack();
-
+        private void PerformAttack(int weaponIndex)
+        {
+            
+            var weapon = weaponSlots[weaponIndex];
+            if (weapon.weaponGameObjectInstance.firingCooldownTimer <= 0)
+            {
+                weapon.DoAttack();
+            }
+        }
         private void StopAttack(int weaponIndex) => weaponSlots[weaponIndex].StopAttack();
 
-        private void AssignWeaponSlots()
+        private void Fire(WeaponSlot weapon, Vector3 position, Quaternion rotation)
         {
-            // if (_weaponsAssigned || weaponSlots == null) return;
-
-            for (int i = 0; i < weaponSlots.Length; i++)
-            {
-                if(IsClient && IsOwner)
-                {
-                    var t = weaponSlots[i].Transform;
-                    var weapon = Instantiate(weaponSlots[i].WeaponType.WeaponPrefab, t.position, t.rotation, transform);
-                    weaponSlots[i].WeaponGameObject = weapon;
-                    weapon.SetWeaponType(weaponSlots[i].WeaponType);
-                    weapon.SetStats(weaponSlots[i].WeaponType.Stats);
-                    weapon.SetAmmoType(weaponSlots[i].WeaponType.AmmoType);
-                    weapon.name = $"Weapon {i + 1}";
-                }
-                
-                if (IsServer)
-                {
-                    weaponSlots[i].WeaponGameObject.NetworkObject.SpawnWithOwnership(OwnerClientId);
-                    weaponSlots[i].WeaponGameObject.NetworkObject.TrySetParent(transform);
-                }
-
-            }
-            // _weaponsAssigned = true;
-        } 
-   
+            var projectile = weapon.Fire(position, rotation);
+            Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
+            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            projectileRb.isKinematic = false;
+            projectileRb.excludeLayers = ignoreCollisionMask;
+            projectileRb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
+            var forward = rotation * Vector3.forward;
+            projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
+            projectileRb.AddForce(forward * weapon.weaponGameObjectInstance.stats.ProjectileSpeed,
+                ForceMode.VelocityChange);
+        }
+        
   
         [ServerRpc]
         void PerformAttackServerRpc(int weaponIndex) => PerformAttack(weaponIndex);

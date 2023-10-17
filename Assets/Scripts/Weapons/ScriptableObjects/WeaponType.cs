@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Effects.Structs;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Weapons.ScriptableObjects
 {

@@ -11,6 +11,5 @@ namespace Interfaces
         void DoAttack();
         void StopAttack();
         // void InstantiateAttackable(Transform transform, Transform parent);
-        Weapon WeaponGameObject { get; set; }
     }
 }

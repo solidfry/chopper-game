@@ -72,7 +72,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6017035465089103339}
   - component: {fileID: 6017035465089103336}
-  - component: {fileID: 7519815061620483665}
   m_Layer: 8
   m_Name: Weapon
   m_TagString: Untagged
@@ -109,37 +108,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c69e325402de47c6a93509e83a360220, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponType: {fileID: 0}
+  <WeaponType>k__BackingField: {fileID: 0}
   firePointTr: {fileID: 6017035464485607926}
   prefabLocation: {fileID: 2359845342999729044}
   weaponModel: {fileID: 0}
   isFiring: 0
-  stats:
-    fireRateInSeconds: 0
-    rangeInMetres: 0
-    spread: 0
-    reloadTimeInSeconds: 0
-    projectileSpeed: 0
-    magazineSize: 0
-    maxAmmo: 0
-  ammoType: {fileID: 0}
---- !u!114 &7519815061620483665
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6017035465089103319}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 951099334
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
+  ownerId: 0
