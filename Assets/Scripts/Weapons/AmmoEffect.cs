@@ -41,6 +41,8 @@ namespace Weapons
 
         private void CheckDistanceTravelled()
         {
+            if(!IsServer) return;
+
             _position = transform.position;
             distanceTraveled += Vector3.Distance(_position, previousPosition);
             previousPosition = _position;
@@ -51,6 +53,8 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
+            if(!IsServer) return;
+
             Debug.Log($"collider3D with {collision.gameObject.name}");
             if (collision.collider.TryGetComponent(out IDamageable damageable))
                 damageable.TakeDamage(ammoType.stats.Damage);
@@ -61,6 +65,8 @@ namespace Weapons
         
         private void OnTriggerEnter(Collider collision)
         {
+            if(!IsServer) return;
+
             if (collision.TryGetComponent(out IDamageable damageable))
                 damageable.TakeDamage(ammoType.stats.Damage);
 
@@ -70,13 +76,12 @@ namespace Weapons
 
         void DestructionEffect() 
         {
+            if(!ProjectileNetworkObject.IsSpawned) return;
             // Debug.Log("Destruction effect");
-            if(IsServer && ProjectileNetworkObject.IsSpawned)
+            if(IsServer)
             {
                 ProjectileNetworkObject.Despawn();
             }
-            //TODO this needs to be looked into to see if the destroy actually needs to be there
-            Destroy(gameObject);
         }
 
         void DoDestroy()

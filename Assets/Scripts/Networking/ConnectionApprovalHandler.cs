@@ -27,10 +27,9 @@ namespace Networking
             if(!PlayersCanJoin()) 
             {
                 response.Approved = false;
-                response.Reason = "Serve    r is full";
+                response.Reason = "Server is full";
                 return;
             }
-
           
             // var id = request.ClientNetworkId;
             _spawnManager.GetSpawnLocation(out var spawnLocation);
@@ -39,8 +38,8 @@ namespace Networking
             {
                 response.Approved = true;
                 response.CreatePlayerObject = true;
-                // response.Position = spawnLocation.position;
-                // response.Rotation = spawnLocation.rotation;
+                response.Position = spawnLocation.position;
+                response.Rotation = spawnLocation.rotation;
                 Debug.Log(response.Position + " The position");
                 response.Reason = "Testing the Approved message";
             }

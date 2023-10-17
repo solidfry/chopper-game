@@ -44,14 +44,17 @@ namespace Weapons
         {
             while (weaponGameObjectInstance.IsFiring)
             {
-                
-                weaponGameObjectInstance.weaponType.shakeEvent.Invoke();
-                OnAttack?.Invoke(this, weaponGameObjectInstance.firePointPosition, transform.rotation);
-                weaponGameObjectInstance.firingCooldownTimer = weaponGameObjectInstance.firingCooldown;
-                yield return new WaitForSeconds(fireRate);
+                if (weaponGameObjectInstance.firingCooldownTimer <= 0)
+                {
+                    weaponGameObjectInstance.weaponType.shakeEvent.Invoke();
+                    weaponGameObjectInstance.firingCooldownTimer = weaponGameObjectInstance.firingCooldown;
+                    OnAttack?.Invoke(this, weaponGameObjectInstance.firePointPosition, transform.rotation);
+
+                    yield return new WaitForSeconds(fireRate); // Maintains the fire rate
+                }
+               
             }
+
         }
-        
-        
     }
 }

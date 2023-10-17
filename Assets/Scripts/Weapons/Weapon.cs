@@ -58,7 +58,7 @@ namespace Weapons
         private void Update()
         {
             firePointPosition = FirePoint();
-            firingCooldownTimer -= Time.deltaTime;
+            firingCooldownTimer = Mathf.Max(firingCooldownTimer - Time.deltaTime, 0);
         }
 
         private Vector3 FirePoint()

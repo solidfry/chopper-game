@@ -11,13 +11,14 @@ namespace PlayerInteraction
         [FormerlySerializedAs("layerMask")] [SerializeField] LayerMask ignoreCollisionMask;
         [SerializeField] private WeaponSlot[] weaponSlots;
         
-        public override void OnNetworkSpawn()
+        public void Start()
         {
             foreach (var weapon in weaponSlots)
             {
                 weapon.OnAttack += Fire;
             }
         }
+        
         
         public override void OnDestroy()
         {
@@ -87,17 +88,21 @@ namespace PlayerInteraction
 
         private void Fire(WeaponSlot weapon, Vector3 position, Quaternion rotation)
         {
-            var projectile = weapon.Fire(position, rotation);
-            Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
-            projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
-            projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            projectileRb.isKinematic = false;
-            projectileRb.excludeLayers = ignoreCollisionMask;
-            projectileRb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
-            var forward = rotation * Vector3.forward;
-            projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
-            projectileRb.AddForce(forward * weapon.weaponGameObjectInstance.stats.ProjectileSpeed,
-                ForceMode.VelocityChange);
+            if (IsServer)
+            {
+                var projectile = weapon.Fire(position, rotation);
+                projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
+
+                Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+                projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
+                projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                projectileRb.isKinematic = false;
+                projectileRb.excludeLayers = ignoreCollisionMask;
+                projectileRb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
+
+                var forward = rotation * Vector3.forward;
+                projectileRb.AddForce(forward * weapon.weaponGameObjectInstance.stats.ProjectileSpeed, ForceMode.VelocityChange);
+            }
         }
         
   
