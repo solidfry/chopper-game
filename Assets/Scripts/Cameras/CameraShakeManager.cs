@@ -59,11 +59,7 @@ namespace Cameras
         }
         
         void SetCameraValues(float amplitude, float frequency, CinemachineBasicMultiChannelPerlin _noise)
-        {
-            // smooth step these badbois
-            //
-            // _noise.m_AmplitudeGain = amplitude;
-            // _noise.m_FrequencyGain = frequency;
+        { 
             _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, amplitude, .25f);
             _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, frequency, .25f);
         }
@@ -72,11 +68,9 @@ namespace Cameras
         {
             yield return new WaitForSeconds(lengthInSeconds);
             
-            // I want to smoothstep these 2 values
             _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, _defaultAmplitude, 1);
             _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, _defaultFrequency, 1);
             
-            // _noise.m_FrequencyGain = _defaultFrequency;
         }
 
         private void CheckNoise()
