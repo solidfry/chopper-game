@@ -60,15 +60,23 @@ namespace Cameras
         
         void SetCameraValues(float amplitude, float frequency, CinemachineBasicMultiChannelPerlin _noise)
         {
-            _noise.m_AmplitudeGain = amplitude;
-            _noise.m_FrequencyGain = frequency;
+            // smooth step these badbois
+            //
+            // _noise.m_AmplitudeGain = amplitude;
+            // _noise.m_FrequencyGain = frequency;
+            _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, amplitude, .25f);
+            _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, frequency, .25f);
         }
         
         IEnumerator ResetCamera(float lengthInSeconds, CinemachineBasicMultiChannelPerlin _noise)
         {
             yield return new WaitForSeconds(lengthInSeconds);
-            _noise.m_AmplitudeGain = _defaultAmplitude;
-            _noise.m_FrequencyGain = _defaultFrequency;
+            
+            // I want to smoothstep these 2 values
+            _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, _defaultAmplitude, 1);
+            _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, _defaultFrequency, 1);
+            
+            // _noise.m_FrequencyGain = _defaultFrequency;
         }
 
         private void CheckNoise()
