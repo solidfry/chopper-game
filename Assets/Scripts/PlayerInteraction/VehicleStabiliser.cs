@@ -1,6 +1,5 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Utilities;
 
 namespace PlayerInteraction
@@ -15,18 +14,25 @@ namespace PlayerInteraction
         [SerializeField] private bool useStabiliser = true;
         [SerializeField] private float strength = 2f;
         [SerializeField] private float speedThreshold = 20f;
-        [ReadOnly] 
-        [SerializeField] private bool isActive;
+
+        
+        public bool IsActive
+        {
+            get => isActive;
+            private set => isActive = value;
+        }
 
         private Vector3 _correctiveTorque;
-        
+        [ReadOnly]
+        [SerializeField] private bool isActive;
+
         // [SerializeField] private bool debug = false;
         
         public void OnStart(Rigidbody rigidbody)
         {
             this.rigidbody = rigidbody;
             if(this.rigidbody is null) return;
-            isActive = false;
+            IsActive = false;
         }
         
         public void UpdateStabiliser(Vector3 currentUp)
@@ -35,7 +41,7 @@ namespace PlayerInteraction
             
             if (GetCurrentSpeed(rigidbody) <= 1)
             {
-                isActive = false;
+                IsActive = false;
                 return;
             }
             
@@ -66,10 +72,14 @@ namespace PlayerInteraction
             rigidbody.AddRelativeTorque(_correctiveTorque, ForceMode.Acceleration);
         }
 
-        private bool CheckIsActive(float currentSpeed) => isActive = currentSpeed <= speedThreshold;
+        private bool CheckIsActive(float currentSpeed) => IsActive = currentSpeed <= speedThreshold;
         
         private float GetCurrentSpeed(Rigidbody rigidbody) => Speed.MetersPerSecondToKilometersPerHour(rigidbody.velocity.magnitude);
 
         private Vector3 CorrectiveTorque(Vector3 axis, float angle) => -axis * (angle * strength * Time.deltaTime);
+
+       
+          
+        
     }
 }

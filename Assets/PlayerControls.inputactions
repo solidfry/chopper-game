@@ -18,10 +18,10 @@
                     "name": "Pitch",
                     "type": "PassThrough",
                     "id": "ac905df7-139c-4c14-b7c8-6346358ad07d",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "Axis",
                     "processors": "",
                     "interactions": "",
-                    "initialStateCheck": false
+                    "initialStateCheck": true
                 },
                 {
                     "name": "Yaw",
@@ -195,7 +195,7 @@
                     "path": "<Keyboard>/upArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": "Mouse and Keyboard",
                     "action": "Pitch",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -206,7 +206,40 @@
                     "path": "<Keyboard>/downArrow",
                     "interactions": "",
                     "processors": "",
+                    "groups": "Mouse and Keyboard",
+                    "action": "Pitch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Mouse",
+                    "id": "be371502-42c7-43af-8baa-b6a5f20ef9f6",
+                    "path": "1DAxis",
+                    "interactions": "",
+                    "processors": "",
                     "groups": "",
+                    "action": "Pitch",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "negative",
+                    "id": "cecb8aba-77cf-4445-8e5f-7ec35e0dd220",
+                    "path": "<Mouse>/delta/down",
+                    "interactions": "",
+                    "processors": "Scale(factor=50)",
+                    "groups": "Mouse and Keyboard",
+                    "action": "Pitch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "positive",
+                    "id": "8d41ae11-d619-4701-a78b-d3a5b86a6e15",
+                    "path": "<Mouse>/delta/up",
+                    "interactions": "",
+                    "processors": "Scale(factor=50)",
+                    "groups": "Mouse and Keyboard",
                     "action": "Pitch",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -441,9 +474,59 @@
                     "action": "Dash",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "Mouse",
+                    "id": "299969e4-c062-41d7-beb7-252bc358e648",
+                    "path": "1DAxis",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Roll",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "negative",
+                    "id": "dfcd0398-e825-4683-9180-c34c1c151f72",
+                    "path": "<Mouse>/delta/left",
+                    "interactions": "",
+                    "processors": "Scale(factor=0.1)",
+                    "groups": "Mouse and Keyboard",
+                    "action": "Roll",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "positive",
+                    "id": "e9ca0bbf-d2c2-4cf1-ab0f-da931aebb895",
+                    "path": "<Mouse>/delta/right",
+                    "interactions": "",
+                    "processors": "Scale(factor=0.1)",
+                    "groups": "Mouse and Keyboard",
+                    "action": "Roll",
+                    "isComposite": false,
+                    "isPartOfComposite": true
                 }
             ]
         }
     ],
-    "controlSchemes": []
+    "controlSchemes": [
+        {
+            "name": "Mouse and Keyboard",
+            "bindingGroup": "Mouse and Keyboard",
+            "devices": [
+                {
+                    "devicePath": "<Keyboard>",
+                    "isOptional": false,
+                    "isOR": false
+                },
+                {
+                    "devicePath": "<Mouse>",
+                    "isOptional": true,
+                    "isOR": false
+                }
+            ]
+        }
+    ]
 }

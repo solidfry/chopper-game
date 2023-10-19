@@ -1,5 +1,7 @@
+using PlayerInteraction;
 using UI.HUD;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace UI.Hud
 {
@@ -8,6 +10,11 @@ namespace UI.Hud
         [SerializeField] OutputHudValues outputHudValues;
         [SerializeField] IntUI speedUI = new();
         [SerializeField] IntUI altitudeUI = new();
+        
+        [Space]
+        [Header("Stabiliser Events")]
+        [SerializeField] UnityEvent onStabiliserActive = new();
+        [SerializeField] UnityEvent onStabiliserInactive = new();
         void Start()
         {
             if (outputHudValues is null) return; 
@@ -17,12 +24,24 @@ namespace UI.Hud
         {
             outputHudValues.OnAltitudeChanged += altitudeUI.UpdateText;
             outputHudValues.OnSpeedChanged += speedUI.UpdateText;
+            outputHudValues.OnStabiliserActive += StabiliserActive;
         }
-    
+        
         private void OnDisable()
         {
             outputHudValues.OnAltitudeChanged -= altitudeUI.UpdateText;
             outputHudValues.OnSpeedChanged -= speedUI.UpdateText;
+            outputHudValues.OnStabiliserActive -= StabiliserActive;
         }
+
+        private void StabiliserActive(bool isActive)
+        {
+            if (!isActive)
+                onStabiliserInactive.Invoke();
+            else 
+                onStabiliserActive.Invoke();
+        }
+
+       
     }
 }

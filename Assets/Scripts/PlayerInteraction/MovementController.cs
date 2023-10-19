@@ -69,8 +69,10 @@ namespace PlayerInteraction
             _forward = _rotation * Vector3.forward;
             thrustVector = _up + _forward * _upwardThrustVectorOffset;
             
-            // stabiliser.UpdateStabiliser(_up);
+            stabiliser.UpdateStabiliser(_up);
         }
+        
+        public VehicleStabiliser GetStabiliser() => stabiliser;
 
         
     }

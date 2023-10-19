@@ -227,7 +227,7 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 0.1
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -903,7 +903,7 @@ Transform:
   m_GameObject: {fileID: 802513807}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -500, y: -33, z: -500}
+  m_LocalPosition: {x: -500, y: -14.99, z: -500}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -974,7 +974,7 @@ PrefabInstance:
     - target: {fileID: 3402839579659932678, guid: 3f26ff4f9f929304bb9749b2ade4498c,
         type: 3}
       propertyPath: m_Volume
-      value: 0.115
+      value: 0.077
       objectReference: {fileID: 0}
     - target: {fileID: 3402839579659932678, guid: 3f26ff4f9f929304bb9749b2ade4498c,
         type: 3}
@@ -989,7 +989,7 @@ PrefabInstance:
     - target: {fileID: 3846759136897085287, guid: 3f26ff4f9f929304bb9749b2ade4498c,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8362774302294367419, guid: 3f26ff4f9f929304bb9749b2ade4498c,
         type: 3}
@@ -2143,6 +2143,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1236399261492903394, guid: f318682fbc3c2134087c30025f22d1ba,
+        type: 3}
+      propertyPath: NetworkConfig.TickRate
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 4897375696408151819, guid: f318682fbc3c2134087c30025f22d1ba,
         type: 3}
       propertyPath: m_Name
@@ -2169,7 +2174,7 @@ PrefabInstance:
     - target: {fileID: 1869544274242661993, guid: 0ade50dc11986e34eaed1c3c89d8c62b,
         type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2324609919662960277, guid: 0ade50dc11986e34eaed1c3c89d8c62b,
         type: 3}

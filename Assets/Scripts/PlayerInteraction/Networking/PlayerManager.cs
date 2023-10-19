@@ -116,6 +116,7 @@ namespace PlayerInteraction.Networking
             {
                 PlayerCameraManager.Initialize(playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
+                Cursor.visible = false;
             }
             else
                 PlayerCameraManager.Initialize(playerVirtualCamera, 0);

@@ -1,4 +1,6 @@
 using System;
+using PlayerInteraction;
+using PlayerInteraction.Networking;
 using UnityEngine;
 using Utilities;
 
@@ -12,11 +14,14 @@ namespace UI.Hud
         Rigidbody _rigidbody;
         [SerializeField] [ReadOnly] float speed, speedKmh, altitudeInMetres;
         [SerializeField] int _frameCount = 0;
+        VehicleStabiliser _stabiliser;
         
         bool _isInitialised;
         
         public event Action<int> OnSpeedChanged;
         public event Action<int> OnAltitudeChanged;
+        public event Action<bool> OnStabiliserActive;
+
 
         public void Initialise()
         {
@@ -24,6 +29,8 @@ namespace UI.Hud
             _rigidbody = GetComponent<Rigidbody>();
             enabled = true;
             _isInitialised = true;
+            _stabiliser = GetComponent<PlayerManager>().MovementController.GetStabiliser();
+
         }
 
         // Update is called once per frame
@@ -43,6 +50,7 @@ namespace UI.Hud
             {
                 OnSpeedChanged?.Invoke(Mathf.FloorToInt(speedKmh));
                 OnAltitudeChanged?.Invoke(Mathf.FloorToInt(altitudeInMetres));
+                OnStabiliserActive?.Invoke(_stabiliser.IsActive);
                 _frameCount = 0; // Reset frame counter
             }
         }
