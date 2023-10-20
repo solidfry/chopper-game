@@ -1716,6 +1716,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 456ef7dff7c53fb49870ea77471f069d, type: 3}
+--- !u!1 &1798616552
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1798616553}
+  m_Layer: 0
+  m_Name: SessionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1798616553
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1798616552}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: -9}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1863797773
 GameObject:
   m_ObjectHideFlags: 0
@@ -2143,11 +2174,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1236399261492903394, guid: f318682fbc3c2134087c30025f22d1ba,
-        type: 3}
-      propertyPath: NetworkConfig.TickRate
-      value: 60
-      objectReference: {fileID: 0}
     - target: {fileID: 4897375696408151819, guid: f318682fbc3c2134087c30025f22d1ba,
         type: 3}
       propertyPath: m_Name
@@ -2269,3 +2295,4 @@ SceneRoots:
   - {fileID: 5667470467279202018}
   - {fileID: 7176694809757972693}
   - {fileID: 26760638}
+  - {fileID: 1798616553}

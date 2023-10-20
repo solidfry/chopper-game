@@ -23,10 +23,10 @@ namespace Weapons
         {
             if (collider3D == null)
                 collider3D = GetComponent<Collider>();
-            
+
             gameObject.layer = LayerMask.NameToLayer("Ammo");
-            
-            if(ProjectileNetworkObject == null)
+
+            if (ProjectileNetworkObject == null)
                 ProjectileNetworkObject = GetComponent<NetworkObject>();
 
             var tr = transform;
@@ -41,44 +41,44 @@ namespace Weapons
 
         private void CheckDistanceTravelled()
         {
-            if(!IsServer) return;
+            if (!IsServer) return;
 
             _position = transform.position;
             distanceTraveled += Vector3.Distance(_position, previousPosition);
             previousPosition = _position;
 
-            if (distanceTraveled >= maximumRange && !_despawnHasBeenRequested) 
+            if (distanceTraveled >= maximumRange && !_despawnHasBeenRequested)
                 DoDestroy();
         }
 
         private void OnCollisionEnter(Collision collision)
         {
-            if(!IsServer) return;
+            if (!IsServer) return;
 
-            Debug.Log($"collider3D with {collision.gameObject.name}");
+            // Debug.Log($"collider3D with {collision.gameObject.name}");
             if (collision.collider.TryGetComponent(out IDamageable damageable))
                 damageable.TakeDamage(ammoType.stats.Damage);
 
-            if (!_despawnHasBeenRequested) 
+            if (!_despawnHasBeenRequested)
                 DoDestroy();
         }
-        
+
         private void OnTriggerEnter(Collider collision)
         {
-            if(!IsServer) return;
+            if (!IsServer) return;
 
             if (collision.TryGetComponent(out IDamageable damageable))
                 damageable.TakeDamage(ammoType.stats.Damage);
 
-            if (!_despawnHasBeenRequested) 
+            if (!_despawnHasBeenRequested)
                 DoDestroy();
         }
 
-        void DestructionEffect() 
+        void DestructionEffect()
         {
-            if(!ProjectileNetworkObject.IsSpawned) return;
+            if (!ProjectileNetworkObject.IsSpawned) return;
             // Debug.Log("Destruction effect");
-            if(IsServer)
+            if (IsServer)
             {
                 ProjectileNetworkObject.Despawn();
             }
@@ -87,7 +87,7 @@ namespace Weapons
         void DoDestroy()
         {
             _despawnHasBeenRequested = true;
-            if(IsServer)
+            if (IsServer)
                 DestructionEffect();
         }
 
