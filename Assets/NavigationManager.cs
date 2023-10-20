@@ -10,20 +10,14 @@ public class NavigationManager : MonoBehaviour
     [SerializeField] List<Button> navItems;
     [SerializeField] List<string> sceneNames;
 
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
     private void OnEnable()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
@@ -37,16 +31,9 @@ public class NavigationManager : MonoBehaviour
         }
     }
 
-    private void OnDisable()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-
-
     void SetButtonState(Button button, bool state)
     {
         button.interactable = state;
-        button.IsActive();
+        button.Select();
     }
 }
