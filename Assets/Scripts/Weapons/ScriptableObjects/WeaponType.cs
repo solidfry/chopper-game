@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Effects.Structs;
+using Interfaces;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -42,12 +43,20 @@ namespace Weapons.ScriptableObjects
             private set => weaponMesh = value;
         }
 
-        public AmmoEffect InstantiateAmmoFromWeapon(Vector3 position, Quaternion rotation)
+        public AmmoEffectServer InstantiateServerAmmoFromWeapon(Vector3 position, Quaternion rotation)
         {
             // Debug.Log($"Firing weapon {name}");
             Vector3 forward = rotation * Vector3.forward;
             position += forward * FirePointOffset;
-            AmmoEffect projectile = AmmoType.InstantiateAmmo(position, rotation);
+            AmmoEffectServer projectile = AmmoType.InstantiateServerAmmo(position, rotation);
+            return projectile;
+        }
+        
+        public AmmoEffectClient InstantiateClientAmmoFromWeapon(Vector3 position, Quaternion rotation)
+        {
+            Vector3 forward = rotation * Vector3.forward;
+            position += forward * FirePointOffset;
+            AmmoEffectClient projectile = AmmoType.InstantiateClientAmmo(position, rotation);
             return projectile;
         }
         

@@ -11,7 +11,7 @@ namespace Weapons
     {
         public WeaponType weaponType;
         public AmmoType ammoType;
-        public AmmoEffect ammoEffect;
+        [FormerlySerializedAs("ammoEffect")] public AmmoEffectServer ammoEffectServer;
 
         [SerializeField] public Transform firePointTr;
 

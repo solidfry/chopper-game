@@ -31,9 +31,18 @@ namespace Weapons
                 StopCoroutine(_firingCoroutine); 
         }
         
-        public AmmoEffect Fire(Vector3 position, Quaternion rotation)
+        public AmmoEffectServer Fire(Vector3 position, Quaternion rotation)
         {
-            AmmoEffect projectile = weaponGameObjectInstance.weaponType.InstantiateAmmoFromWeapon(position, rotation);
+            AmmoEffectServer projectile = weaponGameObjectInstance.weaponType.InstantiateServerAmmoFromWeapon(position, rotation);
+            
+            projectile.SetAmmoType(weaponGameObjectInstance.ammoType);
+            projectile.SetMaxRange(weaponGameObjectInstance.stats.RangeInMetres);
+            return projectile;
+        }
+        
+        public AmmoEffectClient FireClient(Vector3 position, Quaternion rotation)
+        {
+            AmmoEffectClient projectile = weaponGameObjectInstance.weaponType.InstantiateClientAmmoFromWeapon(position, rotation);
             
             projectile.SetAmmoType(weaponGameObjectInstance.ammoType);
             projectile.SetMaxRange(weaponGameObjectInstance.stats.RangeInMetres);
@@ -49,7 +58,6 @@ namespace Weapons
                     weaponGameObjectInstance.weaponType.shakeEvent.Invoke();
                     weaponGameObjectInstance.firingCooldownTimer = weaponGameObjectInstance.firingCooldown;
                     OnAttack?.Invoke(this, weaponGameObjectInstance.firePointPosition, transform.rotation);
-
                     yield return new WaitForSeconds(fireRate); // Maintains the fire rate
                 }
                

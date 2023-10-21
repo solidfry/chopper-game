@@ -15,7 +15,10 @@ namespace PlayerInteraction
         {
             foreach (var weapon in weaponSlots)
             {
-                weapon.OnAttack += Fire;
+                if(IsServer && !IsLocalPlayer)
+                    weapon.OnAttack += FireServer;
+                if (IsLocalPlayer && IsClient)
+                    weapon.OnAttack += FireClient;
             }
         }
         
@@ -25,7 +28,10 @@ namespace PlayerInteraction
             base.OnDestroy();
             foreach (var weapon in weaponSlots)
             {
-                weapon.OnAttack -= Fire;
+                if(IsServer && !IsLocalPlayer)
+                    weapon.OnAttack -= FireServer;
+                if(IsLocalPlayer && IsClient)
+                    weapon.OnAttack -= FireClient;
             }
         }
 
@@ -62,7 +68,10 @@ namespace PlayerInteraction
         private void HandleStopAttack(int weaponIndex)
         {
             if (IsClient && IsOwner)
+            {
+                if(IsLocalPlayer) StopAttack(weaponIndex);
                 StopAttackServerRpc(weaponIndex);
+            }
             else if (IsServer)
                 StopAttack(weaponIndex);
         }
@@ -70,7 +79,10 @@ namespace PlayerInteraction
         private void HandlePerformAttack(int weaponIndex)
         {
             if (IsClient && IsOwner)
+            {
+                if(IsLocalPlayer) PerformAttack(weaponIndex);
                 PerformAttackServerRpc(weaponIndex);
+            }            
             else if (IsServer)
                 PerformAttack(weaponIndex);
         }
@@ -86,26 +98,40 @@ namespace PlayerInteraction
         }
         private void StopAttack(int weaponIndex) => weaponSlots[weaponIndex].StopAttack();
 
-        private void Fire(WeaponSlot weapon, Vector3 position, Quaternion rotation)
+        private void FireServer(WeaponSlot weapon, Vector3 position, Quaternion rotation)
         {
-            if (IsServer)
-            {
-                var projectile = weapon.Fire(position, rotation);
-                projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
-
-                Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
-                projectileRb.interpolation = RigidbodyInterpolation.Interpolate;
-                projectileRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-                projectileRb.isKinematic = false;
-                projectileRb.excludeLayers = ignoreCollisionMask;
-                projectileRb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
-
-                var forward = rotation * Vector3.forward;
-                projectileRb.AddForce(forward * weapon.weaponGameObjectInstance.stats.ProjectileSpeed, ForceMode.VelocityChange);
-            }
+            if (!IsServer) return;
+            var speed = weapon.weaponGameObjectInstance.stats.ProjectileSpeed;
+            var projectile = weapon.Fire(position, rotation);
+            var forward = rotation * Vector3.forward;
+            projectile.GetComponent<NetworkObject>().SpawnWithOwnership(OwnerClientId);
+            var goServer = projectile.gameObject;
+            HandleProjectileRb(goServer, forward, speed);
         }
         
-  
+        private void FireClient(WeaponSlot weapon, Vector3 position, Quaternion rotation)
+        {
+            if (!IsLocalPlayer && !IsClient) return;
+            var speed = weapon.weaponGameObjectInstance.stats.ProjectileSpeed;
+            var projectileClient = weapon.FireClient(position, rotation);
+            var forward = rotation * Vector3.forward;
+            var goClient = projectileClient.gameObject;
+            HandleProjectileRb(goClient, forward, speed);
+        }
+
+        private void HandleProjectileRb(GameObject projectile, Vector3 forward, float speed)
+        {
+            var rb = projectile.GetComponent<Rigidbody>();
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rb.isKinematic = false;
+            rb.excludeLayers = ignoreCollisionMask;
+            rb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
+            rb.AddForce(forward * speed,
+                ForceMode.VelocityChange);
+        }
+
+
         [ServerRpc]
         void PerformAttackServerRpc(int weaponIndex) => PerformAttack(weaponIndex);
         

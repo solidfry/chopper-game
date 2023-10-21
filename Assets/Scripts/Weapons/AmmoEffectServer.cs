@@ -5,7 +5,7 @@ using Weapons.ScriptableObjects;
 
 namespace Weapons
 {
-    public class AmmoEffect : NetworkBehaviour
+    public class AmmoEffectServer : NetworkBehaviour, IAmmo
     {
         [SerializeField] private AmmoType ammoType;
         [SerializeField] float maximumRange, distanceTraveled = 0;
@@ -31,13 +31,13 @@ namespace Weapons
 
             var tr = transform;
             previousPosition = tr.position;
+            
+            if(IsOwner) 
+                this.GetComponentInChildren<GameObject>().gameObject.SetActive(false); 
+            
         }
 
         private void Update() => CheckDistanceTravelled();
-
-        public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
-
-        public void SetMaxRange(float maxRange) => maximumRange = maxRange;
 
         private void CheckDistanceTravelled()
         {
@@ -90,7 +90,12 @@ namespace Weapons
             if (IsServer)
                 DestructionEffect();
         }
+        
+        public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
 
+        public void SetMaxRange(float maxRange) => maximumRange = maxRange;
         public AmmoType GetAmmoType() => ammoType;
+
     }
+    
 }

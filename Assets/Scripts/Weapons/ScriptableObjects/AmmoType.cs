@@ -11,22 +11,29 @@ namespace Weapons.ScriptableObjects
         
         [SerializeField] private TrailRenderer trails;
         [SerializeField] private GameObject deathParticles;
-        [SerializeField] private AmmoEffect ammoBasePrefab;
+        [SerializeField] private AmmoEffectServer ammoServerPrefab;
+        [SerializeField] private AmmoEffectClient ammoClientPrefab;
         [SerializeField] private GameObject graphicsPrefab;
         
         public TrailRenderer Trails => trails;
         public GameObject DeathParticles => deathParticles;
         public GameObject GraphicsPrefab => graphicsPrefab;
 
-        public AmmoEffect InstantiateAmmo(Vector3 position, Quaternion rotation)
+        public AmmoEffectServer InstantiateServerAmmo(Vector3 position, Quaternion rotation)
         {
-            AmmoEffect ammo = Instantiate(ammoBasePrefab, position, rotation);
+            AmmoEffectServer ammo = Instantiate(ammoServerPrefab, position, rotation);
             return ammo;
         }
         
-        // public GameObject InstantiateGraphicsPrefab(Transform parent) => Instantiate(graphicsPrefab, parent.position, parent.rotation, parent);
-        // public GameObject GetGraphicsPrefab() => graphicsPrefab;
-        public AmmoEffect GetAmmoEffectPrefab() => ammoBasePrefab;
+        public AmmoEffectClient InstantiateClientAmmo(Vector3 position, Quaternion rotation)
+        {
+            AmmoEffectClient ammo = Instantiate(ammoClientPrefab, position, rotation);
+            return ammo;
+        }
+        
+        public AmmoEffectServer GetAmmoEffectPrefab() => ammoServerPrefab;
+        public AmmoEffectClient GetAmmoEffectClientPrefab() => ammoClientPrefab;
+        
         public GameObject InstantiateDeathParticles(Transform transform) => Instantiate(deathParticles, transform.position, Quaternion.identity);
 
         public void CreateRayCastExplosion(Transform transform, float explosionRadius, int damage)
