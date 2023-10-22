@@ -13,7 +13,7 @@ namespace Networking
             _spawnManager = GetComponent<ServerSpawnManager>();
             AssignConnectionCallback();
         }
-        
+
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             if (_spawnManager == null)

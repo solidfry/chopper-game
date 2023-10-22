@@ -20,14 +20,7 @@ namespace Networking
             return null;
         }
         
-        public void GetSpawnLocation(out Transform spawnLocation)
-        {
-            spawnLocation = null;
-            
-            if (!NetworkManager.IsServer) return;
-            
-            spawnLocation = UseSpawnLocation();
-        }
+        public void GetSpawnLocation(out Transform spawnLocation) => spawnLocation = UseSpawnLocation();
 
         public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);
 
