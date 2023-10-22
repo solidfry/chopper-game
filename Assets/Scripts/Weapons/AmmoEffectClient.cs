@@ -46,12 +46,15 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
+            if (collision.gameObject.layer == LayerMask.NameToLayer("Ammo"))
+                return;
             DestructionEffect();
         }
 
         void DestructionEffect()
         {
-            Destroy(this.gameObject);
+            ammoType.InstantiateDeathParticles(transform);
+            Destroy(gameObject);
         }
         
         public AmmoType GetAmmoType() => ammoType;

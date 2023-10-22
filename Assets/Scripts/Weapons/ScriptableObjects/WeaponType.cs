@@ -48,16 +48,14 @@ namespace Weapons.ScriptableObjects
             // Debug.Log($"Firing weapon {name}");
             Vector3 forward = rotation * Vector3.forward;
             position += forward * FirePointOffset;
-            AmmoEffectServer projectile = AmmoType.InstantiateServerAmmo(position, rotation);
-            return projectile;
+            return AmmoType.InstantiateServerAmmo(position, rotation);
         }
         
         public AmmoEffectClient InstantiateClientAmmoFromWeapon(Vector3 position, Quaternion rotation)
         {
             Vector3 forward = rotation * Vector3.forward;
             position += forward * FirePointOffset;
-            AmmoEffectClient projectile = AmmoType.InstantiateClientAmmo(position, rotation);
-            return projectile;
+            return AmmoType.InstantiateClientAmmo(position, rotation);
         }
         
         AudioClip GetRandomFireClip() => weaponFireClips[Random.Range(0, weaponFireClips.Count)];

@@ -132,7 +132,7 @@ namespace Server
                 {
                     Connection = ExternalConnectionString,
                     QueueName = payload.QueueName,
-                    Properties = new BackfillTicketProperties(matchProperties),
+                    Properties = new BackfillTicketProperties(matchProperties)
                 };
                 
                 _localBackfillTicket.Id =

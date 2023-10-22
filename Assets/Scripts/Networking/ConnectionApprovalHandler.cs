@@ -14,6 +14,23 @@ namespace Networking
             AssignConnectionCallback();
         }
 
+        public override void OnNetworkSpawn()
+        {
+            if (IsClient && IsLocalPlayer)
+                NetworkManager.OnClientDisconnectCallback += DisconnectPlayer;
+        }
+        
+        public override void OnNetworkDespawn()
+        {
+            if (IsClient && IsLocalPlayer)
+                NetworkManager.OnClientDisconnectCallback -= DisconnectPlayer;
+        }
+
+        private void DisconnectPlayer(ulong obj)
+        {
+            NetworkManager.Singleton.DisconnectClient(obj);
+        }
+
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             if (_spawnManager == null)

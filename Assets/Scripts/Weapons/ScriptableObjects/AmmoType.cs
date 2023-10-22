@@ -1,4 +1,5 @@
 ﻿using Interfaces;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -11,6 +12,7 @@ namespace Weapons.ScriptableObjects
         
         [SerializeField] private TrailRenderer trails;
         [SerializeField] private GameObject deathParticles;
+        [SerializeField] private NetworkObject deathParticlesServer;
         [SerializeField] private AmmoEffectServer ammoServerPrefab;
         [SerializeField] private AmmoEffectClient ammoClientPrefab;
         [SerializeField] private GameObject graphicsPrefab;
@@ -31,10 +33,22 @@ namespace Weapons.ScriptableObjects
             return ammo;
         }
         
-        public AmmoEffectServer GetAmmoEffectPrefab() => ammoServerPrefab;
+        public AmmoEffectServer GetAmmoEffectServerPrefab() => ammoServerPrefab;
         public AmmoEffectClient GetAmmoEffectClientPrefab() => ammoClientPrefab;
         
-        public GameObject InstantiateDeathParticles(Transform transform) => Instantiate(deathParticles, transform.position, Quaternion.identity);
+        public GameObject InstantiateDeathParticles(Transform transform)
+        {
+            GameObject particles = Instantiate(deathParticles, transform.position, Quaternion.identity);
+            particles.transform.localScale = stats.ExplosionRadius == 0 ? transform.localScale : transform.localScale * stats.ExplosionRadius;
+            return particles;
+        }
+        
+        public NetworkObject InstantiateServerDeathParticles(Transform transform)
+        {
+            NetworkObject particles = Instantiate(deathParticlesServer, transform.position, Quaternion.identity);
+            particles.transform.localScale = stats.ExplosionRadius == 0 ? transform.localScale : transform.localScale * stats.ExplosionRadius;
+            return particles;
+        }
 
         public void CreateRayCastExplosion(Transform transform, float explosionRadius, int damage)
         {

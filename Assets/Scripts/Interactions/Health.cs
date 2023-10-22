@@ -12,7 +12,6 @@ namespace Interactions
         [SerializeField][ReadOnly] bool isDead;
         
         [SerializeField] Collider collider3d;
-        Coroutine cleanup;
         
         private void Start()
         {
@@ -40,16 +39,7 @@ namespace Interactions
                 collider3d.enabled = false;
                 Debug.Log($"{this.transform.name} died.");
                 
-                cleanup = death is not null ? StartCoroutine(death.Cleanup(this.transform)) : cleanup = null;
             }
-        }
-        
-        private void OnDestroy()
-        {
-            if(cleanup != null)
-                StopCoroutine(cleanup);
-            
-            transform.DOKill();
         }
     }
 }

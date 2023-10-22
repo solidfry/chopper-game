@@ -55,33 +55,48 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
+            
             if (!IsServer) return;
 
-            // Debug.Log($"collider3D with {collision.gameObject.name}");
-            if (collision.collider.TryGetComponent(out IDamageable damageable))
-                damageable.TakeDamage(ammoType.stats.Damage);
+            DoDamage(collision);
 
             if (!_despawnHasBeenRequested)
                 DoDestroy();
         }
 
+     
+
         private void OnTriggerEnter(Collider collision)
         {
-            if (!IsServer) return;
 
-            if (collision.TryGetComponent(out IDamageable damageable))
-                damageable.TakeDamage(ammoType.stats.Damage);
+            if (IsServer) return;
+
+            DoDamageTrigger(collision);
 
             if (!_despawnHasBeenRequested)
                 DoDestroy();
+        }
+        
+        private void DoDamage(Collision collision)
+        {
+            if (collision.collider.TryGetComponent(out IDamageable damageable))
+                damageable.TakeDamage(ammoType.stats.Damage);
+        }
+
+        private void DoDamageTrigger(Collider collision)
+        {
+            if (collision.TryGetComponent(out IDamageable damageable))
+                damageable.TakeDamage(ammoType.stats.Damage);
         }
 
         void DestructionEffect()
         {
-            if (!ProjectileNetworkObject.IsSpawned) return;
-            // Debug.Log("Destruction effect");
             if (IsServer)
             {
+                var particles = ammoType.InstantiateServerDeathParticles(transform);
+                particles.Spawn();
+                if (!ProjectileNetworkObject.IsSpawned) return;
+                
                 ProjectileNetworkObject.Despawn();
             }
         }
@@ -89,8 +104,7 @@ namespace Weapons
         void DoDestroy()
         {
             _despawnHasBeenRequested = true;
-            if (IsServer)
-                DestructionEffect();
+            DestructionEffect();
         }
         
         public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
