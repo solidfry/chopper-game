@@ -10,6 +10,7 @@ namespace PlayerInteraction.Networking
     public class PlayerManager : NetworkBehaviour
     {
         [SerializeField] private CinemachineVirtualCamera playerVirtualCamera;
+        [SerializeField] private Camera playerCamera;
         [SerializeField] private AudioListener playerAudioListener;
         
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
@@ -18,6 +19,8 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
+        
+        [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
 
         [SerializeField] VehicleValues physicsValues = new();
 
@@ -36,10 +39,6 @@ namespace PlayerInteraction.Networking
                 SetLocalPlayerLayerByName();
             }
         }
-        
-        
-
-      
 
         private void FixedUpdate()
         {
@@ -74,9 +73,6 @@ namespace PlayerInteraction.Networking
                 OutputHudValues.Initialise();
             }
             
-            
-          
-            // TODO: Issue here with the Stabiliser because this is a new MovementController, i think it's resetting the values in the Stabiliser
             MovementController.OnStart(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
         }
 
@@ -112,15 +108,21 @@ namespace PlayerInteraction.Networking
         
         private void SetupAudioVisual()
         {
-            if (IsOwner && playerVirtualCamera is not null)
+            if (IsLocalPlayer && IsOwner && CamerasNotNull)
             {
-                PlayerCameraManager.Initialize(playerVirtualCamera, 10);
+                PlayerCameraManager.Initialize(playerCamera, playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
                 Cursor.visible = false;
             }
             else
-                PlayerCameraManager.Initialize(playerVirtualCamera, 0);
+            {
+                playerCamera.enabled = false;
+                playerAudioListener.enabled = false;
+                playerVirtualCamera.enabled = false;
+            }       
         }
+        
+        bool CamerasNotNull => playerCamera != null && playerVirtualCamera != null;
         
         void SetPlayerRbNonKinematic(bool value) => PlayerRigidbody.isKinematic = value;
         

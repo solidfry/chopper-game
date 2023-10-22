@@ -12,6 +12,7 @@ namespace Weapons
         [SerializeField] private Vector3 previousPosition;
         [SerializeField] private Collider collider3D;
         [SerializeField] private LayerMask ignoreCollisionsOnLayer;
+        [SerializeField] private GameObject graphics;
         [field: SerializeField] public NetworkObject ProjectileNetworkObject { get; private set; }
         public Rigidbody Rigidbody { get; set; }
         private Vector3 _position;
@@ -32,8 +33,9 @@ namespace Weapons
             var tr = transform;
             previousPosition = tr.position;
             
+            // Owner will not see the graphics from the server so that the firing feels responsive.
             if(IsOwner) 
-                this.GetComponentInChildren<GameObject>().gameObject.SetActive(false); 
+               graphics.SetActive(false); 
             
         }
 
@@ -92,7 +94,6 @@ namespace Weapons
         }
         
         public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
-
         public void SetMaxRange(float maxRange) => maximumRange = maxRange;
         public AmmoType GetAmmoType() => ammoType;
 
