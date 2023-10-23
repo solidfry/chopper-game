@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Enums;
+using UI;
 
 public class NavigationManager : SingletonPersistent<NavigationManager>
 {
@@ -29,15 +30,20 @@ public class NavigationManager : SingletonPersistent<NavigationManager>
     private void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
     {
         canvas.worldCamera = Camera.main;
-        foreach (NavButtonHandler button in navItems)
+        foreach (NavButtonHandler navButtonHandler in navItems)
         {
-            if (scenes.FindIndex(n => n.ToString() == scene.name) == navItems.IndexOf(button))
+            var isInteractable = navButtonHandler.IsInteractable;
+            
+            if(isInteractable)
             {
-                button.SetActive();
-                Debug.Log(scene.name);
+                if (scenes.FindIndex(n => n.ToString() == scene.name) == navItems.IndexOf(navButtonHandler))
+                {
+                    navButtonHandler.SetActive();
+                    Debug.Log(scene.name);
+                }
+                else
+                    navButtonHandler.SetInactive();
             }
-            else
-                button.SetInactive();
         }
     }
     
