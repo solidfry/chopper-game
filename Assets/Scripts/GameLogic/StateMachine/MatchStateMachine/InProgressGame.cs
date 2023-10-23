@@ -1,6 +1,4 @@
-﻿using StateMachine;
-
-namespace GameLogic.MatchStateMachine
+﻿namespace GameLogic.StateMachine.MatchStateMachine
 {
     public class InProgressGame : MatchState
     {

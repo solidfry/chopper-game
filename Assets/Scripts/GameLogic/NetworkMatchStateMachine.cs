@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using GameLogic.MatchStateMachine;
 using GameLogic.ScriptableObjects;
+using GameLogic.StateMachine;
+using GameLogic.StateMachine.MatchStateMachine;
 using PlayerInteraction.Networking;
-using StateMachine;
 using Unity.Netcode;
 using UnityEngine;
 

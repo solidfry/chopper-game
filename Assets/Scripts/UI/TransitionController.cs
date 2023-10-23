@@ -1,12 +1,11 @@
 using Events;
 using UI.ScriptableObjects;
-// using Levels.ScriptableObjects;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
+// using Levels.ScriptableObjects;
 
-namespace Scenes
+namespace UI
 {
     public class TransitionController : MonoBehaviour
     {

@@ -1,8 +1,6 @@
-﻿using StateMachine;
-
-namespace GameLogic.MatchStateMachine
+﻿namespace GameLogic.StateMachine.MatchStateMachine
 {
-    public class PreGame : MatchState
+    public class PostGame : MatchState
     {
         public override void OnEnter(IStateMachine stateMachine = null)
         {

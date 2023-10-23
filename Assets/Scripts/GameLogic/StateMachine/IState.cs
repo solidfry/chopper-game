@@ -1,4 +1,4 @@
-﻿namespace StateMachine
+﻿namespace GameLogic.StateMachine
 {
     public interface IState
     {
