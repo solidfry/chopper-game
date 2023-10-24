@@ -30,18 +30,10 @@ namespace Events
         public static PlayerFreeze onPlayerFreezeEvent;
         #endregion
 
-        // #region Utility Events
-        //
-        //
-        // #endregion
-        //
-        // #region Music Events
-        //
-        // #endregion
-
         #region UI Events
 
         public delegate void SetValue(int value);
+        public delegate void PlayAudioClip(string soundListName);
         public delegate void PlayerHealthUIChange(float normalisedCurrentHealth);
         public delegate void PlayerManaUIChange(float normalisedCurrentMana);
         public delegate void PlayerTimerUIChange(float normalisedCurrentTimer);
@@ -49,6 +41,7 @@ namespace Events
 
         public delegate void TargetEnemy();
 
+        public static PlayAudioClip onPlayRandomUISoundEvent;
         public static TargetEnemy onTargetEnemyEvent;
         public static SetValue onSetHealthCountEvent;
         public static PlayerHealthUIChange onPlayerHealthUIChangeEvent;

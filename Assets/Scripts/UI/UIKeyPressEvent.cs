@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 namespace UI
 {
-    public class UIEvent : MonoBehaviour
+    public class UIKeyPressEvent : MonoBehaviour
     {
 
         [SerializeField] InputAction button;

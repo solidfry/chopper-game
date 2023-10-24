@@ -1,45 +1,53 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using Button = UnityEngine.UI.Button;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace UI
 {
     public class NavButtonHandler : MonoBehaviour
     {
         [SerializeField] bool isActiveView = false;
-        [SerializeField] Color activeColor;
+        
         [SerializeField] Color normalColor;
-        private Button _button;
+        [SerializeField] Color activeColor;
 
+        private Button _button;
+        
+         ColorBlock colors;
+         
         private void Awake()
         {
-            normalColor = GetComponent<Button>().colors.normalColor;
             _button = GetComponent<Button>();
+            SetButtonColors(false);
         }
-
-        private void Update() => SetColors();
-
-        private void SetColors()
+        
+        ColorBlock SetButtonColors(bool isActive)
         {
-            if (!IsInteractable) return;
-            
-            if (isActiveView)
-                _button.targetGraphic.canvasRenderer.SetColor(activeColor);
-            else
-                _button.targetGraphic.canvasRenderer.SetColor(normalColor);
+            colors = _button.colors;
+            colors.normalColor = isActive ? activeColor : normalColor;
+            return colors;
         }
-
+      
+        
         public void SetActive()
         {
             if(!IsInteractable) return;
             isActiveView = true;
+            _button.colors = SetButtonColors(isActiveView);
+            _button.Select(); 
         }
     
         public void SetInactive()
         {
             if(!IsInteractable) return;
             isActiveView = false;
+            _button.colors = SetButtonColors(isActiveView);
         }
         
         public bool IsInteractable => _button.IsInteractable();
+        
+        public Button GetButton => _button;
     }
 }

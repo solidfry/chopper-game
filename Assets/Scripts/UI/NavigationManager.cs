@@ -1,50 +1,76 @@
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using Enums;
-using UI;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
-public class NavigationManager : SingletonPersistent<NavigationManager>
+namespace UI
 {
-    Canvas canvas;
+    public class NavigationManager : SingletonPersistent<NavigationManager>
+    {
+        [FormerlySerializedAs("_canvas")] [SerializeField] Canvas canvas;
     
-    [SerializeField] List<NavButtonHandler> navItems;
-    [SerializeField] List<Scenes> scenes;
+        [SerializeField] List<NavButtonHandler> navItems;
+        [SerializeField] List<Scenes> scenes;
+        
 
-    public override void Awake()
-    {
-        base.Awake();
-        canvas = GetComponent<Canvas>();
-    }
-
-    private void OnEnable()
-    {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnDisable()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
-    {
-        canvas.worldCamera = Camera.main;
-        foreach (NavButtonHandler navButtonHandler in navItems)
+        private void Start()
         {
-            var isInteractable = navButtonHandler.IsInteractable;
+            if(canvas == null) 
+                canvas = GetComponent<Canvas>();
+
+
+            SubscribeButtonsOnClick();
+        }
+        
+        private void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
+        private void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+        
+        private void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
+        {
+            if(EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             
-            if(isInteractable)
+            if(canvas.worldCamera == null)
+                canvas.worldCamera = Camera.main;
+            
+            HandleButtonsState(scene);
+        }
+
+        private void HandleButtonsState(Scene scene)
+        {
+            foreach (NavButtonHandler navButtonHandler in navItems)
             {
-                if (scenes.FindIndex(n => n.ToString() == scene.name) == navItems.IndexOf(navButtonHandler))
+                var isInteractable = navButtonHandler.IsInteractable;
+
+                if (!isInteractable) continue;
+
+                navButtonHandler.SetInactive();
+
+                if (scene.name == scenes[navItems.IndexOf(navButtonHandler)].ToString())
                 {
                     navButtonHandler.SetActive();
-                    Debug.Log(scene.name);
                 }
                 else
                     navButtonHandler.SetInactive();
             }
         }
-    }
+
+        private void SubscribeButtonsOnClick()
+        {
+            foreach (NavButtonHandler navButtonHandler in navItems)
+            {
+                navButtonHandler.GetButton.onClick.AddListener(() =>
+                {
+                    if (SceneManager.GetActiveScene().name == scenes[navItems.IndexOf(navButtonHandler)].ToString()) return;
+                    if (navButtonHandler.IsInteractable)
+                    {
+                        SceneManager.LoadSceneAsync(scenes[navItems.IndexOf(navButtonHandler)].ToString());
+                    }
+                });
+            }
+        }
     
+    }
 }

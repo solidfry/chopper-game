@@ -150,6 +150,7 @@ GameObject:
   - component: {fileID: 2787548474192947616}
   - component: {fileID: 2683587865004881201}
   - component: {fileID: 895877825439724879}
+  - component: {fileID: 1553568957157023940}
   m_Layer: 5
   m_Name: Nav Button
   m_TagString: Untagged
@@ -228,8 +229,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isActiveView: 0
-  activeColor: {r: 1, g: 0.8745098, b: 0.41960785, a: 1}
   normalColor: {r: 0, g: 1, b: 0.6, a: 1}
+  activeColor: {r: 1, g: 0.8745098, b: 0.41960785, a: 1}
 --- !u!114 &2787548474192947616
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -273,7 +274,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 7500064661552578902}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1553568957157023940}
+        m_TargetAssemblyTypeName: Audio.AudioClipRequestHandler, Assembly-CSharp
+        m_MethodName: Request
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: ButtonPressUISounds
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &2683587865004881201
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -310,5 +323,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: da91c6990f4d4d30960540ff4e223843, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1553568957157023940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5849310284625409567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d4a776f480b4a13b2ffdf71cd673b7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

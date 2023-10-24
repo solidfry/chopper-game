@@ -22,6 +22,7 @@ namespace UI
         }
 
         public void LoadLevel(string sceneName) => SceneManager.LoadScene(sceneName);
+        public void LoadLevelAsync(string sceneName) => SceneManager.LoadSceneAsync(sceneName);
         public void Quit() => Application.Quit();
     }
 }
