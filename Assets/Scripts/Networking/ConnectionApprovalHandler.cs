@@ -16,13 +16,13 @@ namespace Networking
 
         public override void OnNetworkSpawn()
         {
-            if (IsClient && IsLocalPlayer)
+            // if (IsClient && IsLocalPlayer)
                 NetworkManager.OnClientDisconnectCallback += DisconnectPlayer;
         }
         
         public override void OnNetworkDespawn()
         {
-            if (IsClient && IsLocalPlayer)
+            // if (IsClient && IsLocalPlayer)
                 NetworkManager.OnClientDisconnectCallback -= DisconnectPlayer;
         }
 

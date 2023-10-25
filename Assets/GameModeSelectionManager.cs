@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,16 +7,26 @@ public class GameModeSelectionManager : MonoBehaviour
 {
     
     [SerializeField] List<Button> gameModeButtons = new ();
+    [SerializeField] private Button startServer;
 
     private void Awake()
     {
         AssignButtonListeners();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnEnable()
     {
-        
+        NetworkManager.Singleton.OnServerStarted += OnServerStarted;
+    }
+    
+    private void OnDestroy()
+    {
+        NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
+    }
+
+    private void OnServerStarted()
+    {
+        startServer.gameObject.SetActive(false);
     }
 
     void AssignButtonListeners()
@@ -30,5 +39,11 @@ public class GameModeSelectionManager : MonoBehaviour
                 Debug.Log("Client Started");
             });
         }
+
+        if (startServer != null) startServer.onClick.AddListener(() =>
+        {
+            NetworkManager.Singleton.StartServer();
+            Debug.Log("Server started");
+        });
     }
 }
