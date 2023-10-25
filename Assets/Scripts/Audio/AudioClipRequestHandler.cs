@@ -5,6 +5,6 @@ namespace Audio
 {
     public class AudioClipRequestHandler : MonoBehaviour
     {
-        public void Request (string soundListName) => GameEvents.onPlayRandomUISoundEvent.Invoke(soundListName);
+        public void Request(AudioClipListData list) => GameEvents.onPlayRandomUISoundEvent?.Invoke(list.name);
     }
 }

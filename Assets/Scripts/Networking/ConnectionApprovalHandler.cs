@@ -6,11 +6,11 @@ namespace Networking
     public class ConnectionApprovalHandler : NetworkBehaviour
     {
         public static int MaxPlayers = 12;
-        private ServerSpawnManager _spawnManager;
+        // private ServerSpawnManager _spawnManager;
 
         private void Start()
         {
-            _spawnManager = GetComponent<ServerSpawnManager>();
+            // _spawnManager = GetComponent<ServerSpawnManager>();
             AssignConnectionCallback();
         }
 
@@ -33,13 +33,13 @@ namespace Networking
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
-            if (_spawnManager == null)
-            {
-                Debug.LogError("Spawn Manager not available");
-                response.Approved = false;
-                response.Reason = "Spawn Manager is not available";
-                return;
-            }
+            // if (_spawnManager == null)
+            // {
+            //     Debug.LogError("Spawn Manager not available");
+            //     response.Approved = false;
+            //     response.Reason = "Spawn Manager is not available";
+            //     return;
+            // }
             
             if(!PlayersCanJoin()) 
             {
@@ -47,24 +47,30 @@ namespace Networking
                 response.Reason = "Server is full";
                 return;
             }
-          
-            // var id = request.ClientNetworkId;
-            _spawnManager.GetSpawnLocation(out var spawnLocation);
-            
-            if (spawnLocation != null)
+
+            if (PlayersCanJoin())
             {
                 response.Approved = true;
-                response.CreatePlayerObject = true;
-                response.Position = spawnLocation.position;
-                response.Rotation = spawnLocation.rotation;
-                Debug.Log(response.Position + " The position");
-                response.Reason = "Testing the Approved message";
+                response.Reason = "Approved";
             }
-            else
-            {
-                response.Approved = false;
-                response.Reason = "No spawn location available";
-            }
+          
+            // var id = request.ClientNetworkId;
+            // _spawnManager.GetSpawnLocation(out var spawnLocation);
+            
+            // if (spawnLocation != null)
+            // {
+            //     response.Approved = true;
+            //     // response.CreatePlayerObject = true;
+            //     // response.Position = spawnLocation.position;
+            //     // response.Rotation = spawnLocation.rotation;
+            //     Debug.Log(response.Position + " The position");
+            //     response.Reason = "Testing the Approved message";
+            // }
+            // else
+            // {
+            //     response.Approved = false;
+            //     response.Reason = "No spawn location available";
+            // }
             
         }
             

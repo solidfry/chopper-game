@@ -53,7 +53,6 @@ namespace Server
                     _externalServerIP = args[i + 1];
                 
             }
-
             
             if (server)
             {
@@ -70,6 +69,7 @@ namespace Server
         {
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData(InternalServerIP, _serverPort);
             NetworkManager.Singleton.StartServer();
+            Debug.Log("Server Starting");
             NetworkManager.Singleton.OnClientDisconnectCallback += ClientDisconnected;
         }
 

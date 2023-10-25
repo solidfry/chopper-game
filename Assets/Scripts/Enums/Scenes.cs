@@ -4,6 +4,9 @@
     {
         MainMenu,
         Matchmaking,
+        FreeForAll,
+        TDM,
+        NuclearFootball,
         Match,
         GameOver,
         Settings,
