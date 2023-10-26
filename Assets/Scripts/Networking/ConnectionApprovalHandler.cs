@@ -27,7 +27,7 @@ namespace Networking
 
         private void DisconnectPlayer(ulong obj)
         {
-            NetworkManager.Singleton.DisconnectClient(obj);
+            NetworkManager.Singleton.Shutdown();
         }
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)

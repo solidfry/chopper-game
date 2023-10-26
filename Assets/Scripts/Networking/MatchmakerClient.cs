@@ -84,7 +84,7 @@ namespace Networking
             var players = new List<Player>
             {
                 new Player (PlayerID(),
-                    new MatchmakingPlayerData
+                    new MatchmakingPlayerData()
                     {
                         Skill = 100
                     }

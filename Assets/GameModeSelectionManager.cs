@@ -19,14 +19,14 @@ public class GameModeSelectionManager : MonoBehaviour
 
     void AssignButtonListeners()
     {
-        foreach (var button in gameModeButtons)
-        {
-            button.onClick.AddListener(() =>
-            {
-                NetworkManager.Singleton.StartClient();
-                Debug.Log("Client Started");
-            });
-        }
+        // foreach (var button in gameModeButtons)
+        // {
+        //     button.onClick.AddListener(() =>
+        //     {
+        //         NetworkManager.Singleton.StartClient();
+        //         Debug.Log("Client Started");
+        //     });
+        // }
 
         if (startServer != null) startServer.onClick.AddListener(() =>
         {
