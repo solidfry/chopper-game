@@ -7,17 +7,17 @@ namespace PlayerInteraction
     [Serializable]
     public struct PlayerArgs
     {
-        public Transform transform;
-        public Rigidbody rigidbody;
-        [FormerlySerializedAs("rawInputManager")] [FormerlySerializedAs("inputManager")] public InputController inputController;
-        public MovementController movementController;
+        public Vector3 position;
+        public Vector3 rotation;
+        // public Rigidbody rigidbody;
+        // [FormerlySerializedAs("rawInputManager")] [FormerlySerializedAs("inputManager")] public InputController inputController;
+        // public MovementController movementController;
 
-        public PlayerArgs(Transform _transform, Rigidbody _rigidbody, InputController inputController, MovementController _movementController)
+        public PlayerArgs(Vector3 _position, Vector3 _rotation)
         {
-            transform = _transform;
-            rigidbody = _rigidbody;
-            this.inputController = inputController;
-            movementController = _movementController;
+            position = _position;
+            rotation = _rotation;
+            // rigidbody = _rigidbody;
         }
       
     }

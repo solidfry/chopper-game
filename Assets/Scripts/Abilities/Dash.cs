@@ -46,7 +46,7 @@ namespace Abilities
         {
             if(!canDash && rb != null) return;
             
-            rb.AddForce(rb.velocity * force);
+            rb.AddForce(rb.velocity * force * Time.fixedDeltaTime, ForceMode.Impulse);
             canDash = false;
         }
     }

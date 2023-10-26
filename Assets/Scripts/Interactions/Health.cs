@@ -1,12 +1,12 @@
-﻿using System.Collections;
-using DG.Tweening;
-using Interfaces;
+﻿using Interfaces;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Interactions
 {
     public class Health : MonoBehaviour, IDamageable
     {
+        NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         [SerializeField] private int health = 100;
         [SerializeField] private Death death;
         [SerializeField][ReadOnly] bool isDead;
@@ -17,6 +17,7 @@ namespace Interactions
         {
             collider3d = GetComponent<Collider>();
             death.Init(transform);
+            
         }
 
         public void TakeDamage(int damageAmount)

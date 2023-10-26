@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1271663116509695106}
   - component: {fileID: 4443553418134841936}
   - component: {fileID: 5416182405257171464}
-  m_Layer: 5
+  m_Layer: 12
   m_Name: Footer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -114,7 +114,7 @@ GameObject:
   - component: {fileID: 720363910565755172}
   - component: {fileID: 388363975721935230}
   - component: {fileID: 165097287994970}
-  m_Layer: 5
+  m_Layer: 12
   m_Name: Divider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -189,7 +189,7 @@ GameObject:
   - component: {fileID: 2939539390031814998}
   - component: {fileID: 6456876585746569148}
   - component: {fileID: 140518779228913580}
-  m_Layer: 5
+  m_Layer: 12
   m_Name: Image
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -267,7 +267,8 @@ GameObject:
   - component: {fileID: 4103169821146729801}
   - component: {fileID: 4661818805663092057}
   - component: {fileID: 3277348871464319349}
-  m_Layer: 5
+  - component: {fileID: 7207938681844288007}
+  m_Layer: 12
   m_Name: Tile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -309,10 +310,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
+    m_Left: 2
+    m_Right: 2
+    m_Top: 2
+    m_Bottom: 2
   m_ChildAlignment: 4
   m_Spacing: 0
   m_ChildForceExpandWidth: 1
@@ -410,6 +411,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d4a776f480b4a13b2ffdf71cd673b7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &7207938681844288007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6217279033032570983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 1, b: 0.6, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &8661324491483309312
 GameObject:
   m_ObjectHideFlags: 0
@@ -421,7 +452,7 @@ GameObject:
   - component: {fileID: 2691283846255774103}
   - component: {fileID: 5523047317897566772}
   - component: {fileID: 1990752253916954226}
-  m_Layer: 5
+  m_Layer: 12
   m_Name: Label
   m_TagString: Untagged
   m_Icon: {fileID: 0}

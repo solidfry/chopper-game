@@ -7,27 +7,15 @@ public class GameModeSelectionManager : MonoBehaviour
 {
     
     [SerializeField] List<Button> gameModeButtons = new ();
-    [SerializeField] private Button startServer;
+    [SerializeField] Button startServer;
 
-    private void Awake()
-    {
-        AssignButtonListeners();
-    }
+    private void Awake() => AssignButtonListeners();
 
-    private void OnEnable()
-    {
-        NetworkManager.Singleton.OnServerStarted += OnServerStarted;
-    }
-    
-    private void OnDestroy()
-    {
-        NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
-    }
+    private void OnEnable() => NetworkManager.Singleton.OnServerStarted += OnServerStarted;
 
-    private void OnServerStarted()
-    {
-        startServer.gameObject.SetActive(false);
-    }
+    private void OnDestroy() => NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
+
+    private void OnServerStarted() => startServer.gameObject.SetActive(false);
 
     void AssignButtonListeners()
     {

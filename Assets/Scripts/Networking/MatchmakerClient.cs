@@ -49,7 +49,6 @@ namespace Networking
                 await UnityServices.InitializeAsync(initOptions);
             }
             else
-          
             {
                 await UnityServices.InitializeAsync();
             }
@@ -59,7 +58,7 @@ namespace Networking
 
         private string PlayerID() => AuthenticationService.Instance.PlayerId;
 
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         private string GetCloneNumberSuffix()
         {
             string projectPath = ClonesManager.GetCurrentProjectPath();
@@ -74,14 +73,14 @@ namespace Networking
         
         // TODO: Need to have this called in the UI somewhere.
         // TODO: This should be done when the player clicks the Multiplayer button in the main menu and is sent to a lobby.
-        public void StartClient()
+        public void StartClient(string queueName = "TestQueue")
         {
-            CreateATicket();
+            CreateATicket(queueName);
         }
 
-        private async void CreateATicket()
+        private async void CreateATicket(string queueName = "TestQueue")
         {
-            var options = new CreateTicketOptions("TestMode");
+            var options = new CreateTicketOptions(queueName);
             var players = new List<Player>
             {
                 new Player (PlayerID(),

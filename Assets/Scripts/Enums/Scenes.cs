@@ -4,13 +4,13 @@
     {
         MainMenu,
         Matchmaking,
+        Lobby,
         FreeForAll,
-        TDM,
+        TeamDeathMatch,
         NuclearFootball,
         Match,
         GameOver,
         Settings,
-        Lobby,
         Credits,
         Loading,
         None

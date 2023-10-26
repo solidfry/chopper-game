@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace PlayerInteraction
@@ -31,5 +32,16 @@ namespace PlayerInteraction
         {
             return yawTorque.ToString(format, formatProvider) + ", " + pitchTorque.ToString(format, formatProvider) + ", " + rollTorque.ToString(format, formatProvider) + ", " + thrustForce.ToString(format, formatProvider)  + ", " + thrustVectorOffset.ToString(format, formatProvider);
         }
+
+        // public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        // {
+        //     serializer.SerializeValue(ref yawTorque);
+        //     serializer.SerializeValue(ref pitchTorque);
+        //     serializer.SerializeValue(ref rollTorque);
+        //     serializer.SerializeValue(ref thrustForce);
+        //     serializer.SerializeValue(ref thrustVectorOffset);
+        //     
+        //     
+        // }
     }
 }

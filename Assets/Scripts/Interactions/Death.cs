@@ -43,7 +43,6 @@ namespace Interactions
             PlayParticles();
             PlayAudio();
             OnDeath?.Invoke();
-            
         }
 
         private void PlayParticles()
@@ -68,7 +67,9 @@ namespace Interactions
             
             if (audioClip != null)
                 yield return new WaitForSeconds(ClipLength);
-            Object.Destroy(transform.gameObject);
+            // Object.Destroy(transform.gameObject);
+            
+            transform.gameObject.SetActive(false);
             
         }
         
