@@ -1,4 +1,5 @@
 using System;
+using Interactions;
 using PlayerInteraction;
 using PlayerInteraction.Networking;
 using UnityEngine;
@@ -15,14 +16,15 @@ namespace UI.Hud
         [SerializeField] [ReadOnly] float speed, speedKmh, altitudeInMetres;
         [SerializeField] int _frameCount = 0;
         VehicleStabiliser _stabiliser;
+        [SerializeField] NetworkHealth health;
         
         bool _isInitialised;
         
         public event Action<int> OnSpeedChanged;
         public event Action<int> OnAltitudeChanged;
         public event Action<bool> OnStabiliserActive;
-
-
+        public event Action<int> OnUpdateHealthEvent;
+        
         public void Initialise()
         {
             Debug.Log("HudValues Init");
@@ -30,16 +32,24 @@ namespace UI.Hud
             enabled = true;
             _isInitialised = true;
             _stabiliser = GetComponent<PlayerManager>().MovementController.GetStabiliser();
-
+            
+            if(health == null)
+                health = GetComponent<NetworkHealth>();
+            
+            health.SendHealthEvent += SendHealth;
         }
-
-        // Update is called once per frame
+        
         void LateUpdate()
         {
             if (!_isInitialised) return;
             UpdateSpeed();
             UpdateAltitude();
             DelayEvents();
+        }
+        
+        void SendHealth (int healthValue)
+        {
+            OnUpdateHealthEvent?.Invoke(healthValue);
         }
 
         private void DelayEvents()
@@ -74,7 +84,13 @@ namespace UI.Hud
             speed = Mathf.Max(0, speed);
             speedKmh = Speed.MetersPerSecondToKilometersPerHour(speed);
         }
-        
+
+        private void OnDestroy()
+        {
+            if(health != null)
+                health.SendHealthEvent -= SendHealth;
+        }
+
         // private void OnDrawGizmos()
         // {
         //     Gizmos.color = Color.red;

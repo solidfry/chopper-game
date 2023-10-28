@@ -16,6 +16,7 @@ namespace Interactions
         [SerializeField] AudioSource audioSource;
         [SerializeField] AudioClip audioClip;
         private Transform parent;
+        [field: SerializeField] public bool isDead { get; private set; }
         [SerializeField] bool isExplosive;
         float ClipLength => audioClip.length;
         
@@ -31,10 +32,10 @@ namespace Interactions
     
         public void Init(Transform transform = null)
         {
-            if(transform)
+            if(transform != null)
                 parent = transform;
-        
-            audioSource.clip = audioClip;
+            
+            // audioSource.clip = audioClip;
         }
 
         public void Play()
@@ -71,6 +72,11 @@ namespace Interactions
             
             transform.gameObject.SetActive(false);
             
+        }
+
+        public void SetIsDead(bool value)
+        {
+            isDead = value;
         }
         
         // public void PlayEffects()

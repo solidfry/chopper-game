@@ -13,6 +13,8 @@ namespace Weapons
     
         void Start()
         {
+            if(!IsServer) return; 
+            
             if(particles == null)
                 particles = GetComponent<ParticleSystem>();
         
@@ -23,6 +25,8 @@ namespace Weapons
 
         public override void OnDestroy()
         {
+            if(!IsServer) return;
+            
             if(_destroyCoroutine != null)
                 StopCoroutine(_destroyCoroutine);
             base.OnDestroy();

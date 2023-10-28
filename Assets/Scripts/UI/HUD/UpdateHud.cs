@@ -7,14 +7,14 @@ namespace UI.Hud
     public class UpdateHud : MonoBehaviour
     {
         [SerializeField] OutputHudValues outputHudValues;
-        
         [Header("Reticle UI")]
         [SerializeField] Reticle reticle = new();
         
         [Header("Text UI Elements")]
         [SerializeField] IntUI speedUI = new();
         [SerializeField] IntUI altitudeUI = new();
-        
+        [SerializeField] IntUI healthUI = new();
+         
         [Header("Stabiliser UI Events")]
         [SerializeField] UnityEvent onStabiliserActive = new();
         [SerializeField] UnityEvent onStabiliserInactive = new();
@@ -38,6 +38,7 @@ namespace UI.Hud
         {
             outputHudValues.OnAltitudeChanged += altitudeUI.UpdateText;
             outputHudValues.OnSpeedChanged += speedUI.UpdateText;
+            outputHudValues.OnUpdateHealthEvent += healthUI.UpdateText;
             outputHudValues.OnStabiliserActive += StabiliserActive;
         }
         
@@ -45,6 +46,7 @@ namespace UI.Hud
         {
             outputHudValues.OnAltitudeChanged -= altitudeUI.UpdateText;
             outputHudValues.OnSpeedChanged -= speedUI.UpdateText;
+            outputHudValues.OnUpdateHealthEvent -= healthUI.UpdateText;
             outputHudValues.OnStabiliserActive -= StabiliserActive;
         }
 

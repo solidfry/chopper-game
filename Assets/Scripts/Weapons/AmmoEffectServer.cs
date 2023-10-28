@@ -39,12 +39,14 @@ namespace Weapons
             
         }
 
-        private void Update() => CheckDistanceTravelled();
+        private void Update()
+        {
+            if (!IsServer) return;
+            CheckDistanceTravelled();
+        }
 
         private void CheckDistanceTravelled()
         {
-            if (!IsServer) return;
-
             _position = transform.position;
             distanceTraveled += Vector3.Distance(_position, previousPosition);
             previousPosition = _position;
@@ -63,13 +65,10 @@ namespace Weapons
             if (!_despawnHasBeenRequested)
                 DoDestroy();
         }
-
-     
-
+        
         private void OnTriggerEnter(Collider collision)
         {
-
-            if (IsServer) return;
+            if (!IsServer) return;
 
             DoDamageTrigger(collision);
 
@@ -79,18 +78,39 @@ namespace Weapons
         
         private void DoDamage(Collision collision)
         {
-            if (collision.collider.TryGetComponent(out IDamageable damageable))
-                damageable.TakeDamage(ammoType.stats.Damage);
+            if(!IsServer) return;
+            
+            if (collision.collider.TryGetComponent(out IPlayer player))
+            {
+                if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
+                player.Health.TakeDamage(ammoType.stats.Damage);
+                Debug.Log("damage taken from collider " + ammoType.stats.Damage);
+            }
+        
+            Debug.Log(collision.collider.name);
+            
         }
-
+        
         private void DoDamageTrigger(Collider collision)
         {
-            if (collision.TryGetComponent(out IDamageable damageable))
-                damageable.TakeDamage(ammoType.stats.Damage);
+            if(!IsServer) return;
+            
+            if (collision.TryGetComponent(out IPlayer player))
+            {
+                if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
+                player.Health.TakeDamage(ammoType.stats.Damage);
+                Debug.Log("damage taken from collider " + ammoType.stats.Damage);
+            }
+            
+            Debug.Log(collision.name + " from trigger");
+        
+        
         }
 
-        void DestructionEffect()
+        void DoDestroy()
         {
+            _despawnHasBeenRequested = true;
+            
             if (IsServer)
             {
                 var particles = ammoType.InstantiateServerDeathParticles(transform);
@@ -100,17 +120,10 @@ namespace Weapons
                 ProjectileNetworkObject.Despawn();
             }
         }
-
-        void DoDestroy()
-        {
-            _despawnHasBeenRequested = true;
-            DestructionEffect();
-        }
         
         public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
         public void SetMaxRange(float maxRange) => maximumRange = maxRange;
         public AmmoType GetAmmoType() => ammoType;
-
     }
     
 }

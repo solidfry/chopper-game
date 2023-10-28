@@ -24,7 +24,9 @@ namespace Networking
             // if (IsClient && IsLocalPlayer)
                 NetworkManager.OnClientDisconnectCallback -= DisconnectPlayer;
         }
-
+        
+        void AssignConnectionCallback() => NetworkManager.ConnectionApprovalCallback = ApprovalCheck;
+        
         private void DisconnectPlayer(ulong obj)
         {
             NetworkManager.Singleton.Shutdown();
@@ -51,6 +53,7 @@ namespace Networking
             {
                 response.Approved = true;
                 response.Reason = "Approved";
+                response.CreatePlayerObject = true;
             }
           
             // var id = request.ClientNetworkId;
@@ -73,7 +76,6 @@ namespace Networking
             
         }
             
-        void AssignConnectionCallback() => NetworkManager.ConnectionApprovalCallback = ApprovalCheck;
 
 
         // <summary>

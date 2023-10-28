@@ -1,4 +1,6 @@
 ﻿using Cinemachine;
+using Interactions;
+using Interfaces;
 using UI.Hud;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,13 +9,15 @@ using UnityEngine.InputSystem;
 namespace PlayerInteraction.Networking
 {
     [RequireComponent(typeof(Rigidbody), typeof(PlayerInput))]
-    public class PlayerManager : NetworkBehaviour
+    public class PlayerManager : NetworkBehaviour, IPlayer
     {
         [SerializeField] private CinemachineVirtualCamera playerVirtualCamera;
         [SerializeField] private Camera playerCamera;
         [SerializeField] private AudioListener playerAudioListener;
         
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
+        [field: SerializeField] public NetworkHealth Health { get; set; }
+        [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
@@ -36,8 +40,19 @@ namespace PlayerInteraction.Networking
             if (IsClient && IsOwner && IsLocalPlayer)
             {
                 SetPlayerRbNonKinematic(true);
+                SetPlayerNetworkID();
                 SetLocalPlayerLayerByName();
             }
+        }
+
+        private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
+
+        private void InitialiseHealth()
+        {
+            if(Health is null)
+                Health = GetComponent<NetworkHealth>();
+
+            Health.InitialiseHealth();
         }
 
         private void FixedUpdate()
@@ -72,6 +87,8 @@ namespace PlayerInteraction.Networking
             {
                 OutputHudValues.Initialise();
             }
+            
+            InitialiseHealth();
             
             MovementController.OnStart(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
         }
@@ -146,5 +163,7 @@ namespace PlayerInteraction.Networking
         {
             SetIsKinematicClientRpc(value);
         }
+
     }
+    
 }
