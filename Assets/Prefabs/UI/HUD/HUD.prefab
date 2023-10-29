@@ -88,6 +88,7 @@ GameObject:
   - component: {fileID: 6259560006573602193}
   - component: {fileID: 7378431439232122791}
   - component: {fileID: 1903044571837913870}
+  - component: {fileID: 8595406029248088803}
   m_Layer: 5
   m_Name: HUD
   m_TagString: Untagged
@@ -193,12 +194,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ad2cce6f2c7f034a8e32f28c292dd13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  useCullingMasks: 0
   outputHudValues: {fileID: 0}
-  health: {fileID: 0}
   reticle:
     objectToFollow: {fileID: 0}
     cam: {fileID: 0}
-    reticleObject: {fileID: 0}
+    <ReticleObject>k__BackingField: {fileID: 0}
+  cam: {fileID: 0}
+  compass: {fileID: 8595406029248088803}
+  hudTransform: {fileID: 0}
   speedUI:
     value: 0
     Text: {fileID: 5357838858661213208}
@@ -238,6 +242,32 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &8595406029248088803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2922712400545335998}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e98560c7337e41e996575aed16bfc872, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  color: {r: 0, g: 1, b: 0.6, a: 1}
+  position: {x: 0, y: 0.16}
+  width: 0.3
+  lineThickness: 0.00109
+  bendRadius: 2
+  fieldOfView: 1.99
+  ticksPerQuarterTurn: 10
+  tickSize: 0.01
+  tickEdgeFadeFraction: 0.1
+  fontSizeTickLabel: 0.138
+  tickLabelOffset: 0.006
+  fontSizeLookLabel: 0.107
+  lookAngLabelOffset: {x: 0, y: 0.19}
+  triangleNootSize: 0.0027
 --- !u!1 &2955273094469707931
 GameObject:
   m_ObjectHideFlags: 0

@@ -8,9 +8,9 @@ namespace UI.HUD
     public class Reticle
     {
         [SerializeField] GameObject objectToFollow;
-        [SerializeField] private Camera cam;
-        [SerializeField ]private RectTransform reticleObject; 
-        
+        [SerializeField][ReadOnly] private Camera cam;
+        [field: SerializeField] public RectTransform ReticleObject { get; private set; }
+
         public void OnStart(Camera camera) => cam = camera;
 
         public void OnUpdate()
@@ -22,7 +22,7 @@ namespace UI.HUD
         private void UpdateReticle(Vector3 obj)
         {
             var screenPoint = WorldPointToScreenPoint(obj);
-            reticleObject.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y); 
+            ReticleObject.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y); 
         }
         
         private Vector3 WorldPointToScreenPoint(Vector3 worldPoint)

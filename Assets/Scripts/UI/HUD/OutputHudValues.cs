@@ -3,6 +3,7 @@ using Interactions;
 using PlayerInteraction;
 using PlayerInteraction.Networking;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Utilities;
 
 namespace UI.Hud
@@ -10,9 +11,10 @@ namespace UI.Hud
     [RequireComponent(typeof(Rigidbody))]
     public class OutputHudValues : MonoBehaviour
     {
+        
         [SerializeField] LayerMask altitudeRaycastIgnore;
         [SerializeField] float altitudeCheckRange;
-        Rigidbody _rigidbody;
+        [field: SerializeField] public Rigidbody Rigidbody { get; private set; }
         [SerializeField] [ReadOnly] float speed, speedKmh, altitudeInMetres;
         [SerializeField] int _frameCount = 0;
         VehicleStabiliser _stabiliser;
@@ -28,7 +30,7 @@ namespace UI.Hud
         public void Initialise()
         {
             Debug.Log("HudValues Init");
-            _rigidbody = GetComponent<Rigidbody>();
+            Rigidbody = GetComponent<Rigidbody>();
             enabled = true;
             _isInitialised = true;
             _stabiliser = GetComponent<PlayerManager>().MovementController.GetStabiliser();
@@ -68,7 +70,7 @@ namespace UI.Hud
         private void UpdateAltitude()
         {    
             // Raycast to the ground
-            if (Physics.Raycast(new Ray(_rigidbody.position, Vector3.down), out RaycastHit hit, altitudeCheckRange, ~altitudeRaycastIgnore))
+            if (Physics.Raycast(new Ray(Rigidbody.position, Vector3.down), out RaycastHit hit, altitudeCheckRange, ~altitudeRaycastIgnore))
             {
                 altitudeInMetres = hit.distance;
             }
@@ -80,7 +82,7 @@ namespace UI.Hud
 
         private void UpdateSpeed()
         {
-            speed = _rigidbody.velocity.magnitude;
+            speed = Rigidbody.velocity.magnitude;
             speed = Mathf.Max(0, speed);
             speedKmh = Speed.MetersPerSecondToKilometersPerHour(speed);
         }
