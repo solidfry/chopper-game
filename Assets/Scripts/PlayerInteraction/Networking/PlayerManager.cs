@@ -1,4 +1,5 @@
 ﻿using Cinemachine;
+using Events;
 using Interactions;
 using Interfaces;
 using UI.Hud;
@@ -43,6 +44,17 @@ namespace PlayerInteraction.Networking
                 SetPlayerNetworkID();
                 SetLocalPlayerLayerByName();
             }
+            
+            if(IsServer)
+                GameEvents.OnPlayerFreezeAllAllEvent += FreezePlayerClientRpc;
+        }
+        
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+            
+            if(IsServer)
+                GameEvents.OnPlayerFreezeAllAllEvent -= FreezePlayerClientRpc;
         }
 
         private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
@@ -92,7 +104,8 @@ namespace PlayerInteraction.Networking
             
             MovementController.OnStart(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
         }
-
+        
+        
         private void HandleMovement()
         {
             if (!IsOwner) return;
@@ -156,6 +169,15 @@ namespace PlayerInteraction.Networking
             {
                 SetPlayerRbNonKinematic(value);
             }
+        }
+        
+        [ClientRpc]
+        private void FreezePlayerClientRpc()
+        {
+            if(!IsOwner) return;
+            
+            PlayerRigidbody.isKinematic = true;
+            PlayerInput.actions.Disable();
         }
 
         [ServerRpc]

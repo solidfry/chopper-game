@@ -6,49 +6,33 @@ namespace Events
 {
     public static class GameEvents
     {
-        #region User Events
-
-        public delegate void Pause();
-        public delegate void UnPause();
-        public static Pause onPauseGame;
-        public static UnPause onUnPauseGame;
-
-        #endregion
 
         #region Player Events
-        public delegate void PlayerKill();
+        public delegate void PlayerKill(ulong clientId);
         public delegate void PlayerTakeDamage(int amount);
         public delegate void PlayerHeal(int amount);
-        public delegate void PlayerDied();
+        public delegate void PlayerDied(ulong clientId);
         public delegate void PlayerRespawn(float delaySeconds = 0, Transform positionToRespawn = null);
-        public delegate void PlayerFreeze();
+        public delegate void PlayerFreezeAll();
 
-        public static PlayerHeal onPlayerHealedEvent;
-        public static PlayerKill onPlayerKillEvent;
-        public static PlayerDied onPlayerDiedEvent;
-        public static PlayerRespawn onPlayerRespawnEvent;
-        public static PlayerFreeze onPlayerFreezeEvent;
+        public static PlayerHeal OnPlayerHealedEvent;
+        public static PlayerKill OnPlayerKillEvent;
+        public static PlayerDied OnPlayerDiedEvent;
+        public static PlayerRespawn OnPlayerRespawnEvent;
+        public static PlayerFreezeAll OnPlayerFreezeAllAllEvent;
         #endregion
 
         #region UI Events
-
-        public delegate void SetValue(int value);
         public delegate void PlayAudioClip(string soundListName);
-        public delegate void PlayerHealthUIChange(float normalisedCurrentHealth);
-        public delegate void PlayerManaUIChange(float normalisedCurrentMana);
-        public delegate void PlayerTimerUIChange(float normalisedCurrentTimer);
-        public delegate void BossHealthUIChange(float normalisedCurrentHealth);
+        public static PlayAudioClip OnPlayRandomUISoundEvent;
+        #endregion
 
-        public delegate void TargetEnemy();
-
-        public static PlayAudioClip onPlayRandomUISoundEvent;
-        public static TargetEnemy onTargetEnemyEvent;
-        public static SetValue onSetHealthCountEvent;
-        public static PlayerHealthUIChange onPlayerHealthUIChangeEvent;
-
-
-
-
+        #region Server Events
+        public delegate void StartMatch();
+        public delegate void EndMatch();
+        public static StartMatch OnStartMatchEvent;
+        public static EndMatch OnEndMatchEvent;
+        
         #endregion
 
         #region Effects

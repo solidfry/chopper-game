@@ -13,22 +13,21 @@ namespace GameLogic
 
         private MatchState CurrentState { get; set; }
         [SerializeField][ReadOnly] string matchStateName;
-
-        public override void OnNetworkSpawn()
+        
+        public override  void OnNetworkSpawn()
         {
-            if (IsServer)
-            {
-                ChangeState(new PreGame());
-            }
+            if (!IsServer) return;
+            
+            ChangeState(new PreGame());
         }
 
         private void Update()
         {
-            if (IsServer)
-            {
-                matchStateName = GetCurrentStateName();
-                CurrentState.OnUpdate(this);
-            }
+            if (!IsServer) return;
+            
+            matchStateName = GetCurrentStateName();
+            CurrentState.OnUpdate(this);
+            
         }
 
         public void ChangeState(IState newState)
@@ -46,6 +45,5 @@ namespace GameLogic
         {
             return CurrentState.GetType().Name;
         }
-
     }
 }

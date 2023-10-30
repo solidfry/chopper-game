@@ -33,9 +33,9 @@ namespace Audio
             }
         }
 
-        private void OnEnable() => GameEvents.onPlayRandomUISoundEvent += PlayRandomUISound;
+        private void OnEnable() => GameEvents.OnPlayRandomUISoundEvent += PlayRandomUISound;
 
-        private void OnDisable() => GameEvents.onPlayRandomUISoundEvent -= PlayRandomUISound;
+        private void OnDisable() => GameEvents.OnPlayRandomUISoundEvent -= PlayRandomUISound;
 
         private void PlayRandomUISound(string soundListName)
         {
