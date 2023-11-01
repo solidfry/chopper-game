@@ -14,12 +14,14 @@ namespace Events
         public delegate void PlayerDied(ulong clientId);
         public delegate void PlayerRespawn(float delaySeconds = 0, Transform positionToRespawn = null);
         public delegate void PlayerFreezeAll();
+        public delegate void PlayerUnFreezeAll();
 
         public static PlayerHeal OnPlayerHealedEvent;
         public static PlayerKill OnPlayerKillEvent;
         public static PlayerDied OnPlayerDiedEvent;
         public static PlayerRespawn OnPlayerRespawnEvent;
         public static PlayerFreezeAll OnPlayerFreezeAllAllEvent;
+        public static PlayerUnFreezeAll OnPlayerUnFreezeAllAllEvent;
         #endregion
 
         #region UI Events

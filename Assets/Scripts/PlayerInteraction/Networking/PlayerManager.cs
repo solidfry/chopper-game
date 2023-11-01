@@ -45,16 +45,30 @@ namespace PlayerInteraction.Networking
                 SetLocalPlayerLayerByName();
             }
             
-            if(IsServer)
-                GameEvents.OnPlayerFreezeAllAllEvent += FreezePlayerClientRpc;
+            SubscribeToPlayerEvents();
         }
         
         public override void OnNetworkDespawn()
         {
             base.OnNetworkDespawn();
+
+            UnSubscribeFromPlayerEvents();
+        }
+        
+        private void SubscribeToPlayerEvents()
+        {
+            if (!IsServer) return;
             
-            if(IsServer)
-                GameEvents.OnPlayerFreezeAllAllEvent -= FreezePlayerClientRpc;
+            GameEvents.OnPlayerFreezeAllAllEvent += FreezePlayerClientRpc;
+            GameEvents.OnPlayerUnFreezeAllAllEvent += UnFreezePlayerClientRpc;
+        }
+
+        private void UnSubscribeFromPlayerEvents()
+        {
+            if (!IsServer) return;
+            
+            GameEvents.OnPlayerFreezeAllAllEvent -= FreezePlayerClientRpc;
+            GameEvents.OnPlayerUnFreezeAllAllEvent -= UnFreezePlayerClientRpc;
         }
 
         private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
@@ -127,8 +141,8 @@ namespace PlayerInteraction.Networking
         public void OnYaw(InputAction.CallbackContext context) => InputController.OnYaw(context);
         public void OnPitch(InputAction.CallbackContext context) => InputController.OnPitch(context);
         public void OnRoll(InputAction.CallbackContext context) => InputController.OnRoll(context);
-        
-        public void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
+
+        void HandleAllMovement(float thrustInput, float yawInput, float pitchInput, float rollInput)
         {
             MovementController.HandleThrust(thrustInput);
             MovementController.HandleYaw(yawInput);
@@ -159,18 +173,10 @@ namespace PlayerInteraction.Networking
         void SetLocalPlayerLayerByName() => gameObject.layer = LayerMask.NameToLayer("LocalPlayer");
         
         [ServerRpc]
-        void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
+        void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => 
+            HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
         
-        
-        [ClientRpc]
-        public void SetIsKinematicClientRpc(bool value)
-        {
-            if (PlayerRigidbody != null)
-            {
-                SetPlayerRbNonKinematic(value);
-            }
-        }
-        
+      
         [ClientRpc]
         private void FreezePlayerClientRpc()
         {
@@ -179,13 +185,30 @@ namespace PlayerInteraction.Networking
             PlayerRigidbody.isKinematic = true;
             PlayerInput.actions.Disable();
         }
+        
+        [ClientRpc]
+        private void UnFreezePlayerClientRpc()
+        {
+            if(!IsOwner) return;
+            
+            PlayerRigidbody.isKinematic = false;
+            PlayerInput.actions.Enable();
+        }
 
         [ServerRpc]
         public void RequestSetIsKinematicServerRpc(bool value)
         {
             SetIsKinematicClientRpc(value);
         }
-
+        
+        [ClientRpc]
+        private void SetIsKinematicClientRpc(bool value)
+        {
+            if (PlayerRigidbody != null)
+            {
+                SetPlayerRbNonKinematic(value);
+            }
+        }
     }
     
 }

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Events;
+using UnityEngine;
 
 namespace GameLogic.StateMachine.MatchStateMachine
 {
@@ -7,6 +8,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
+            GameEvents.OnPlayerUnFreezeAllAllEvent?.Invoke();
         }
         
         public override void OnUpdate()
