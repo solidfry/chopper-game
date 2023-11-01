@@ -53,7 +53,7 @@ namespace Networking
             {
                 response.Approved = true;
                 response.Reason = "Approved";
-                response.CreatePlayerObject = true;
+                // response.CreatePlayerObject = true;
             }
           
             // var id = request.ClientNetworkId;

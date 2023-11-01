@@ -8,7 +8,7 @@
         {
         }
 
-        public virtual void OnUpdate(IStateMachine stateMachine = null)
+        public virtual void OnUpdate()
         {
         }
         

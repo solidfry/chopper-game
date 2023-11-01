@@ -6,8 +6,9 @@ namespace Networking
 {
     public class ServerSpawnManager : SingletonNetwork<ServerSpawnManager>
     {
+        [SerializeField] GameObject playerPrefab;
         [SerializeField] List<TeamSpawnLocations> teamSpawnLocations = new();
-
+        
         private Transform UseSpawnLocation()
         {
             foreach (var team in teamSpawnLocations)
@@ -20,6 +21,7 @@ namespace Networking
             return null;
         }
         
+        public GameObject GetPlayerPrefab() => playerPrefab;
         public void GetSpawnLocation(out Transform spawnLocation) => spawnLocation = UseSpawnLocation();
 
         public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);

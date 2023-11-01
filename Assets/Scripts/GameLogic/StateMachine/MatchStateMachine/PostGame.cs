@@ -4,13 +4,15 @@
     {
         public override void OnEnter(IStateMachine stateMachine = null)
         {
+            base.OnEnter(stateMachine);
+
         }
 
         public override void OnExit()
         {
         }
 
-        public override void OnUpdate(IStateMachine stateMachine = null)
+        public override void OnUpdate()
         {
         }
         

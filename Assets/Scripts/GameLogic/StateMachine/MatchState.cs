@@ -2,22 +2,14 @@
 {
     public abstract class MatchState : IState
     {
-        internal IStateMachine StateMachine;
 
-        IStateMachine IState.StateMachine { get; set; }
+        public IStateMachine StateMachine { get; set; }
 
-        public virtual void OnEnter(IStateMachine stateMachine = null)
-        {
-            StateMachine = stateMachine;
-        }
+        public virtual void OnEnter(IStateMachine stateMachine = null) => StateMachine = stateMachine;
 
-        public virtual void OnUpdate(IStateMachine stateMachine = null)
-        {
-        }
+        public virtual void OnUpdate() { }
         
-        public virtual void OnExit()
-        {
-        }
+        public virtual void OnExit() { }
     }
 }
 

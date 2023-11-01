@@ -1,8 +1,5 @@
-using System.Collections.Generic;
-using GameLogic.ScriptableObjects;
 using GameLogic.StateMachine;
 using GameLogic.StateMachine.MatchStateMachine;
-using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -10,14 +7,33 @@ namespace GameLogic
 {
     public class NetworkMatchStateMachine : NetworkBehaviour, IStateMachine
     {
-
-        private MatchState CurrentState { get; set; }
-        [SerializeField][ReadOnly] string matchStateName;
+       
+        // PreGame
+            // wait for players to load
         
-        public override  void OnNetworkSpawn()
+        // StartGame
+            // move them to their spawn locations and start a short count down
+            
+        // InProgressGame
+            // players can move around and interact with the world and attack each other
+            
+        // PostGame
+            // show the scoreboard and wait for players to press a button to return to the lobby
+        private IState CurrentState { get; set; }
+        [SerializeField][ReadOnly] string matchStateName;
+        [SerializeField] GameMode gameMode;
+        
+        public NetworkManager GetNetworkManager
+        {
+            get;
+            private set;
+        }
+        
+        public override void OnNetworkSpawn()
         {
             if (!IsServer) return;
             
+            GetNetworkManager = NetworkManager.Singleton;
             ChangeState(new PreGame());
         }
 
@@ -26,8 +42,7 @@ namespace GameLogic
             if (!IsServer) return;
             
             matchStateName = GetCurrentStateName();
-            CurrentState.OnUpdate(this);
-            
+            CurrentState.OnUpdate();
         }
 
         public void ChangeState(IState newState)
@@ -37,13 +52,11 @@ namespace GameLogic
                 CurrentState.OnExit();
             }
 
-            CurrentState = (MatchState)newState;
+            CurrentState = newState;
             CurrentState.OnEnter(this);
         }
 
-        public string GetCurrentStateName()
-        {
-            return CurrentState.GetType().Name;
-        }
+        public string GetCurrentStateName() => CurrentState.GetType().Name;
+        
     }
 }

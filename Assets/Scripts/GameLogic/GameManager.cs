@@ -3,7 +3,6 @@ using GameLogic.ScriptableObjects;
 using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace GameLogic
 {
@@ -15,11 +14,10 @@ namespace GameLogic
         {
             base.Awake();
 
-            if (NetworkManager.Singleton == null)
-            {
-                Debug.Log("NetworkManager prefab spawned");
-                Instantiate(networkManagerPrefab);
-            }
+            if (NetworkManager.Singleton != null) return;
+            
+            Debug.Log("NetworkManager prefab spawned");
+            Instantiate(networkManagerPrefab);
         }
     }
 }

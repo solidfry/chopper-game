@@ -1,13 +1,15 @@
-﻿namespace GameLogic.StateMachine.MatchStateMachine
+﻿using UnityEngine;
+
+namespace GameLogic.StateMachine.MatchStateMachine
 {
     public class InProgressGame : MatchState
     {
         public override void OnEnter(IStateMachine stateMachine = null)
         {
-            StateMachine = stateMachine;
+            base.OnEnter(stateMachine);
         }
         
-        public override void OnUpdate(IStateMachine stateMachine = null)
+        public override void OnUpdate()
         {
         }
 
