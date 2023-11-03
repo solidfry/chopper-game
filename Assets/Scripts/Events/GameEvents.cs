@@ -35,6 +35,9 @@ namespace Events
         public static StartMatch OnStartMatchEvent;
         public static EndMatch OnEndMatchEvent;
         
+        public delegate void Notification(string message);
+        public static Notification OnNotificationEvent;
+
         #endregion
 
         #region Effects
