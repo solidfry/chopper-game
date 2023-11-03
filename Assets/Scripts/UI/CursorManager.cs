@@ -1,49 +1,53 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
-using UnityEngine.Serialization;
 
-public class CursorManager : SingletonPersistent<CursorManager>
+namespace UI
 {
-    [SerializeField] Texture2D defaultTexture;
-    [SerializeField] Texture2D hoverTexture;
-    [SerializeField] Texture2D clickTexture;
-    [SerializeField] LayerMask buttonLayerMask;
-    
-    private Mouse mouse; 
-
-    // Start is called before the first frame update
-    void Start()
+    public class CursorManager : SingletonPersistent<CursorManager>
     {
-        mouse = Mouse.current;
-        Cursor.SetCursor( null, Vector2.zero, CursorMode.Auto);
-    }
+        [SerializeField] Texture2D defaultTexture;
+        [SerializeField] Texture2D hoverTexture;
+        [SerializeField] Texture2D clickTexture;
+        [SerializeField] LayerMask buttonLayerMask;
+        PointerEventData _pointerEventData;
     
-    
-    void Update()
-    { 
-        HandleMouseState();
-    }
+        private Mouse _mouse; 
 
-    private void HandleMouseState()
-    {
-        List<RaycastResult> results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = mouse.position.ReadValue() }, results);
-
-        bool isOverButton = results.Exists(result => ((1 << result.gameObject.layer) & buttonLayerMask) != 0);
-
-        Texture2D cursorTexture = mouse.leftButton.isPressed ? clickTexture : (isOverButton ? hoverTexture : defaultTexture);
+        // Start is called before the first frame update
+        void Start()
+        {
+            _mouse = Mouse.current;
+            Cursor.SetCursor( defaultTexture, Vector2.zero, CursorMode.Auto);
+            _pointerEventData = new PointerEventData(EventSystem.current) { position = _mouse.position.ReadValue() };
+        }
         
-        SetCursor(cursorTexture);
-    }
+        void Update()
+        { 
+            HandleMouseState();
+        }
 
+        private void HandleMouseState()
+        {
+            List<RaycastResult> results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(_pointerEventData, results);
 
-    void SetCursor(Texture2D texture)
-    {
-        Cursor.SetCursor(texture, Vector2.zero, CursorMode.Auto);
+            bool isOverButton = results.Exists(result => ((1 << result.gameObject.layer) & buttonLayerMask) != 0);
+
+            Texture2D cursorTexture = _mouse.leftButton.isPressed ? clickTexture : (isOverButton ? hoverTexture : defaultTexture);
+        
+            SetCursor(cursorTexture);
+        }
+        
+        void SetCursor(Texture2D texture)
+        {
+            Cursor.SetCursor(texture, Vector2.zero, CursorMode.Auto);
+        }
+        
+        void DisableCursor()
+        {
+            Cursor.visible = false;
+        }
     }
 }
