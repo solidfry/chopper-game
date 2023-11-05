@@ -1,5 +1,6 @@
 ﻿using Events;
 using Networking;
+using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -7,7 +8,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
 {
     public class StartGame : MatchState
     {
-        private GameObject _playerPrefab;
+        private PlayerManager _playerPrefab;
         private ServerSpawnManager _serverSpawnManager;
         public override void OnEnter(IStateMachine stateMachine = null)
         {
@@ -24,13 +25,13 @@ namespace GameLogic.StateMachine.MatchStateMachine
                     // Assuming you have a method to create a player object
                     // GameObject playerObject ;
                     _serverSpawnManager.GetSpawnLocation(out var transform);
-                    GameObject go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
-                    go.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+                    PlayerManager go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
+                    go.NetworkObject.SpawnAsPlayerObject(clientId);
                     // Assuming you have a method to get a starting position based on the client ID
                     
                 }
             }
-            GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
+            // GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
             GameEvents.OnStartMatchEvent?.Invoke();
         }
 

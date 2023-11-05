@@ -13,6 +13,7 @@ namespace Events
         public delegate void PlayerHeal(int amount);
         public delegate void PlayerDied(ulong clientId);
         public delegate void PlayerRespawn(float delaySeconds = 0, Transform positionToRespawn = null);
+        public delegate void PlayerFreeze(ulong clientId);
         public delegate void PlayerFreezeAll();
         public delegate void PlayerUnFreezeAll();
 

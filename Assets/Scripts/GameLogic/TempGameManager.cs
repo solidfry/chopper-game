@@ -17,47 +17,6 @@ namespace GameLogic
         [SerializeField] private int endScreenSceneID;
         Coroutine endGameRoutine;
     
-        void Start()
-        {
-            targets = FindObjectsOfType<MoveTarget>().ToList();
-            scoreToWin = targets.Count;
-        }
-
-        private void OnEnable()
-        {
-            Death.OnDeath += AddScore;
-        }
-
-        private void OnDisable()
-        {
-            Death.OnDeath -= AddScore;
-        }
-    
-        void AddScore()
-        { 
-            score++;
-            EndGame();
-        }
-    
-        void EndGame()
-        {
-            if (score == scoreToWin)
-            {
-                Debug.Log("You win!");
-                endGameRoutine = StartCoroutine(EndGameRoutine(endScreenSceneID));
-            }
-        }
-
-        private IEnumerator EndGameRoutine(int id)
-        {
-            yield return new WaitForSeconds(2);
-            SceneManager.LoadSceneAsync(id, LoadSceneMode.Single);
-        }
-
-        private void OnDestroy()
-        {
-            if(endGameRoutine != null)
-                StopCoroutine(endGameRoutine);
-        }
+        
     }
 }

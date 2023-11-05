@@ -79,7 +79,7 @@ namespace Weapons
         private void DoDamage(Collision collision)
         {
             if(!IsServer) return;
-            
+            Debug.Log("DO Damage was run on server");
             if (collision.collider.TryGetComponent(out IPlayer player))
             {
                 if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;

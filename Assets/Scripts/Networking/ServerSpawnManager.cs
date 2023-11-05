@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using Networking.Spawns;
+using PlayerInteraction.Networking;
 using UnityEngine;
 
 namespace Networking
 {
     public class ServerSpawnManager : SingletonNetwork<ServerSpawnManager>
     {
-        [SerializeField] GameObject playerPrefab;
+        [SerializeField] PlayerManager playerPrefab;
         [SerializeField] List<TeamSpawnLocations> teamSpawnLocations = new();
         
         private Transform UseSpawnLocation()
@@ -21,7 +22,7 @@ namespace Networking
             return null;
         }
         
-        public GameObject GetPlayerPrefab() => playerPrefab;
+        public PlayerManager GetPlayerPrefab() => playerPrefab;
         public void GetSpawnLocation(out Transform spawnLocation) => spawnLocation = UseSpawnLocation();
 
         public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);

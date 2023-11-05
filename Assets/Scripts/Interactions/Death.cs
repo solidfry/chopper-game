@@ -20,7 +20,6 @@ namespace Interactions
         [SerializeField] bool isExplosive;
         float ClipLength => audioClip.length;
         
-        public static event Action OnDeath; // We need to remove this as it is only for the first playtest
         
         // [SerializeField] List<DeathEffect> deathEffects;
     
@@ -43,7 +42,6 @@ namespace Interactions
             if (particles.isPlaying || audioSource.isPlaying) return;
             PlayParticles();
             PlayAudio();
-            OnDeath?.Invoke();
         }
 
         private void PlayParticles()

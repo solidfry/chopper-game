@@ -16,7 +16,7 @@
         {
             if (StateMachine != null)
             {
-                if(StateMachine.GetNetworkManager.ConnectedClients.Count >= 1)
+                if(StateMachine.GetNetworkManager.ConnectedClients.Count >= 2)
                     StateMachine.ChangeState(new StartGame());
             }
         }

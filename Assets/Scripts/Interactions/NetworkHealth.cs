@@ -10,7 +10,7 @@ namespace Interactions
     {
         [SerializeField] int health = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-        // [SerializeField] Death death;
+        [SerializeField] Death death;
         // [SerializeField] Collider collider3d;
         
         public event Action<int> SendHealthEvent;
@@ -22,6 +22,7 @@ namespace Interactions
             {
                 networkHealth.OnValueChanged += OnHealthChanged;
             }
+            
         }
         
         public override void OnNetworkDespawn()
@@ -32,13 +33,22 @@ namespace Interactions
         
         public void TakeDamage(int damageAmount)
         {
-            if(!IsServer || !IsOwner) return;
+            if(!IsServer) return;
             
-            if(networkHealth.Value <= 0) return;
-            
-            networkHealth.Value -= damageAmount;
+            TakeDamageClientRpc(damageAmount);
         }
         
+        [ClientRpc]
+        private void TakeDamageClientRpc(int damageAmount)
+        {
+            if(!IsClient && !IsOwner) return;
+            
+            if(networkHealth.Value <= 0) return;
+
+            networkHealth.Value -= damageAmount;
+            Debug.Log(damageAmount + " damage taken" + " health is now " + networkHealth.Value);
+        }
+
         private void OnHealthChanged(int previousvalue, int newvalue)
         {
             health = newvalue;
@@ -52,6 +62,7 @@ namespace Interactions
 
         public void Die()
         {
+            Debug.Log("Player died");
             // if(!death.isDead)
             // {
             //     death.SetIsDead(true);
@@ -62,7 +73,7 @@ namespace Interactions
             //     if(colliders != null )
             //         foreach (var col in colliders)
             //         {
-            //             collider3d.enabled = false;
+            //             col.enabled = false;
             //         }
             //     
             //     // collider3d.enabled = false;
@@ -97,19 +108,19 @@ namespace Interactions
         private void OnCollisionEnter(Collision other)
         {
             // Refactor this so that it's handled in a better way and in a different location
-            if (IsOwner && IsClient || IsServer)
+            if (IsServer)
             {
                 // if the player is colliding and is upside down in correlation to the environment
                 if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Vector3.Dot(transform.up, Vector3.down) > 0)
                 {
-                    TakeDamage(100);
+                    TakeDamageClientRpc(100);
                     Debug.Log("Hit your roof!");
                     return;
                 }
                 
                 if(other.gameObject.layer == LayerMask.NameToLayer("Environment") && Speed.MetersPerSecondToKilometersPerHour(GetComponent<Rigidbody>().velocity.magnitude) > 50)
                 {
-                    TakeDamage(200);
+                    TakeDamageClientRpc(200);
                     Debug.Log("Hit too hard!");
                     return;
                 }
