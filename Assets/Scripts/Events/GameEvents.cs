@@ -1,5 +1,6 @@
 using Effects.Structs;
 using Enums;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Events
@@ -36,6 +37,18 @@ namespace Events
         public static StartMatch OnStartMatchEvent;
         public static EndMatch OnEndMatchEvent;
         
+        public delegate void TimerStart();
+        public delegate void TimerEnd();
+        public static TimerStart OnTimerStartEvent;
+        public static TimerEnd OnTimerEndEvent;
+        
+        public delegate void TickTimer(float time);
+        public static TickTimer OnTickTimer;
+        
+        public delegate void SetTimer(float time);
+        public static SetTimer OnSetTimerEvent;
+        
+        
         public delegate void Notification(string message);
         public static Notification OnNotificationEvent;
 
@@ -62,5 +75,6 @@ namespace Events
         public static ParticleEffect onParticleEvent;
         public static LoadLevel onLevelLoadEvent;
         #endregion
+
     }
 }
