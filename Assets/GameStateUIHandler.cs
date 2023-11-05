@@ -42,6 +42,9 @@ public class GameStateUIHandler : NetworkBehaviour
         countdownTimer.OnUpdate();
         time.Value = countdownTimer.CurrentTimeRemaining;
         timerUI.SetTimer(time.Value);
+        
+        // TODO: Client needs to have the timer synced up with the server
+        
     }
 
     private void ShowTimer() => timerUI.gameObject.SetActive(true);
