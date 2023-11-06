@@ -5,6 +5,7 @@
         public IStateMachine StateMachine { get; set; }
         public void OnEnter(IStateMachine stateMachine = null);
         public void OnUpdate();
+        public void OnFixedUpdate();
         public void OnExit();
     }
 }

@@ -44,6 +44,13 @@ namespace GameLogic
             matchStateName = GetCurrentStateName();
             CurrentState.OnUpdate();
         }
+        
+        private void FixedUpdate()
+        {
+            if (!IsServer) return;
+            
+            CurrentState.OnFixedUpdate();
+        }
 
         public void ChangeState(IState newState)
         {

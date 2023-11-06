@@ -8,7 +8,8 @@
         public virtual void OnEnter(IStateMachine stateMachine = null) => StateMachine = stateMachine;
 
         public virtual void OnUpdate() { }
-        
+        public virtual void OnFixedUpdate() { }
+
         public virtual void OnExit() { }
     }
 }

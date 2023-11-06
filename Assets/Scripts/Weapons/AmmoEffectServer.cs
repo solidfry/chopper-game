@@ -79,12 +79,13 @@ namespace Weapons
         private void DoDamage(Collision collision)
         {
             if(!IsServer) return;
-            Debug.Log("DO Damage was run on server");
-            if (collision.collider.TryGetComponent(out IPlayer player))
+            // Debug.Log("DO Damage was run on server");
+            var player = collision.collider.GetComponentInParent<IPlayer>();
+            if (player != null)
             {
                 if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
                 player.Health.TakeDamage(ammoType.stats.Damage);
-                Debug.Log("damage taken from collider " + ammoType.stats.Damage);
+                // Debug.Log("damage taken from collider " + ammoType.stats.Damage);
             }
         
             Debug.Log(collision.collider.name);
@@ -95,14 +96,15 @@ namespace Weapons
         {
             if(!IsServer) return;
             
-            if (collision.TryGetComponent(out IPlayer player))
+            var player = collision.GetComponentInParent<IPlayer>();
+            if (player != null)
             {
                 if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
                 player.Health.TakeDamage(ammoType.stats.Damage);
-                Debug.Log("damage taken from collider " + ammoType.stats.Damage);
+                // Debug.Log("damage taken from collider " + ammoType.stats.Damage);
             }
             
-            Debug.Log(collision.name + " from trigger");
+            // Debug.Log(collision.name + " from trigger");
         
         
         }

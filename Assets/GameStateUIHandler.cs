@@ -12,39 +12,63 @@ public class GameStateUIHandler : NetworkBehaviour
     [SerializeField] GameObject endGamePanel;
     [SerializeField] TimerUI timerUI;
     
-    [SerializeField] private CountdownTimer countdownTimer;
+    [SerializeField] private CountdownTimer countdownTimer = null;
 
     private void Awake()
     {
         if(timerUI == null) timerUI = GetComponentInChildren<TimerUI>();
-        if(!IsServer) return;
-        GameEvents.OnSetTimerEvent += timerUI.SetTimer;
-        GameEvents.OnTimerStartEvent += timerUI.StartTimer;
-        GameEvents.OnTimerStartEvent += ShowTimerClientRpc;
-        GameEvents.OnEndMatchEvent += OnEndMatchClientRpc;
     }
-    
+
+    private void InitialiseTimer(float f)
+    {
+        time.Value = f;
+        countdownTimer = new CountdownTimer(time.Value, NetworkManager.Singleton.ServerTime.FixedDeltaTime);
+        timerUI.SetTimer(time.Value);
+    }
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        countdownTimer = new CountdownTimer(time.Value, NetworkManager.Singleton.ServerTime.FixedDeltaTime);
+        if (IsServer)
+        {
+            GameEvents.OnSetTimerEvent += InitialiseTimer;
+            GameEvents.OnTimerStartEvent += StartTimer;
+            GameEvents.OnTimerStartEvent += ShowTimerClientRpc;
+            GameEvents.OnTimerEndEvent += HideTimerClientRpc;
+            GameEvents.OnEndMatchEvent += OnEndMatchClientRpc;
+        }
 
-        if(IsClient && IsOwner)
+        if(IsClient && IsLocalPlayer)
         {
             endGamePanel.SetActive(false);
             timerUI.gameObject.SetActive(false);
         }
     }
 
+    private void StartTimer()
+    {
+        if (!IsServer) return;
+        if (countdownTimer == null) return;
+        countdownTimer.StartTimer();
+        timerUI.StartTimer();
+    }
+
     private void FixedUpdate()
     {
         if (!IsServer) return;
+        if (countdownTimer == null) return;
+            
         countdownTimer.OnUpdate();
         time.Value = countdownTimer.CurrentTimeRemaining;
         timerUI.SetTimer(time.Value);
-        
-        // TODO: Client needs to have the timer synced up with the server
-        
+        SetTimerClientRpc(time.Value);
+
+    }
+
+    [ClientRpc]
+    private void SetTimerClientRpc(float timeValue)
+    {
+        timerUI.SetTimer(timeValue);
     }
 
     private void ShowTimer() => timerUI.gameObject.SetActive(true);
@@ -54,9 +78,10 @@ public class GameStateUIHandler : NetworkBehaviour
     {
         base.OnNetworkDespawn();
         if(!IsServer) return;
-        GameEvents.OnSetTimerEvent -= timerUI.SetTimer;
-        GameEvents.OnTimerStartEvent -= timerUI.StartTimer;
+        GameEvents.OnSetTimerEvent -= InitialiseTimer;
+        GameEvents.OnTimerStartEvent -= StartTimer;
         GameEvents.OnTimerStartEvent -= ShowTimerClientRpc;
+        GameEvents.OnTimerEndEvent -= HideTimerClientRpc;
         GameEvents.OnEndMatchEvent -= OnEndMatchClientRpc;
     }
 

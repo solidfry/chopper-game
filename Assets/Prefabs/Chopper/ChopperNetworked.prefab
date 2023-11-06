@@ -66,6 +66,12 @@ MonoBehaviour:
   health: 200
   networkHealth:
     m_InternalValue: 119
+  death:
+    particles: {fileID: 0}
+    audioSource: {fileID: 0}
+    audioClip: {fileID: 0}
+    <isDead>k__BackingField: 0
+    isExplosive: 0
 --- !u!136 &5737661289056225369
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -83,7 +89,7 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_Radius: 0.71
   m_Height: 8.52
@@ -119,8 +125,8 @@ MonoBehaviour:
     stabiliser:
       rigidbody: {fileID: 0}
       useStabiliser: 1
-      strength: 2
-      speedThreshold: 40
+      strength: 1.2
+      speedThreshold: 10
       isActive: 0
   <UpdateHud>k__BackingField: {fileID: 8937438530940468184}
   physicsValues:
@@ -1191,12 +1197,12 @@ PrefabInstance:
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.0040449854
+      value: -0.0040442175
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00026339575
+      value: 0.00026334572
       objectReference: {fileID: 0}
     - target: {fileID: 4947359982213080249, guid: 6beb9861c4df10f46a758c1002bcffd6,
         type: 3}
@@ -1490,12 +1496,12 @@ PrefabInstance:
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.0040449854
+      value: -0.0040442175
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.00026339575
+      value: 0.00026334572
       objectReference: {fileID: 0}
     - target: {fileID: 531580078276485122, guid: ffa2e7bf106e0ca4f8648fc06dfe3459,
         type: 3}
@@ -1712,12 +1718,12 @@ PrefabInstance:
     - target: {fileID: 2420720289666991761, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.5072174
+      value: 4.6204224
       objectReference: {fileID: 0}
     - target: {fileID: 2420720289666991761, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 5.6737404
+      value: 51.69406
       objectReference: {fileID: 0}
     - target: {fileID: 2454351902714255719, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
@@ -2019,12 +2025,6 @@ PrefabInstance:
       propertyPath: helicopterTransform
       value: 
       objectReference: {fileID: 548169382991786596}
-    - target: {fileID: 8595406029248088803, guid: 8ec454c5b95a2f44c93c2c8edea44076,
-        type: 3}
-      propertyPath: font
-      value: 
-      objectReference: {fileID: 11400000, guid: 7d47bdd30cfecfb49b333f9e5ac946d4,
-        type: 2}
     - target: {fileID: 8595406029248088803, guid: 8ec454c5b95a2f44c93c2c8edea44076,
         type: 3}
       propertyPath: color.a
