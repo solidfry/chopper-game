@@ -80,6 +80,7 @@ public class ScoreManager : NetworkBehaviour
         if(networkClient == null) return;
         
         playerScores[networkClient].Deaths++;
+        print($"Player {client} died and has {playerScores[networkClient].Deaths} deaths");
     }
     
     [ContextMenu("End Match")]

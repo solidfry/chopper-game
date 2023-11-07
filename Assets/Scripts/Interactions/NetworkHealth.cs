@@ -13,8 +13,8 @@ namespace Interactions
         [SerializeField] int health = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         [SerializeField] Death death;
-        private Collider[] _colliders;
         public event Action<int> SendHealthEvent;
+        public event Action<ulong> PlayerDiedEvent;
         
         public override void OnNetworkSpawn()
         {
@@ -22,9 +22,7 @@ namespace Interactions
             if(IsClient && IsOwner || IsServer)
             {
                 networkHealth.OnValueChanged += OnHealthChanged;
-                _colliders = gameObject.GetComponentsInChildren<Collider>();
             }
-            
         }
         
         public override void OnNetworkDespawn()
@@ -66,27 +64,16 @@ namespace Interactions
         {
             if(!IsServer) return;
             
-            Debug.Log("Player died");
             if (!death.IsDead)
             {
                 death.SetIsDead(true);
                 
-                SetColliders(false);
-                
+                Debug.Log("Player died");
                 GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId);
-            }
-            
-        }
-        
-        void SetColliders(bool value)
-        {
-            _colliders ??= gameObject.GetComponentsInChildren<Collider>();
-            foreach (var c in _colliders)
-            {
-                c.enabled = value;
+                PlayerDiedEvent?.Invoke(OwnerClientId);
             }
         }
-        
+
         public void InitialiseHealth()
         {
             if(IsClient && IsOwner) PlayerHealthSetServerRpc(health);

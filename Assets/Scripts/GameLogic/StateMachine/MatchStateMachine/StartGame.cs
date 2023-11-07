@@ -12,9 +12,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
         private ServerSpawnManager _serverSpawnManager;
         
         bool _timerStarted = false;
-        float waitTime = 5f;
+        float _waitTime = 5f;
 
-        CountdownTimer startGameTimer;
+        CountdownTimer _startGameTimer;
 
         public override void OnEnter(IStateMachine stateMachine = null)
         {
@@ -37,17 +37,17 @@ namespace GameLogic.StateMachine.MatchStateMachine
                 }
             }
             GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
-            GameEvents.OnSetTimerEvent?.Invoke(waitTime);
-            startGameTimer = new CountdownTimer(waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
+            GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
+            _startGameTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
             GameEvents.OnTimerStartEvent?.Invoke();
             GameEvents.OnStartMatchEvent?.Invoke();
-            startGameTimer.StartTimer();
+            _startGameTimer.StartTimer();
             _timerStarted = true;
         }
         
         public override void OnUpdate()
         {
-            if (_timerStarted && startGameTimer.CurrentTimeRemaining <= 0.5f)
+            if (_timerStarted && _startGameTimer.CurrentTimeRemaining <= 0.5f)
             {
                 _timerStarted = false;
                 StateMachine.ChangeState(new InProgressGame());
@@ -57,13 +57,14 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnFixedUpdate()
         {
             if (!_timerStarted) return;
-            startGameTimer.OnUpdate();
+            _startGameTimer.OnUpdate();
         }
         
         public override void OnExit()
         {
             GameEvents.OnTimerEndEvent?.Invoke();
-            startGameTimer = null;
+            GameEvents.OnPlayerUnFreezeAllAllEvent?.Invoke();
+            _startGameTimer = null;
         }
 
         

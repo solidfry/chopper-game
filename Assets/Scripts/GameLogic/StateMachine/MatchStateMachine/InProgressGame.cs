@@ -1,4 +1,5 @@
 ﻿using Events;
+using UnityEngine;
 
 namespace GameLogic.StateMachine.MatchStateMachine
 {
@@ -7,6 +8,8 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
+            if(!StateMachine.GetNetworkManager.IsServer) return;
+            Debug.Log("Game In Progress");
             GameEvents.OnPlayerUnFreezeAllAllEvent?.Invoke();
         }
         
@@ -16,6 +19,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
 
         public override void OnExit()
         {
+            
         }
 
    

@@ -20,14 +20,16 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public NetworkHealth Health { get; set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
+        [field: SerializeField] public GameObject PlayerModel { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
+        [SerializeField] VehicleValues physicsValues = new();
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
         
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
+        
 
-        [SerializeField] VehicleValues physicsValues = new();
 
         public override void OnNetworkSpawn()
         {
@@ -61,6 +63,7 @@ namespace PlayerInteraction.Networking
             
             GameEvents.OnPlayerFreezeAllAllEvent += FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllAllEvent += UnFreezePlayerClientRpc;
+            Health.PlayerDiedEvent += PlayerDiedClientRpc;
         }
 
         private void UnSubscribeFromPlayerEvents()
@@ -69,6 +72,7 @@ namespace PlayerInteraction.Networking
             
             GameEvents.OnPlayerFreezeAllAllEvent -= FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllAllEvent -= UnFreezePlayerClientRpc;
+            Health.PlayerDiedEvent -= PlayerDiedClientRpc;
         }
 
         private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
@@ -172,9 +176,9 @@ namespace PlayerInteraction.Networking
         
         void SetLocalPlayerLayerByName() => gameObject.layer = LayerMask.NameToLayer("LocalPlayer");
         
-        [ServerRpc]
-        void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => 
-            HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
+        // [ServerRpc]
+        // void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => 
+        //     HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
         
       
         [ClientRpc]
@@ -182,33 +186,46 @@ namespace PlayerInteraction.Networking
         {
             if(!IsOwner) return;
             
-            PlayerRigidbody.isKinematic = true;
-            PlayerInput.actions.Disable();
+            DisablePlayer();
         }
         
         [ClientRpc]
         private void UnFreezePlayerClientRpc()
         {
             if(!IsOwner) return;
-            
+
+            EnablePlayer();
+        }
+        
+        [ClientRpc]
+        private void PlayerDiedClientRpc(ulong obj)
+        {
+            if (IsOwner && OwnerClientId == obj)
+            {
+                DisablePlayer();
+            }
+        }
+        
+        void DisablePlayer()
+        {
+            PlayerRigidbody.isKinematic = true;
+            PlayerInput.actions.Disable();
+        }
+        
+        void EnablePlayer()
+        {
             PlayerRigidbody.isKinematic = false;
             PlayerInput.actions.Enable();
         }
 
-        [ServerRpc]
-        public void RequestSetIsKinematicServerRpc(bool value)
+        [ClientRpc]
+        public void PositionPlayerClientRpc(Vector3 position, Quaternion rotation)
         {
-            SetIsKinematicClientRpc(value);
+            transform.position = position;
+            transform.rotation = rotation;
+            GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
         }
         
-        [ClientRpc]
-        private void SetIsKinematicClientRpc(bool value)
-        {
-            if (PlayerRigidbody != null)
-            {
-                SetPlayerRbNonKinematic(value);
-            }
-        }
     }
     
 }

@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 548169382991786596}
   - component: {fileID: -2883884951460820180}
-  - component: {fileID: 5737661289056225369}
   - component: {fileID: 7360639563048435297}
   - component: {fileID: 210267188}
   - component: {fileID: 548169382991786599}
@@ -70,31 +69,8 @@ MonoBehaviour:
     particles: {fileID: 0}
     audioSource: {fileID: 0}
     audioClip: {fileID: 0}
-    <isDead>k__BackingField: 0
+    <IsDead>k__BackingField: 0
     isExplosive: 0
---- !u!136 &5737661289056225369
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 548169382991786597}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 15863
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 2
-  m_Radius: 0.71
-  m_Height: 8.52
-  m_Direction: 2
-  m_Center: {x: 0, y: -0.78, z: -0.6}
 --- !u!114 &7360639563048435297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -114,6 +90,7 @@ MonoBehaviour:
   <Health>k__BackingField: {fileID: -2883884951460820180}
   <PlayerNetworkID>k__BackingField: 0
   <PlayerRigidbody>k__BackingField: {fileID: 548169382991786599}
+  <PlayerModel>k__BackingField: {fileID: 2684627172255505681}
   <OutputHudValues>k__BackingField: {fileID: 5468480333737548721}
   <InputController>k__BackingField:
     thrust: 0
@@ -128,13 +105,13 @@ MonoBehaviour:
       strength: 1.2
       speedThreshold: 10
       isActive: 0
-  <UpdateHud>k__BackingField: {fileID: 8937438530940468184}
   physicsValues:
     yawTorque: 1000
     pitchTorque: 1200
     rollTorque: 300
     thrustForce: 10000
     thrustVectorOffset: 0.4
+  <UpdateHud>k__BackingField: {fileID: 8937438530940468184}
 --- !u!114 &210267188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -362,7 +339,7 @@ MonoBehaviour:
   speedKmh: 0
   altitudeInMetres: 0
   _frameCount: 0
-  health: {fileID: 0}
+  health: {fileID: -2883884951460820180}
 --- !u!82 &6082360959239746859
 AudioSource:
   m_ObjectHideFlags: 0

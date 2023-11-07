@@ -7,6 +7,7 @@ namespace Networking.Spawns
     [Serializable]
     public record SpawnLocation
     {
+        [SerializeField] public Transform currentPlayerTransform;
         [field: SerializeField] public Transform Transform { get; private set; } = null;
         [field: SerializeField] public bool IsUsed { get; private set; } = false;
 
@@ -18,6 +19,7 @@ namespace Networking.Spawns
 
         public void ReleasePosition()
         {
+            Debug.Log("Position released");
             IsUsed = false;
         }
 
