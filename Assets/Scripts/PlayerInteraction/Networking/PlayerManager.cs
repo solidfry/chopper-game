@@ -221,8 +221,9 @@ namespace PlayerInteraction.Networking
         [ClientRpc]
         public void PositionPlayerClientRpc(Vector3 position, Quaternion rotation)
         {
-            transform.position = position;
-            transform.rotation = rotation;
+            var t = transform;
+            t.position = position;
+            t.rotation = rotation;
             GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
         }
         
