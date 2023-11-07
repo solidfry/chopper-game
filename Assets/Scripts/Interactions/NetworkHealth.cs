@@ -1,5 +1,7 @@
 ﻿using System;
+using Events;
 using Interfaces;
+using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 using Utilities;
@@ -11,8 +13,7 @@ namespace Interactions
         [SerializeField] int health = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         [SerializeField] Death death;
-        // [SerializeField] Collider collider3d;
-        
+        private Collider[] _colliders;
         public event Action<int> SendHealthEvent;
         
         public override void OnNetworkSpawn()
@@ -21,6 +22,7 @@ namespace Interactions
             if(IsClient && IsOwner || IsServer)
             {
                 networkHealth.OnValueChanged += OnHealthChanged;
+                _colliders = gameObject.GetComponentsInChildren<Collider>();
             }
             
         }
@@ -62,23 +64,27 @@ namespace Interactions
 
         public void Die()
         {
+            if(!IsServer) return;
+            
             Debug.Log("Player died");
-            // if(!death.isDead)
-            // {
-            //     death.SetIsDead(true);
-            //     death?.Play();
-            //     
-            //     Collider[] colliders = gameObject.GetComponentsInChildren<Collider>();
-            //     
-            //     if(colliders != null )
-            //         foreach (var col in colliders)
-            //         {
-            //             col.enabled = false;
-            //         }
-            //     
-            //     // collider3d.enabled = false;
-            //     Debug.Log($"{this.transform.name} died.");
-            // }
+            if (!death.IsDead)
+            {
+                death.SetIsDead(true);
+                
+                SetColliders(false);
+                
+                GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId);
+            }
+            
+        }
+        
+        void SetColliders(bool value)
+        {
+            _colliders ??= gameObject.GetComponentsInChildren<Collider>();
+            foreach (var c in _colliders)
+            {
+                c.enabled = value;
+            }
         }
         
         public void InitialiseHealth()

@@ -1,7 +1,4 @@
-﻿using System;
-using Events;
-using Unity.Netcode;
-using UnityEngine;
+﻿using Events;
 using Utilities;
 
 namespace GameLogic.StateMachine.MatchStateMachine
@@ -39,15 +36,11 @@ namespace GameLogic.StateMachine.MatchStateMachine
             
             if (_timerStarted && countdownTimer.CurrentTimeRemaining <= 0.5f)
             {
-                ChangeState();
+                _timerStarted = false;
+                StateMachine.ChangeState(new StartGame());
             }
         }
         
-        void ChangeState()
-        {
-            StateMachine.ChangeState(new StartGame());
-        }
-
         public override void OnFixedUpdate()
         {
             if (!_timerStarted) return;

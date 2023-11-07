@@ -29,6 +29,8 @@ namespace Events
         #region UI Events
         public delegate void PlayAudioClip(string soundListName);
         public static PlayAudioClip OnPlayRandomUISoundEvent;
+        public delegate void SetTimerColors(Color textColor, Color backgroundColor);
+        public static SetTimerColors OnSetTimerColors;
         #endregion
 
         #region Server Events

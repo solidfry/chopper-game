@@ -2,8 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using Events;
 using Interactions.ScriptableObjects;
 using Interfaces;
+using PlayerInteraction.Networking;
+using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -15,11 +18,10 @@ namespace Interactions
         [SerializeField] ParticleSystem particles;
         [SerializeField] AudioSource audioSource;
         [SerializeField] AudioClip audioClip;
-        private Transform parent;
-        [field: SerializeField] public bool isDead { get; private set; }
+        private Transform _parent;
+        [field: SerializeField] public bool IsDead { get; private set; }
         [SerializeField] bool isExplosive;
         float ClipLength => audioClip.length;
-        
         
         // [SerializeField] List<DeathEffect> deathEffects;
     
@@ -32,9 +34,7 @@ namespace Interactions
         public void Init(Transform transform = null)
         {
             if(transform != null)
-                parent = transform;
-            
-            // audioSource.clip = audioClip;
+                _parent = transform;
         }
 
         public void Play()
@@ -48,7 +48,7 @@ namespace Interactions
         {
             if (particles != null)
             {
-                var activeParticles =  Object.Instantiate(particles, parent);
+                var activeParticles =  Object.Instantiate(particles, _parent);
                 activeParticles.transform.localScale = Vector3.one * 3;
             }
         }
@@ -66,15 +66,14 @@ namespace Interactions
             
             if (audioClip != null)
                 yield return new WaitForSeconds(ClipLength);
-            // Object.Destroy(transform.gameObject);
             
-            transform.gameObject.SetActive(false);
-            
+            // transform.gameObject.SetActive(false);
+            // SetIsDead(true);
         }
 
         public void SetIsDead(bool value)
         {
-            isDead = value;
+            IsDead = value;
         }
         
         // public void PlayEffects()
