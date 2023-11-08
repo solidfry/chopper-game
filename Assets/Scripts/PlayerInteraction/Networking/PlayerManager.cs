@@ -15,7 +15,6 @@ namespace PlayerInteraction.Networking
         [SerializeField] private CinemachineVirtualCamera playerVirtualCamera;
         [SerializeField] private Camera playerCamera;
         [SerializeField] private AudioListener playerAudioListener;
-        
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
         [field: SerializeField] public NetworkHealth Health { get; set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
@@ -26,7 +25,6 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public MovementController MovementController { get; private set; }
         [SerializeField] VehicleValues physicsValues = new();
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
-        
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
         
 
