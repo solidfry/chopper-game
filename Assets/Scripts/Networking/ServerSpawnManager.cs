@@ -35,14 +35,22 @@ namespace Networking
         {
             if (!IsServer) return;
             GetSpawnLocation(out var spawnLocation);
-            RespawnPlayer(clientid, spawnLocation);
+            if (spawnLocation == null) return;
+            StartCoroutine(RespawnPlayerCoroutine(clientid, spawnLocation));
             Debug.Log("Player was moved to spawn location");
+        }
+        
+        IEnumerator RespawnPlayerCoroutine(ulong clientid, Transform spawnLocation)
+        {
+            yield return new WaitForSeconds(respawnTime);
+            RespawnPlayer(clientid, spawnLocation);
         }
         
         void RespawnPlayer(ulong clientid, Transform spawnLocation)
         {
-            NetworkManager.ConnectedClients[clientid].PlayerObject.GetComponent<PlayerManager>().PositionPlayerClientRpc(spawnLocation.position, spawnLocation.rotation);
-            Debug.Log("Player should be moved");
+            var player = NetworkManager.ConnectedClients[clientid].PlayerObject.GetComponent<PlayerManager>();
+            player.PositionPlayerClientRpc(spawnLocation.position, spawnLocation.rotation);
+            player.RespawnPlayerClientRpc();
             ReleaseSpawnLocation(spawnLocation);
         }
 
@@ -54,7 +62,6 @@ namespace Networking
                 if (tr != null)
                     return tr;
             }
-
             return null;
         }
         
@@ -63,7 +70,7 @@ namespace Networking
 
         public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);
 
-        public void ReleaseSpawnLocation(Transform tr)
+        void ReleaseSpawnLocation(Transform tr)
         {
             StartCoroutine(ReleaseSpawnLocationCoroutine(tr));
         }
@@ -74,7 +81,10 @@ namespace Networking
             teamSpawnLocations.ForEach(team => team.ReleasePositionByTransform(tr));
         }
 
-        public void ReleaseAllSpawnLocations() => teamSpawnLocations.ForEach(team => team.ReleaseAllPositions());
+        public void ReleaseAllSpawnLocations()
+        {
+            teamSpawnLocations.ForEach(team => team.ReleaseAllPositions());
+        }
 
         public bool AllSpawnLocationsUsed() => teamSpawnLocations.TrueForAll(team => team.AllPositionsUsed());
 

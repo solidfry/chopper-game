@@ -11,6 +11,7 @@ namespace Interactions
     public class NetworkHealth : NetworkBehaviour, IDamageable
     {
         [SerializeField] int health = 200;
+        [SerializeField] int maxHealth = 200; 
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         [SerializeField] Death death;
         public event Action<int> SendHealthEvent;
@@ -76,7 +77,10 @@ namespace Interactions
 
         public void InitialiseHealth()
         {
-            if(IsClient && IsOwner) PlayerHealthSetServerRpc(health);
+            if(IsClient && IsOwner)
+            {
+                SetPlayerHealthServerRpc(health);
+            }
             
             // if(IsServer) PlayerHeathSetClientRpc(health);
             
@@ -84,18 +88,26 @@ namespace Interactions
         }
         
         [ServerRpc] 
-        private void PlayerHealthSetServerRpc(int health)
+        private void SetPlayerHealthServerRpc(int health)
         {
             if(!IsServer) return;
-            PlayerHealthSetClientRpc(health);
+            SetPlayerHealthClientRpc(health);
             Debug.Log("Server sent Client RPC to set health");
         }
         
         [ClientRpc]
-        private void PlayerHealthSetClientRpc(int health)
+        private void SetPlayerHealthClientRpc(int health)
         {
+            if(!IsClient && !IsOwner) return;
             networkHealth.Value = health;
             Debug.Log("Health set for " + OwnerClientId + "via Client RPC");
+        }
+        
+        public void ResetHealth()
+        {
+            if(!IsClient && !IsOwner) return;
+            networkHealth.Value = maxHealth;
+            death.SetIsDead(false);
         }
 
         private void OnCollisionEnter(Collision other)

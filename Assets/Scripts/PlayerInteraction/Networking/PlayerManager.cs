@@ -176,10 +176,6 @@ namespace PlayerInteraction.Networking
         
         void SetLocalPlayerLayerByName() => gameObject.layer = LayerMask.NameToLayer("LocalPlayer");
         
-        // [ServerRpc]
-        // void HandleAllMovementServerRpc(float thrustInput, float yawInput, float pitchInput, float rollInput) => 
-        //     HandleAllMovement(thrustInput, yawInput, pitchInput, rollInput);
-        
       
         [ClientRpc]
         private void FreezePlayerClientRpc()
@@ -225,6 +221,13 @@ namespace PlayerInteraction.Networking
             t.position = position;
             t.rotation = rotation;
             GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
+        }
+        
+        [ClientRpc]
+        public void RespawnPlayerClientRpc()
+        {
+            Health.ResetHealth();
+            EnablePlayer();
         }
         
     }
