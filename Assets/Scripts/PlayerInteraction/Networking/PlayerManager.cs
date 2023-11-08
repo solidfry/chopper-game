@@ -224,7 +224,7 @@ namespace PlayerInteraction.Networking
         [ClientRpc]
         public void RespawnPlayerClientRpc()
         {
-            Health.ResetHealth();
+            Health.SetPlayerHealthServerRpc(Health.MaxHealth);
             EnablePlayer();
         }
         

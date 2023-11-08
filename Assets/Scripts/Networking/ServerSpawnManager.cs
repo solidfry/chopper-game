@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using Events;
-using Networking.Spawns;
 using PlayerInteraction.Networking;
 using UnityEngine;
 
@@ -10,9 +9,12 @@ namespace Networking
     public class ServerSpawnManager : SingletonNetwork<ServerSpawnManager>
     {
         [SerializeField] PlayerManager playerPrefab;
-        [SerializeField] List<TeamSpawnLocations> teamSpawnLocations = new();
         [SerializeField] float respawnTime = 5f;
-
+        [SerializeField] SpawnLocations spawnLocations = new();
+        [SerializeField] ParticleSystem respawnEffect;
+        
+        public int GetSpawnLocationsCount => spawnLocations.spawnLocations.Count;
+        
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
@@ -34,7 +36,7 @@ namespace Networking
         void OnPlayerDied(ulong clientid)
         {
             if (!IsServer) return;
-            GetSpawnLocation(out var spawnLocation);
+            GetRandomSpawnLocation(out var spawnLocation);
             if (spawnLocation == null) return;
             StartCoroutine(RespawnPlayerCoroutine(clientid, spawnLocation));
             Debug.Log("Player was moved to spawn location");
@@ -44,52 +46,41 @@ namespace Networking
         {
             yield return new WaitForSeconds(respawnTime);
             RespawnPlayer(clientid, spawnLocation);
+            // if(respawnEffect)
+            //     respawnEffect.Play();
         }
         
         void RespawnPlayer(ulong clientid, Transform spawnLocation)
         {
-            var player = NetworkManager.ConnectedClients[clientid].PlayerObject.GetComponent<PlayerManager>();
-            player.PositionPlayerClientRpc(spawnLocation.position, spawnLocation.rotation);
-            player.RespawnPlayerClientRpc();
+            NetworkManager.ConnectedClients[clientid].PlayerObject.TryGetComponent(out PlayerManager playerManager);
+            
+            if (playerManager == null) return;
+            playerManager.PositionPlayerClientRpc(spawnLocation.position, spawnLocation.rotation);
+            playerManager.RespawnPlayerClientRpc();
             ReleaseSpawnLocation(spawnLocation);
         }
 
        private Transform UseSpawnLocation()
         {
-            foreach (var team in teamSpawnLocations)
-            {
-                var tr = team.GetNextUnusedPosition();
-                if (tr != null)
-                    return tr;
-            }
+            var tr = spawnLocations.GetNextUnusedPosition();
+            if (tr != null)
+                return tr;
             return null;
         }
         
         public PlayerManager GetPlayerPrefab() => playerPrefab;
         public void GetSpawnLocation(out Transform spawnLocation) => spawnLocation = UseSpawnLocation();
-
-        public void ReleaseSpawnLocationInTeamAtIndex(int teamIndex, int index) => teamSpawnLocations[teamIndex].ReleasePositionAtIndex(index);
-
-        void ReleaseSpawnLocation(Transform tr)
-        {
-            StartCoroutine(ReleaseSpawnLocationCoroutine(tr));
-        }
+        void GetRandomSpawnLocation(out Transform spawnLocation) => spawnLocation = spawnLocations.GetRandomUnusedPosition();
+        
+        void ReleaseSpawnLocation(Transform tr) => StartCoroutine(ReleaseSpawnLocationCoroutine(tr));
 
         private IEnumerator ReleaseSpawnLocationCoroutine(Transform tr)
         {
             yield return new WaitForSeconds(respawnTime);
-            teamSpawnLocations.ForEach(team => team.ReleasePositionByTransform(tr));
+            spawnLocations.ReleasePositionByTransform(tr);
         }
 
-        public void ReleaseAllSpawnLocations()
-        {
-            teamSpawnLocations.ForEach(team => team.ReleaseAllPositions());
-        }
-
-        public bool AllSpawnLocationsUsed() => teamSpawnLocations.TrueForAll(team => team.AllPositionsUsed());
-
-        public bool AllSpawnLocationsUsedInTeam(int teamIndex) => teamSpawnLocations[teamIndex].AllPositionsUsed();
-        
+        public void ReleaseAllSpawnLocations() => spawnLocations.ReleaseAllPositions();
     }
 
 }

@@ -25,15 +25,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
             // Instantiate the players and instantiate the timer and start it
             if (stateMachine != null && stateMachine.GetNetworkManager.IsServer)
             {
-                foreach (var clientId in stateMachine.GetNetworkManager.ConnectedClients.Keys)
+                if(_serverSpawnManager != null && _serverSpawnManager.GetSpawnLocationsCount != 0)
                 {
-                    // Assuming you have a method to create a player object
-                    // GameObject playerObject ;
-                    _serverSpawnManager.GetSpawnLocation(out var transform);
-                    PlayerManager go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
-                    go.NetworkObject.SpawnAsPlayerObject(clientId);
-                    // Assuming you have a method to get a starting position based on the client ID
-                    
+                    AllocateSpawns(stateMachine);
                 }
             }
             GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
@@ -44,7 +38,17 @@ namespace GameLogic.StateMachine.MatchStateMachine
             _startGameTimer.StartTimer();
             _timerStarted = true;
         }
-        
+
+        private void AllocateSpawns(IStateMachine stateMachine)
+        {
+            foreach (var clientId in stateMachine.GetNetworkManager.ConnectedClients.Keys)
+            {
+                _serverSpawnManager.GetSpawnLocation(out var transform);
+                PlayerManager go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
+                go.NetworkObject.SpawnAsPlayerObject(clientId);
+            }
+        }
+
         public override void OnUpdate()
         {
             if (_timerStarted && _startGameTimer.CurrentTimeRemaining <= 0.5f)

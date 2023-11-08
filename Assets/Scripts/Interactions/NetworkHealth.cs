@@ -1,7 +1,6 @@
 ﻿using System;
 using Events;
 using Interfaces;
-using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 using Utilities;
@@ -11,7 +10,7 @@ namespace Interactions
     public class NetworkHealth : NetworkBehaviour, IDamageable
     {
         [SerializeField] int health = 200;
-        [SerializeField] int maxHealth = 200; 
+        [field: SerializeField] public int MaxHealth { get; private set; } = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         [SerializeField] Death death;
         public event Action<int> SendHealthEvent;
@@ -88,11 +87,12 @@ namespace Interactions
         }
         
         [ServerRpc] 
-        private void SetPlayerHealthServerRpc(int health)
+        public void SetPlayerHealthServerRpc(int health)
         {
             if(!IsServer) return;
             SetPlayerHealthClientRpc(health);
-            Debug.Log("Server sent Client RPC to set health");
+            death.SetIsDead(false);
+            // Debug.Log("Server sent Client RPC to set health");
         }
         
         [ClientRpc]
@@ -100,14 +100,6 @@ namespace Interactions
         {
             if(!IsClient && !IsOwner) return;
             networkHealth.Value = health;
-            Debug.Log("Health set for " + OwnerClientId + "via Client RPC");
-        }
-        
-        public void ResetHealth()
-        {
-            if(!IsClient && !IsOwner) return;
-            networkHealth.Value = maxHealth;
-            death.SetIsDead(false);
         }
 
         private void OnCollisionEnter(Collision other)

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Networking.Spawns
+namespace Networking
 {
     [Serializable]
     public record SpawnLocation
@@ -17,11 +17,7 @@ namespace Networking.Spawns
             return Transform;
         }
 
-        public void ReleasePosition()
-        {
-            // Debug.Log("Position released");
-            IsUsed = false;
-        }
+        public void ReleasePosition() => IsUsed = false;
 
         public bool IsPositionUsed()
         {
@@ -30,10 +26,11 @@ namespace Networking.Spawns
     }
 
     [Serializable]
-    class TeamSpawnLocations
+    class SpawnLocations
     {
+        [SerializeField]
         public List<SpawnLocation> spawnLocations;
-
+        
         public Transform GetNextUnusedPosition()
         {
             foreach (var location in spawnLocations)
@@ -41,6 +38,14 @@ namespace Networking.Spawns
                     return location.GetAndUsePosition();
 
             return null;
+        }
+        
+        public Transform GetRandomUnusedPosition()
+        {
+            var unusedLocations = spawnLocations.FindAll(location => !location.IsPositionUsed());
+            if (unusedLocations.Count == 0) return null;
+            var randomIndex = UnityEngine.Random.Range(0, unusedLocations.Count);
+            return unusedLocations[randomIndex].GetAndUsePosition();
         }
 
         public void ReleasePositionAtIndex(int index) => spawnLocations[index].ReleasePosition();
