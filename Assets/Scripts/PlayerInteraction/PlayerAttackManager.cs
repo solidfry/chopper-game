@@ -22,7 +22,6 @@ namespace PlayerInteraction
             }
         }
         
-        
         public override void OnDestroy()
         {
             base.OnDestroy();
@@ -34,7 +33,6 @@ namespace PlayerInteraction
                     weapon.OnAttack -= FireClient;
             }
         }
-
 
         public void Fire1(InputAction.CallbackContext ctx) => HandleInput(0, ctx);
 
@@ -138,5 +136,13 @@ namespace PlayerInteraction
         [ServerRpc]
         void StopAttackServerRpc(int weaponIndex) => StopAttack(weaponIndex);
         
+        
+        public void ToggleAllWeaponVisibility(bool value)
+        { 
+            foreach (var weapon in weaponSlots)
+            {
+                weapon.weaponGameObjectInstance.ToggleWeaponVisibility(value);
+            }
+        }
     }
 }

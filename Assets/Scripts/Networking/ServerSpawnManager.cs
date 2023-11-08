@@ -56,7 +56,6 @@ namespace Networking
             
             if (playerManager == null) return;
             playerManager.PositionPlayerClientRpc(spawnLocation.position, spawnLocation.rotation);
-            playerManager.RespawnPlayerClientRpc();
             ReleaseSpawnLocation(spawnLocation);
         }
 

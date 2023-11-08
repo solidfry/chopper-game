@@ -1,4 +1,5 @@
-﻿using Cinemachine;
+﻿using System.Collections;
+using Cinemachine;
 using Events;
 using Interactions;
 using Interfaces;
@@ -19,6 +20,7 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public NetworkHealth Health { get; set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
+        [field: SerializeField] public PlayerAttackManager PlayerAttackManager { get; private set; }
         [field: SerializeField] public GameObject PlayerModel { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
@@ -26,8 +28,8 @@ namespace PlayerInteraction.Networking
         [SerializeField] VehicleValues physicsValues = new();
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
-        
 
+        private MeshRenderer[] _meshes;
 
         public override void OnNetworkSpawn()
         {
@@ -44,6 +46,9 @@ namespace PlayerInteraction.Networking
                 SetPlayerNetworkID();
                 SetLocalPlayerLayerByName();
             }
+            
+            if(IsClient || IsServer)
+                _meshes = GetComponentsInChildren<MeshRenderer>();
             
             SubscribeToPlayerEvents();
         }
@@ -198,8 +203,25 @@ namespace PlayerInteraction.Networking
             {
                 DisablePlayer();
             }
+            
+            if (IsClient) 
+                TogglePlayerVisibility(false);
         }
         
+        // [ClientRpc]
+        // void TogglePlayerVisibilityClientRpc(bool value) => TogglePlayerVisibility(value);
+
+        private void TogglePlayerVisibility(bool value)
+        {
+            foreach (var mesh in _meshes)
+            {
+                mesh.enabled = value;
+            }
+
+            // PlayerModel.SetActive(value);
+            // PlayerAttackManager.ToggleAllWeaponVisibility(value);
+        }
+
         void DisablePlayer()
         {
             PlayerRigidbody.isKinematic = true;
@@ -219,13 +241,20 @@ namespace PlayerInteraction.Networking
             t.position = position;
             t.rotation = rotation;
             GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
-        }
-        
-        [ClientRpc]
-        public void RespawnPlayerClientRpc()
-        {
             Health.SetPlayerHealthServerRpc(Health.MaxHealth);
-            EnablePlayer();
+            if(IsClient)
+                TogglePlayerVisibility(true);
+            StartCoroutine(DelayRespawn());
+        }
+ 
+        IEnumerator DelayRespawn()
+        {
+            yield return new WaitForSeconds(1f);
+            if(IsOwner && IsLocalPlayer)
+                EnablePlayer();
+            //
+            // if(IsClient)
+            //     TogglePlayerVisibility(true);
         }
         
     }

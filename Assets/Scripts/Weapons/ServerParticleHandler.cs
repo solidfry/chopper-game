@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Weapons
 {
-    public class AmmoDestroyServerParticleHandler : NetworkBehaviour
+    public class ServerParticleHandler : NetworkBehaviour
     {
         [SerializeField] ParticleSystem particles;
         private float _particleDuration;

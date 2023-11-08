@@ -20,7 +20,6 @@ namespace Interactions
         [SerializeField] AudioClip audioClip;
         private Transform _parent;
         [field: SerializeField] public bool IsDead { get; private set; }
-        [SerializeField] bool isExplosive;
         float ClipLength => audioClip.length;
         
         // [SerializeField] List<DeathEffect> deathEffects;
@@ -49,7 +48,12 @@ namespace Interactions
             if (particles != null)
             {
                 var activeParticles =  Object.Instantiate(particles, _parent);
-                activeParticles.transform.localScale = Vector3.one * 3;
+                activeParticles.transform.localScale = Vector3.one * 10;
+                if(NetworkManager.Singleton.IsServer)
+                {
+                    activeParticles.GetComponent<NetworkObject>().Spawn();
+                    Debug.Log("Death particles spawned");
+                }
             }
         }
 
@@ -67,8 +71,6 @@ namespace Interactions
             if (audioClip != null)
                 yield return new WaitForSeconds(ClipLength);
             
-            // transform.gameObject.SetActive(false);
-            // SetIsDead(true);
         }
 
         public void SetIsDead(bool value)
@@ -76,13 +78,6 @@ namespace Interactions
             IsDead = value;
         }
         
-        // public void PlayEffects()
-        // {
-        //     foreach (var effect in deathEffects)
-        //     {
-        //         effect.DoDeathEffect();
-        //     }
-        // }
     }
 }
 

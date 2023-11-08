@@ -14,12 +14,9 @@ namespace Weapons
         [FormerlySerializedAs("ammoEffect")] public AmmoEffectServer ammoEffectServer;
 
         [SerializeField] public Transform firePointTr;
-
-        // [SerializeField] private Transform parent;
         [SerializeField] private GameObject prefabLocation;
         [SerializeField] private GameObject weaponModel;
         [SerializeField] private bool isFiring;
-        // [SerializeField] private ulong ownerId;
 
         public WeaponStats stats;
 
@@ -67,6 +64,8 @@ namespace Weapons
             var tr = transform;
             return tr.position + tr.forward * _firePointOffset;
         }
+        
+        public void ToggleWeaponVisibility(bool value) => weaponModel.SetActive(value);
 
 #if UNITY_EDITOR
         private void OnDrawGizmos()
