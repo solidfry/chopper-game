@@ -5,7 +5,8 @@
     /// </summary>
     public interface IDamageable
     {
-        public void TakeDamage(int damageAmount);
+        public void TakeDamage(int damageAmount, ulong damagerId);
         public void Die();
+        public ulong LastPlayerToDamage { get; }
     }
 }

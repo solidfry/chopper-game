@@ -11,10 +11,14 @@ namespace Interactions
     {
         [SerializeField] int health = 200;
         [field: SerializeField] public int MaxHealth { get; private set; } = 200;
-        [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         [SerializeField] Death death;
         public event Action<int> SendHealthEvent;
         public event Action<ulong> PlayerDiedEvent;
+        
+        private int _pendingDamage;
+        private ulong _lastPlayerToDamage;
+        public ulong LastPlayerToDamage => _lastPlayerToDamage;
         
         public override void OnNetworkSpawn()
         {
@@ -30,21 +34,42 @@ namespace Interactions
             if(IsClient && IsOwner || IsServer)
                 networkHealth.OnValueChanged -= OnHealthChanged;
         }
-        
-        public void TakeDamage(int damageAmount)
+
+        private void FixedUpdate()
+        {
+            if(!IsServer) return;
+
+            if (_pendingDamage <= 0) return;
+            
+            ApplyDamage(_pendingDamage);
+            _pendingDamage = 0;
+        }
+
+        private void ApplyDamage(int totalDamage)
         {
             if(!IsServer) return;
             
-            TakeDamageClientRpc(damageAmount);
+            if(networkHealth.Value <= 0) return;
+            
+            networkHealth.Value -= totalDamage;
+            // Debug.Log(totalDamage + " damage taken" + " health is now " + networkHealth.Value);
+        }
+
+        public void TakeDamage(int damageAmount, ulong damagerId)
+        {
+            if(!IsServer) return;
+    
+            _pendingDamage += damageAmount;
+            _lastPlayerToDamage = damagerId; // Update the last damager ID here
         }
         
-        [ClientRpc]
-        private void TakeDamageClientRpc(int damageAmount)
+        [ServerRpc]
+        private void TakeDamageServerRpc(int damageAmount)
         {
-            if(!IsClient && !IsOwner) return;
+            if(!IsServer) return;
             
             if(networkHealth.Value <= 0) return;
-
+        
             networkHealth.Value -= damageAmount;
             Debug.Log(damageAmount + " damage taken" + " health is now " + networkHealth.Value);
         }
@@ -63,14 +88,21 @@ namespace Interactions
         public void Die()
         {
             if(!IsServer) return;
-            
+    
             if (!death.IsDead)
             {
+                // Before setting death state, handle the last damage attribution
+
                 death.SetIsDead(true);
-                
-                Debug.Log("Player died");
-                GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId);
+                Debug.Log($"Player died. Killed by player {_lastPlayerToDamage}");
+                GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId); // You might want to pass the _lastDamagerId as well
                 PlayerDiedEvent?.Invoke(OwnerClientId);
+                
+                if(LastPlayerToDamage != 0)
+                    GameEvents.OnPlayerKillEvent?.Invoke(_lastPlayerToDamage);
+                
+                // Reset last damager ID after handling death
+                _lastPlayerToDamage = 0;
             }
         }
 
@@ -81,8 +113,6 @@ namespace Interactions
                 SetPlayerHealthServerRpc(health);
             }
             
-            // if(IsServer) PlayerHeathSetClientRpc(health);
-            
             Debug.Log("Health initialised for " + OwnerClientId);
         }
         
@@ -90,41 +120,29 @@ namespace Interactions
         public void SetPlayerHealthServerRpc(int health)
         {
             if(!IsServer) return;
-            SetPlayerHealthClientRpc(health);
-            death.SetIsDead(false);
-            // Debug.Log("Server sent Client RPC to set health");
-        }
-        
-        [ClientRpc]
-        private void SetPlayerHealthClientRpc(int health)
-        {
-            if(!IsClient && !IsOwner) return;
             networkHealth.Value = health;
+            death.SetIsDead(false);
         }
 
         private void OnCollisionEnter(Collision other)
         {
-            // Refactor this so that it's handled in a better way and in a different location
-            if (IsServer)
+            if (!IsServer) return;
+
+            // Check for upside-down collision
+            if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Vector3.Dot(transform.up, Vector3.down) > 0)
             {
-                // if the player is colliding and is upside down in correlation to the environment
-                if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Vector3.Dot(transform.up, Vector3.down) > 0)
-                {
-                    TakeDamageClientRpc(100);
-                    Debug.Log("Hit your roof!");
-                    return;
-                }
-                
-                if(other.gameObject.layer == LayerMask.NameToLayer("Environment") && Speed.MetersPerSecondToKilometersPerHour(GetComponent<Rigidbody>().velocity.magnitude) > 50)
-                {
-                    TakeDamageClientRpc(200);
-                    Debug.Log("Hit too hard!");
-                    return;
-                }
+                GetComponent<NetworkHealth>().TakeDamage(100, 0);
+                Debug.Log("Hit your roof!");
+                return;
             }
-            
-            
-                
+    
+            // Check for high-speed collision
+            if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Speed.MetersPerSecondToKilometersPerHour(GetComponent<Rigidbody>().velocity.magnitude) > 50)
+            {
+                GetComponent<NetworkHealth>().TakeDamage(200, 0);
+                Debug.Log("Hit too hard!");
+                return;
+            }
         }
     }
     

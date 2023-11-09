@@ -9,7 +9,7 @@ namespace Events
     {
 
         #region Player Events
-        public delegate void PlayerKill(ulong clientId);
+        public delegate void PlayerKill(ulong clientIdOfAttacker);
         public delegate void PlayerTakeDamage(int amount);
         public delegate void PlayerHeal(int amount);
         public delegate void PlayerDied(ulong clientId);
@@ -22,8 +22,8 @@ namespace Events
         public static PlayerKill OnPlayerKillEvent;
         public static PlayerDied OnPlayerDiedEvent;
         public static PlayerRespawn OnPlayerRespawnEvent;
-        public static PlayerFreezeAll OnPlayerFreezeAllAllEvent;
-        public static PlayerUnFreezeAll OnPlayerUnFreezeAllAllEvent;
+        public static PlayerFreezeAll OnPlayerFreezeAllEvent;
+        public static PlayerUnFreezeAll OnPlayerUnFreezeAllEvent;
         #endregion
 
         #region UI Events

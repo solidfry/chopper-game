@@ -10,7 +10,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
             base.OnEnter(stateMachine);
             if(!StateMachine.GetNetworkManager.IsServer) return;
             Debug.Log("Game In Progress");
-            GameEvents.OnPlayerUnFreezeAllAllEvent?.Invoke();
+            GameEvents.OnPlayerUnFreezeAllEvent?.Invoke();
         }
         
         public override void OnUpdate()

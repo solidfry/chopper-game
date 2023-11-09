@@ -5,11 +5,9 @@ namespace Networking
     public class ConnectionApprovalHandler : NetworkBehaviour
     {
         public static int MaxPlayers = 12;
-        // private ServerSpawnManager _spawnManager;
 
         private void Start()
         {
-            // _spawnManager = GetComponent<ServerSpawnManager>();
             AssignConnectionCallback();
         }
 
@@ -29,7 +27,8 @@ namespace Networking
         
         private void DisconnectPlayer(ulong obj)
         {
-            NetworkManager.Singleton.Shutdown();
+            if(IsClient && IsLocalPlayer)
+                NetworkManager.Singleton.Shutdown();
         }
 
         private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)

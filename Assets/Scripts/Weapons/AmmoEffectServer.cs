@@ -1,4 +1,5 @@
-﻿using Interfaces;
+﻿using Events;
+using Interfaces;
 using Unity.Netcode;
 using UnityEngine;
 using Weapons.ScriptableObjects;
@@ -13,12 +14,15 @@ namespace Weapons
         [SerializeField] private Collider collider3D;
         [SerializeField] private LayerMask ignoreCollisionsOnLayer;
         [SerializeField] private GameObject graphics;
-        [field: SerializeField] public NetworkObject ProjectileNetworkObject { get; private set; }
-        public Rigidbody Rigidbody { get; set; }
         private Vector3 _position;
         private bool _despawnHasBeenRequested = false;
 
-        private void Awake() => Rigidbody = GetComponent<Rigidbody>();
+        private int _damage;
+
+        private void Awake()
+        {
+            _damage = ammoType.stats.Damage;
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -27,16 +31,17 @@ namespace Weapons
 
             gameObject.layer = LayerMask.NameToLayer("Ammo");
 
-            if (ProjectileNetworkObject == null)
-                ProjectileNetworkObject = GetComponent<NetworkObject>();
-
             var tr = transform;
             previousPosition = tr.position;
             
             // Owner will not see the graphics from the server so that the firing feels responsive.
             if(IsOwner) 
-               graphics.SetActive(false); 
+               graphics.SetActive(false);
             
+            if (IsServer)
+            {
+                Debug.Log("Ammo spawned on server and is owned by " + OwnerClientId);
+            }
         }
 
         private void Update()
@@ -57,7 +62,6 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
-            
             if (!IsServer) return;
 
             DoDamage(collision);
@@ -66,47 +70,25 @@ namespace Weapons
                 DoDestroy();
         }
         
-        private void OnTriggerEnter(Collider collision)
-        {
-            if (!IsServer) return;
-
-            DoDamageTrigger(collision);
-
-            if (!_despawnHasBeenRequested)
-                DoDestroy();
-        }
-        
         private void DoDamage(Collision collision)
         {
             if(!IsServer) return;
+            
             // Debug.Log("DO Damage was run on server");
-            var player = collision.collider.GetComponentInParent<IPlayer>();
-            if (player != null)
+            var otherPlayer = collision.collider.GetComponentInParent<IPlayer>();
+            if (otherPlayer != null)
             {
-                if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
-                player.Health.TakeDamage(ammoType.stats.Damage);
-                // Debug.Log("damage taken from collider " + ammoType.stats.Damage);
+
+            
+
+                if (otherPlayer.Health.OwnerClientId == OwnerClientId)
+                {
+                    Debug.Log("Bullet hit self so returned");
+                    return;
+                }
+
+                otherPlayer.Health.TakeDamage(_damage, OwnerClientId);
             }
-        
-            Debug.Log(collision.collider.name);
-            
-        }
-        
-        private void DoDamageTrigger(Collider collision)
-        {
-            if(!IsServer) return;
-            
-            var player = collision.GetComponentInParent<IPlayer>();
-            if (player != null)
-            {
-                if(player.PlayerNetworkID == ProjectileNetworkObject.OwnerClientId) return;
-                player.Health.TakeDamage(ammoType.stats.Damage);
-                // Debug.Log("damage taken from collider " + ammoType.stats.Damage);
-            }
-            
-            // Debug.Log(collision.name + " from trigger");
-        
-        
         }
 
         void DoDestroy()
@@ -117,9 +99,9 @@ namespace Weapons
             {
                 var particles = ammoType.InstantiateServerDeathParticles(transform);
                 particles.Spawn();
-                if (!ProjectileNetworkObject.IsSpawned) return;
+                if (!IsSpawned) return;
                 
-                ProjectileNetworkObject.Despawn();
+                NetworkObject.Despawn();
             }
         }
         

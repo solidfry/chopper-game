@@ -21,15 +21,15 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public PlayerAttackManager PlayerAttackManager { get; private set; }
-        [field: SerializeField] public GameObject PlayerModel { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
-        [SerializeField] VehicleValues physicsValues = new();
+        [SerializeField] VehicleValues physicsValues;
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
 
         private MeshRenderer[] _meshes;
+        private Collider[] _colliders;
 
         public override void OnNetworkSpawn()
         {
@@ -48,8 +48,10 @@ namespace PlayerInteraction.Networking
             }
             
             if(IsClient || IsServer)
+            {
                 _meshes = GetComponentsInChildren<MeshRenderer>();
-            
+                _colliders = GetComponentsInChildren<Collider>();
+            }            
             SubscribeToPlayerEvents();
         }
         
@@ -64,8 +66,8 @@ namespace PlayerInteraction.Networking
         {
             if (!IsServer) return;
             
-            GameEvents.OnPlayerFreezeAllAllEvent += FreezePlayerClientRpc;
-            GameEvents.OnPlayerUnFreezeAllAllEvent += UnFreezePlayerClientRpc;
+            GameEvents.OnPlayerFreezeAllEvent += FreezePlayerClientRpc;
+            GameEvents.OnPlayerUnFreezeAllEvent += UnFreezePlayerClientRpc;
             Health.PlayerDiedEvent += PlayerDiedClientRpc;
         }
 
@@ -73,8 +75,8 @@ namespace PlayerInteraction.Networking
         {
             if (!IsServer) return;
             
-            GameEvents.OnPlayerFreezeAllAllEvent -= FreezePlayerClientRpc;
-            GameEvents.OnPlayerUnFreezeAllAllEvent -= UnFreezePlayerClientRpc;
+            GameEvents.OnPlayerFreezeAllEvent -= FreezePlayerClientRpc;
+            GameEvents.OnPlayerUnFreezeAllEvent -= UnFreezePlayerClientRpc;
             Health.PlayerDiedEvent -= PlayerDiedClientRpc;
         }
 
@@ -217,9 +219,11 @@ namespace PlayerInteraction.Networking
             {
                 mesh.enabled = value;
             }
-
-            // PlayerModel.SetActive(value);
-            // PlayerAttackManager.ToggleAllWeaponVisibility(value);
+            
+            foreach (var col in _colliders)
+            {
+                col.enabled = value;
+            }
         }
 
         void DisablePlayer()
@@ -237,14 +241,25 @@ namespace PlayerInteraction.Networking
         [ClientRpc]
         public void PositionPlayerClientRpc(Vector3 position, Quaternion rotation)
         {
-            var t = transform;
-            t.position = position;
-            t.rotation = rotation;
-            GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
-            Health.SetPlayerHealthServerRpc(Health.MaxHealth);
+            
+             
+            if(IsOwner)
+            {
+                var t = transform;
+                t.position = position;
+                t.rotation = rotation;
+            
+                Health.SetPlayerHealthServerRpc(Health.MaxHealth);
+                GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
+            }
+            
             if(IsClient)
-                TogglePlayerVisibility(true);
-            StartCoroutine(DelayRespawn());
+            {
+                // TogglePlayerVisibility(true);
+                StartCoroutine(DelayRespawn());
+            }
+            
+            
         }
  
         IEnumerator DelayRespawn()
@@ -252,9 +267,9 @@ namespace PlayerInteraction.Networking
             yield return new WaitForSeconds(1f);
             if(IsOwner && IsLocalPlayer)
                 EnablePlayer();
-            //
-            // if(IsClient)
-            //     TogglePlayerVisibility(true);
+            
+            if(IsClient)
+                TogglePlayerVisibility(true);
         }
         
     }

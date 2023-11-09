@@ -6,8 +6,8 @@ namespace GameLogic.StateMachine.MatchStateMachine
     public class PreGame : MatchState
     {
         bool _timerStarted = false;
-        float waitTime = 10f;
-        
+        float _waitTime = 5f;
+        int _playerCount = 2;
         
         CountdownTimer countdownTimer;
         public override void OnEnter(IStateMachine stateMachine = null)
@@ -15,9 +15,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
             base.OnEnter(stateMachine);
             if(!StateMachine.GetNetworkManager.IsServer) return;
             // TODO: get this from an SO
-            GameEvents.OnSetTimerEvent?.Invoke(waitTime);
+            GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
             // Debug.Log(waitTime + " seconds until game starts");
-            countdownTimer = new CountdownTimer(waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
+            countdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
         }
 
         public override void OnUpdate()
@@ -26,10 +26,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
 
             if (!StateMachine.GetNetworkManager.IsServer) return;
             
-            if (StateMachine.GetNetworkManager.ConnectedClients.Count >= 2 && !_timerStarted)
+            if (StateMachine.GetNetworkManager.ConnectedClients.Count >= _playerCount && !_timerStarted)
             {
                 GameEvents.OnTimerStartEvent?.Invoke();
-                // Debug.Log("Timer started from pregame state");
                 countdownTimer.StartTimer();
                 _timerStarted = true;
             }

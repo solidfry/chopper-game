@@ -9,7 +9,7 @@ namespace UI
 {
     public class TimerUI : MonoBehaviour
     {
-        [SerializeField] bool runTimer = false;
+        [SerializeField] bool runTimer;
         [Header("Text Settings")]
         [SerializeField] TMP_Text timerText;
         [SerializeField][Range(0,1)] float monoSpace = 0.8f;
@@ -86,7 +86,7 @@ namespace UI
             _bgColorSequence = backgroundImage.DOColor(c, colorSwapDuration).SetEase(easing);
             _bgColorSequence.Play();
         }
-        
+
         [ContextMenu("Hide Timer")]
         public void HideTimer() => HideTimerSequence.Play().SetEase(easing);
 

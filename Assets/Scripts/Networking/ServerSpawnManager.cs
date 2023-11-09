@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using Events;
 using PlayerInteraction.Networking;
 using UnityEngine;
@@ -39,7 +38,7 @@ namespace Networking
             GetRandomSpawnLocation(out var spawnLocation);
             if (spawnLocation == null) return;
             StartCoroutine(RespawnPlayerCoroutine(clientid, spawnLocation));
-            Debug.Log("Player was moved to spawn location");
+            // Debug.Log("Player was moved to spawn location");
         }
         
         IEnumerator RespawnPlayerCoroutine(ulong clientid, Transform spawnLocation)

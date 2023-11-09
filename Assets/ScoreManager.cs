@@ -1,96 +1,132 @@
-using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using Events;
+using PlayerInteraction.Networking;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-class PlayerScore
-{
-    public int Kills = 0;
-    public int Deaths = 0;
-}
-
 public class ScoreManager : NetworkBehaviour
 {
-    Dictionary<NetworkClient, PlayerScore> playerScores = new ();
+    Dictionary<ulong, NetworkVariable<NetworkPlayerData>> _playerScores = new ();
     [SerializeField] int maxKills = 10; // This will come from a ScriptableObject
-    [SerializeField] private int totalKills = 0;
-    [SerializeField] Canvas scoreboardCanvasPrefab;
-    [SerializeField] InputAction showScoreboardAction;
+    [SerializeField] private NetworkVariable<int> totalKills = new (0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     
-    public int TotalKills
-    {
-        get => totalKills;
-        private set
-        {
-            totalKills = value; 
-            if(!IsServer) return;
-            if (totalKills >= maxKills) EndConditionsMet();
-        }
-    }
-    
-    private void Awake()
+
+    public override void OnNetworkSpawn()
     {
         if (!IsServer) return;
         NetworkManager.OnClientConnectedCallback += OnClientConnected;
         NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
-        GameEvents.OnPlayerKillEvent += AddKill;
         GameEvents.OnPlayerDiedEvent += AddDeath;
+        GameEvents.OnPlayerKillEvent += AddKill;
     }
-    
+
+ 
     public override void OnNetworkDespawn()
     {
-        base.OnNetworkDespawn();
-        
         if (!IsServer) return;
-
         NetworkManager.OnClientConnectedCallback -= OnClientConnected;
         NetworkManager.OnClientDisconnectCallback -= OnClientDisconnected;
-        GameEvents.OnPlayerKillEvent -= AddKill;
         GameEvents.OnPlayerDiedEvent -= AddDeath;
+        GameEvents.OnPlayerKillEvent -= AddKill;
     }
 
-    private void OnClientConnected(ulong client)
+    private void OnClientConnected(ulong clientId)
     {
-        playerScores.Add(NetworkManager.Singleton.ConnectedClients[client], new PlayerScore());
+        if(!IsServer) return;
+    
+        var player = new NetworkVariable<NetworkPlayerData>
+        (
+            readPerm: NetworkVariableReadPermission.Everyone,
+            writePerm: NetworkVariableWritePermission.Server, 
+            value: new NetworkPlayerData
+            {
+                PlayerNetworkID = clientId,
+                Kills = 0,
+                Deaths = 0
+            }
+        );
+        
+        _playerScores.Add(clientId, player);
+        
+        Debug.Log("Player connected " + clientId + " and added to scoreboard player " + player.Value.PlayerNetworkID);
     }
     
-    private void OnClientDisconnected(ulong client)
+    private void OnClientDisconnected(ulong clientId)
     {
-        playerScores.Remove(NetworkManager.Singleton.ConnectedClients[client]);
+        if(!IsServer) return;
+
+        _playerScores.Remove(clientId);
     }
     
-    void AddKill(ulong client)
+    void AddKill(ulong clientId)
     {
         if (!IsServer) return;
         
-        NetworkManager.Singleton.ConnectedClients.TryGetValue(client, out var networkClient);
-        if(networkClient == null) return;
+        _playerScores.TryGetValue(clientId, out var networkPlayerData);
         
-        playerScores[networkClient].Kills++;
-        totalKills++;
+        if (networkPlayerData != null)
+        {
+            UpdatePlayerData(clientId, 1);
+            // var playerData = networkPlayerData.Value;
+            // playerData.AddKill();
+            // networkPlayerData.Value = playerData;
+            Debug.Log("Player kills updated for " + clientId + " and is now " + networkPlayerData.Value.Kills);
+            totalKills.Value += 1;
+        }
+
+        CheckTotalKills();
     }
-    
-    void AddDeath(ulong client)
+
+    void AddDeath(ulong clientId)
     {
         if (!IsServer) return;
+  
+        _playerScores.TryGetValue(clientId, out var networkPlayerData);
         
-        NetworkManager.Singleton.ConnectedClients.TryGetValue(client, out var networkClient);
-        if(networkClient == null) return;
-        
-        playerScores[networkClient].Deaths++;
-        print($"Player {client} died and has {playerScores[networkClient].Deaths} deaths");
+        if (networkPlayerData != null)
+        {
+            UpdatePlayerData(clientId, addDeaths:1);
+
+            // var playerData = networkPlayerData.Value;
+            // playerData.AddDeath();
+            // networkPlayerData.Value = playerData;
+            Debug.Log("Player deaths updated for " + clientId + " and is now " + networkPlayerData.Value.Deaths);
+        }
+    }
+
+    private void UpdatePlayerData(ulong client, int addKills = 0, int addDeaths = 0)
+    {
+        var oldPlayerData = _playerScores[client];
+        var kills = oldPlayerData.Value.Kills + addKills;
+        var deaths = oldPlayerData.Value.Deaths + addDeaths;
+        var playerData = new NetworkPlayerData(client, kills, deaths);
+        _playerScores[client] = new(playerData);
     }
     
+    void CheckTotalKills()
+    {
+        if (!IsMatchOver) return;
+        EndMatch();
+    }
+    
+    public bool IsMatchOver => totalKills.Value >= maxKills;
+
     [ContextMenu("End Match")]
-    private void EndConditionsMet() => EndMatchClientRpc();
-    
-    [ClientRpc]
-    private void EndMatchClientRpc()
+    private void EndMatch()
     {
-        GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
         GameEvents.OnEndMatchEvent?.Invoke();
+        GameEvents.OnPlayerFreezeAllEvent?.Invoke();
     }
-
+    
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+        if(!IsServer) return;
+        
+        _playerScores.Clear();
+    }
+    
+    
 }

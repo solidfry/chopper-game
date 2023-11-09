@@ -59,7 +59,7 @@ namespace Weapons.ScriptableObjects
             if (size == 0) return;
             foreach (var result in results)
                 if(result.collider.TryGetComponent(out IDamageable damageable))
-                    damageable.TakeDamage(damage);
+                    damageable.TakeDamage(damage, 0); // This will need to be the owner
         }
     }
 }

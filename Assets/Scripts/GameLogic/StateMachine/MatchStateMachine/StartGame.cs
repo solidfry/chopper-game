@@ -12,7 +12,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         private ServerSpawnManager _serverSpawnManager;
         
         bool _timerStarted = false;
-        float _waitTime = 5f;
+        float _waitTime = 2f;
 
         CountdownTimer _startGameTimer;
 
@@ -30,7 +30,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
                     AllocateSpawns(stateMachine);
                 }
             }
-            GameEvents.OnPlayerFreezeAllAllEvent?.Invoke();
+            GameEvents.OnPlayerFreezeAllEvent?.Invoke();
             GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
             _startGameTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
             GameEvents.OnTimerStartEvent?.Invoke();
@@ -67,7 +67,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnExit()
         {
             GameEvents.OnTimerEndEvent?.Invoke();
-            GameEvents.OnPlayerUnFreezeAllAllEvent?.Invoke();
+            GameEvents.OnPlayerUnFreezeAllEvent?.Invoke();
             _startGameTimer = null;
         }
 
