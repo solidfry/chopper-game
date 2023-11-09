@@ -18,9 +18,9 @@ namespace Networking
 {
     public class MatchmakerClient : MonoBehaviour
     {
-        
+
         private string _ticketId;
-        
+
         private void OnEnable()
         {
             ServerStartup.ClientInstance += SignIn;
@@ -41,9 +41,9 @@ namespace Networking
         {
             if (serviceProfileName != null)
             {
-                #if UNITY_EDITOR
+#if UNITY_EDITOR
                 serviceProfileName = $"{serviceProfileName}{GetCloneNumberSuffix()}";
-                #endif
+#endif
                 var initOptions = new InitializationOptions();
                 initOptions.SetProfile(serviceProfileName);
                 await UnityServices.InitializeAsync(initOptions);
@@ -58,27 +58,27 @@ namespace Networking
 
         private string PlayerID() => AuthenticationService.Instance.PlayerId;
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         private string GetCloneNumberSuffix()
         {
             string projectPath = ClonesManager.GetCurrentProjectPath();
             int lastUnderscore = projectPath.LastIndexOf("_");
             string projectCloneSuffix = projectPath.Substring(lastUnderscore + 1);
-            
+
             if (projectCloneSuffix.Length != 1) projectCloneSuffix = "";
-            
+
             return projectCloneSuffix;
         }
-        #endif
-        
+#endif
+
         // TODO: Need to have this called in the UI somewhere.
         // TODO: This should be done when the player clicks the Multiplayer button in the main menu and is sent to a lobby.
-        public void StartClient(string queueName = "TestQueue")
+        public void StartClient(string queueName = "TestMode")
         {
             CreateATicket(queueName);
         }
 
-        private async void CreateATicket(string queueName = "TestQueue")
+        private async void CreateATicket(string queueName = "TestMode")
         {
             var options = new CreateTicketOptions(queueName);
             var players = new List<Player>
@@ -90,7 +90,7 @@ namespace Networking
                     }
                 )
             };
-            
+
             var ticketResponse = await MatchmakerService.Instance.CreateTicketAsync(players, options);
             _ticketId = ticketResponse.Id;
             Debug.Log($"Ticket ID: {_ticketId}");
@@ -105,7 +105,7 @@ namespace Networking
             {
                 await Task.Delay(TimeSpan.FromSeconds(1f));
                 var ticketStatus = await MatchmakerService.Instance.GetTicketAsync(_ticketId);
-                if(ticketStatus == null) continue;
+                if (ticketStatus == null) continue;
 
                 if (ticketStatus.Type == typeof(MultiplayAssignment))
                 {
@@ -122,7 +122,7 @@ namespace Networking
                         case StatusOptions.InProgress:
                             break;
                         case StatusOptions.Failed:
-                            gotAssignment = true; // just to stop the polling
+                            // gotAssignment = true; // just to stop the polling
                             Debug.LogError($"Failed to get ticket status. Error: {multiplayAssignment.Message}");
                             break;
                         case StatusOptions.Timeout:
