@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-#if UNITY_EDITOR
-using ParrelSync;
-#endif
 using Server;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -13,6 +10,7 @@ using Unity.Services.Matchmaker;
 using Unity.Services.Matchmaker.Models;
 using StatusOptions = Unity.Services.Matchmaker.Models.MultiplayAssignment.StatusOptions;
 using UnityEngine;
+using UnityEngine.InputSystem.Utilities;
 
 namespace Networking
 {
@@ -41,9 +39,7 @@ namespace Networking
         {
             if (serviceProfileName != null)
             {
-#if UNITY_EDITOR
-                serviceProfileName = $"{serviceProfileName}{GetCloneNumberSuffix()}";
-#endif
+
                 var initOptions = new InitializationOptions();
                 initOptions.SetProfile(serviceProfileName);
                 await UnityServices.InitializeAsync(initOptions);
@@ -57,19 +53,6 @@ namespace Networking
         }
 
         private string PlayerID() => AuthenticationService.Instance.PlayerId;
-
-#if UNITY_EDITOR
-        private string GetCloneNumberSuffix()
-        {
-            string projectPath = ClonesManager.GetCurrentProjectPath();
-            int lastUnderscore = projectPath.LastIndexOf("_");
-            string projectCloneSuffix = projectPath.Substring(lastUnderscore + 1);
-
-            if (projectCloneSuffix.Length != 1) projectCloneSuffix = "";
-
-            return projectCloneSuffix;
-        }
-#endif
 
         // TODO: Need to have this called in the UI somewhere.
         // TODO: This should be done when the player clicks the Multiplayer button in the main menu and is sent to a lobby.
@@ -86,6 +69,7 @@ namespace Networking
                 new Player (PlayerID(),
                     new MatchmakingPlayerData()
                     {
+                        PlayerName = "Player " + PlayerID(),
                         Skill = 100
                     }
                 )
@@ -116,14 +100,14 @@ namespace Networking
                     switch (multiplayAssignment.Status)
                     {
                         case StatusOptions.Found:
-                            gotAssignment = true;
                             TicketAssigned(multiplayAssignment);
+                            gotAssignment = true;
                             break;
                         case StatusOptions.InProgress:
                             break;
                         case StatusOptions.Failed:
-                            // gotAssignment = true; // just to stop the polling
                             Debug.LogError($"Failed to get ticket status. Error: {multiplayAssignment.Message}");
+                            gotAssignment = true; // just to stop the polling
                             break;
                         case StatusOptions.Timeout:
                             Debug.LogError("Failed to get ticket status. Ticket timed out.");
@@ -152,6 +136,7 @@ namespace Networking
         [Serializable]
         public class MatchmakingPlayerData
         {
+            public string PlayerName;
             public int Skill;
         }
     }

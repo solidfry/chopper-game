@@ -97,6 +97,7 @@ MonoBehaviour:
     roll: 0
     pitch: 0
     yaw: 0
+    dash: 0
   <MovementController>k__BackingField:
     thrustVector: {x: 0, y: 0, z: 0}
     stabiliser:
@@ -105,6 +106,11 @@ MonoBehaviour:
       strength: 1.2
       speedThreshold: 25
       isActive: 0
+    dash:
+      force: 10000
+      cooldown: 2
+      canDash: 0
+      rb: {fileID: 548169382991786599}
   physicsValues:
     yawTorque: 1000
     pitchTorque: 1200
@@ -252,10 +258,10 @@ MonoBehaviour:
     m_ActionName: Flight/Fire3[/Keyboard/space]
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: Player.ChopperController, Assembly-CSharp
-        m_MethodName: HandleDash
-        m_Mode: 1
+      - m_Target: {fileID: 7360639563048435297}
+        m_TargetAssemblyTypeName: PlayerInteraction.Networking.PlayerManager, Assembly-CSharp
+        m_MethodName: OnDash
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

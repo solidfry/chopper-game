@@ -6,31 +6,31 @@ namespace Abilities
     [Serializable]
     public class Dash : IAbility
     {
-        
-        [SerializeField] float force = 1000f;
+
+        [SerializeField] float force = 100000f;
         [SerializeField] float cooldown = 1f;
         [SerializeField] bool canDash = true;
-        
-        private Rigidbody rb;
-        
-        float cooldownTimer = 0f;
 
-        public Dash(Rigidbody _rb)
-        { 
-            rb = _rb;
-        }
+        public bool CanDash => canDash;
+        public float Cooldown => cooldown;
 
-        public void OnStart()
+        [SerializeField] private Rigidbody rb;
+
+        [SerializeField] float cooldownTimer = 0f;
+
+        public void OnStart(Rigidbody rigidbody)
         {
             canDash = true;
+            if (rb == null)
+                rb = rigidbody;
         }
 
         public void OnUpdate()
         {
-            if(!canDash)
+            if (!canDash)
                 cooldownTimer -= Time.deltaTime;
-            
-            if(cooldownTimer <= 0)
+
+            if (cooldownTimer <= 0)
             {
                 canDash = true;
                 cooldownTimer = cooldown;
@@ -39,13 +39,14 @@ namespace Abilities
 
         public void OnFixedUpdate()
         {
-            
+
         }
 
         public void DoAbility()
         {
-            if(!canDash && rb != null) return;
-            
+            if (!canDash && rb != null) return;
+
+            Debug.Log("Dash");
             rb.AddForce(rb.velocity * force * Time.fixedDeltaTime, ForceMode.Impulse);
             canDash = false;
         }
