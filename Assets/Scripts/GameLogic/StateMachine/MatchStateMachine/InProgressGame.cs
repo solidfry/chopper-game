@@ -1,5 +1,4 @@
 ﻿using Events;
-using UnityEngine;
 
 namespace GameLogic.StateMachine.MatchStateMachine
 {
@@ -9,17 +8,26 @@ namespace GameLogic.StateMachine.MatchStateMachine
         {
             base.OnEnter(stateMachine);
             if(!StateMachine.GetNetworkManager.IsServer) return;
-            Debug.Log("Game In Progress");
+            StateMachine.CurrentCountdownTimer = null;
+            // Debug.Log("Game In Progress");
+            GameEvents.OnInProgressGameEvent?.Invoke();
             GameEvents.OnPlayerUnFreezeAllEvent?.Invoke();
+            GameEvents.OnEndMatchEvent += OnEndMatch;
         }
-        
+
+        private void OnEndMatch()
+        {
+            StateMachine.ChangeState(new PostGame());
+        }
+
         public override void OnUpdate()
         {
+            
         }
 
         public override void OnExit()
         {
-            
+            GameEvents.OnEndMatchEvent -= OnEndMatch;
         }
 
    

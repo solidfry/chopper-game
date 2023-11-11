@@ -7,16 +7,14 @@ namespace Utilities
     public class CountdownTimer
     {
         [SerializeField] private float currentTimeRemaining;
-        [SerializeField] private float countdownTime;
         [SerializeField] private bool runTimer;
         public float CurrentTimeRemaining => currentTimeRemaining;
 
-        private float deltaTime;
+        private float _deltaTime;
 
         public CountdownTimer(float countdownTime, float deltaTime)
         {
-            this.countdownTime = countdownTime;
-            this.deltaTime = deltaTime;
+            _deltaTime = deltaTime;
             currentTimeRemaining = countdownTime;
         }
         
@@ -25,7 +23,7 @@ namespace Utilities
             if (!runTimer) return;
             if (currentTimeRemaining > 0)
             {
-                currentTimeRemaining -= deltaTime;
+                currentTimeRemaining -= _deltaTime;
             }
             else
             {
@@ -36,6 +34,11 @@ namespace Utilities
         public void StartTimer()
         {
             runTimer = true;
+        }
+        
+        public void StopTimer()
+        {
+            runTimer = false;
         }
     }
 }

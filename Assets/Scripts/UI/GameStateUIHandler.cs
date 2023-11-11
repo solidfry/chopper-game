@@ -1,3 +1,4 @@
+using System.Globalization;
 using Events;
 using Unity.Netcode;
 using UnityEngine;
@@ -5,46 +6,43 @@ using Utilities;
 
 namespace UI
 {
-    public class GameStateUIHandler : NetworkBehaviour
+    public class GameStateUIHandler : SingletonNetwork<GameStateUIHandler>
     {
-        [SerializeField] NetworkVariable<float> time = new (60);
+        [SerializeField] public NetworkVariable<float> time;
         [SerializeField] GameObject endGamePanel;
         [SerializeField] TimerUI timerUI;
     
-        [SerializeField] private CountdownTimer countdownTimer = null;
+        [SerializeField] private CountdownTimer countdownTimer;
 
-        private void Awake()
+        public void Initialise()
         {
-            if(timerUI == null) timerUI = GetComponentInChildren<TimerUI>();
+            if (!IsServer) return;
+            // SetTimer(time.Value);
+            GameEvents.OnSetTimerEvent += SetTimer;
+            GameEvents.OnTimerStartEvent += StartTimer;
+            GameEvents.OnTimerEndEvent += HideTimer;
+            GameEvents.OnEndMatchEvent += EndMatch;
+            GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
+        }
+        
+        public override void OnNetworkDespawn()
+        {
+            if (!IsServer) return;
+            GameEvents.OnSetTimerEvent -= SetTimer;
+            GameEvents.OnTimerStartEvent -= StartTimer;
+            GameEvents.OnTimerEndEvent -= HideTimer;
+            GameEvents.OnEndMatchEvent -= EndMatch;
+            GameEvents.OnStartMatchEvent -= UpdateStartMatchUI;
         }
 
-        private void InitialiseTimer(float t)
+        private void SetTimer(float t)
         {
+            if (!IsServer) return;
             time.Value = t;
+            Debug.Log("Timer set to " + time.Value + " seconds");
             countdownTimer = new CountdownTimer(time.Value, NetworkManager.Singleton.ServerTime.FixedDeltaTime);
             timerUI.SetTimer(time.Value);
         }
-
-        public override void OnNetworkSpawn()
-        {
-            base.OnNetworkSpawn();
-            if (IsServer)
-            {
-                GameEvents.OnSetTimerEvent += InitialiseTimer;
-                GameEvents.OnTimerStartEvent += StartTimer;
-                GameEvents.OnTimerStartEvent += ShowTimerClientRpc;
-                GameEvents.OnTimerEndEvent += HideTimerClientRpc;
-                GameEvents.OnEndMatchEvent += OnEndMatchClientRpc;
-                GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
-            }
-
-            if(IsClient && IsLocalPlayer)
-            {
-                endGamePanel.SetActive(false);
-                timerUI.HideTimer();
-            }
-        }
-
  
         private void FixedUpdate()
         {
@@ -54,66 +52,75 @@ namespace UI
             countdownTimer.OnUpdate();
             time.Value = countdownTimer.CurrentTimeRemaining;
             timerUI.SetTimer(time.Value);
-            SetTimerClientRpc(time.Value);
+            SetTimer_ClientRpc(time.Value);
         }
 
-        public override void OnNetworkDespawn()
+        private void EndMatch()
         {
-            base.OnNetworkDespawn();
-            if(!IsServer) return;
-            GameEvents.OnSetTimerEvent -= InitialiseTimer;
-            GameEvents.OnTimerStartEvent -= StartTimer;
-            GameEvents.OnTimerStartEvent -= ShowTimerClientRpc;
-            GameEvents.OnTimerEndEvent -= HideTimerClientRpc;
-            GameEvents.OnEndMatchEvent -= OnEndMatchClientRpc;
-            GameEvents.OnStartMatchEvent -= UpdateStartMatchUI;
+            if (!IsServer) return;
+            OnEndMatch_ClientRpc();
         }
-    
+
         private void StartTimer()
         {
             if (!IsServer) return;
             if (countdownTimer == null) return;
+            timerUI.gameObject.SetActive(true);
             countdownTimer.StartTimer();
-            timerUI.StartTimer();
+            timerUI.StartTimerUI();
+            ShowTimer_ClientRpc();
+        }
+        
+        private void HideTimer()
+        {
+            if (!IsServer) return;
+            if (countdownTimer == null) return;
+            timerUI.StopTimerUI();
+            timerUI.gameObject.SetActive(false);
+            HideTimer_ClientRpc();
         }
     
         private void UpdateStartMatchUI()
         {   
             if (!IsServer) return;
-            Debug.Log("Updating start match UI");
-            timerUI.SetColors("Green", "DarkGreen");
-            UpdateStartMatchUIClientRpc();
+            // Debug.Log("Updating start match UI");
+            timerUI.SetColors("DarkGreen", "Green");
+            UpdateStartMatchUI_ClientRpc();
         }
 
         [ClientRpc]
-        private void UpdateStartMatchUIClientRpc()
+        private void UpdateStartMatchUI_ClientRpc()
         {
             GameEvents.OnNotificationEvent?.Invoke("Match Starting");
-            timerUI.SetColors("Green", "DarkGreen");
+            timerUI.SetColors("DarkGreen", "Green");
         }
     
         [ClientRpc]
-        private void SetTimerClientRpc(float timeValue)
+        private void SetTimer_ClientRpc(float timeValue)
         {
             timerUI.SetTimer(timeValue);
         }
 
         [ClientRpc]
-        private void OnEndMatchClientRpc()
+        private void OnEndMatch_ClientRpc()
         {
             endGamePanel.SetActive(true);
         }
     
         [ClientRpc] 
-        private void ShowTimerClientRpc()
+        private void ShowTimer_ClientRpc()
         {
-            timerUI.ShowTimer();
+            if(!IsClient) return;
+            timerUI.gameObject.SetActive(true);
+            timerUI.Show();
         }
     
         [ClientRpc]
-        private void HideTimerClientRpc()
+        private void HideTimer_ClientRpc()
         {
-            timerUI.HideTimer();
+            if(!IsClient) return;
+            timerUI.Hide();
         }
+        
     }
 }

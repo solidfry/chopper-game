@@ -45,6 +45,7 @@ namespace PlayerInteraction.Networking
                 SetPlayerRbNonKinematic(true);
                 SetPlayerNetworkID();
                 SetLocalPlayerLayerByName();
+                UpdateHud.Initialise(IsOwner);
             }
 
             if (IsClient || IsServer)
@@ -52,6 +53,13 @@ namespace PlayerInteraction.Networking
                 _meshes = GetComponentsInChildren<MeshRenderer>();
                 _colliders = GetComponentsInChildren<Collider>();
             }
+
+            if (!IsOwner && IsClient)
+            {
+                UpdateHud.Initialise(IsOwner);
+                UpdateHud.gameObject.SetActive(false);
+            }
+            
             SubscribeToPlayerEvents();
         }
 
@@ -110,8 +118,7 @@ namespace PlayerInteraction.Networking
 
             if (PlayerRigidbody is null)
                 PlayerRigidbody = GetComponent<Rigidbody>();
-
-
+            
             if (OutputHudValues is null)
             {
                 Debug.Log("OutputHudValues was Null");

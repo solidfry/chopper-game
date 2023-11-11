@@ -21,37 +21,42 @@ namespace UI
         [SerializeField] Color defaultTextColor;
         [SerializeField] Color defaultBackgroundColor;
         
-        [FormerlySerializedAs("animationDuration")]
         [Header("Animation Settings")]
         [SerializeField] float animationInOutDuration = 1f;
         [SerializeField] float colorSwapDuration = .5f;
         [SerializeField] Ease easing;
         
+        [Header("Canvas Settings")]
+        [SerializeField] RectTransform rectTransform;
+        [SerializeField] CanvasGroup canvasGroup;
         private float _currentTimeRemaining;
-        RectTransform _rectTransform;
-        CanvasGroup _canvasGroup;
         private float _height;
         
         private Sequence HideTimerSequence => DOTween.Sequence()
             .Append(transform.DOMoveY(-_height, animationInOutDuration))
-            .Join(_canvasGroup.DOFade(0, animationInOutDuration));
+            .Join(canvasGroup.DOFade(0, animationInOutDuration).From(1));
         private Sequence ShowTimerSequence => DOTween.Sequence()
-            .Append(transform.DOMoveY(0, animationInOutDuration))
-            .Join(_canvasGroup.DOFade(1, animationInOutDuration));
+            .Append(transform.DOMoveY(0, animationInOutDuration).From(-_height))
+            .Join(canvasGroup.DOFade(1, animationInOutDuration).From(0));
 
         private Tween _bgColorSequence;
         private Tween _textColorSequence;
 
-        private void Awake()
+        private void Start()
         {
-            _rectTransform = GetComponent<RectTransform>();
-            _height = _rectTransform.rect.height;
-            _canvasGroup = GetComponent<CanvasGroup>();
+            rectTransform = GetComponent<RectTransform>();
+            _height = rectTransform.rect.height;
+            canvasGroup = GetComponent<CanvasGroup>();
         }
 
-        public void StartTimer()
+        public void StartTimerUI()
         {
             runTimer = true;
+        }
+        
+        public void StopTimerUI()
+        {
+            runTimer = false;
         }
         
         void FormatTimer(float time)
@@ -88,10 +93,10 @@ namespace UI
         }
 
         [ContextMenu("Hide Timer")]
-        public void HideTimer() => HideTimerSequence.Play().SetEase(easing);
+        public void Hide() => HideTimerSequence.Play().SetEase(easing);
 
         [ContextMenu("Show Timer")]
-        public void ShowTimer() => ShowTimerSequence.Play().SetEase(easing);
+        public void Show() => ShowTimerSequence.Play().SetEase(easing);
 
         private void OnDestroy()
         {

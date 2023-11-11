@@ -1,4 +1,5 @@
 ﻿using Events;
+using UnityEngine;
 using Utilities;
 
 namespace GameLogic.StateMachine.MatchStateMachine
@@ -6,18 +7,16 @@ namespace GameLogic.StateMachine.MatchStateMachine
     public class PreGame : MatchState
     {
         bool _timerStarted = false;
-        float _waitTime = 5f;
+        float _waitTime = 10f;
         int _playerCount = 2;
+        private bool playerCountReached;
         
-        CountdownTimer countdownTimer;
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
             if(!StateMachine.GetNetworkManager.IsServer) return;
-            // TODO: get this from an SO
+            StateMachine.CurrentCountdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
             GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
-            // Debug.Log(waitTime + " seconds until game starts");
-            countdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
         }
 
         public override void OnUpdate()
@@ -26,14 +25,16 @@ namespace GameLogic.StateMachine.MatchStateMachine
 
             if (!StateMachine.GetNetworkManager.IsServer) return;
             
-            if (StateMachine.GetNetworkManager.ConnectedClients.Count >= _playerCount && !_timerStarted)
+            playerCountReached = StateMachine.GetNetworkManager.ConnectedClients.Count >= _playerCount;
+            if (!_timerStarted && playerCountReached)
             {
+                Debug.Log("Starting pregame timer");
+                StateMachine.CurrentCountdownTimer.StartTimer();
                 GameEvents.OnTimerStartEvent?.Invoke();
-                countdownTimer.StartTimer();
                 _timerStarted = true;
             }
             
-            if (_timerStarted && countdownTimer.CurrentTimeRemaining <= 0.5f)
+            if (_timerStarted && StateMachine.CurrentCountdownTimer.CurrentTimeRemaining <= 0.1f)
             {
                 _timerStarted = false;
                 StateMachine.ChangeState(new StartGame());
@@ -42,15 +43,19 @@ namespace GameLogic.StateMachine.MatchStateMachine
         
         public override void OnFixedUpdate()
         {
+            if (!StateMachine.GetNetworkManager.IsServer) return;
+
             if (!_timerStarted) return;
             // Debug.Log(countdownTimer.CurrentTimeRemaining);
-            countdownTimer.OnUpdate();
+            StateMachine.CurrentCountdownTimer.OnUpdate();
         }
         
         public override void OnExit()
         {
+            if (!StateMachine.GetNetworkManager.IsServer) return;
+
             GameEvents.OnTimerEndEvent?.Invoke();
-            countdownTimer = null;
+            StateMachine.CurrentCountdownTimer = null;
         }
     }
 }

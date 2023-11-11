@@ -7,8 +7,9 @@ using UnityEngine.Rendering;
 namespace UI.Hud
 {
     [ExecuteAlways]
-    public class UpdateHud : ImmediateModeShapeDrawer   
+    public class UpdateHud : ImmediateModeShapeDrawer
     {
+        public bool IsOwner { get; private set; }
         [SerializeField] OutputHudValues outputHudValues;
         [Header("Reticle UI")]
         [SerializeField] Reticle reticle = new();
@@ -29,8 +30,10 @@ namespace UI.Hud
         [SerializeField] UnityEvent onStabiliserInactive = new();
         
 
-        void Start()
+        public void Initialise(bool isOwner)
         {
+            IsOwner = isOwner;
+            
             if (Application.isPlaying == false)
                 return;
             
@@ -66,6 +69,7 @@ namespace UI.Hud
         }
         
         public override void DrawShapes( Camera cam ) {
+            if (IsOwner == false) return;
             if( cam != this.cam ) // only draw in the player camera
                 return;
 

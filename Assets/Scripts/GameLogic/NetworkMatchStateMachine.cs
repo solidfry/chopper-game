@@ -2,6 +2,7 @@ using GameLogic.StateMachine;
 using GameLogic.StateMachine.MatchStateMachine;
 using Unity.Netcode;
 using UnityEngine;
+using Utilities;
 
 namespace GameLogic
 {
@@ -23,6 +24,8 @@ namespace GameLogic
         [SerializeField][ReadOnly] string matchStateName;
         [SerializeField] GameMode gameMode;
         
+        [field: SerializeField] public CountdownTimer CurrentCountdownTimer { get; set; }
+        
         public NetworkManager GetNetworkManager
         {
             get;
@@ -34,7 +37,7 @@ namespace GameLogic
             if (!IsServer) return;
             
             GetNetworkManager = NetworkManager.Singleton;
-            ChangeState(new PreGame());
+            ChangeState(new InitialisingGame());
         }
 
         private void Update()

@@ -11,7 +11,6 @@ namespace UI.Hud
     [RequireComponent(typeof(Rigidbody))]
     public class OutputHudValues : MonoBehaviour
     {
-        
         [SerializeField] LayerMask altitudeRaycastIgnore;
         [SerializeField] float altitudeCheckRange;
         [field: SerializeField] public Rigidbody Rigidbody { get; private set; }

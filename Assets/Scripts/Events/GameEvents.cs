@@ -31,6 +31,13 @@ namespace Events
         public static PlayAudioClip OnPlayRandomUISoundEvent;
         public delegate void SetTimerColors(Color textColor, Color backgroundColor);
         public static SetTimerColors OnSetTimerColors;
+
+        public delegate void UpdatePlayerScore(ulong clientId, int kills, int deaths);
+        public static UpdatePlayerScore OnUpdatePlayerScoreEvent;
+        
+        public delegate void RemovePlayerScore(ulong clientId);
+        public static RemovePlayerScore OnRemovePlayerScoreEvent;
+        
         #endregion
 
         #region Server Events
@@ -38,6 +45,9 @@ namespace Events
         public delegate void EndMatch();
         public static StartMatch OnStartMatchEvent;
         public static EndMatch OnEndMatchEvent;
+        
+        public delegate void InProgressGame();
+        public static InProgressGame OnInProgressGameEvent;
         
         public delegate void TimerStart();
         public delegate void TimerEnd();

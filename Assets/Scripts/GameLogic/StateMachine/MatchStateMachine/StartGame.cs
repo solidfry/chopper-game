@@ -12,9 +12,8 @@ namespace GameLogic.StateMachine.MatchStateMachine
         private ServerSpawnManager _serverSpawnManager;
         
         bool _timerStarted = false;
-        float _waitTime = 2f;
+        float _waitTime = 10f;
 
-        CountdownTimer _startGameTimer;
 
         public override void OnEnter(IStateMachine stateMachine = null)
         {
@@ -25,17 +24,25 @@ namespace GameLogic.StateMachine.MatchStateMachine
             // Instantiate the players and instantiate the timer and start it
             if (stateMachine != null && stateMachine.GetNetworkManager.IsServer)
             {
-                if(_serverSpawnManager != null && _serverSpawnManager.GetSpawnLocationsCount != 0)
+                if(_serverSpawnManager is not null && _serverSpawnManager.GetSpawnLocationsCount != 0)
                 {
                     AllocateSpawns(stateMachine);
                 }
             }
+            
+            HandleStartTimer();
+        }
+
+        private void HandleStartTimer()
+        {
+            if(!StateMachine.GetNetworkManager.IsServer) return;
+            
+            StateMachine.CurrentCountdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
             GameEvents.OnPlayerFreezeAllEvent?.Invoke();
             GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
-            _startGameTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
-            GameEvents.OnTimerStartEvent?.Invoke();
             GameEvents.OnStartMatchEvent?.Invoke();
-            _startGameTimer.StartTimer();
+            StateMachine.CurrentCountdownTimer.StartTimer();
+            GameEvents.OnTimerStartEvent?.Invoke();
             _timerStarted = true;
         }
 
@@ -51,7 +58,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
 
         public override void OnUpdate()
         {
-            if (_timerStarted && _startGameTimer.CurrentTimeRemaining <= 0.5f)
+            if(!StateMachine.GetNetworkManager.IsServer) return;
+
+            if (_timerStarted && StateMachine.CurrentCountdownTimer.CurrentTimeRemaining <= 0.5f)
             {
                 _timerStarted = false;
                 StateMachine.ChangeState(new InProgressGame());
@@ -60,15 +69,19 @@ namespace GameLogic.StateMachine.MatchStateMachine
         
         public override void OnFixedUpdate()
         {
+            if(!StateMachine.GetNetworkManager.IsServer) return;
+
             if (!_timerStarted) return;
-            _startGameTimer.OnUpdate();
+            StateMachine.CurrentCountdownTimer.OnUpdate();
         }
         
         public override void OnExit()
         {
+            if(!StateMachine.GetNetworkManager.IsServer) return;
+
             GameEvents.OnTimerEndEvent?.Invoke();
             GameEvents.OnPlayerUnFreezeAllEvent?.Invoke();
-            _startGameTimer = null;
+            StateMachine.CurrentCountdownTimer = null;
         }
 
         
