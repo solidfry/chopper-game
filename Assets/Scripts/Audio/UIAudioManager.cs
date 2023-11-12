@@ -62,11 +62,10 @@ namespace Audio
         [Serializable]
         class AudioList
         {
-            [SerializeField] private string name;
             [SerializeField] private AudioClipListData clips;
             
-            public string Name => name;
             public AudioClip GetRandomClip() => clips.GetRandomClip();
+            public string Name => clips.name;
         }
     }
     
