@@ -63,9 +63,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 607fd6839528440b9ea673c7f9a9b539, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Kills:
+  kills:
     m_InternalValue: 0
-  Deaths:
+  deaths:
+    m_InternalValue: 0
+  score:
     m_InternalValue: 0
 --- !u!114 &-2883884951460820180
 MonoBehaviour:
@@ -84,6 +86,7 @@ MonoBehaviour:
   networkHealth:
     m_InternalValue: 119
   death:
+    deathParticleSystemScale: 10
     particles: {fileID: 19830606, guid: 708e3c570904ae94784072253b29507c, type: 3}
     audioSource: {fileID: 0}
     audioClip: {fileID: 0}

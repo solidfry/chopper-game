@@ -13,14 +13,16 @@ using Object = UnityEngine.Object;
 namespace Interactions
 {
     [Serializable]
-    public class Death 
+    public class Death
     {
+        [SerializeField] private int deathParticleSystemScale = 10;
         [SerializeField] ParticleSystem particles;
         [SerializeField] AudioSource audioSource;
         [SerializeField] AudioClip audioClip;
         private Transform _parent;
         [field: SerializeField] public bool IsDead { get; private set; }
         float ClipLength => audioClip.length;
+        
         
         // [SerializeField] List<DeathEffect> deathEffects;
     
@@ -38,23 +40,15 @@ namespace Interactions
 
         public void Play()
         {
-            if (particles.isPlaying || audioSource.isPlaying) return;
-            PlayParticles();
+            if (audioSource.isPlaying) return;
             PlayAudio();
         }
-
-        private void PlayParticles()
+        
+        public ParticleSystem InstantiateParticles()
         {
-            if (particles != null)
-            {
-                var activeParticles =  Object.Instantiate(particles, _parent);
-                activeParticles.transform.localScale = Vector3.one * 10;
-                if(NetworkManager.Singleton.IsServer)
-                {
-                    activeParticles.GetComponent<NetworkObject>().Spawn();
-                    Debug.Log("Death particles spawned");
-                }
-            }
+            var activeParticles =  Object.Instantiate(particles, _parent);
+            activeParticles.transform.localScale = Vector3.one * deathParticleSystemScale;
+            return activeParticles;
         }
 
         private void PlayAudio()

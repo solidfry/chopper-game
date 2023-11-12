@@ -83,9 +83,11 @@ namespace Interactions
                 // Before setting death state, handle the last damage attribution
 
                 death.SetIsDead(true);
+                var particle = death.InstantiateParticles();
                 Debug.Log($"Player died. Killed by player {_lastPlayerToDamage}");
                 GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId); // You might want to pass the _lastDamagerId as well
                 PlayerDiedEvent?.Invoke(OwnerClientId);
+                particle.gameObject.GetComponent<NetworkObject>().Spawn();
                 
                 if(LastPlayerToDamage != 0)
                     GameEvents.OnPlayerKillEvent?.Invoke(_lastPlayerToDamage);

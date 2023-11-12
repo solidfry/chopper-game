@@ -10,7 +10,6 @@ namespace GameLogic.StateMachine.MatchStateMachine
     public class InitialisingGame : MatchState
     {
    
-        bool allServicesInitialise;
         GameStateUIHandler _gameStateUIHandler = GameStateUIHandler.Instance;
         ServerSpawnManager _serverSpawnManager = ServerSpawnManager.Instance;
         NetworkManager _networkManager = NetworkManager.Singleton;
@@ -19,7 +18,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
-            
+            Debug.Log("Initialising Game");
         }
         
         bool AllServicesInitialised =>
@@ -50,7 +49,6 @@ namespace GameLogic.StateMachine.MatchStateMachine
         
         public override void OnExit()
         {
-
             
         }
     }
