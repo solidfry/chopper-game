@@ -78,15 +78,11 @@ namespace Weapons
             var otherPlayer = collision.collider.GetComponentInParent<IPlayer>();
             if (otherPlayer != null)
             {
-
-            
-
                 if (otherPlayer.Health.OwnerClientId == OwnerClientId)
                 {
                     Debug.Log("Bullet hit self so returned");
                     return;
                 }
-
                 otherPlayer.Health.TakeDamage(_damage, OwnerClientId);
             }
         }

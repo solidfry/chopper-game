@@ -62,18 +62,7 @@ namespace Interactions
             _pendingDamage += damageAmount;
             _lastPlayerToDamage = damagerId; // Update the last damager ID here
         }
-        
-        [ServerRpc]
-        private void TakeDamageServerRpc(int damageAmount)
-        {
-            if(!IsServer) return;
-            
-            if(networkHealth.Value <= 0) return;
-        
-            networkHealth.Value -= damageAmount;
-            Debug.Log(damageAmount + " damage taken" + " health is now " + networkHealth.Value);
-        }
-
+  
         private void OnHealthChanged(int previousvalue, int newvalue)
         {
             health = newvalue;

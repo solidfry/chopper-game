@@ -1,4 +1,5 @@
 ﻿using Events;
+using GameLogic.ScriptableObjects;
 using UnityEngine;
 using Utilities;
 
@@ -8,25 +9,35 @@ namespace GameLogic.StateMachine.MatchStateMachine
     {
         bool _timerStarted = false;
         float _waitTime = 10f;
-        int _playerCount = 2;
-        private bool playerCountReached;
+
+        private GameMode gameMode;
         
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
             if(!StateMachine.GetNetworkManager.IsServer) return;
-            StateMachine.CurrentCountdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
-            GameEvents.OnSetTimerEvent?.Invoke(_waitTime);
+            StateMachine.CurrentCountdownTimer = new CountdownTimer(HandleWaitTime(), StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
+            GameEvents.OnSetTimerEvent?.Invoke(HandleWaitTime());
+            gameMode = StateMachine.GameMode != null ? StateMachine.GameMode : null;
         }
 
+        private float HandleWaitTime() => _waitTime = StateMachine.GameMode != null ? StateMachine.GameMode.PreGameCountdownTime : _waitTime;
+
+        bool PlayerCountReached()
+        {
+            if(StateMachine.GameMode != null) 
+                return StateMachine.GetNetworkManager.ConnectedClients.Count >= StateMachine.GameMode.GameStartPlayerCount;
+            return StateMachine.GetNetworkManager.ConnectedClients.Count >= 2;
+        }
+        
         public override void OnUpdate()
         {
             if (StateMachine == null) return;
 
             if (!StateMachine.GetNetworkManager.IsServer) return;
             
-            playerCountReached = StateMachine.GetNetworkManager.ConnectedClients.Count >= _playerCount;
-            if (!_timerStarted && playerCountReached)
+     
+            if (!_timerStarted && PlayerCountReached())
             {
                 Debug.Log("Starting pregame timer");
                 StateMachine.CurrentCountdownTimer.StartTimer();
@@ -57,5 +68,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
             GameEvents.OnTimerEndEvent?.Invoke();
             StateMachine.CurrentCountdownTimer = null;
         }
+        
+        
     }
 }

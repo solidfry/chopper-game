@@ -1,4 +1,5 @@
 ﻿using Events;
+using GameLogic.ScriptableObjects;
 using Networking;
 using PlayerInteraction.Networking;
 using UnityEngine;
@@ -13,6 +14,8 @@ namespace GameLogic.StateMachine.MatchStateMachine
         
         bool _timerStarted = false;
         float _waitTime = 10f;
+        
+        private GameMode gameMode;
 
 
         public override void OnEnter(IStateMachine stateMachine = null)
@@ -21,6 +24,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
             if(!StateMachine.GetNetworkManager.IsServer) return;
             _serverSpawnManager = ServerSpawnManager.Instance;
             _playerPrefab = _serverSpawnManager.GetPlayerPrefab();
+            gameMode = StateMachine.GameMode != null ? StateMachine.GameMode : null;
             // Instantiate the players and instantiate the timer and start it
             if (stateMachine != null && stateMachine.GetNetworkManager.IsServer)
             {
@@ -32,11 +36,13 @@ namespace GameLogic.StateMachine.MatchStateMachine
             
             HandleStartTimer();
         }
+        
+        private float HandleWaitTime() => _waitTime = StateMachine.GameMode != null ? StateMachine.GameMode.PreGameCountdownTime : _waitTime;
 
         private void HandleStartTimer()
         {
             if(!StateMachine.GetNetworkManager.IsServer) return;
-            
+            _waitTime = HandleWaitTime();
             StateMachine.CurrentCountdownTimer = new CountdownTimer(_waitTime, StateMachine.GetNetworkManager.ServerTime.FixedDeltaTime);
             GameEvents.OnPlayerFreezeAllEvent?.Invoke();
             GameEvents.OnSetTimerEvent?.Invoke(_waitTime);

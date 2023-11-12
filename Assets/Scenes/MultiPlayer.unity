@@ -243,74 +243,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1372cb6473118b741a3ad7bc924d495d, type: 3}
---- !u!1 &403555295
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 403555298}
-  - component: {fileID: 403555297}
-  - component: {fileID: 403555299}
-  m_Layer: 0
-  m_Name: ScoreManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &403555297
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 403555295}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4c14922200da4b140908a275cc74652e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  maxKills: 10
-  totalKills:
-    m_InternalValue: 0
---- !u!4 &403555298
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 403555295}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &403555299
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 403555295}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1621484495
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 0
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1281,7 +1213,7 @@ PrefabInstance:
     - target: {fileID: 1135394493769925828, guid: 936f2b83f81ab7b44a6f798cb61b3bfd,
         type: 3}
       propertyPath: m_Name
-      value: ScoreBoard
+      value: ScoreBoardUI
       objectReference: {fileID: 0}
     - target: {fileID: 3547712736376757225, guid: 936f2b83f81ab7b44a6f798cb61b3bfd,
         type: 3}
@@ -1843,6 +1775,84 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 144f8f128a879eb4999170ee10c59025, type: 3}
+--- !u!1001 &7446036866508269519
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 351398673317603895, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4436581905972223042, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: maxKills
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5573291976251319816, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 3897670749
+      objectReference: {fileID: 0}
+    - target: {fileID: 7715768687556771056, guid: efd2961e195a6ca4980c0c7ac54df449,
+        type: 3}
+      propertyPath: m_Name
+      value: ScoreManager
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: efd2961e195a6ca4980c0c7ac54df449, type: 3}
 --- !u!1001 &7706311895605965879
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2014,6 +2024,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1869544274242661993, guid: 0ade50dc11986e34eaed1c3c89d8c62b,
         type: 3}
+      propertyPath: gameMode
+      value: 
+      objectReference: {fileID: 11400000, guid: 9740f483608bb084eb0bf790f129dc5c,
+        type: 2}
+    - target: {fileID: 1869544274242661993, guid: 0ade50dc11986e34eaed1c3c89d8c62b,
+        type: 3}
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
@@ -2108,4 +2124,4 @@ SceneRoots:
   - {fileID: 223372350}
   - {fileID: 937721035}
   - {fileID: 2426102121911327765}
-  - {fileID: 403555298}
+  - {fileID: 7446036866508269519}

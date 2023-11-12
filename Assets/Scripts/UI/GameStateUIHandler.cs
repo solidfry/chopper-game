@@ -1,4 +1,3 @@
-using System.Globalization;
 using Events;
 using Unity.Netcode;
 using UnityEngine;
@@ -17,7 +16,6 @@ namespace UI
         public void Initialise()
         {
             if (!IsServer) return;
-            // SetTimer(time.Value);
             GameEvents.OnSetTimerEvent += SetTimer;
             GameEvents.OnTimerStartEvent += StartTimer;
             GameEvents.OnTimerEndEvent += HideTimer;

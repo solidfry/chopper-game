@@ -1,30 +1,75 @@
-﻿using TMPro;
+﻿using Interactions;
+using UnityEngine.UI;
+using TMPro;
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace UI
 {
     public class PlayerScoreUI : MonoBehaviour
     {
-        [SerializeField] ClientPlayerScoreData playerData;
-        [SerializeField] TMP_Text playerNameText;
-        [SerializeField] TMP_Text playerKillsText;
-        [SerializeField] TMP_Text playerDeathsText;
+        [field: SerializeField] public ulong ClientId { get; private set; }
+        [Header("Client Data")]
+        [SerializeField] NetworkPlayerScore playerScore;
         
-        public void Initialise(ulong clientId)
-        {
-            playerData = new ClientPlayerScoreData(clientId);
-            playerNameText.text = "Player " + playerData.clientId;
-            playerKillsText.text = playerData.kills.ToString();
-            playerDeathsText.text = playerData.deaths.ToString();
+        [Header("Text fields")]
+        [SerializeField] TMP_Text nameText;
+        [SerializeField] TMP_Text killsText;
+        [SerializeField] TMP_Text deathsText;
+        [SerializeField] TMP_Text scoreText;
+        
+        [Header("Local Player Styling")]
+        [SerializeField] Image backgroundImage;
+        [SerializeField] Color localPlayerColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        
+        public void Initialise(NetworkPlayerScore playerScore)
+        { 
+            this.playerScore = playerScore;
+            playerScore.kills.OnValueChanged += OnKillsChanged;
+            playerScore.deaths.OnValueChanged += OnDeathsChanged;
+            playerScore.score.OnValueChanged += OnScoreChanged;
+
+            var id = playerScore.OwnerClientId;
+            
+            if(backgroundImage == null) 
+                GetComponent<Image>();
+            
+            if(NetworkManager.Singleton.LocalClientId == id)
+                backgroundImage.color = localPlayerColor;
+            
+            ClientId = id;
+            OnUpdateName($"Player {id}");
+            OnScoreChanged(0, playerScore.score.Value);
+            OnDeathsChanged(0, playerScore.deaths.Value);
+            OnKillsChanged(0, playerScore.kills.Value);
         }
 
-        public void UpdatePlayerScore(int kills, int deaths)
+        private void OnScoreChanged(int previousvalue, int newvalue)
+        { 
+            scoreText.text = newvalue.ToString();
+        }
+
+        private void OnDeathsChanged(int previousvalue, int newvalue)
         {
-            playerData.UpdatePlayerScore(kills, deaths);
-            playerKillsText.text = playerData.kills.ToString();
-            playerDeathsText.text = playerData.deaths.ToString();
+            deathsText.text = newvalue.ToString();
+        }
+
+        private void OnKillsChanged(int previousvalue, int newvalue)
+        {
+            killsText.text = newvalue.ToString();
         }
         
-        public ulong GetClientId => playerData.clientId;
+        private void OnUpdateName(string newvalue)
+        {
+            nameText.text = newvalue;
+        }
+
+        private void OnDestroy()
+        {
+            playerScore.kills.OnValueChanged -= OnKillsChanged;
+            playerScore.deaths.OnValueChanged -= OnDeathsChanged;
+            playerScore.score.OnValueChanged -= OnScoreChanged;
+        }
     }
 }

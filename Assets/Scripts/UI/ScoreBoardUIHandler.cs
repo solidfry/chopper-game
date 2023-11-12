@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Events;
+using Interactions;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -8,7 +8,7 @@ namespace UI
 {
     public class ScoreBoardUIHandler : MonoBehaviour
     {
-        [Header("Player Scores")]
+        [Header("Player Scores Templates")]
         [SerializeField] List<PlayerScoreUI> playerScores = new ();
     
         [Header("Scoreboard UI")]
@@ -36,50 +36,36 @@ namespace UI
             scoreboardObjectRect.gameObject.SetActive(true);
         
             showScoreboardAction.Enable();
-
+            NetworkPlayerScore.OnPlayerSpawnedEvent += PlayerSpawned;
+            NetworkPlayerScore.OnPlayerDespawnedEvent += PlayerDespawned;
             showScoreboardAction.performed += ToggleScoreboard;
             showScoreboardAction.canceled += ToggleScoreboard;
-            GameEvents.OnUpdatePlayerScoreEvent += UpdatePlayerScore;
-            GameEvents.OnRemovePlayerScoreEvent += RemovePlayerScore;
         }
-        
+
+        private void PlayerDespawned(NetworkPlayerScore obj) => RemovePlayerScore(obj.OwnerClientId);
+
+        private void PlayerSpawned(NetworkPlayerScore obj) => AddPlayerScoreUI(obj);
+
         private void OnDisable()
         {
             if (ObjectsAreNull) return;
 
             showScoreboardAction.Disable();
-
+            NetworkPlayerScore.OnPlayerSpawnedEvent -= PlayerSpawned;
+            NetworkPlayerScore.OnPlayerDespawnedEvent -= PlayerDespawned;
             showScoreboardAction.performed -= ToggleScoreboard;
             showScoreboardAction.canceled -= ToggleScoreboard;
-            GameEvents.OnUpdatePlayerScoreEvent -= UpdatePlayerScore;
-            GameEvents.OnRemovePlayerScoreEvent -= RemovePlayerScore;
         }
     
         bool ObjectsAreNull => scoreboardObjectRect == null || scoreboardPlayerListRect == null || playerScoreUIPrefab == null;
 
         private void RemovePlayerScore(ulong clientId)
         {
-            if (playerScores.Count == 0) return;
-            foreach (var playerScore in playerScores)
+            var playerScore = playerScores.Find(c => c.ClientId == clientId);
+            if (playerScore is not null)
             {
-                if (playerScore.GetClientId == clientId)
-                {
-                    playerScores.Remove(playerScore);
-                    Destroy(playerScore.gameObject);
-                    return;
-                }
-            }
-        }
-        
-        private void UpdatePlayerScore(ulong clientId, int kills, int deaths)
-        {
-            if(playerScores.Find(c => c.GetClientId == clientId) is null)
-            {
-                AddPlayerScoreUI(clientId);
-            }
-            else
-            {
-                playerScores.Find(c => c.GetClientId == clientId).UpdatePlayerScore(kills, deaths);
+                playerScores.Remove(playerScore);
+                Destroy(playerScore.gameObject);
             }
         }
 
@@ -96,10 +82,11 @@ namespace UI
             }
         }
     
-        void AddPlayerScoreUI(ulong clientId)
+        void AddPlayerScoreUI(NetworkPlayerScore playerScore)
         {
             var playerScoreUI = Instantiate(playerScoreUIPrefab, scoreboardPlayerListRect);
-            playerScoreUI.Initialise(clientId);
+            playerScoreUI.Initialise(playerScore);
+            playerScores.Add(playerScoreUI);
         }
         
     }

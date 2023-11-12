@@ -1,4 +1,5 @@
-﻿using Unity.Netcode;
+﻿using GameLogic.ScriptableObjects;
+using Unity.Netcode;
 using Utilities;
 
 namespace GameLogic.StateMachine
@@ -9,5 +10,6 @@ namespace GameLogic.StateMachine
         public string GetCurrentStateName();
         public NetworkManager GetNetworkManager { get; }
         public CountdownTimer CurrentCountdownTimer { get; set; }
+        public GameMode GameMode { get; }
     }
 }

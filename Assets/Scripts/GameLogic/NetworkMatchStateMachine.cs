@@ -1,3 +1,4 @@
+using GameLogic.ScriptableObjects;
 using GameLogic.StateMachine;
 using GameLogic.StateMachine.MatchStateMachine;
 using Unity.Netcode;
@@ -31,6 +32,8 @@ namespace GameLogic
             get;
             private set;
         }
+        
+        public GameMode GameMode => gameMode;
         
         public override void OnNetworkSpawn()
         {
