@@ -87,7 +87,6 @@ namespace PlayerInteraction
 
         private void PerformAttack(int weaponIndex)
         {
-            
             var weapon = weaponSlots[weaponIndex];
             if (weapon.weaponGameObjectInstance.firingCooldownTimer <= 0)
             {
@@ -128,21 +127,12 @@ namespace PlayerInteraction
             rb.AddForce(forward * speed,
                 ForceMode.VelocityChange);
         }
-
-
+        
         [ServerRpc]
         void PerformAttackServerRpc(int weaponIndex) => PerformAttack(weaponIndex);
         
         [ServerRpc]
         void StopAttackServerRpc(int weaponIndex) => StopAttack(weaponIndex);
         
-        
-        public void ToggleAllWeaponVisibility(bool value)
-        { 
-            foreach (var weapon in weaponSlots)
-            {
-                weapon.weaponGameObjectInstance.ToggleWeaponVisibility(value);
-            }
-        }
     }
 }
