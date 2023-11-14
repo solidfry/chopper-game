@@ -30,6 +30,8 @@ namespace UI
 
         private void HandleMouseState()
         {
+            if (EventSystem.current == null) return;
+            
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(_pointerEventData, results);
 

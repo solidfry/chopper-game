@@ -29,7 +29,6 @@ namespace UI
             colors.normalColor = isActive ? activeColor : normalColor;
             return colors;
         }
-      
         
         public void SetActive()
         {

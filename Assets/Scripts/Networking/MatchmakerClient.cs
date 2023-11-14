@@ -10,7 +10,6 @@ using Unity.Services.Matchmaker;
 using Unity.Services.Matchmaker.Models;
 using StatusOptions = Unity.Services.Matchmaker.Models.MultiplayAssignment.StatusOptions;
 using UnityEngine;
-using UnityEngine.InputSystem.Utilities;
 
 namespace Networking
 {
@@ -69,7 +68,7 @@ namespace Networking
                 new Player (PlayerID(),
                     new MatchmakingPlayerData()
                     {
-                        PlayerName = "Player " + PlayerID(),
+                        // PlayerName = "Player " + PlayerID(),
                         Skill = 100
                     }
                 )
@@ -136,7 +135,7 @@ namespace Networking
         [Serializable]
         public class MatchmakingPlayerData
         {
-            public string PlayerName;
+            // public string PlayerName;
             public int Skill;
         }
     }

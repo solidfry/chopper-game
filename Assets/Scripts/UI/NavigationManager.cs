@@ -3,13 +3,12 @@ using Enums;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 
 namespace UI
 {
     public class NavigationManager : SingletonPersistent<NavigationManager>
     {
-        [FormerlySerializedAs("_canvas")] [SerializeField] Canvas canvas;
+        [SerializeField] Canvas canvas;
     
         [SerializeField] List<NavButtonHandler> navItems;
         [SerializeField] List<Scenes> scenes;
@@ -36,6 +35,16 @@ namespace UI
                 canvas.worldCamera = Camera.main;
             
             HandleButtonsState(scene);
+            
+            ToggleMenuInMultiplayer();
+        }
+
+        private void ToggleMenuInMultiplayer()
+        {
+            if (SceneManager.GetActiveScene().name == Scenes.Multiplayer.ToString())
+                canvas.enabled = false;
+            else
+                canvas.enabled = true;
         }
 
         private void HandleButtonsState(Scene scene)

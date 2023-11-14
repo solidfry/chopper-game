@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3357842608590911911}
   - component: {fileID: 666860567641326287}
-  - component: {fileID: 6171675123122375809}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -47,23 +46,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   networkManagerPrefab: {fileID: 1236399261492903394, guid: f318682fbc3c2134087c30025f22d1ba,
     type: 3}
---- !u!114 &6171675123122375809
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6030394067989160955}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 951099334
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 0
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
+  cursorManager: {fileID: 177135658108278786, guid: 29312297a2f61e144b981beb16d0f83f,
+    type: 3}
+  uiAudioManager: {fileID: 555644018038927963, guid: 23f5e38981357fb42901df360d112994,
+    type: 3}
+  colourManager: {fileID: 709956839639043136, guid: 68476f8051fbeda479d515e702b8ea01,
+    type: 3}
+  notificationManager: {fileID: 8117142464648682179, guid: 1372cb6473118b741a3ad7bc924d495d,
+    type: 3}
