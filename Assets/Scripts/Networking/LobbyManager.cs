@@ -24,7 +24,7 @@ namespace Networking
         // [SerializeField] private GameObject teamAGridLocation;
         // [SerializeField] private GameObject teamBGridLocation;
         
-        [SerializeField] ColorData colours;
+        [SerializeField] ColourDataList colours;
 
         [SerializeField] private NetworkManager networkManager;
 

@@ -13,6 +13,7 @@ namespace UI
     
         [SerializeField] private CountdownTimer countdownTimer;
 
+
         public void Initialise()
         {
             if (!IsServer) return;
@@ -22,7 +23,8 @@ namespace UI
             GameEvents.OnEndMatchEvent += EndMatch;
             GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
         }
-        
+
+
         public override void OnNetworkDespawn()
         {
             if (!IsServer) return;

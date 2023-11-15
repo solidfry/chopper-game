@@ -6,23 +6,23 @@ namespace Utilities
     public class ColourManager : SingletonPersistent<ColourManager>
     {
 
-        [SerializeField] ColorData uiColours;
-        [SerializeField] ColorData teamColours;
-        public ColorData TeamColours
+        [SerializeField] ColourDataList uiColours;
+        [SerializeField] ColourDataList teamColours;
+        public ColourDataList TeamColours
         {
             get => teamColours;
             set => teamColours = value;
         }
         
-        public ColorData UIColours
+        public ColourDataList UIColours
         {
             get => uiColours;
             set => uiColours = value;
         }
         
-        public ColorData GetTeamColours => TeamColours;
+        public ColourDataList GetTeamColours => TeamColours;
         
-        public ColorData GetUIColours => UIColours;
+        public ColourDataList GetUIColours => UIColours;
         
 
 

@@ -33,11 +33,11 @@ namespace GameLogic.ScriptableObjects
             }
         }
 
-        public void GenerateTeams(ColorData teamColors)
+        public void GenerateTeams(ColourDataList teamColours)
         {
             if (Players.Count == 0) return;
 
-            Teams = TeamDataBuilder.SplitPlayersIntoTwoTeams(Players.Keys.ToList(), teamColors);
+            Teams = TeamDataBuilder.SplitPlayersIntoTwoTeams(Players.Keys.ToList(), teamColours);
         }
 
         public void AddPlayer(NetworkClient player, PlayerManager playerManager)

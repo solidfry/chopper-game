@@ -14,11 +14,11 @@ namespace GameLogic
             return matchData;
         }
 
-        public static MatchData CreateMatchDataAndTeams(List<NetworkClient> players, ColorData teamColors)
+        public static MatchData CreateMatchDataAndTeams(List<NetworkClient> players, ColourDataList teamColours)
         {
             var matchData = ScriptableObject.CreateInstance<MatchData>();
             matchData.AddPlayersFromList(players);
-            matchData.GenerateTeams(teamColors);
+            matchData.GenerateTeams(teamColours);
             return matchData;
         }
 
@@ -34,9 +34,9 @@ namespace GameLogic
             return matchData;
         }
 
-        public static MatchData SetTeams(this MatchData matchData, ColorData teamColors)
+        public static MatchData SetTeams(this MatchData matchData, ColourDataList teamColours)
         {
-            matchData.GenerateTeams(teamColors);
+            matchData.GenerateTeams(teamColours);
             return matchData;
         }
 

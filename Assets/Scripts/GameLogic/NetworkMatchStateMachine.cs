@@ -7,20 +7,24 @@ using Utilities;
 
 namespace GameLogic
 {
+    /// <summary>
+    /// The current state of the match.
+    /// **InitialisingGame**
+    /// Set up the game mode and load the map
+    /// **PreGame**
+    /// Wait for players to load
+    /// **StartGame**
+    /// Move them to their spawn locations and start a short count down
+    /// **InProgressGame**
+    /// Players can move around and interact with the world and attack each other
+    /// **PostGame**
+    /// Show the scoreboard and wait for players to press a button to return to the lobby
+    ///</summary>
     public class NetworkMatchStateMachine : SingletonNetwork<NetworkMatchStateMachine>, IStateMachine
     {
        
-        // PreGame
-            // wait for players to load
         
-        // StartGame
-            // move them to their spawn locations and start a short count down
             
-        // InProgressGame
-            // players can move around and interact with the world and attack each other
-            
-        // PostGame
-            // show the scoreboard and wait for players to press a button to return to the lobby
         private IState CurrentState { get; set; }
         [SerializeField][ReadOnly] string matchStateName;
         [SerializeField] GameMode gameMode;

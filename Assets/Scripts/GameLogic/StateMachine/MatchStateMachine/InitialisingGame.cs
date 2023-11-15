@@ -34,7 +34,6 @@ namespace GameLogic.StateMachine.MatchStateMachine
 
             if (!StateMachine.GetNetworkManager.IsServer) return;
             
-            
             if (AllServicesInitialised)
             {
                 _gameStateUIHandler.Initialise();
