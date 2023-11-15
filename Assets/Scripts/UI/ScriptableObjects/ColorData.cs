@@ -22,9 +22,6 @@ namespace UI.ScriptableObjects
         public Color GetColourByIndex(int index) => Colours[index].Color;
         public Color GetAccessibleColourByIndex(int index) => Colours[index].AccessibleColor;
 
-        // <summary> Returns an array of colors based on the names provided </summary>
-        public Color[] GetColoursByName(string[] colors) => Colours.FindAll(x => colors.Contains(x.ColorName)).ConvertAll(x => x.Color).ToArray();
-
         [Serializable]
         public class ColourSlot
         {
