@@ -1,5 +1,5 @@
 using Events;
-using PlayerInteraction.Networking;
+using GameLogic.ScriptableObjects;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -7,6 +7,7 @@ namespace Networking
 {
     public class ScoreManager : SingletonNetwork<ScoreManager>
     {
+        [SerializeField] private GameMode gameMode;
         [SerializeField] int maxKills = 10; // This will come from a ScriptableObject
         [SerializeField] private NetworkVariable<int> totalKills = new (0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     
@@ -14,16 +15,24 @@ namespace Networking
         {
             base.OnNetworkSpawn();
             if (!IsServer) return;
-
+            
             GameEvents.OnPlayerKillEvent += AddKill;
+            GameEvents.OnSendGameModeEvent += SetGameMode;
         }
-    
+        
         public override void OnNetworkDespawn()
         {
             base.OnNetworkDespawn();
             if (!IsServer) return;
 
             GameEvents.OnPlayerKillEvent -= AddKill;
+            GameEvents.OnSendGameModeEvent -= SetGameMode;
+        }
+
+        private void SetGameMode(GameMode gamemode)
+        {
+            gameMode = gamemode;
+            maxKills = gameMode.MaxTotalKills;
         }
     
         void AddKill(ulong clientId)

@@ -7,7 +7,7 @@ using Utilities;
 
 namespace GameLogic
 {
-    public class NetworkMatchStateMachine : NetworkBehaviour, IStateMachine
+    public class NetworkMatchStateMachine : SingletonNetwork<NetworkMatchStateMachine>, IStateMachine
     {
        
         // PreGame

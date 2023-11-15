@@ -19,6 +19,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         {
             base.OnEnter(stateMachine);
             Debug.Log("Initialising Game");
+            GameEvents.OnSendGameModeEvent?.Invoke(StateMachine.GameMode);
         }
         
         bool AllServicesInitialised =>

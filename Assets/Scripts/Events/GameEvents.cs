@@ -1,5 +1,6 @@
 using Effects.Structs;
 using Enums;
+using GameLogic.ScriptableObjects;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -43,6 +44,7 @@ namespace Events
         #region Server Events
         public delegate void StartMatch();
         public delegate void EndMatch();
+        
         public static StartMatch OnStartMatchEvent;
         public static EndMatch OnEndMatchEvent;
         
@@ -60,6 +62,8 @@ namespace Events
         public delegate void SetTimer(float time);
         public static SetTimer OnSetTimerEvent;
         
+        public delegate void SendGameMode(GameMode gameMode);
+        public static SendGameMode OnSendGameModeEvent;
         
         public delegate void Notification(string message);
         public static Notification OnNotificationEvent;

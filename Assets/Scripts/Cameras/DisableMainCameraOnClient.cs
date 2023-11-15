@@ -17,6 +17,7 @@ public class DisableMainCameraOnClient : NetworkBehaviour
         if (IsClient || IsHost)
         {
             mainCamera.enabled = false;
+            // TODO: Need a way to enable and disable this more effectively at the correct time
             mainAudioListener.enabled = false;
         }
     }
