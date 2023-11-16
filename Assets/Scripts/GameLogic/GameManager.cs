@@ -9,6 +9,7 @@ namespace GameLogic
 {
     public class GameManager : SingletonPersistent<GameManager>
     {
+        
         [Header("System Prefabs")]
         [SerializeField] NetworkManager networkManagerPrefab;
         [SerializeField] CursorManager cursorManagerPrefab;
@@ -32,20 +33,16 @@ namespace GameLogic
         [field:SerializeField ] 
         public UIAudioManager UIAudioManager { get; private set; }
         private bool _uiAudioManagerIsActive;
-
-
-            
+        
         [SerializeField] [ReadOnly] 
         private bool allSystemsActive;
 
-
-
-
-
         public override void Awake()
         {
-            base.Awake();
-
+#if SERVER
+            Destroy(this.gameObject);  
+#endif
+            base.Awake(); 
             SetSystemsActive();
         }
 

@@ -1,24 +1,56 @@
+using Events;
 using Unity.Netcode;
 using UnityEngine;
 
-public class DisableMainCameraOnClient : NetworkBehaviour
+namespace Cameras
 {
-    [SerializeField] private Camera mainCamera;
-    [SerializeField] private AudioListener mainAudioListener;
-
-    private void Start()
+    public class DisableMainCameraOnClient : NetworkBehaviour
     {
-        mainCamera = Camera.main;
-        mainAudioListener = GetComponent<AudioListener>();
-    }
+        [SerializeField] private Camera mainCamera;
+        [SerializeField] private AudioListener mainAudioListener;
 
-    public override void OnNetworkSpawn()
-    {
-        if (IsClient || IsHost)
+        private void Start()
         {
+            if (mainCamera == null)
+                mainCamera = Camera.main;
+        
+            if(mainAudioListener == null)
+                mainAudioListener = mainCamera.GetComponent<AudioListener>();
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (IsClient && IsLocalPlayer || IsHost)
+            {
+                EnableMainCamera();
+                GameEvents.OnDisableMainCameraEvent += DisableMainCamera;
+            }
+        }
+    
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+            if (IsClient && IsLocalPlayer || IsHost)
+            {
+                GameEvents.OnDisableMainCameraEvent -= DisableMainCamera;
+            }
+        }
+
+        private void DisableMainCamera()
+        {
+            mainCamera.depth = -1;
             mainCamera.enabled = false;
-            // TODO: Need a way to enable and disable this more effectively at the correct time
             mainAudioListener.enabled = false;
         }
+
+        private void EnableMainCamera()
+        {
+            mainCamera.depth = 0;
+            mainCamera.enabled = true;
+            mainAudioListener.enabled = true;
+        }
+
+   
     }
 }

@@ -1,11 +1,10 @@
-using System;
 using DG.Tweening;
+using Events;
 using Interactions;
 using UI;
 using Unity.Netcode;
 using UnityEngine;
 
-[Serializable]
 public class EndMatchScreenUIHandler : MonoBehaviour
 {
     [SerializeField] StatTile killsStatTile;
@@ -17,11 +16,13 @@ public class EndMatchScreenUIHandler : MonoBehaviour
     private void OnEnable()
     {
         NetworkPlayerScore.OnPlayerSpawnedEvent += SetScore;
+        GameEvents.OnShowEndGameScreenEvent += ShowEndMatchScreen;
     }
 
     private void OnDisable()
     {
         NetworkPlayerScore.OnPlayerSpawnedEvent -= SetScore;
+        GameEvents.OnShowEndGameScreenEvent -= ShowEndMatchScreen;
     }
 
     [ContextMenu("ShowEndMatchScreen")]

@@ -175,6 +175,7 @@ namespace PlayerInteraction.Networking
                 PlayerCameraManager.Initialize(playerCamera, playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
                 Cursor.visible = false;
+                GameEvents.OnDisableMainCameraEvent?.Invoke();
             }
             else
             {

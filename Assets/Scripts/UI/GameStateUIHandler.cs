@@ -1,5 +1,4 @@
 using Events;
-using Interactions;
 using UI.ScriptableObjects;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,16 +9,12 @@ namespace UI
     public class GameStateUIHandler : SingletonNetwork<GameStateUIHandler>
     {
         [SerializeField] NetworkVariable<float> time;
-        [SerializeField] EndMatchScreenUIHandler endGamePanel;
         [SerializeField] TimerUI timerUI;
-    
-        [SerializeField] private CountdownTimer countdownTimer;
-        
         [SerializeField] ColourData startMatchColourData;
+        [SerializeField] CountdownTimer countdownTimer;
         
         public void Initialise()
         {
-            
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent += SetTimer;
             GameEvents.OnTimerStartEvent += StartTimer;
@@ -27,32 +22,10 @@ namespace UI
             GameEvents.OnPostGameEvent += ShowPostGameUI;
             GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
         }
-
-        public override void OnNetworkSpawn()
-        {
-            base.OnNetworkSpawn();
-            
-            // if(IsClient && IsLocalPlayer)
-            // {
-            //     NetworkPlayerScore.OnPlayerSpawnedEvent += PreparePlayerEndScreen;
-            //     GameEvents.OnNotificationEvent.Invoke("Set score has been subbed");
-            // }
-        }
-
-        // private void PreparePlayerEndScreen(NetworkPlayerScore ps)
-        // {
-        //     if (!IsClient && !IsLocalPlayer) return;
-        //     Debug.Log("Prepping player end screen");
-        //     endMatchScreenUIHandler.SetScore(ps);
-        // }
+        
 
         public override void OnNetworkDespawn()
         {
-            // if(IsClient && IsLocalPlayer)
-            // {
-            //     NetworkPlayerScore.OnPlayerSpawnedEvent -= PreparePlayerEndScreen;
-            // }
-            
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent -= SetTimer;
             GameEvents.OnTimerStartEvent -= StartTimer;
@@ -65,7 +38,7 @@ namespace UI
         {
             if (!IsServer) return;
             time.Value = t;
-            Debug.Log("Timer set to " + time.Value + " seconds");
+            // Debug.Log("Timer set to " + time.Value + " seconds");
             countdownTimer = new CountdownTimer(time.Value, NetworkManager.Singleton.ServerTime.FixedDeltaTime);
             timerUI.SetTimer(time.Value);
         }
@@ -122,17 +95,15 @@ namespace UI
         }
     
         [ClientRpc]
-        private void SetTimer_ClientRpc(float timeValue)
-        {
-            timerUI.SetTimer(timeValue);
-        }
+        private void SetTimer_ClientRpc(float timeValue) => timerUI.SetTimer(timeValue);
 
         [ClientRpc]
         private void OnEndMatch_ClientRpc()
         {
-            endGamePanel.ShowEndMatchScreen();
+            if(!IsClient) return;
+            GameEvents.OnShowEndGameScreenEvent?.Invoke();
         }
-    
+
         [ClientRpc] 
         private void ShowTimer_ClientRpc()
         {
