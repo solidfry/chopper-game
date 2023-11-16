@@ -38,7 +38,7 @@ namespace UI
             labelField.text = label;
         }
         
-        public void SetValueString(string newValue)
+        public void SetStat(string newValue)
         {
             value = newValue;
             SetValue();

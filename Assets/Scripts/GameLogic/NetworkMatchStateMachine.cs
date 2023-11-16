@@ -22,9 +22,6 @@ namespace GameLogic
     ///</summary>
     public class NetworkMatchStateMachine : SingletonNetwork<NetworkMatchStateMachine>, IStateMachine
     {
-       
-        
-            
         private IState CurrentState { get; set; }
         [SerializeField][ReadOnly] string matchStateName;
         [SerializeField] GameMode gameMode;

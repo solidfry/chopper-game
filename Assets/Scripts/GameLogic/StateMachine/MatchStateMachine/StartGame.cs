@@ -51,17 +51,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
             GameEvents.OnTimerStartEvent?.Invoke();
             _timerStarted = true;
         }
-
-        private void AllocateSpawns(IStateMachine stateMachine)
-        {
-            foreach (var clientId in stateMachine.GetNetworkManager.ConnectedClients.Keys)
-            {
-                _serverSpawnManager.GetSpawnLocation(out var transform);
-                PlayerManager go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
-                go.NetworkObject.SpawnAsPlayerObject(clientId);
-            }
-        }
-
+        
         public override void OnUpdate()
         {
             if(!StateMachine.GetNetworkManager.IsServer) return;
@@ -88,6 +78,21 @@ namespace GameLogic.StateMachine.MatchStateMachine
             GameEvents.OnTimerEndEvent?.Invoke();
             GameEvents.OnPlayerUnFreezeAllEvent?.Invoke();
             StateMachine.CurrentCountdownTimer = null;
+        }
+        
+        private void AllocateSpawns(IStateMachine stateMachine)
+        {
+            foreach (var clientId in stateMachine.GetNetworkManager.ConnectedClients.Keys)
+            {
+                SpawnPlayerObject(clientId);
+            }
+        }
+
+        private void SpawnPlayerObject(ulong clientId)
+        {
+            _serverSpawnManager.GetSpawnLocation(out var transform);
+            PlayerManager go = Object.Instantiate(_playerPrefab, transform.position, transform.rotation);
+            go.NetworkObject.SpawnAsPlayerObject(clientId);
         }
 
         

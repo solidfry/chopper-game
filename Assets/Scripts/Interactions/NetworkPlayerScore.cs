@@ -2,7 +2,6 @@
 using Events;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Interactions
 {
@@ -17,8 +16,8 @@ namespace Interactions
         public override void OnNetworkSpawn()
         {
             OnPlayerSpawnedEvent?.Invoke(this);
+            
             if (!IsServer) return;
-
             Debug.Log($"Score was initialised for {OwnerClientId}");
             kills.Value = 0;
             deaths.Value = 0;
@@ -30,10 +29,12 @@ namespace Interactions
         public override void OnNetworkDespawn()
         {
             OnPlayerDespawnedEvent?.Invoke(this);
+            
             if (!IsServer) return;
             GameEvents.OnPlayerDiedEvent -= AddDeath;
             GameEvents.OnPlayerKillEvent -= AddKill;
         }
+        
 
         void AddKill(ulong killerId)
         {

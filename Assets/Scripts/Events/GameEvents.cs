@@ -1,6 +1,7 @@
 using Effects.Structs;
 using Enums;
 using GameLogic.ScriptableObjects;
+using Interactions;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -19,12 +20,17 @@ namespace Events
         public delegate void PlayerFreezeAll();
         public delegate void PlayerUnFreezeAll();
 
+        public delegate void SendPlayerScore(NetworkPlayerScore playerScore);
+        public static SendPlayerScore OnSendPlayerScoreEvent;
+        
         public static PlayerHeal OnPlayerHealedEvent;
         public static PlayerKill OnPlayerKillEvent;
         public static PlayerDied OnPlayerDiedEvent;
         public static PlayerRespawn OnPlayerRespawnEvent;
         public static PlayerFreezeAll OnPlayerFreezeAllEvent;
         public static PlayerUnFreezeAll OnPlayerUnFreezeAllEvent;
+        
+        
         #endregion
 
         #region UI Events
@@ -50,6 +56,9 @@ namespace Events
         
         public delegate void InProgressGame();
         public static InProgressGame OnInProgressGameEvent;
+
+        public delegate void PostGame();
+        public static PostGame OnPostGameEvent;
         
         public delegate void TimerStart();
         public delegate void TimerEnd();

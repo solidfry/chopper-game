@@ -18,7 +18,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
-            Debug.Log("Initialising Game");
+            // Debug.Log("Initialising Game");
             GameEvents.OnSendGameModeEvent?.Invoke(StateMachine.GameMode);
         }
         
@@ -26,7 +26,8 @@ namespace GameLogic.StateMachine.MatchStateMachine
             _gameStateUIHandler != null && 
             _serverSpawnManager != null && 
             _networkManager != null && 
-            _scoreManager != null;
+            _scoreManager != null && 
+            StateMachine.GameMode != null;
 
         public override void OnUpdate()
         {

@@ -1,9 +1,8 @@
 ﻿using DG.Tweening;
 using TMPro;
+using UI.ScriptableObjects;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
-using Utilities;
 
 namespace UI
 {
@@ -72,23 +71,25 @@ namespace UI
             FormatTimer(_currentTimeRemaining);
         }
         
-        public void SetColors(string textColor, string backgroundColor)
+        public void SetColors(ColourData textColor)
         {
             SetTextColor(textColor);
-            SetBackgroundColor(backgroundColor);
+            SetBackgroundColor(textColor);
         }
         
-        void SetTextColor(string color)
+        void SetTextColor(ColourData color)
         { 
-            Color c = ColourManager.Instance ? ColourManager.Instance.UIColours.GetColourByName(color) : defaultTextColor;
-            _textColorSequence = timerText.DOColor(c, colorSwapDuration).SetEase(easing);
+            if(color == null) return;
+            
+            _textColorSequence = timerText.DOColor(color.Color, colorSwapDuration).SetEase(easing);
             _textColorSequence.Play();
         }
 
-        void SetBackgroundColor(string color)
+        void SetBackgroundColor(ColourData color)
         {
-            Color c = ColourManager.Instance ? ColourManager.Instance.UIColours.GetColourByName(color) : defaultBackgroundColor;
-            _bgColorSequence = backgroundImage.DOColor(c, colorSwapDuration).SetEase(easing);
+            if(color == null) return;
+
+            _bgColorSequence = backgroundImage.DOColor(color.ShadeColor, colorSwapDuration).SetEase(easing);
             _bgColorSequence.Play();
         }
 

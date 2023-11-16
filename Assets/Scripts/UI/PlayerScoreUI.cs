@@ -23,14 +23,14 @@ namespace UI
         [SerializeField] Image backgroundImage;
         [SerializeField] Color localPlayerColor = new Color(0.5f, 0.5f, 0.5f, 1f);
         
-        public void Initialise(NetworkPlayerScore playerScore)
+        public void Initialise(NetworkPlayerScore ps)
         { 
-            this.playerScore = playerScore;
-            playerScore.kills.OnValueChanged += OnKillsChanged;
-            playerScore.deaths.OnValueChanged += OnDeathsChanged;
-            playerScore.score.OnValueChanged += OnScoreChanged;
+            playerScore = ps;
+            ps.kills.OnValueChanged += OnKillsChanged;
+            ps.deaths.OnValueChanged += OnDeathsChanged;
+            ps.score.OnValueChanged += OnScoreChanged;
 
-            var id = playerScore.OwnerClientId;
+            var id = ps.OwnerClientId;
             
             if(backgroundImage == null) 
                 GetComponent<Image>();
@@ -40,9 +40,9 @@ namespace UI
             
             ClientId = id;
             OnUpdateName($"Player {id}");
-            OnScoreChanged(0, playerScore.score.Value);
-            OnDeathsChanged(0, playerScore.deaths.Value);
-            OnKillsChanged(0, playerScore.kills.Value);
+            OnScoreChanged(0, ps.score.Value);
+            OnDeathsChanged(0, ps.deaths.Value);
+            OnKillsChanged(0, ps.kills.Value);
         }
 
         private void OnScoreChanged(int previousvalue, int newvalue)

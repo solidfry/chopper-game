@@ -1,4 +1,6 @@
 using Events;
+using Interactions;
+using UI.ScriptableObjects;
 using Unity.Netcode;
 using UnityEngine;
 using Utilities;
@@ -7,31 +9,55 @@ namespace UI
 {
     public class GameStateUIHandler : SingletonNetwork<GameStateUIHandler>
     {
-        [SerializeField] public NetworkVariable<float> time;
-        [SerializeField] GameObject endGamePanel;
+        [SerializeField] NetworkVariable<float> time;
+        [SerializeField] EndMatchScreenUIHandler endGamePanel;
         [SerializeField] TimerUI timerUI;
     
         [SerializeField] private CountdownTimer countdownTimer;
-
-
+        
+        [SerializeField] ColourData startMatchColourData;
+        
         public void Initialise()
         {
+            
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent += SetTimer;
             GameEvents.OnTimerStartEvent += StartTimer;
             GameEvents.OnTimerEndEvent += HideTimer;
-            GameEvents.OnEndMatchEvent += EndMatch;
+            GameEvents.OnPostGameEvent += ShowPostGameUI;
             GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
         }
 
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            
+            // if(IsClient && IsLocalPlayer)
+            // {
+            //     NetworkPlayerScore.OnPlayerSpawnedEvent += PreparePlayerEndScreen;
+            //     GameEvents.OnNotificationEvent.Invoke("Set score has been subbed");
+            // }
+        }
+
+        // private void PreparePlayerEndScreen(NetworkPlayerScore ps)
+        // {
+        //     if (!IsClient && !IsLocalPlayer) return;
+        //     Debug.Log("Prepping player end screen");
+        //     endMatchScreenUIHandler.SetScore(ps);
+        // }
 
         public override void OnNetworkDespawn()
         {
+            // if(IsClient && IsLocalPlayer)
+            // {
+            //     NetworkPlayerScore.OnPlayerSpawnedEvent -= PreparePlayerEndScreen;
+            // }
+            
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent -= SetTimer;
             GameEvents.OnTimerStartEvent -= StartTimer;
             GameEvents.OnTimerEndEvent -= HideTimer;
-            GameEvents.OnEndMatchEvent -= EndMatch;
+            GameEvents.OnPostGameEvent -= ShowPostGameUI;
             GameEvents.OnStartMatchEvent -= UpdateStartMatchUI;
         }
 
@@ -55,7 +81,7 @@ namespace UI
             SetTimer_ClientRpc(time.Value);
         }
 
-        private void EndMatch()
+        private void ShowPostGameUI()
         {
             if (!IsServer) return;
             OnEndMatch_ClientRpc();
@@ -84,7 +110,7 @@ namespace UI
         {   
             if (!IsServer) return;
             // Debug.Log("Updating start match UI");
-            timerUI.SetColors("DarkGreen", "Green");
+            timerUI.SetColors(startMatchColourData);
             UpdateStartMatchUI_ClientRpc();
         }
 
@@ -92,7 +118,7 @@ namespace UI
         private void UpdateStartMatchUI_ClientRpc()
         {
             GameEvents.OnNotificationEvent?.Invoke("Match Starting");
-            timerUI.SetColors("DarkGreen", "Green");
+            timerUI.SetColors(startMatchColourData);
         }
     
         [ClientRpc]
@@ -104,7 +130,7 @@ namespace UI
         [ClientRpc]
         private void OnEndMatch_ClientRpc()
         {
-            endGamePanel.SetActive(true);
+            endGamePanel.ShowEndMatchScreen();
         }
     
         [ClientRpc] 
