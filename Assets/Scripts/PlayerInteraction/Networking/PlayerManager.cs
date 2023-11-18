@@ -58,8 +58,10 @@ namespace PlayerInteraction.Networking
             {
                 UpdateHud.Initialise(IsOwner);
                 UpdateHud.gameObject.SetActive(false);
+                // Disable the player inputs if the player is not the localplayer
+                PlayerInput.enabled = false;
             }
-            
+
             SubscribeToPlayerEvents();
         }
 
@@ -118,7 +120,7 @@ namespace PlayerInteraction.Networking
 
             if (PlayerRigidbody is null)
                 PlayerRigidbody = GetComponent<Rigidbody>();
-            
+
             if (OutputHudValues is null)
             {
                 Debug.Log("OutputHudValues was Null");
