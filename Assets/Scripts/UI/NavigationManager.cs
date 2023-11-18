@@ -13,6 +13,7 @@ namespace UI
         [SerializeField] List<NavButtonHandler> navItems;
         [SerializeField] List<Scenes> scenes;
         
+        [SerializeField] List<Scenes> scenesToDisableMenu;
 
         private void Start()
         {
@@ -36,16 +37,17 @@ namespace UI
             
             HandleButtonsState(scene);
             
-            ToggleMenuInMultiplayer();
+            ToggleMenuInSelectScenes();
         }
-
-        private void ToggleMenuInMultiplayer()
-        {
-            if (SceneManager.GetActiveScene().name == Scenes.Multiplayer.ToString())
-                canvas.enabled = false;
-            else
-                canvas.enabled = true;
-        }
+        
+        private void ToggleMenuInSelectScenes() => canvas.enabled =
+            !scenesToDisableMenu.Exists(scene => scene.ToString() == SceneManager.GetActiveScene().name);
+       
+        
+        //     if (scenesToDisableMenu.Contains((Scenes) SceneManager.GetActiveScene().buildIndex))
+        // canvas.enabled = false;
+        // else
+        // canvas.enabled = true;
 
         private void HandleButtonsState(Scene scene)
         {
