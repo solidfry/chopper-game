@@ -69,9 +69,7 @@ namespace PlayerInteraction
             JobHandle handle = job.Schedule(_currentForwards.Length, 64);
             handle.Complete();
 
-            // Apply the corrective torque
             rigidbody.AddRelativeTorque(_correctiveTorques[0], ForceMode.Acceleration);
-
         }
         
         public void OnDestroy()

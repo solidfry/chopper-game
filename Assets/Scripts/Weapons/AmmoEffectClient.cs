@@ -1,5 +1,8 @@
 ﻿using Interfaces;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
+using Weapons.Jobs;
 using Weapons.ScriptableObjects;
 
 namespace Weapons
@@ -28,21 +31,34 @@ namespace Weapons
             previousPosition = tr.position;
         }
 
-        private void Update() => CheckDistanceTravelled();
+        private void Update()
+        {
+            var dt = new NativeReference<float>(Allocator.TempJob);
+            dt.Value = this.distanceTraveled;
+
+            var position = transform.position;
+            DistanceCalculationJob job = new DistanceCalculationJob
+            {
+                currentPosition = position,
+                previousPosition = previousPosition,
+                distanceTraveled = dt
+            };
+
+            var handle = job.Schedule();
+            handle.Complete();
+
+            this.distanceTraveled = dt.Value;
+            dt.Dispose();
+
+            previousPosition = position;
+
+            if (this.distanceTraveled >= maximumRange)
+                DestructionEffect();
+        }
 
         public void SetAmmoType(AmmoType ammoTypeToSet) => this.ammoType = ammoTypeToSet;
 
         public void SetMaxRange(float maxRange) => maximumRange = maxRange;
-
-        private void CheckDistanceTravelled()
-        {
-            _position = transform.position;
-            distanceTraveled += Vector3.Distance(_position, previousPosition);
-            previousPosition = _position;
-
-            if (distanceTraveled >= maximumRange)
-                DestructionEffect();
-        }
 
         private void OnCollisionEnter(Collision collision)
         {

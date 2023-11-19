@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Interactions.Jobs
 {
-    // [BurstCompile]
+    [BurstCompile]
     public struct StabilisationJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<Vector3> currentForwards;

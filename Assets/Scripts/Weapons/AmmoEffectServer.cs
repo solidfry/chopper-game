@@ -1,7 +1,10 @@
 ﻿using Events;
 using Interfaces;
+using Unity.Collections;
+using Unity.Jobs;
 using Unity.Netcode;
 using UnityEngine;
+using Weapons.Jobs;
 using Weapons.ScriptableObjects;
 
 namespace Weapons
@@ -47,7 +50,27 @@ namespace Weapons
         private void Update()
         {
             if (!IsServer) return;
-            CheckDistanceTravelled();
+            var dt = new NativeReference<float>(Allocator.TempJob);
+            dt.Value = this.distanceTraveled;
+
+            var position = transform.position;
+            DistanceCalculationJob job = new DistanceCalculationJob
+            {
+                currentPosition = position,
+                previousPosition = previousPosition,
+                distanceTraveled = dt
+            };
+
+            var handle = job.Schedule();
+            handle.Complete();
+
+            this.distanceTraveled = dt.Value;
+            dt.Dispose();
+
+            previousPosition = position;
+
+            if (this.distanceTraveled >= maximumRange)
+                DoDestroy();
         }
 
         private void CheckDistanceTravelled()

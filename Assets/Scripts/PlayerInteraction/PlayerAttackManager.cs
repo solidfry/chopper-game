@@ -1,8 +1,11 @@
-﻿using Unity.Netcode;
+﻿using Unity.Collections;
+using Unity.Jobs;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using Weapons;
+using Weapons.Jobs;
 
 namespace PlayerInteraction
 {
@@ -124,8 +127,21 @@ namespace PlayerInteraction
             rb.isKinematic = false;
             rb.excludeLayers = ignoreCollisionMask;
             rb.GetComponent<Collider>().excludeLayers = ignoreCollisionMask;
-            rb.AddForce(forward * speed,
-                ForceMode.VelocityChange);
+            
+            var resultForce = new NativeArray<Vector3>(1, Allocator.TempJob);
+            var calculateForceJob = new CalculateForceJob
+            {
+                forward = forward,
+                speed = speed,
+                resultForce = resultForce
+            };
+
+            // Schedule the job
+            var handle = calculateForceJob.Schedule();
+            handle.Complete();
+            
+            rb.AddForce(resultForce[0], ForceMode.VelocityChange);
+            resultForce.Dispose();  
         }
         
         [ServerRpc]
