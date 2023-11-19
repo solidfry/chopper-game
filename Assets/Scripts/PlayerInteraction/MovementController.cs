@@ -81,10 +81,12 @@ namespace PlayerInteraction
             _position = position;
             _rotation = rotation;
             _up = _rotation * Vector3.up;
+                    
+            
             _forward = _rotation * Vector3.forward;
+            stabiliser.UpdateStabiliser(_forward);
             thrustVector = _up + _forward * _upwardThrustVectorOffset;
 
-            stabiliser.UpdateStabiliser(_up);
             dash.OnUpdate();
         }
 
