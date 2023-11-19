@@ -10,7 +10,7 @@ namespace UI
         [SerializeField] InputAction button;
     
         [SerializeField] UnityEvent doEvent;
-
+        
         private void OnEnable()
         {
             button.Enable();

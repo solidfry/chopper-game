@@ -17,6 +17,8 @@ namespace Events
         public delegate void PlayerFreeze(ulong clientId);
         public delegate void PlayerFreezeAll();
         public delegate void PlayerUnFreezeAll();
+        public delegate void TogglePlayerControls(bool enable);
+        public static TogglePlayerControls OnTogglePlayerControlsEvent;
 
         public delegate void SendPlayerScore(NetworkPlayerScore playerScore);
         public static SendPlayerScore OnSendPlayerScoreEvent;
@@ -46,6 +48,12 @@ namespace Events
         
         public delegate void RemovePlayerScore(ulong clientId);
         public static RemovePlayerScore OnRemovePlayerScoreEvent;
+        
+        public delegate void ShowCursor();
+        public static ShowCursor OnShowCursorEvent;
+        
+        public delegate void HideCursor();
+        public static HideCursor OnHideCursorEvent;
         
         #endregion
 

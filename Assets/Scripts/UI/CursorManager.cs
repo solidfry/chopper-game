@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Enums;
+using Events;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -32,9 +33,19 @@ namespace UI
         
         void Update() => HandleMouseState();
 
-        private void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            GameEvents.OnShowCursorEvent += EnableCursor;
+            GameEvents.OnHideCursorEvent += DisableCursor;
+        }
 
-        private void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            GameEvents.OnShowCursorEvent -= EnableCursor;
+            GameEvents.OnHideCursorEvent -= DisableCursor;
+        }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode loadMode)
         {
@@ -63,8 +74,16 @@ namespace UI
         
         void SetCursor(Texture2D texture) => Cursor.SetCursor(texture, Vector2.zero, CursorMode.Auto);
 
-        void DisableCursor() => Cursor.visible = false;
+        void DisableCursor()
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Confined;
+        }
 
-        void EnableCursor() => Cursor.visible = true;
+        void EnableCursor()
+        {
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
     }
 }

@@ -78,6 +78,7 @@ namespace PlayerInteraction.Networking
 
             GameEvents.OnPlayerFreezeAllEvent += FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllEvent += UnFreezePlayerClientRpc;
+            GameEvents.OnTogglePlayerControlsEvent += ToggleControls;
             Health.PlayerDiedEvent += PlayerDiedClientRpc;
         }
 
@@ -87,6 +88,7 @@ namespace PlayerInteraction.Networking
 
             GameEvents.OnPlayerFreezeAllEvent -= FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllEvent -= UnFreezePlayerClientRpc;
+            GameEvents.OnTogglePlayerControlsEvent -= ToggleControls;
             Health.PlayerDiedEvent -= PlayerDiedClientRpc;
         }
 
@@ -247,6 +249,18 @@ namespace PlayerInteraction.Networking
         {
             PlayerRigidbody.isKinematic = false;
             PlayerInput.actions.Enable();
+        }
+        
+        void ToggleControls(bool value)
+        {
+            if (value)
+            {
+                PlayerInput.actions.Enable();
+            }
+            else
+            {
+                PlayerInput.actions.Disable();
+            }
         }
 
         [ClientRpc]

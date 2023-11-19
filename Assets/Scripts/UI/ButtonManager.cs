@@ -11,6 +11,7 @@ namespace UI
     {
         Button button;
         private TMP_Text text;
+        [SerializeField] bool useButtonColorForText = true;
         
         void Start()
         {
@@ -20,6 +21,7 @@ namespace UI
 
         private void Update()
         {
+            if (!useButtonColorForText) return;
             text.color = button.targetGraphic.canvasRenderer.GetColor();
         }
 
