@@ -74,9 +74,10 @@ namespace PlayerInteraction
         
         public void OnDestroy()
         {
-            // Dispose of the NativeArrays
-            _currentForwards.Dispose();
-            _correctiveTorques.Dispose();
+            if(_correctiveTorques.IsCreated)
+                _correctiveTorques.Dispose();
+            if(_currentForwards.IsCreated)
+                _currentForwards.Dispose();
         }
           
         

@@ -177,10 +177,12 @@ namespace PlayerInteraction.Networking
                 PlayerCameraManager.Initialize(playerCamera, playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
                 Cursor.visible = false;
-                GameEvents.OnDisableMainCameraEvent?.Invoke();
+                Debug.Log("Disable main camera sent");
+                Camera.main.gameObject.SetActive(false);
             }
             else
             {
+
                 playerCamera.enabled = false;
                 playerAudioListener.enabled = false;
                 playerVirtualCamera.enabled = false;
@@ -221,9 +223,6 @@ namespace PlayerInteraction.Networking
             if (IsClient)
                 TogglePlayerVisibility(false);
         }
-
-        // [ClientRpc]
-        // void TogglePlayerVisibilityClientRpc(bool value) => TogglePlayerVisibility(value);
 
         private void TogglePlayerVisibility(bool value)
         {
@@ -284,6 +283,11 @@ namespace PlayerInteraction.Networking
                 TogglePlayerVisibility(true);
         }
 
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+            MovementController.OnDestroy();
+        }
     }
 
 }

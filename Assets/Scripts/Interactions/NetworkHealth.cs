@@ -76,6 +76,9 @@ namespace Interactions
 
         public void Die()
         {
+            if(IsOwner && IsClient)
+                InstantiateDeathParticlesServerRpc();
+            
             if(!IsServer) return;
     
             if (!death.IsDead)
@@ -83,11 +86,9 @@ namespace Interactions
                 // Before setting death state, handle the last damage attribution
 
                 death.SetIsDead(true);
-                var particle = death.InstantiateParticles();
                 Debug.Log($"Player died. Killed by player {_lastPlayerToDamage}");
                 GameEvents.OnPlayerDiedEvent?.Invoke(OwnerClientId); // You might want to pass the _lastDamagerId as well
                 PlayerDiedEvent?.Invoke(OwnerClientId);
-                particle.gameObject.GetComponent<NetworkObject>().Spawn();
                 
                 if(LastPlayerToDamage != 0)
                     GameEvents.OnPlayerKillEvent?.Invoke(_lastPlayerToDamage);
@@ -114,6 +115,14 @@ namespace Interactions
             networkHealth.Value = health;
             death.SetIsDead(false);
         }
+        
+        [ServerRpc] 
+        public void InstantiateDeathParticlesServerRpc()
+        {
+            if(!IsServer) return;
+            var particle = death.InstantiateParticles();
+            particle.gameObject.GetComponent<NetworkObject>().Spawn();
+        }
 
         private void OnCollisionEnter(Collision other)
         {
@@ -122,7 +131,7 @@ namespace Interactions
             // Check for upside-down collision
             if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Vector3.Dot(transform.up, Vector3.down) > 0)
             {
-                GetComponent<NetworkHealth>().TakeDamage(100, 0);
+                TakeDamage(100, 0);
                 Debug.Log("Hit your roof!");
                 return;
             }
@@ -130,7 +139,7 @@ namespace Interactions
             // Check for high-speed collision
             if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Speed.MetersPerSecondToKilometersPerHour(GetComponent<Rigidbody>().velocity.magnitude) > 50)
             {
-                GetComponent<NetworkHealth>().TakeDamage(200, 0);
+                TakeDamage(200, 0);
                 Debug.Log("Hit too hard!");
                 return;
             }

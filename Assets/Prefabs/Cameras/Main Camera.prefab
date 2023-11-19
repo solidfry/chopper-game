@@ -13,14 +13,13 @@ GameObject:
   - component: {fileID: 5166124119915782477}
   - component: {fileID: 2721083162814451769}
   - component: {fileID: 8265882284735751478}
-  - component: {fileID: 1641855178075428578}
   - component: {fileID: 7462059456203850094}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &2391619488567354435
 Transform:
@@ -33,7 +32,7 @@ Transform:
   m_LocalRotation: {x: 0.015585005, y: -0.0040574674, z: 0.00006324385, w: 0.99987036}
   m_LocalPosition: {x: 0, y: 3.69, z: -8}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 1.786, y: -0.465, z: 0}
@@ -174,26 +173,6 @@ MonoBehaviour:
   m_CameraActivatedEvent:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &1641855178075428578
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1397992766590510694}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 951099334
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
 --- !u!114 &7462059456203850094
 MonoBehaviour:
   m_ObjectHideFlags: 0

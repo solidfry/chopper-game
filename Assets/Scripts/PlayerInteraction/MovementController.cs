@@ -1,6 +1,9 @@
 using System;
 using Abilities;
 using Events;
+using PlayerInteraction.Jobs;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 namespace PlayerInteraction
@@ -22,6 +25,7 @@ namespace PlayerInteraction
         [SerializeField] VehicleStabiliser stabiliser;
         [SerializeField] Dash dash;
 
+        private NativeArray<Vector3> results;
         public void OnStart(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
             _physicsValues = physicsValues;
@@ -33,7 +37,10 @@ namespace PlayerInteraction
             dash.OnStart(rigidbody);
         }
 
-        public void OnUpdate(Quaternion rotation, Vector3 position) => UpdateMovementVariables(rotation, position);
+        public void OnUpdate(Quaternion rotation, Vector3 position)
+        {
+            UpdateMovementVariables(rotation, position);
+        }
 
         public void HandleYaw(float yawInput)
         {
@@ -78,19 +85,54 @@ namespace PlayerInteraction
 
         private void UpdateMovementVariables(Quaternion rotation, Vector3 position)
         {
-            _position = position;
-            _rotation = rotation;
-            _up = _rotation * Vector3.up;
-                    
             
-            _forward = _rotation * Vector3.forward;
-            stabiliser.UpdateStabiliser(_forward);
-            thrustVector = _up + _forward * _upwardThrustVectorOffset;
+            // Set up NativeArray for results
+            results = new NativeArray<Vector3>(3, Allocator.TempJob);
+    
+            // Create and schedule the job
+            MovementVariablesJob job = new MovementVariablesJob
+            {
+                rotation = rotation,
+                upwardThrustVectorOffset = _upwardThrustVectorOffset,
+                result = results
+            };
+    
+            // Schedule the job and Complete it to ensure it's finished before proceeding
+            JobHandle handle = job.Schedule();
+            handle.Complete();
 
+            // Apply the results from the job
+            _up = results[0];
+            _forward = results[1];
+            thrustVector = results[2];
+
+            // Dispose of the NativeArray
+            results.Dispose();
+
+            // Call other updates that need the main thread
+            stabiliser.UpdateStabiliser(_forward);
             dash.OnUpdate();
+            
+            // _position = position;
+            // _rotation = rotation;
+            // _up = _rotation * Vector3.up;
+            //         
+            //
+            // _forward = _rotation * Vector3.forward;
+            // stabiliser.UpdateStabiliser(_forward);
+            // thrustVector = _up + _forward * _upwardThrustVectorOffset;
+            //
+            // dash.OnUpdate();
         }
 
         public VehicleStabiliser GetStabiliser() => stabiliser;
+        
+        public void OnDestroy ()
+        {
+            stabiliser.OnDestroy();
+            if (results.IsCreated)
+                results.Dispose();
+        }
 
 
     }
