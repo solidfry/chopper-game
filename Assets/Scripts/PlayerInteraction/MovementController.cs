@@ -2,6 +2,7 @@ using System;
 using Abilities;
 using Events;
 using PlayerInteraction.Jobs;
+using UI.Hud;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -21,11 +22,19 @@ namespace PlayerInteraction
         Vector3 _position;
         Vector3 _up;
         Vector3 _forward;
+        
         [SerializeField][ReadOnly] Vector3 thrustVector;
+        
+        [SerializeField] float gravityToggleAltitude = 10f;
+        [SerializeField][ReadOnly] float currentAltitude;
+        
+        [Header("Abilities")]
         [SerializeField] VehicleStabiliser stabiliser;
         [SerializeField] Dash dash;
+        
 
         private NativeArray<Vector3> results;
+        
         public void OnStart(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
             _physicsValues = physicsValues;
@@ -35,12 +44,16 @@ namespace PlayerInteraction
             _upwardThrustVectorOffset = physicsValues.thrustVectorOffset;
             stabiliser.OnStart(rigidbody);
             dash.OnStart(rigidbody);
+            _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged += UpdateCurrentAltitude;
         }
-
+        
         public void OnUpdate(Quaternion rotation, Vector3 position)
         {
             UpdateMovementVariables(rotation, position);
+            UseGravity();
         }
+
+        private void UseGravity() => _rigidbody.useGravity = currentAltitude < gravityToggleAltitude;
 
         public void HandleYaw(float yawInput)
         {
@@ -112,17 +125,6 @@ namespace PlayerInteraction
             // Call other updates that need the main thread
             stabiliser.UpdateStabiliser(_forward);
             dash.OnUpdate();
-            
-            // _position = position;
-            // _rotation = rotation;
-            // _up = _rotation * Vector3.up;
-            //         
-            //
-            // _forward = _rotation * Vector3.forward;
-            // stabiliser.UpdateStabiliser(_forward);
-            // thrustVector = _up + _forward * _upwardThrustVectorOffset;
-            //
-            // dash.OnUpdate();
         }
 
         public VehicleStabiliser GetStabiliser() => stabiliser;
@@ -132,7 +134,12 @@ namespace PlayerInteraction
             stabiliser.OnDestroy();
             if (results.IsCreated)
                 results.Dispose();
+            
+            _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged -= UpdateCurrentAltitude;
         }
+        
+        private void UpdateCurrentAltitude(int alt) => currentAltitude = alt;
+
 
 
     }

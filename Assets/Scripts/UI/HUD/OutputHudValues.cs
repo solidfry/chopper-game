@@ -14,11 +14,12 @@ namespace UI.Hud
         [SerializeField] LayerMask altitudeRaycastIgnore;
         [SerializeField] float altitudeCheckRange;
         [field: SerializeField] public Rigidbody Rigidbody { get; private set; }
-        [SerializeField] [ReadOnly] float speed, speedKmh, altitudeInMetres;
-        [SerializeField] int _frameCount = 0;
-        VehicleStabiliser _stabiliser;
+        [SerializeField] [ReadOnly] private float speed, speedKmh; 
+        [field:SerializeField] public float AltitudeInMetres { get; private set; }
         [SerializeField] NetworkHealth health;
+        VehicleStabiliser _stabiliser;
         
+        int _frameCount = 0;
         bool _isInitialised;
         
         public event Action<int> OnSpeedChanged;
@@ -60,7 +61,7 @@ namespace UI.Hud
             if (_frameCount >= 60) // Check if 60 frames have passed
             {
                 OnSpeedChanged?.Invoke(Mathf.FloorToInt(speedKmh));
-                OnAltitudeChanged?.Invoke(Mathf.FloorToInt(altitudeInMetres));
+                OnAltitudeChanged?.Invoke(Mathf.FloorToInt(AltitudeInMetres));
                 OnStabiliserActive?.Invoke(_stabiliser.IsActive);
                 _frameCount = 0; // Reset frame counter
             }
@@ -71,11 +72,11 @@ namespace UI.Hud
             // Raycast to the ground
             if (Physics.Raycast(new Ray(Rigidbody.position, Vector3.down), out RaycastHit hit, altitudeCheckRange, ~altitudeRaycastIgnore))
             {
-                altitudeInMetres = hit.distance;
+                AltitudeInMetres = hit.distance;
             }
             else
             {
-                altitudeInMetres = 0;
+                AltitudeInMetres = 0;
             }
         }
 

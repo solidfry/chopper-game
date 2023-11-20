@@ -44,9 +44,9 @@ namespace Interactions
             PlayAudio();
         }
         
-        public ParticleSystem InstantiateParticles()
+        public ParticleSystem InstantiateParticles(Vector3 location, Quaternion rotation)
         {
-            var activeParticles =  Object.Instantiate(particles, _parent);
+            var activeParticles =  Object.Instantiate(particles, location, rotation);
             activeParticles.transform.localScale = Vector3.one * deathParticleSystemScale;
             return activeParticles;
         }

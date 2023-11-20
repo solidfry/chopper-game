@@ -2,7 +2,7 @@ using Events;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace UI
 {
@@ -19,6 +19,13 @@ namespace UI
         [Space]
         [SerializeField] UnityEvent onShown;
         [SerializeField] UnityEvent onHidden;
+        Button[] _buttons;
+
+        private void Awake()
+        {
+            _buttons = GetComponentsInChildren<Button>();
+            Close();
+        }
 
         private void OnEnable()
         {
@@ -52,6 +59,7 @@ namespace UI
             GameEvents.OnTogglePlayerControlsEvent?.Invoke(false);
             onShown?.Invoke();
             Debug.Log("Open");
+            SetButtonsInteractable(true);
         }
 
         private void Close()
@@ -61,6 +69,15 @@ namespace UI
             GameEvents.OnTogglePlayerControlsEvent?.Invoke(true);
             onHidden?.Invoke();
             Debug.Log("Close");
+            SetButtonsInteractable(false);
+        }
+        
+        void SetButtonsInteractable(bool value)
+        {
+            foreach (var button in _buttons)
+            {
+                button.interactable = value;
+            }
         }
     }
 }

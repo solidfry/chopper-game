@@ -11,7 +11,7 @@ namespace PlayerInteraction
 {
     public class PlayerAttackManager : NetworkBehaviour
     {
-        [FormerlySerializedAs("layerMask")] [SerializeField] LayerMask ignoreCollisionMask;
+        [SerializeField] LayerMask ignoreCollisionMask;
         [SerializeField] private WeaponSlot[] weaponSlots;
         
         public void Start()

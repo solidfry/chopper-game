@@ -15,7 +15,6 @@ namespace Weapons
         [SerializeField] float maximumRange, distanceTraveled = 0;
         [SerializeField] private Vector3 previousPosition;
         [SerializeField] private Collider collider3D;
-        [SerializeField] private LayerMask ignoreCollisionsOnLayer;
         [SerializeField] private GameObject graphics;
         private Vector3 _position;
         private bool _despawnHasBeenRequested = false;

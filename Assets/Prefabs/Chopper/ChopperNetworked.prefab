@@ -84,13 +84,23 @@ MonoBehaviour:
   health: 100
   <MaxHealth>k__BackingField: 100
   networkHealth:
-    m_InternalValue: 119
+    m_InternalValue: 100
   death:
     deathParticleSystemScale: 10
     particles: {fileID: 19830606, guid: 708e3c570904ae94784072253b29507c, type: 3}
     audioSource: {fileID: 0}
     audioClip: {fileID: 0}
     <IsDead>k__BackingField: 0
+  environmentLayers:
+    serializedVersion: 2
+    m_Bits: 8256
+  highSpeedDamageThreshold: 50
+  highSpeedDamageMultiplier: 0.9
+  dotProductEnvironmentAndPlayer: -0.503
+  takeDamageCameraShake:
+    strength: 2
+    duration: 0.5
+    doShake: 1
 --- !u!114 &7360639563048435297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -120,6 +130,8 @@ MonoBehaviour:
     dash: 0
   <MovementController>k__BackingField:
     thrustVector: {x: 0, y: 0, z: 0}
+    gravityToggleAltitude: 5
+    currentAltitude: 0
     stabiliser:
       rigidbody: {fileID: 0}
       useStabiliser: 1
@@ -137,7 +149,7 @@ MonoBehaviour:
     pitchTorque: 1200
     rollTorque: 300
     thrustForce: 10000
-    thrustVectorOffset: 0.4
+    thrustVectorOffset: 0.602
   <UpdateHud>k__BackingField: {fileID: 8937438530940468184}
 --- !u!114 &210267188
 MonoBehaviour:
@@ -364,8 +376,7 @@ MonoBehaviour:
   <Rigidbody>k__BackingField: {fileID: 548169382991786599}
   speed: 0
   speedKmh: 0
-  altitudeInMetres: 0
-  _frameCount: 0
+  <AltitudeInMetres>k__BackingField: 0
   health: {fileID: -2883884951460820180}
 --- !u!82 &6082360959239746859
 AudioSource:
@@ -479,7 +490,7 @@ MonoBehaviour:
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1

@@ -1,8 +1,10 @@
 ﻿using System;
+using Effects.Structs;
 using Events;
 using Interfaces;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Utilities;
 
 namespace Interactions
@@ -13,6 +15,16 @@ namespace Interactions
         [field: SerializeField] public int MaxHealth { get; private set; } = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         [SerializeField] Death death;
+        [SerializeField] LayerMask environmentLayers;
+        
+        [SerializeField] int highSpeedDamageThreshold = 50;
+        [SerializeField] float highSpeedDamageMultiplier = 1.5f;
+        [Range(-1,1)]
+        [SerializeField] float dotProductEnvironmentAndPlayer = 0;
+        
+        [Header("Take Damage Events")]
+        [SerializeField] CameraShakeEvent takeDamageCameraShake;
+
         public event Action<int> SendHealthEvent;
         public event Action<ulong> PlayerDiedEvent;
         
@@ -52,7 +64,15 @@ namespace Interactions
             if(networkHealth.Value <= 0) return;
             
             networkHealth.Value -= totalDamage;
-            // Debug.Log(totalDamage + " damage taken" + " health is now " + networkHealth.Value);
+            
+            ClampHealth();
+            
+        }
+
+        private void ClampHealth()
+        {
+            if (networkHealth.Value <= 0)
+                networkHealth.Value = 0;
         }
 
         public void TakeDamage(int damageAmount, ulong damagerId)
@@ -61,6 +81,7 @@ namespace Interactions
     
             _pendingDamage += damageAmount;
             _lastPlayerToDamage = damagerId; // Update the last damager ID here
+            DoShakeCameraClientRpc(); 
         }
   
         private void OnHealthChanged(int previousvalue, int newvalue)
@@ -107,6 +128,33 @@ namespace Interactions
             
             Debug.Log("Health initialised for " + OwnerClientId);
         }
+
+        private void OnCollisionEnter(Collision other)
+        {
+            if (!IsServer) return;
+            
+            // Check for high-speed collision
+            if (EnvironmentLayersValue(other) != 0)
+            {
+                var speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
+                if (speed < highSpeedDamageThreshold) return;
+                var damage = Mathf.FloorToInt(speed * highSpeedDamageMultiplier);
+                TakeDamage(damage, 0);
+                Debug.Log($"Hit too hard for {damage} damage! Your speed was {speed}.");
+            }
+            
+            // Check for upside-down collision
+            if (EnvironmentLayersValue(other) != 0)
+            {
+                var dot = Vector3.Dot(transform.up, Vector3.up);
+                if (dot > dotProductEnvironmentAndPlayer) return;
+                TakeDamage(100, 0);
+                // Debug.Log($"Hit your roof! The dot product was {dot}");
+            }
+            
+        }
+
+        private int EnvironmentLayersValue(Collision other) => environmentLayers.value & (1 << other.transform.gameObject.layer);
         
         [ServerRpc] 
         public void SetPlayerHealthServerRpc(int health)
@@ -117,33 +165,22 @@ namespace Interactions
         }
         
         [ServerRpc] 
-        public void InstantiateDeathParticlesServerRpc()
+        void InstantiateDeathParticlesServerRpc()
         {
             if(!IsServer) return;
-            var particle = death.InstantiateParticles();
+            var tr = transform;
+            var particle = death.InstantiateParticles(tr.position, tr.rotation);
             particle.gameObject.GetComponent<NetworkObject>().Spawn();
         }
-
-        private void OnCollisionEnter(Collision other)
+        
+        [ClientRpc]
+        private void DoShakeCameraClientRpc()
         {
-            if (!IsServer) return;
-
-            // Check for upside-down collision
-            if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Vector3.Dot(transform.up, Vector3.down) > 0)
-            {
-                TakeDamage(100, 0);
-                Debug.Log("Hit your roof!");
-                return;
-            }
-    
-            // Check for high-speed collision
-            if (other.gameObject.layer == LayerMask.NameToLayer("Environment") && Speed.MetersPerSecondToKilometersPerHour(GetComponent<Rigidbody>().velocity.magnitude) > 50)
-            {
-                TakeDamage(200, 0);
-                Debug.Log("Hit too hard!");
-                return;
-            }
+            if(!IsOwner) return;
+            takeDamageCameraShake.Invoke();
+            Debug.Log("Camera shake invoked");
         }
+        
     }
     
 }

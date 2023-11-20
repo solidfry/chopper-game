@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PlayerInteraction
 {
     [Serializable]
-    public struct VehicleValues : IEquatable<VehicleValues>, IFormattable
+    public struct VehicleValues : IEquatable<VehicleValues>
     {
         public float yawTorque, pitchTorque, rollTorque,thrustForce;
         [Range(-1, 1)]public float thrustVectorOffset;
@@ -28,11 +28,6 @@ namespace PlayerInteraction
                    thrustVectorOffset.Equals(other.thrustVectorOffset);
         }
 
-        public string ToString(string format, IFormatProvider formatProvider)
-        {
-            return yawTorque.ToString(format, formatProvider) + ", " + pitchTorque.ToString(format, formatProvider) + ", " + rollTorque.ToString(format, formatProvider) + ", " + thrustForce.ToString(format, formatProvider)  + ", " + thrustVectorOffset.ToString(format, formatProvider);
-        }
-
         // public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         // {
         //     serializer.SerializeValue(ref yawTorque);
@@ -40,8 +35,6 @@ namespace PlayerInteraction
         //     serializer.SerializeValue(ref rollTorque);
         //     serializer.SerializeValue(ref thrustForce);
         //     serializer.SerializeValue(ref thrustVectorOffset);
-        //     
-        //     
         // }
     }
 }
