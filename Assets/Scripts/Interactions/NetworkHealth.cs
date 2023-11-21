@@ -15,8 +15,9 @@ namespace Interactions
         [field: SerializeField] public int MaxHealth { get; private set; } = 200;
         [SerializeField] public NetworkVariable<int> networkHealth = new (100, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         [SerializeField] Death death;
-        [SerializeField] LayerMask environmentLayers;
         
+        [Header("Environment Damage")]
+        [SerializeField] LayerMask environmentLayers;
         [SerializeField] int highSpeedDamageThreshold = 50;
         [SerializeField] float highSpeedDamageMultiplier = 1.5f;
         [Range(-1,1)]

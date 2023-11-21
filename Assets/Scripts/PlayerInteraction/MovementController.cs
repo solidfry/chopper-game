@@ -32,6 +32,11 @@ namespace PlayerInteraction
         [SerializeField] VehicleStabiliser stabiliser;
         [SerializeField] Dash dash;
         
+        [Header("Gravity Toggle Values")]
+        [Range(0, 1)]
+        [SerializeField]float gravityToggleValue;
+        [SerializeField][ReadOnly] float orientationDotProduct;
+        
 
         private NativeArray<Vector3> results;
         
@@ -53,7 +58,13 @@ namespace PlayerInteraction
             UseGravity();
         }
 
-        private void UseGravity() => _rigidbody.useGravity = currentAltitude < gravityToggleAltitude;
+        private void UseGravity() => _rigidbody.useGravity = currentAltitude < gravityToggleAltitude || CheckOrientation() < gravityToggleValue;
+
+        private float CheckOrientation()
+        {
+            orientationDotProduct = Vector3.Dot(_rigidbody.transform.up, Vector3.up);
+            return orientationDotProduct;
+        }
 
         public void HandleYaw(float yawInput)
         {
