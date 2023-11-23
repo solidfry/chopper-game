@@ -51,6 +51,7 @@ namespace UI.Hud
             outputHudValues.OnSpeedChanged += speedUI.UpdateText;
             outputHudValues.OnUpdateHealthEvent += healthUI.UpdateText;
             outputHudValues.OnStabiliserActive += StabiliserActive;
+            healthUI.UpdateText(100); // this needs to be updated in a better way
         }
         
         void Update()

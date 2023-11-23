@@ -39,6 +39,7 @@ namespace UI.Hud
                 health = GetComponent<NetworkHealth>();
             
             health.SendHealthEvent += SendHealth;
+            // SendHealth(health.MaxHealth);
         }
         
         void LateUpdate()

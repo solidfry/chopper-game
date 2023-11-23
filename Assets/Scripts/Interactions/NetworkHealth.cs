@@ -127,7 +127,7 @@ namespace Interactions
             {
                 SetPlayerHealthServerRpc(health);
             }
-            
+
             Debug.Log("Health initialised for " + OwnerClientId);
         }
 
