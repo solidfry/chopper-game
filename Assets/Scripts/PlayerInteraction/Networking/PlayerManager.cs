@@ -179,7 +179,7 @@ namespace PlayerInteraction.Networking
                 PlayerCameraManager.Initialize(playerCamera, playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
                 Cursor.visible = false;
-                Debug.Log("Disable main camera sent");
+                // Debug.Log("Disable main camera sent");
                 Camera.main.gameObject.SetActive(false);
             }
             else
