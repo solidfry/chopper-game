@@ -133,35 +133,12 @@ namespace Interactions
 
         private void OnCollisionEnter(Collision other)
         {
-            // if (!IsServer) return;
             if(IsClient && !IsOwner) return;
             if (EnvironmentLayersValue(other) != 0)
             {
                 CalculateEnvironmentalDamage(other);
                 // Debug.Log($"Hit your roof! The dot product was {dot}");
             }
-            
-            // // Check for high-speed collision
-            // if (EnvironmentLayersValue(other) != 0)
-            // {
-            //     var speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
-            //     if (speed < highSpeedDamageThreshold) return;
-            //     var damage = Mathf.FloorToInt(speed * highSpeedDamageMultiplier);
-            //     TakeDamage(damage, 0);
-            //     // Debug.Log($"Hit too hard for {damage} damage! Your speed was {speed}.");
-            // }
-            
-            // Check for upside-down collision and speed
-            
-            // // Check for upside-down collision
-            // if (EnvironmentLayersValue(other) != 0)
-            // {
-            //     var dot = Vector3.Dot(transform.up, Vector3.up);
-            //     if (dot > dotProductEnvironmentAndPlayer) return;
-            //     TakeDamage(upsideDownDamage, 0);
-            //     // Debug.Log($"Hit your roof! The dot product was {dot}");
-            // }
-            
         }
 
         private void CalculateEnvironmentalDamage(Collision other)
