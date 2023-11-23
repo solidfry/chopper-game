@@ -243,12 +243,15 @@ namespace PlayerInteraction.Networking
         {
             PlayerRigidbody.isKinematic = true;
             PlayerInput.actions.Disable();
+            // This might throw an error
+            UpdateHud.gameObject.SetActive(false);
         }
 
         void EnablePlayer()
         {
             PlayerRigidbody.isKinematic = false;
             PlayerInput.actions.Enable();
+            UpdateHud.gameObject.SetActive(true);
         }
         
         void ToggleControls(bool value)

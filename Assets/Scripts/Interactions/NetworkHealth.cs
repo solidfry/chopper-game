@@ -20,6 +20,7 @@ namespace Interactions
         [SerializeField] LayerMask environmentLayers;
         [SerializeField] int highSpeedDamageThreshold = 50;
         [SerializeField] float highSpeedDamageMultiplier = 1.5f;
+        [SerializeField] int upsideDownDamage = 100;
         [Range(-1,1)]
         [SerializeField] float dotProductEnvironmentAndPlayer = 0;
         
@@ -132,30 +133,55 @@ namespace Interactions
 
         private void OnCollisionEnter(Collision other)
         {
-            if (!IsServer) return;
-            
-            // Check for high-speed collision
+            // if (!IsServer) return;
+            if(IsClient && !IsOwner) return;
             if (EnvironmentLayersValue(other) != 0)
             {
-                var speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
-                if (speed < highSpeedDamageThreshold) return;
-                var damage = Mathf.FloorToInt(speed * highSpeedDamageMultiplier);
-                TakeDamage(damage, 0);
-                Debug.Log($"Hit too hard for {damage} damage! Your speed was {speed}.");
-            }
-            
-            // Check for upside-down collision
-            if (EnvironmentLayersValue(other) != 0)
-            {
-                var dot = Vector3.Dot(transform.up, Vector3.up);
-                if (dot > dotProductEnvironmentAndPlayer) return;
-                TakeDamage(100, 0);
+                CalculateEnvironmentalDamage(other);
                 // Debug.Log($"Hit your roof! The dot product was {dot}");
             }
             
+            // // Check for high-speed collision
+            // if (EnvironmentLayersValue(other) != 0)
+            // {
+            //     var speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
+            //     if (speed < highSpeedDamageThreshold) return;
+            //     var damage = Mathf.FloorToInt(speed * highSpeedDamageMultiplier);
+            //     TakeDamage(damage, 0);
+            //     // Debug.Log($"Hit too hard for {damage} damage! Your speed was {speed}.");
+            // }
+            
+            // Check for upside-down collision and speed
+            
+            // // Check for upside-down collision
+            // if (EnvironmentLayersValue(other) != 0)
+            // {
+            //     var dot = Vector3.Dot(transform.up, Vector3.up);
+            //     if (dot > dotProductEnvironmentAndPlayer) return;
+            //     TakeDamage(upsideDownDamage, 0);
+            //     // Debug.Log($"Hit your roof! The dot product was {dot}");
+            // }
+            
+        }
+
+        private void CalculateEnvironmentalDamage(Collision other)
+        {
+            float speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
+            bool checkDotProduct = Vector3.Dot(transform.up, Vector3.up) < dotProductEnvironmentAndPlayer;
+            int addUpsideDownDamage = checkDotProduct ? upsideDownDamage : 0;
+            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? highSpeedDamageMultiplier : 1;
+            int damage = Mathf.FloorToInt(speed * addHighSpeedDamage + addUpsideDownDamage);
+            TakeDamage_ServerRpc(damage, 0);
         }
 
         private int EnvironmentLayersValue(Collision other) => environmentLayers.value & (1 << other.transform.gameObject.layer);
+        
+        [ServerRpc] 
+        void TakeDamage_ServerRpc(int damage, ulong damagerId)
+        {
+            if(!IsServer) return;
+            TakeDamage(damage, damagerId);
+        }
         
         [ServerRpc] 
         public void SetPlayerHealthServerRpc(int health)
