@@ -22,24 +22,23 @@ namespace PlayerInteraction
         Vector3 _position;
         Vector3 _up;
         Vector3 _forward;
-        
+
         [SerializeField][ReadOnly] Vector3 thrustVector;
-        
+
         [SerializeField] float gravityToggleAltitude = 10f;
         [SerializeField][ReadOnly] float currentAltitude;
-        
+
         [Header("Abilities")]
         [SerializeField] VehicleStabiliser stabiliser;
         [SerializeField] Dash dash;
-        
+
         [Header("Gravity Toggle Values")]
         [Range(0, 1)]
-        [SerializeField]float gravityToggleValue;
+        [SerializeField] float gravityToggleValue;
         [SerializeField][ReadOnly] float orientationDotProduct;
-        
 
         private NativeArray<Vector3> results;
-        
+
         public void OnStart(Rigidbody rigidbody, Quaternion rotation, Vector3 position, VehicleValues physicsValues)
         {
             _physicsValues = physicsValues;
@@ -51,7 +50,7 @@ namespace PlayerInteraction
             dash.OnStart(rigidbody);
             _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged += UpdateCurrentAltitude;
         }
-        
+
         public void OnUpdate(Quaternion rotation, Vector3 position)
         {
             UpdateMovementVariables(rotation, position);
@@ -109,10 +108,10 @@ namespace PlayerInteraction
 
         private void UpdateMovementVariables(Quaternion rotation, Vector3 position)
         {
-            
+
             // Set up NativeArray for results
             results = new NativeArray<Vector3>(3, Allocator.TempJob);
-    
+
             // Create and schedule the job
             MovementVariablesJob job = new MovementVariablesJob
             {
@@ -120,7 +119,7 @@ namespace PlayerInteraction
                 upwardThrustVectorOffset = _upwardThrustVectorOffset,
                 result = results
             };
-    
+
             // Schedule the job and Complete it to ensure it's finished before proceeding
             JobHandle handle = job.Schedule();
             handle.Complete();
@@ -139,16 +138,16 @@ namespace PlayerInteraction
         }
 
         public VehicleStabiliser GetStabiliser() => stabiliser;
-        
-        public void OnDestroy ()
+
+        public void OnDestroy()
         {
             stabiliser.OnDestroy();
             if (results.IsCreated)
                 results.Dispose();
-            
+
             _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged -= UpdateCurrentAltitude;
         }
-        
+
         private void UpdateCurrentAltitude(int alt) => currentAltitude = alt;
 
 

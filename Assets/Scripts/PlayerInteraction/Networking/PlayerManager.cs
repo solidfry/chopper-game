@@ -20,6 +20,7 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public NetworkHealth Health { get; set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
+        [field: SerializeField] public GameObject CollisionObject { get; private set; }
         [field: SerializeField] public PlayerAttackManager PlayerAttackManager { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
@@ -28,6 +29,7 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
 
+
         private MeshRenderer[] _meshes;
         private Collider[] _colliders;
 
@@ -35,31 +37,39 @@ namespace PlayerInteraction.Networking
         {
             SetupAudioVisual();
 
-            if (IsClient && IsOwner || IsServer && !IsLocalPlayer)
+            if (IsClient)
             {
-                InitializeComponents();
+                if (IsOwner)
+                {
+                    InitializeComponents();
+
+                    if (IsLocalPlayer)
+                    {
+                        SetPlayerRbNonKinematic(true);
+                        SetPlayerNetworkID();
+                        SetLocalPlayerLayerByName();
+                    }
+                }
+
+                if (!IsOwner)
+                {
+                    // UpdateHud.Initialise(false);
+                    UpdateHud.gameObject.SetActive(false);
+                    // Disable the player inputs if the player is not the localplayer
+                    PlayerInput.enabled = false;
+                }
             }
 
-            if (IsClient && IsOwner && IsLocalPlayer)
+
+            if (IsServer && !IsLocalPlayer)
             {
-                SetPlayerRbNonKinematic(true);
-                SetPlayerNetworkID();
-                SetLocalPlayerLayerByName();
-                UpdateHud.Initialise(IsOwner);
+                InitializeComponents();
             }
 
             if (IsClient || IsServer)
             {
                 _meshes = GetComponentsInChildren<MeshRenderer>();
                 _colliders = GetComponentsInChildren<Collider>();
-            }
-
-            if (!IsOwner && IsClient)
-            {
-                UpdateHud.Initialise(IsOwner);
-                UpdateHud.gameObject.SetActive(false);
-                // Disable the player inputs if the player is not the localplayer
-                PlayerInput.enabled = false;
             }
 
             SubscribeToPlayerEvents();
@@ -94,18 +104,7 @@ namespace PlayerInteraction.Networking
 
         private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
 
-        private void InitialiseHealth()
-        {
-            if (Health is null)
-                Health = GetComponent<NetworkHealth>();
-
-            Health.InitialiseHealth();
-        }
-
-        private void FixedUpdate()
-        {
-            HandleMovement();
-        }
+        private void FixedUpdate() => HandleMovement();
 
         private void Update()
         {
@@ -123,33 +122,43 @@ namespace PlayerInteraction.Networking
             if (PlayerRigidbody is null)
                 PlayerRigidbody = GetComponent<Rigidbody>();
 
-            if (OutputHudValues is null)
-            {
-                Debug.Log("OutputHudValues was Null");
-                OutputHudValues = GetComponent<OutputHudValues>();
-                OutputHudValues.Initialise();
-            }
-            else
-            {
-                OutputHudValues.Initialise();
-            }
-
+            InitialiseHudOutput();
             InitialiseHealth();
-
+            UpdateHud.Initialise();
             MovementController.OnStart(PlayerRigidbody, PlayerRigidbody.rotation, PlayerRigidbody.position, physicsValues);
         }
 
+        private void InitialiseHudOutput()
+        {
+            if (OutputHudValues is null)
+            {
+                OutputHudValues = GetComponent<OutputHudValues>();
+                OutputHudValues.Initialise();
+                return;
+            }
+
+            OutputHudValues.Initialise();
+        }
+
+        private void InitialiseHealth()
+        {
+            if (Health is null)
+                Health = GetComponent<NetworkHealth>();
+
+            Health.InitialiseHealth();
+        }
 
         private void HandleMovement()
         {
             if (!IsOwner) return;
 
-            // Server Reconciliation and Authorization
-            if (IsServer)
-            {
-                HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll, InputController.dash);
-            }
-            else if (IsClient && IsLocalPlayer)
+            // // Server Reconciliation and Authorization
+            // if (IsServer)
+            // {
+            //     HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll, InputController.dash);
+            // }
+            // else 
+            if (IsClient && IsLocalPlayer)
             {
                 // TODO: This used to be the ServerRpc, but it was causing issues with the Server Reconciliation and Authorization so
                 // TODO: for now ill leave it like this until i can figure out a better way
@@ -195,8 +204,13 @@ namespace PlayerInteraction.Networking
 
         void SetPlayerRbNonKinematic(bool value) => PlayerRigidbody.isKinematic = value;
 
-        void SetLocalPlayerLayerByName() => gameObject.layer = LayerMask.NameToLayer("LocalPlayer");
-
+        void SetLocalPlayerLayerByName()
+        {
+            var localPlayerLayer = LayerMask.NameToLayer("LocalPlayer");
+            gameObject.layer = localPlayerLayer;
+            CollisionObject.layer = localPlayerLayer;
+            // Set the layer of the player to the localplayer layer to stop the player colliding with their own projectiles
+        }
 
         [ClientRpc]
         private void FreezePlayerClientRpc()
@@ -253,7 +267,7 @@ namespace PlayerInteraction.Networking
             PlayerInput.actions.Enable();
             UpdateHud.gameObject.SetActive(true);
         }
-        
+
         void ToggleControls(bool value)
         {
             if (value)
