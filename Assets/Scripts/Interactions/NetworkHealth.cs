@@ -146,8 +146,9 @@ namespace Interactions
             float speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
             bool checkDotProduct = Vector3.Dot(transform.up, Vector3.up) < dotProductEnvironmentAndPlayer;
             int addUpsideDownDamage = checkDotProduct ? upsideDownDamage : 0;
-            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? highSpeedDamageMultiplier : 1;
-            int damage = Mathf.FloorToInt(speed * addHighSpeedDamage + addUpsideDownDamage);
+            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? speed * highSpeedDamageMultiplier : 0;
+            if(addHighSpeedDamage == 0 && addUpsideDownDamage == 0) return;
+            int damage = Mathf.FloorToInt(addHighSpeedDamage + addUpsideDownDamage);
             TakeDamage_ServerRpc(damage, 0);
         }
 
