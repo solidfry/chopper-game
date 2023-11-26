@@ -37,7 +37,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
             HandleStartTimer();
         }
         
-        private float HandleWaitTime() => _waitTime = StateMachine.GameMode != null ? StateMachine.GameMode.PreGameCountdownTime : _waitTime;
+        private float HandleWaitTime() => _waitTime = StateMachine.GameMode != null ? StateMachine.GameMode.GameStartCountdownTime : _waitTime;
 
         private void HandleStartTimer()
         {

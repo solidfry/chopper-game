@@ -17,17 +17,17 @@ namespace PlayerInteraction.Networking
         [SerializeField] private Camera playerCamera;
         [SerializeField] private AudioListener playerAudioListener;
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
-        [field: SerializeField] public NetworkHealth Health { get; set; }
+        [field: SerializeField] public NetworkHealth PlayerNetworkHealth { get; set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public GameObject CollisionObject { get; private set; }
         [field: SerializeField] public PlayerAttackManager PlayerAttackManager { get; private set; }
         [field: SerializeField] public OutputHudValues OutputHudValues { get; private set; }
+        [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
         [SerializeField] VehicleValues physicsValues;
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
-        [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
 
 
         private MeshRenderer[] _meshes;
@@ -89,7 +89,7 @@ namespace PlayerInteraction.Networking
             GameEvents.OnPlayerFreezeAllEvent += FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllEvent += UnFreezePlayerClientRpc;
             GameEvents.OnTogglePlayerControlsEvent += ToggleControls;
-            Health.PlayerDiedEvent += PlayerDiedClientRpc;
+            PlayerNetworkHealth.PlayerDiedEvent += PlayerDiedClientRpc;
         }
 
         private void UnSubscribeFromPlayerEvents()
@@ -99,7 +99,7 @@ namespace PlayerInteraction.Networking
             GameEvents.OnPlayerFreezeAllEvent -= FreezePlayerClientRpc;
             GameEvents.OnPlayerUnFreezeAllEvent -= UnFreezePlayerClientRpc;
             GameEvents.OnTogglePlayerControlsEvent -= ToggleControls;
-            Health.PlayerDiedEvent -= PlayerDiedClientRpc;
+            PlayerNetworkHealth.PlayerDiedEvent -= PlayerDiedClientRpc;
         }
 
         private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
@@ -142,10 +142,10 @@ namespace PlayerInteraction.Networking
 
         private void InitialiseHealth()
         {
-            if (Health is null)
-                Health = GetComponent<NetworkHealth>();
+            if (PlayerNetworkHealth is null)
+                PlayerNetworkHealth = GetComponent<NetworkHealth>();
 
-            Health.InitialiseHealth();
+            PlayerNetworkHealth.InitialiseHealth();
         }
 
         private void HandleMovement()
@@ -291,7 +291,7 @@ namespace PlayerInteraction.Networking
                 t.position = position;
                 t.rotation = rotation;
 
-                Health.SetPlayerHealthServerRpc(Health.MaxHealth);
+                PlayerNetworkHealth.SetPlayerHealthServerRpc(PlayerNetworkHealth.MaxHealth);
                 GameEvents.OnNotificationEvent?.Invoke("You have been respawned");
             }
 

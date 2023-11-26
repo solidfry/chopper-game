@@ -31,5 +31,12 @@ namespace UI
         // public void LoadLevelAsyncViaEnumAdditive(Scenes scene) => SceneManager.LoadSceneAsync(scene.ToString(), LoadSceneMode.Additive);
         // public void NetworkLoadLevelViaEnum(Scenes scene) => NetworkManager.Singleton.SceneManager.LoadScene(scene.ToString(), LoadSceneMode.Single);
         public void Quit() => Application.Quit();
+        public void LeaveGame()
+        {
+            if(NetworkManager.Singleton != null)
+                NetworkManager.Singleton.Shutdown();
+            
+            SceneManager.LoadScene(Scenes.MainMenu.ToString());
+        }
     }
 }
