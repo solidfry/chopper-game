@@ -34,6 +34,12 @@ namespace Events
         public delegate void DisableMainCamera();
         public static DisableMainCamera OnDisableMainCameraEvent;
         
+        public delegate void PlayerInBounds();
+        public static PlayerInBounds OnPlayerInBoundsEvent;
+        
+        public delegate void PlayerOutOfBounds();
+        public static PlayerOutOfBounds OnPlayerOutOfBoundsEvent;
+        
         
         #endregion
 
