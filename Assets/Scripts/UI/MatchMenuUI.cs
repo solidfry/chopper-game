@@ -41,7 +41,7 @@ namespace UI
 
         public void Toggle(InputAction.CallbackContext obj)
         {
-            Debug.Log("Toggled");
+            // Debug.Log("Toggled");
             if (menuOpen)
             {
                 Close();
@@ -58,7 +58,7 @@ namespace UI
             GameEvents.OnShowCursorEvent?.Invoke();
             GameEvents.OnTogglePlayerControlsEvent?.Invoke(false);
             onShown?.Invoke();
-            Debug.Log("Open");
+            // Debug.Log("Open");
             SetButtonsInteractable(true);
         }
 
@@ -68,7 +68,7 @@ namespace UI
             GameEvents.OnHideCursorEvent?.Invoke();
             GameEvents.OnTogglePlayerControlsEvent?.Invoke(true);
             onHidden?.Invoke();
-            Debug.Log("Close");
+            // Debug.Log("Close");
             SetButtonsInteractable(false);
         }
         

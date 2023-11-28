@@ -36,17 +36,29 @@ namespace Interactions
         
         public override void OnNetworkSpawn()
         {
-            Debug.Log("Player health spawned");
+            // Debug.Log("Player health spawned");
             if(IsClient && IsOwner || IsServer)
             {
                 networkHealth.OnValueChanged += OnHealthChanged;
             }
+            
+            if(IsClient && IsOwner)
+            {
+                GameEvents.OnPlayerOutOfBoundsDestroyEvent += OutOfBounds;
+            }
         }
-        
+
         public override void OnNetworkDespawn()
         {
             if(IsClient && IsOwner || IsServer)
+            {
                 networkHealth.OnValueChanged -= OnHealthChanged;
+            }
+            
+            if(IsClient && IsOwner)
+            {
+                GameEvents.OnPlayerOutOfBoundsDestroyEvent -= OutOfBounds;
+            }
         }
 
         private void FixedUpdate()
@@ -137,7 +149,6 @@ namespace Interactions
             if (EnvironmentLayersValue(other) != 0)
             {
                 CalculateEnvironmentalDamage(other);
-                // Debug.Log($"Hit your roof! The dot product was {dot}");
             }
         }
 
@@ -145,14 +156,33 @@ namespace Interactions
         {
             float speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
             bool checkDotProduct = Vector3.Dot(transform.up, Vector3.up) < dotProductEnvironmentAndPlayer;
-            int addUpsideDownDamage = checkDotProduct ? upsideDownDamage : 0;
-            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? speed * highSpeedDamageMultiplier : 0;
+            var addUpsideDownDamage = AddUpsideDownDamage(checkDotProduct);
+            var addHighSpeedDamage = AddHighSpeedDamage(speed);
             if(addHighSpeedDamage == 0 && addUpsideDownDamage == 0) return;
             int damage = Mathf.FloorToInt(addHighSpeedDamage + addUpsideDownDamage);
             TakeDamage_ServerRpc(damage, 0);
         }
 
+        private int AddUpsideDownDamage(bool checkDotProduct)
+        {
+            int addUpsideDownDamage = checkDotProduct ? upsideDownDamage : 0;
+            return addUpsideDownDamage;
+        }
+
+        private float AddHighSpeedDamage(float speed)
+        {
+            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? speed * highSpeedDamageMultiplier : 0;
+            return addHighSpeedDamage;
+        }
+
         private int EnvironmentLayersValue(Collision other) => environmentLayers.value & (1 << other.transform.gameObject.layer);
+        
+        private void OutOfBounds(ulong clientid)
+        {
+            if(clientid != OwnerClientId) return;
+            // Debug.Log("Player out of bounds and and was killed");
+            TakeDamage_ServerRpc(MaxHealth, 0);
+        }
         
         [ServerRpc] 
         void TakeDamage_ServerRpc(int damage, ulong damagerId)
@@ -183,9 +213,6 @@ namespace Interactions
         {
             if(!IsOwner) return;
             takeDamageCameraShake.Invoke();
-            Debug.Log("Camera shake invoked");
         }
-        
     }
-    
 }

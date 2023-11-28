@@ -283,8 +283,6 @@ namespace PlayerInteraction.Networking
         [ClientRpc]
         public void PositionPlayerClientRpc(Vector3 position, Quaternion rotation)
         {
-
-
             if (IsOwner)
             {
                 var t = transform;
@@ -300,8 +298,6 @@ namespace PlayerInteraction.Networking
                 // TogglePlayerVisibility(true);
                 StartCoroutine(DelayRespawn());
             }
-
-
         }
 
         IEnumerator DelayRespawn()

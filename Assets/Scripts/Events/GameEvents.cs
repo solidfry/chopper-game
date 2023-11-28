@@ -40,6 +40,9 @@ namespace Events
         public delegate void PlayerOutOfBounds();
         public static PlayerOutOfBounds OnPlayerOutOfBoundsEvent;
         
+        public delegate void PlayerOutOfBoundsDestroy(ulong clientId);
+        public static PlayerOutOfBoundsDestroy OnPlayerOutOfBoundsDestroyEvent;
+        
         
         #endregion
 
@@ -64,6 +67,9 @@ namespace Events
         #endregion
 
         #region Server Events
+
+        public delegate void PreMatch();
+        public static PreMatch OnPreMatchEvent;
         public delegate void StartMatch();
         public delegate void EndMatch();
         
@@ -74,7 +80,7 @@ namespace Events
         public static InProgressGame OnInProgressGameEvent;
 
         public delegate void PostGame();
-        public static PostGame OnPostGameEvent;
+        public static PostGame OnPostMatchEvent;
         
         public delegate void TimerStart();
         public delegate void TimerEnd();

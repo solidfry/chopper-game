@@ -39,8 +39,9 @@ namespace GameLogic.StateMachine.MatchStateMachine
      
             if (!_timerStarted && PlayerCountReached())
             {
-                Debug.Log("Starting pregame timer");
+                // Debug.Log("Starting pregame timer");
                 StateMachine.CurrentCountdownTimer.StartTimer();
+                GameEvents.OnPreMatchEvent?.Invoke();
                 GameEvents.OnTimerStartEvent?.Invoke();
                 _timerStarted = true;
             }

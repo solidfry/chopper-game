@@ -40,5 +40,12 @@ namespace Utilities
         {
             runTimer = false;
         }
+        
+        public void ResetTimer(float time)
+        {
+            currentTimeRemaining = time;
+        }
+        
+        public bool GetTimerStatus => runTimer;
     }
 }

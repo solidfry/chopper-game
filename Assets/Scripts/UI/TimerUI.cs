@@ -71,23 +71,31 @@ namespace UI
             FormatTimer(_currentTimeRemaining);
         }
         
-        public void SetColors(ColourData textColor)
+        public void SetColors(ColourData textColor = null)
         {
             SetTextColor(textColor);
             SetBackgroundColor(textColor);
         }
         
-        void SetTextColor(ColourData color)
+        void SetTextColor(ColourData color = null)
         { 
-            if(color == null) return;
+            if(color == null)
+            {
+                timerText.color = defaultTextColor;
+                return;
+            }
             
             _textColorSequence = timerText.DOColor(color.Color, colorSwapDuration).SetEase(easing);
             _textColorSequence.Play();
         }
 
-        void SetBackgroundColor(ColourData color)
+        void SetBackgroundColor(ColourData color = null)
         {
-            if(color == null) return;
+            if(color == null)
+            {
+                backgroundImage.color = defaultBackgroundColor;
+                return;
+            }
 
             _bgColorSequence = backgroundImage.DOColor(color.ShadeColor, colorSwapDuration).SetEase(easing);
             _bgColorSequence.Play();

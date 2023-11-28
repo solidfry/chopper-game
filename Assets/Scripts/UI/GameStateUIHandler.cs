@@ -11,26 +11,35 @@ namespace UI
         [SerializeField] NetworkVariable<float> time;
         [SerializeField] TimerUI timerUI;
         [SerializeField] ColourData startMatchColourData;
+        [SerializeField] ColourData preMatchColourData;
         [SerializeField] CountdownTimer countdownTimer;
         
         public void Initialise()
         {
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent += SetTimer;
+            GameEvents.OnPreMatchEvent += UpdatePreMatchUI;
             GameEvents.OnTimerStartEvent += StartTimer;
             GameEvents.OnTimerEndEvent += HideTimer;
-            GameEvents.OnPostGameEvent += ShowPostGameUI;
+            GameEvents.OnPostMatchEvent += ShowPostGameUI;
             GameEvents.OnStartMatchEvent += UpdateStartMatchUI;
         }
-        
+
+        private void UpdatePreMatchUI()
+        {
+            if (!IsServer) return;
+            timerUI.SetColors(preMatchColourData);
+            UpdatePreMatchUI_ClientRpc();
+        }
 
         public override void OnNetworkDespawn()
         {
             if (!IsServer) return;
             GameEvents.OnSetTimerEvent -= SetTimer;
+            GameEvents.OnPreMatchEvent -= UpdatePreMatchUI;
             GameEvents.OnTimerStartEvent -= StartTimer;
             GameEvents.OnTimerEndEvent -= HideTimer;
-            GameEvents.OnPostGameEvent -= ShowPostGameUI;
+            GameEvents.OnPostMatchEvent -= ShowPostGameUI;
             GameEvents.OnStartMatchEvent -= UpdateStartMatchUI;
         }
 
@@ -92,6 +101,13 @@ namespace UI
         {
             GameEvents.OnNotificationEvent?.Invoke("Match Starting");
             timerUI.SetColors(startMatchColourData);
+        }
+        
+        [ClientRpc]
+        private void UpdatePreMatchUI_ClientRpc()
+        {
+            GameEvents.OnNotificationEvent?.Invoke("Waiting for players");
+            timerUI.SetColors(preMatchColourData);
         }
     
         [ClientRpc]

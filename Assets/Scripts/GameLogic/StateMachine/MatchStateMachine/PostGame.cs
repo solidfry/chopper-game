@@ -7,7 +7,7 @@ namespace GameLogic.StateMachine.MatchStateMachine
         public override void OnEnter(IStateMachine stateMachine = null)
         {
             base.OnEnter(stateMachine);
-            GameEvents.OnPostGameEvent?.Invoke();
+            GameEvents.OnPostMatchEvent?.Invoke();
         }
 
         public override void OnExit()
