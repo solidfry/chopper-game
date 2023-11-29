@@ -96,6 +96,21 @@ MonoBehaviour:
   glareSample3Angle: 135
   glareSample3Intensity: 1
   glareSample3Offset: 0
+--- !u!114 &-1688342637763386814
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96dab975e69883249a56554e791c4fd0, type: 3}
+  m_Name: ButoRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    renderPassEvent: 450
 --- !u!114 &-1521868796174429534
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -150,7 +165,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -1521868796174429534}
   - {fileID: -3701257971808328855}
-  m_RendererFeatureMap: a29245a1643ce1ea692348187c7da2cc
+  - {fileID: -1688342637763386814}
+  m_RendererFeatureMap: a29245a1643ce1ea692348187c7da2cc42a2f7f050cd91e8
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
