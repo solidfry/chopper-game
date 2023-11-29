@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Cameras;
 using Cinemachine;
 using Events;
 using Interactions;
@@ -18,6 +19,7 @@ namespace PlayerInteraction.Networking
         [SerializeField] private AudioListener playerAudioListener;
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
         [field: SerializeField] public NetworkHealth PlayerNetworkHealth { get; set; }
+        [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
         [field: SerializeField] public ulong PlayerNetworkID { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public GameObject CollisionObject { get; private set; }
@@ -26,8 +28,8 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public UpdateHud UpdateHud { get; private set; }
         [field: SerializeField] public InputController InputController { get; private set; }
         [field: SerializeField] public MovementController MovementController { get; private set; }
+        
         [SerializeField] VehicleValues physicsValues;
-        [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
 
 
         private MeshRenderer[] _meshes;
@@ -185,7 +187,6 @@ namespace PlayerInteraction.Networking
         {
             if (IsLocalPlayer && IsOwner && CamerasNotNull)
             {
-                PlayerCameraManager.Initialize(playerCamera, playerVirtualCamera, 10);
                 playerAudioListener.enabled = true;
                 Cursor.visible = false;
                 // Debug.Log("Disable main camera sent");
@@ -193,7 +194,8 @@ namespace PlayerInteraction.Networking
             }
             else
             {
-
+                PlayerCameraManager.DisableAllCameras();
+                PlayerCameraManager.gameObject.SetActive(false);
                 playerCamera.enabled = false;
                 playerAudioListener.enabled = false;
                 playerVirtualCamera.enabled = false;

@@ -72,41 +72,34 @@ namespace Weapons
                 DoDestroy();
         }
 
-        private void CheckDistanceTravelled()
-        {
-            _position = transform.position;
-            distanceTraveled += Vector3.Distance(_position, previousPosition);
-            previousPosition = _position;
-
-            if (distanceTraveled >= maximumRange && !_despawnHasBeenRequested)
-                DoDestroy();
-        }
-
         private void OnCollisionEnter(Collision collision)
         {
             if (!IsServer) return;
 
-            DoDamage(collision);
+            IPlayer otherPlayer = collision.gameObject.GetComponentInParent<IPlayer>();
+            
+            if(otherPlayer != null && otherPlayer.PlayerNetworkID != OwnerClientId)
+            {
+                DoDamage(collision, otherPlayer);
+            }
 
             if (!_despawnHasBeenRequested)
                 DoDestroy();
         }
         
-        private void DoDamage(Collision collision)
+        private void DoDamage(Collision collision, IPlayer otherPlayer)
         {
             if(!IsServer) return;
             
             // Debug.Log("DO Damage was run on server");
-            var otherPlayer = collision.collider.GetComponentInParent<IPlayer>();
-            if (otherPlayer != null)
+           
+            if (otherPlayer.PlayerNetworkHealth.OwnerClientId == OwnerClientId)
             {
-                if (otherPlayer.PlayerNetworkHealth.OwnerClientId == OwnerClientId)
-                {
-                    Debug.Log("Bullet hit self so returned");
-                    return;
-                }
-                otherPlayer.PlayerNetworkHealth.TakeDamage(_damage, OwnerClientId);
+                Debug.Log("Bullet hit self so returned");
+                return;
             }
+            otherPlayer.PlayerNetworkHealth.TakeDamage(_damage, OwnerClientId);
+            
         }
 
         void DoDestroy()

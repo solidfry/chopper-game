@@ -56,6 +56,14 @@ namespace Cameras
                     c.Priority = 11;
             }
         }
+        
+        public void DisableAllCameras()
+        {
+            foreach (var c in cameras)
+            {
+               c.gameObject.SetActive(false);
+            }
+        }
 
     
     

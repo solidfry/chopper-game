@@ -1,3 +1,4 @@
+using System;
 using Events;
 using Interfaces;
 using UI;
@@ -6,9 +7,13 @@ using Utilities;
 
 public class PlayerBoundsHandler : MonoBehaviour
 {
+    [Header("Timer")]
     [SerializeField] float countdownTime = 5f;
     [SerializeField] CountdownTimer timer;
     [SerializeField] TimerUI timerUI;
+    [Header("Bounds")]
+    [SerializeField] SphereCollider sphereCollider;
+    [SerializeField] private float boundsRadius = 1200f;
     [SerializeField] [ReadOnly] bool playerOutOfBounds = false;
     ulong _playerId;
     
@@ -16,6 +21,7 @@ public class PlayerBoundsHandler : MonoBehaviour
 
     private void Start()
     {
+        sphereCollider = GetComponent<SphereCollider>();
         timer = new CountdownTimer(countdownTime, Time.deltaTime);
         if(timerUI != null)
         {
@@ -95,5 +101,19 @@ public class PlayerBoundsHandler : MonoBehaviour
         timer.StopTimer();
         timer.ResetTimer(countdownTime);
         timerUI.Hide();
+    }
+    
+    private void SetBoundsRadius()
+    {
+        if(sphereCollider is null) return;
+        sphereCollider.radius = boundsRadius;        
+    }
+
+    private void OnValidate()
+    {
+        if(sphereCollider is null) 
+            sphereCollider = GetComponent<SphereCollider>();
+        
+        SetBoundsRadius();
     }
 }

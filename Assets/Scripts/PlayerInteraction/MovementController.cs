@@ -145,7 +145,7 @@ namespace PlayerInteraction
             if (results.IsCreated)
                 results.Dispose();
 
-            _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged -= UpdateCurrentAltitude;
+            // _rigidbody.transform.GetComponent<OutputHudValues>().OnAltitudeChanged -= UpdateCurrentAltitude;
         }
 
         private void UpdateCurrentAltitude(int alt) => currentAltitude = alt;
