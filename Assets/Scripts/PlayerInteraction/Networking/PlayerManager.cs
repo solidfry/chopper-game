@@ -156,13 +156,7 @@ namespace PlayerInteraction.Networking
         private void HandleMovement()
         {
             if (!IsOwner) return;
-
-            // // Server Reconciliation and Authorization
-            // if (IsServer)
-            // {
-            //     HandleAllMovement(InputController.thrust, InputController.yaw, InputController.pitch, InputController.roll, InputController.dash);
-            // }
-            // else 
+            
             if (IsClient && IsLocalPlayer)
             {
                 // TODO: This used to be the ServerRpc, but it was causing issues with the Server Reconciliation and Authorization so

@@ -14,7 +14,7 @@ namespace Weapons
 
         private void Start()
         {
-            Debug.Log($"Fire rate is {weaponGameObjectInstance.stats.FireRateInSeconds}");
+            // Debug.Log($"Fire rate is {weaponGameObjectInstance.stats.FireRateInSeconds}");
             _firingCoroutine = Firing(weaponGameObjectInstance.stats.FireRateInSeconds);
         }
 

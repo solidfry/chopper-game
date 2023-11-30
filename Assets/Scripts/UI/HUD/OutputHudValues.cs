@@ -29,7 +29,7 @@ namespace UI.Hud
         
         public void Initialise()
         {
-            Debug.Log("HudValues Init");
+            // Debug.Log("HudValues Init");
             Rigidbody = GetComponent<Rigidbody>();
             enabled = true;
             _isInitialised = true;

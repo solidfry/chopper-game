@@ -76,11 +76,10 @@ namespace Weapons
             
             if (otherPlayer != null && otherPlayer.PlayerOwnerNetworkId == OwnerClientId)
             {
-                Debug.Log("Collision was ignored");
+                // Debug.Log("Collision was ignored");
                 Physics.IgnoreCollision(this.collider3D, collision.collider);
-                return;
-            }
-            
+            } 
+            else
             if(otherPlayer != null && otherPlayer.PlayerOwnerNetworkId != OwnerClientId)
             {
                 DoDamage(collision, otherPlayer);
