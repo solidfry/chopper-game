@@ -63,7 +63,7 @@ public class PlayerBoundsHandler : MonoBehaviour
                 StartTimer();
             }
             
-            _playerId = other.GetComponentInParent<IPlayer>().PlayerNetworkID;
+            _playerId = other.GetComponentInParent<IPlayer>().PlayerOwnerNetworkId;
         }
     }
     

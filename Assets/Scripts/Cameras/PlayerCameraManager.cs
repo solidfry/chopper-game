@@ -12,12 +12,24 @@ namespace Cameras
         [SerializeField] InputAction cameraSwitch;
     
         [SerializeField] int currentCamera = 0;
-    
+
+        private void Start()
+        {
+            
+        }
+
         private void OnEnable()
         {
             cameraSwitch.Enable();
             cameraSwitch.performed += SwitchCamera;
             GameEvents.OnTogglePlayerControlsEvent += ToggleControls;
+        }
+        
+        private void OnDisable()
+        {
+            cameraSwitch.Disable();
+            cameraSwitch.performed -= SwitchCamera;
+            GameEvents.OnTogglePlayerControlsEvent -= ToggleControls;
         }
 
         private void ToggleControls(bool enable)
@@ -33,12 +45,6 @@ namespace Cameras
             }
         }
     
-        private void OnDisable()
-        {
-            cameraSwitch.Disable();
-            cameraSwitch.performed -= SwitchCamera;
-            GameEvents.OnTogglePlayerControlsEvent -= ToggleControls;
-        }
     
         private void SwitchCamera(InputAction.CallbackContext obj)
         { 

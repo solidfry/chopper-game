@@ -8,7 +8,8 @@ namespace UI
 {
     public class TimerUI : MonoBehaviour
     {
-        [SerializeField] bool runTimer;
+        
+        public bool RunTimer { get; private set; }
         [Header("Text Settings")]
         [SerializeField] TMP_Text timerText;
         [SerializeField][Range(0,1)] float monoSpace = 0.8f;
@@ -30,6 +31,9 @@ namespace UI
         [SerializeField] CanvasGroup canvasGroup;
         private float _currentTimeRemaining;
         private float _height;
+
+        private int minutes;
+        private int seconds;
         
         private Sequence HideTimerSequence => DOTween.Sequence()
             .Append(transform.DOMoveY(-_height, animationInOutDuration))
@@ -48,20 +52,14 @@ namespace UI
             canvasGroup = GetComponent<CanvasGroup>();
         }
 
-        public void StartTimerUI()
-        {
-            runTimer = true;
-        }
-        
-        public void StopTimerUI()
-        {
-            runTimer = false;
-        }
-        
+        public void StartTimerUI() => RunTimer = true;
+
+        public void StopTimerUI() => RunTimer = false;
+
         void FormatTimer(float time)
         {
-            int minutes = Mathf.FloorToInt(time / 60F);
-            int seconds = Mathf.FloorToInt(time - minutes * 60);
+            minutes = Mathf.FloorToInt(time / 60F);
+            seconds = Mathf.FloorToInt(time - minutes * 60);
             timerText.text = $"<mspace={monoSpace}em>{minutes:00}</mspace>:<mspace={monoSpace}em>{seconds:00}</mspace>";
         }
 

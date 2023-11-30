@@ -8,6 +8,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2338707089843655608, guid: 0fa55b51ab8e00d47939fded78db9d09,
+        type: 3}
+      propertyPath: m_Height
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3658898114435680434, guid: 0fa55b51ab8e00d47939fded78db9d09,
         type: 3}
       propertyPath: m_IsTrigger
@@ -26,7 +31,7 @@ PrefabInstance:
     - target: {fileID: 3882903767741319166, guid: 0fa55b51ab8e00d47939fded78db9d09,
         type: 3}
       propertyPath: m_ExcludeLayers.m_Bits
-      value: 0
+      value: 1792
       objectReference: {fileID: 0}
     - target: {fileID: 3882903767741319166, guid: 0fa55b51ab8e00d47939fded78db9d09,
         type: 3}
@@ -116,12 +121,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: -7967689817825998460}
   m_SourcePrefab: {fileID: 100100000, guid: 0fa55b51ab8e00d47939fded78db9d09, type: 3}
---- !u!135 &1841330057736590945 stripped
-SphereCollider:
-  m_CorrespondingSourceObject: {fileID: 3658898114435680434, guid: 0fa55b51ab8e00d47939fded78db9d09,
-    type: 3}
-  m_PrefabInstance: {fileID: 3119503181112581843}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &7223525991062675439 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5725672718846460220, guid: 0fa55b51ab8e00d47939fded78db9d09,
@@ -144,7 +143,7 @@ MonoBehaviour:
   maximumRange: 0
   distanceTraveled: 0
   previousPosition: {x: 0, y: 0, z: 0}
-  collider3D: {fileID: 1841330057736590945}
+  collider3D: {fileID: 0}
   ignoreCollisionsOnLayer:
     serializedVersion: 2
     m_Bits: 1792

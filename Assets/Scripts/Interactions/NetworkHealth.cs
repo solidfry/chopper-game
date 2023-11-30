@@ -24,6 +24,15 @@ namespace Interactions
         [Range(-1,1)]
         [SerializeField] float dotProductEnvironmentAndPlayer = 0;
         
+        bool _checkDotProduct;
+        float _speed;
+        int _addUpsideDownDamage;
+        float _addHighSpeedDamage;
+        
+        int _envDamageToTake;
+
+
+        
         [Header("Take Damage Events")]
         [SerializeField] CameraShakeEvent takeDamageCameraShake;
 
@@ -154,26 +163,18 @@ namespace Interactions
 
         private void CalculateEnvironmentalDamage(Collision other)
         {
-            float speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
-            bool checkDotProduct = Vector3.Dot(transform.up, Vector3.up) < dotProductEnvironmentAndPlayer;
-            var addUpsideDownDamage = AddUpsideDownDamage(checkDotProduct);
-            var addHighSpeedDamage = AddHighSpeedDamage(speed);
-            if(addHighSpeedDamage == 0 && addUpsideDownDamage == 0) return;
-            int damage = Mathf.FloorToInt(addHighSpeedDamage + addUpsideDownDamage);
-            TakeDamage_ServerRpc(damage, 0);
+            _speed = Speed.MetersPerSecondToKilometersPerHour(other.relativeVelocity.magnitude);
+            _checkDotProduct = Vector3.Dot(transform.up, Vector3.up) < dotProductEnvironmentAndPlayer;
+            _addUpsideDownDamage = AddUpsideDownDamage(_checkDotProduct);
+            _addHighSpeedDamage = AddHighSpeedDamage(_speed);
+            if(_addHighSpeedDamage == 0 && !_checkDotProduct) return;
+            _envDamageToTake = Mathf.FloorToInt(_addHighSpeedDamage + _addUpsideDownDamage);
+            TakeDamage_ServerRpc(_envDamageToTake, 0);
         }
 
-        private int AddUpsideDownDamage(bool checkDotProduct)
-        {
-            int addUpsideDownDamage = checkDotProduct ? upsideDownDamage : 0;
-            return addUpsideDownDamage;
-        }
+        private int AddUpsideDownDamage(bool checkDotProduct) => checkDotProduct ? upsideDownDamage : 0;
 
-        private float AddHighSpeedDamage(float speed)
-        {
-            float addHighSpeedDamage = speed > highSpeedDamageThreshold ? speed * highSpeedDamageMultiplier : 0;
-            return addHighSpeedDamage;
-        }
+        private float AddHighSpeedDamage(float speed) => speed > highSpeedDamageThreshold ? speed * highSpeedDamageMultiplier : 0;
 
         private int EnvironmentLayersValue(Collision other) => environmentLayers.value & (1 << other.transform.gameObject.layer);
         

@@ -40,10 +40,6 @@ namespace Weapons
             if(IsOwner) 
                graphics.SetActive(false);
             
-            if (IsServer)
-            {
-                Debug.Log("Ammo spawned on server and is owned by " + OwnerClientId);
-            }
         }
 
         private void Update()
@@ -78,13 +74,22 @@ namespace Weapons
 
             IPlayer otherPlayer = collision.gameObject.GetComponentInParent<IPlayer>();
             
-            if(otherPlayer != null && otherPlayer.PlayerNetworkID != OwnerClientId)
+            if (otherPlayer != null && otherPlayer.PlayerOwnerNetworkId == OwnerClientId)
+            {
+                Debug.Log("Collision was ignored");
+                Physics.IgnoreCollision(this.collider3D, collision.collider);
+                return;
+            }
+            
+            if(otherPlayer != null && otherPlayer.PlayerOwnerNetworkId != OwnerClientId)
             {
                 DoDamage(collision, otherPlayer);
             }
-
-            if (!_despawnHasBeenRequested)
-                DoDestroy();
+            else
+            {
+                if (!_despawnHasBeenRequested)
+                    DoDestroy();
+            }
         }
         
         private void DoDamage(Collision collision, IPlayer otherPlayer)
@@ -98,8 +103,11 @@ namespace Weapons
                 Debug.Log("Bullet hit self so returned");
                 return;
             }
-            otherPlayer.PlayerNetworkHealth.TakeDamage(_damage, OwnerClientId);
             
+            if (!_despawnHasBeenRequested)
+                DoDestroy();
+            
+            otherPlayer.PlayerNetworkHealth.TakeDamage(_damage, OwnerClientId);
         }
 
         void DoDestroy()
@@ -110,9 +118,11 @@ namespace Weapons
             {
                 var particles = ammoType.InstantiateServerDeathParticles(transform);
                 particles.Spawn();
-                if (!IsSpawned) return;
                 
-                NetworkObject.Despawn();
+                if(IsSpawned)
+                    NetworkObject.Despawn();
+                else 
+                    Destroy(gameObject);
             }
         }
         

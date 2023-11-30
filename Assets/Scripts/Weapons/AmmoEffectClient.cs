@@ -62,8 +62,13 @@ namespace Weapons
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (collision.gameObject.layer == LayerMask.NameToLayer("Ammo"))
+            // bitwise operation to compare layer and layermask variable and do physics.ignorecollision if true
+            if ((ignoreCollisionsOnLayer.value & (1 << collision.gameObject.layer)) != 0)
+            {
+                Physics.IgnoreCollision(collider3D, collision.collider);
                 return;
+            }
+            
             DestructionEffect();
         }
 

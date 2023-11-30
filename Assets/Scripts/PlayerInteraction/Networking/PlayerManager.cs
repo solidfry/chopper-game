@@ -20,7 +20,7 @@ namespace PlayerInteraction.Networking
         [field: SerializeField] public PlayerInput PlayerInput { get; private set; }
         [field: SerializeField] public NetworkHealth PlayerNetworkHealth { get; set; }
         [field: SerializeField] public PlayerCameraManager PlayerCameraManager { get; private set; }
-        [field: SerializeField] public ulong PlayerNetworkID { get; set; }
+        [field: SerializeField] public ulong PlayerOwnerNetworkId { get; set; }
         [field: SerializeField] public Rigidbody PlayerRigidbody { get; private set; }
         [field: SerializeField] public GameObject CollisionObject { get; private set; }
         [field: SerializeField] public PlayerAttackManager PlayerAttackManager { get; private set; }
@@ -48,7 +48,6 @@ namespace PlayerInteraction.Networking
                     if (IsLocalPlayer)
                     {
                         SetPlayerRbNonKinematic(true);
-                        SetPlayerNetworkID();
                         SetLocalPlayerLayerByName();
                     }
                 }
@@ -72,6 +71,7 @@ namespace PlayerInteraction.Networking
             {
                 _meshes = GetComponentsInChildren<MeshRenderer>();
                 _colliders = GetComponentsInChildren<Collider>();
+                SetPlayerOwnerNetworkID();
             }
 
             SubscribeToPlayerEvents();
@@ -104,7 +104,10 @@ namespace PlayerInteraction.Networking
             PlayerNetworkHealth.PlayerDiedEvent -= PlayerDiedClientRpc;
         }
 
-        private void SetPlayerNetworkID() => PlayerNetworkID = OwnerClientId;
+        private void SetPlayerOwnerNetworkID()
+        {
+            this.PlayerOwnerNetworkId = OwnerClientId;
+        }
 
         private void FixedUpdate() => HandleMovement();
 
