@@ -32,10 +32,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1771090052599776008}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 80, y: 0}
+  m_SizeDelta: {x: 112, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1115471425586462874
 CanvasRenderer:
@@ -151,6 +151,7 @@ GameObject:
   - component: {fileID: 2683587865004881201}
   - component: {fileID: 895877825439724879}
   - component: {fileID: 1553568957157023940}
+  - component: {fileID: 6746641937995105154}
   m_Layer: 12
   m_Name: Nav Button
   m_TagString: Untagged
@@ -326,6 +327,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da91c6990f4d4d30960540ff4e223843, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  useButtonColorForText: 1
 --- !u!114 &1553568957157023940
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -336,5 +338,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6d4a776f480b4a13b2ffdf71cd673b7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6746641937995105154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5849310284625409567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ec4108a3502c1b42a9cca580f7b4f8f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

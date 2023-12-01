@@ -31,7 +31,8 @@ namespace Networking
         private async void SignIn()
         {
             await ClientSignIn("MatchmakerClient");
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            if (!AuthenticationService.Instance.IsSignedIn)
+                await AuthenticationService.Instance.SignInAnonymouslyAsync();
         }
 
         private async Task ClientSignIn(string serviceProfileName = null)
@@ -52,9 +53,6 @@ namespace Networking
         }
 
         private string PlayerID() => AuthenticationService.Instance.PlayerId;
-
-        // TODO: Need to have this called in the UI somewhere.
-        // TODO: This should be done when the player clicks the Multiplayer button in the main menu and is sent to a lobby.
         public void StartClient(string queueName = "TestMode")
         {
             CreateATicket(queueName);
