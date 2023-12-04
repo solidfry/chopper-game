@@ -10,6 +10,7 @@ namespace Networking
         [SerializeField] private GameMode gameMode;
         [SerializeField] int maxKills = 10; // This will come from a ScriptableObject
         [SerializeField] private NetworkVariable<int> totalKills = new (0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        bool _matchInProgress;
     
         public override void OnNetworkSpawn()
         {
@@ -38,7 +39,8 @@ namespace Networking
         void AddKill(ulong clientId)
         {
             if (!IsServer) return;
-
+            if(IsMatchOver) return;
+            
             totalKills.Value += 1;
             CheckTotalKills();
         }

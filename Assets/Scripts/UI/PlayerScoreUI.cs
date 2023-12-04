@@ -1,4 +1,5 @@
-﻿using Interactions;
+﻿using Events;
+using Interactions;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
@@ -33,9 +34,9 @@ namespace UI
             var id = ps.OwnerClientId;
             
             if(backgroundImage == null) 
-                GetComponent<Image>();
+                backgroundImage.GetComponent<Image>();
             
-            if(NetworkManager.Singleton.LocalClientId == id)
+            if(NetworkManager.Singleton.LocalClientId == id && backgroundImage != null)
                 backgroundImage.color = localPlayerColor;
             
             ClientId = id;
@@ -44,7 +45,7 @@ namespace UI
             OnDeathsChanged(0, ps.deaths.Value);
             OnKillsChanged(0, ps.kills.Value);
         }
-
+        
         private void OnScoreChanged(int previousvalue, int newvalue)
         { 
             scoreText.text = newvalue.ToString();

@@ -87,7 +87,7 @@ namespace Server
             try
             {
                 _multiplayService = MultiplayService.Instance;
-                _serverQueryHandler = await _multiplayService.StartServerQueryHandlerAsync((ushort)MAXPLAYERS, "ServerName", "GameType", "0", "n/a");
+                _serverQueryHandler = await _multiplayService.StartServerQueryHandlerAsync((ushort)MAXPLAYERS, "n/a", "n/a", "0", "n/a");
             }
             catch (Exception ex)
             {

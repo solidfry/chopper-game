@@ -13,6 +13,8 @@ namespace Interactions
         public static event Action<NetworkPlayerScore> OnPlayerSpawnedEvent;
         public static event Action<NetworkPlayerScore> OnPlayerDespawnedEvent;
 
+        private bool _matchEnded;
+
         public override void OnNetworkSpawn()
         {
             OnPlayerSpawnedEvent?.Invoke(this);
@@ -24,6 +26,12 @@ namespace Interactions
             score.Value = 0;
             GameEvents.OnPlayerDiedEvent += AddDeath;
             GameEvents.OnPlayerKillEvent += AddKill;
+            GameEvents.OnEndMatchEvent += MatchEnded;
+        }
+        
+        private void MatchEnded()
+        {
+            _matchEnded = true;
         }
         
         public override void OnNetworkDespawn()
@@ -33,6 +41,7 @@ namespace Interactions
             if (!IsServer) return;
             GameEvents.OnPlayerDiedEvent -= AddDeath;
             GameEvents.OnPlayerKillEvent -= AddKill;
+            GameEvents.OnEndMatchEvent -= MatchEnded;
         }
         
 
@@ -40,6 +49,7 @@ namespace Interactions
         {
             if (!IsServer) return;
             if (killerId != OwnerClientId) return;
+            if (_matchEnded) return;
             kills.Value += 1;
             score.Value += 100;
         }
@@ -48,6 +58,7 @@ namespace Interactions
         {
             if (!IsServer) return;
             if (victimId != OwnerClientId) return;
+            if (_matchEnded) return;
             deaths.Value += 1;
             score.Value -= 50;
         }

@@ -34,6 +34,8 @@ namespace UI
                 {
                     anim.DOPlay();
                 }
+            
+            GameEvents.OnShowCursorEvent?.Invoke();
         }
     
         public void SetScore(NetworkPlayerScore playerScore)
