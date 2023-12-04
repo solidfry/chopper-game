@@ -59,6 +59,15 @@ public class SingletonNetwork<T> : NetworkBehaviour where T : Component
             Destroy(gameObject);
         }
     }
+    
+    
+    // TODO: Remove this when the bug is fixed, this is a workaround for a bug in the current version of Netcode For GameObjects
+    // https://github.com/Unity-Technologies/com.unity.netcode.gameobjects/issues/2755
+    [ServerRpc]
+    public void WorkaroundDummyServerRpc()
+    {
+
+    }
 }
 
 public class SingletonNetworkPersistent<T> : NetworkBehaviour where T : Component
@@ -76,5 +85,13 @@ public class SingletonNetworkPersistent<T> : NetworkBehaviour where T : Componen
         {
             Destroy(gameObject);
         }
+    }
+    
+    // TODO: Remove this when the bug is fixed, this is a workaround for a bug in the current version of Netcode For GameObjects
+    // https://github.com/Unity-Technologies/com.unity.netcode.gameobjects/issues/2755
+    [ServerRpc]
+    public void WorkaroundDummyServerRpc()
+    {
+
     }
 }
