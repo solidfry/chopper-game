@@ -13,11 +13,6 @@ namespace Cameras
     
         [SerializeField] int currentCamera = 0;
 
-        private void Start()
-        {
-            
-        }
-
         private void OnEnable()
         {
             cameraSwitch.Enable();

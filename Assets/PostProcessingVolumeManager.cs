@@ -45,8 +45,6 @@ public class PostProcessingVolumeManager : MonoBehaviour
     {
         _mainVolumeTween.PlayForward();
         _outOfBoundsVolumeTween.PlayBackwards();
-        // mainVolume.weight = Lerp(mainVolume.weight, 1);
-        // outOfBoundsVolume.weight = Lerp(outOfBoundsVolume.weight, 0);
     }
     
     [ContextMenu("OutOfBounds")]
@@ -54,15 +52,6 @@ public class PostProcessingVolumeManager : MonoBehaviour
     {
         _mainVolumeTween.PlayBackwards();
         _outOfBoundsVolumeTween.PlayForward();
-        // mainVolume.weight = Lerp(mainVolume.weight, 0);
-        // outOfBoundsVolume.weight = Lerp(outOfBoundsVolume.weight, 1);
     }
-
-    // float Lerp(float value, float valueToTranslateTo)
-    // {
-    //     
-    //     // I want to add a curve to this 
-    //     return Mathf.Lerp(value, valueToTranslateTo, duration * Time.deltaTime);
-    // }
     
 }
