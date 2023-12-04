@@ -41,6 +41,7 @@ namespace GameLogic
         {
 #if SERVER
             Destroy(this.gameObject);  
+            Debug.Log("Destroyed GameManager on Server");
 #endif
             base.Awake(); 
             SetSystemsActive();
