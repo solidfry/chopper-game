@@ -12,6 +12,7 @@
         Settings,
         Credits,
         Loading,
+        Controls,
         None
     }
 }
