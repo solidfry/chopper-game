@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Enums;
+using Events;
 using Server;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -10,6 +12,7 @@ using Unity.Services.Matchmaker;
 using Unity.Services.Matchmaker.Models;
 using StatusOptions = Unity.Services.Matchmaker.Models.MultiplayAssignment.StatusOptions;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Networking
 {
@@ -99,15 +102,20 @@ namespace Networking
                         case StatusOptions.Found:
                             TicketAssigned(multiplayAssignment);
                             gotAssignment = true;
+                            GameEvents.OnNotificationEvent?.Invoke("Game found!");
                             break;
                         case StatusOptions.InProgress:
                             break;
                         case StatusOptions.Failed:
                             Debug.LogError($"Failed to get ticket status. Error: {multiplayAssignment.Message}");
+                            GameEvents.OnNotificationEvent?.Invoke($"{multiplayAssignment.Message}");
+                            SceneManager.LoadScene(Scenes.Matchmaking.ToString());
                             gotAssignment = true; // just to stop the polling
                             break;
                         case StatusOptions.Timeout:
                             Debug.LogError("Failed to get ticket status. Ticket timed out.");
+                            GameEvents.OnNotificationEvent?.Invoke("Timed out.");
+                            SceneManager.LoadScene(Scenes.Matchmaking.ToString());
                             gotAssignment = true; // just to stop the polling
                             break;
                         default:
