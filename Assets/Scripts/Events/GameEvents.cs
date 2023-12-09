@@ -2,7 +2,6 @@ using Effects.Structs;
 using Enums;
 using GameLogic.ScriptableObjects;
 using Interactions;
-using Unity.Netcode;
 using UnityEngine;
 
 namespace Events
@@ -121,6 +120,15 @@ namespace Events
         public static SendCamera onSendCameraEvent;
         public static ParticleEffect onParticleEvent;
         public static LoadLevel onLevelLoadEvent;
+        #endregion
+        
+        #region Audio
+        public delegate void MusicChange(AudioClip clip, TrackPlayMode playMode = TrackPlayMode.PlayOnce); 
+        public static MusicChange OnMusicChangedEvent;
+        public delegate void MusicStop();
+        public static MusicStop OnMusicStoppedEvent;
+        public delegate void MusicStart();
+        public static MusicStart OnMusicStartedEvent;
         #endregion
 
     }

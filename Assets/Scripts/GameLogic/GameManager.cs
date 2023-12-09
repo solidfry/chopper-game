@@ -16,6 +16,7 @@ namespace GameLogic
         [SerializeField] UIAudioManager uiAudioManagerPrefab;
         [SerializeField] ColourManager colourManagerPrefab;
         [SerializeField] NotificationManager notificationManagerPrefab;
+        [SerializeField] MusicManager musicManagerPrefab;
         
         [field: Header("Active Systems")]
         [field:SerializeField ] 
@@ -29,10 +30,13 @@ namespace GameLogic
         private bool _colourManagerIsActive;
         [field:SerializeField ] 
         public NotificationManager NotificationManager { get; private set; }
-        private bool _notificationManagerIsAction;
+        private bool _notificationManagerIsActive;
         [field:SerializeField ] 
         public UIAudioManager UIAudioManager { get; private set; }
         private bool _uiAudioManagerIsActive;
+        [field:SerializeField ]
+        public MusicManager MusicManager { get; private set; }
+        private bool _musicManagerIsActive;
         
         [SerializeField] [ReadOnly] 
         private bool allSystemsActive;
@@ -51,6 +55,16 @@ namespace GameLogic
         {
             CheckAllSystemsActive();
         }
+        
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
 
         void SetSystemsActive()
         {
@@ -68,6 +82,9 @@ namespace GameLogic
             
             if(NotificationManager == null)
                 NotificationManager = Instantiate(notificationManagerPrefab);
+            
+            if(MusicManager == null)
+                MusicManager = Instantiate(musicManagerPrefab);
         }
         
         public bool CheckAllSystemsActive()
@@ -76,19 +93,18 @@ namespace GameLogic
             _cursorManagerIsActive = CursorManager != null;
             _uiAudioManagerIsActive = UIAudioManager != null;
             _colourManagerIsActive = ColourManager != null;
-            _notificationManagerIsAction = NotificationManager != null;
-            allSystemsActive = _networkManagerIsActive && _cursorManagerIsActive && _uiAudioManagerIsActive && _colourManagerIsActive && _notificationManagerIsAction;
+            _notificationManagerIsActive = NotificationManager != null;
+            _musicManagerIsActive = MusicManager != null;
+            
+            allSystemsActive = 
+                _networkManagerIsActive 
+                               && _cursorManagerIsActive 
+                               && _uiAudioManagerIsActive 
+                               && _colourManagerIsActive 
+                               && _notificationManagerIsActive 
+                               && _musicManagerIsActive;
+            
             return allSystemsActive;
-        }
-        
-        private void OnEnable()
-        {
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
-        
-        private void OnDisable()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
         }
         
         private void OnSceneLoaded(Scene arg0, LoadSceneMode arg1) => CheckAllSystemsActive();
