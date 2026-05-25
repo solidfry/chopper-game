@@ -44,7 +44,7 @@ namespace PlayerInteraction
         {
             if (!useStabiliser || rigidbody == null) return;
 
-            float currentSpeed = Speed.MetersPerSecondToKilometersPerHour(rigidbody.velocity.magnitude);
+            float currentSpeed = Speed.MetersPerSecondToKilometersPerHour(rigidbody.linearVelocity.magnitude);
             if (currentSpeed <= speedThreshold)
             {
                 isActive = true;

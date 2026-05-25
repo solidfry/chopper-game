@@ -83,7 +83,7 @@ namespace UI.Hud
 
         private void UpdateSpeed()
         {
-            speed = Rigidbody.velocity.magnitude;
+            speed = Rigidbody.linearVelocity.magnitude;
             speed = Mathf.Max(0, speed);
             speedKmh = Speed.MetersPerSecondToKilometersPerHour(speed);
         }

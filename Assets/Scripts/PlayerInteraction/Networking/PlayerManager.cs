@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using Cameras;
-using Cinemachine;
+using Unity.Cinemachine;
 using Events;
 using Interactions;
 using Interfaces;

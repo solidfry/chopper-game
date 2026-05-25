@@ -118,7 +118,7 @@ namespace Shapes {
 		static void MakeSureSampleMaterialsAreValid() {
 			#if SHAPES_URP || SHAPES_HDRP
 			#if UNITY_2019_1_OR_NEWER
-			Shader targetShader = GraphicsSettings.renderPipelineAsset.defaultShader;
+			Shader targetShader = GraphicsSettings.defaultRenderPipeline.defaultShader;
 			#else
 			Shader targetShader = GraphicsSettings.renderPipelineAsset.GetDefaultShader();
 			#endif

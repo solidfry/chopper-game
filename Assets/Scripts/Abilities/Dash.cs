@@ -47,7 +47,7 @@ namespace Abilities
             if (!canDash && rb != null) return;
 
             // Debug.Log("Dash");
-            rb.AddForce(rb.velocity * (force * Time.fixedDeltaTime), ForceMode.Impulse);
+            rb.AddForce(rb.linearVelocity * (force * Time.fixedDeltaTime), ForceMode.Impulse);
             canDash = false;
         }
     }

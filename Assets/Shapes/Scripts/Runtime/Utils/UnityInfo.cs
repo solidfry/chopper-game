@@ -15,12 +15,12 @@ using URP_RND_DATA = UnityEngine.Rendering.Universal.ForwardRendererData;
 namespace Shapes {
 
 	internal static class UnityInfo {
-		public static bool UsingSRP => GraphicsSettings.renderPipelineAsset != null;
+		public static bool UsingSRP => GraphicsSettings.defaultRenderPipeline != null;
 		public const int INSTANCES_MAX = 1023;
 
 		#if UNITY_EDITOR
 		internal static RenderPipeline GetCurrentRenderPipelineInUse() {
-			RenderPipelineAsset rpa = GraphicsSettings.renderPipelineAsset;
+			RenderPipelineAsset rpa = GraphicsSettings.defaultRenderPipeline;
 			if( rpa != null ) {
 				switch( rpa.GetType().Name ) {
 					case "UniversalRenderPipelineAsset": return RenderPipeline.URP;

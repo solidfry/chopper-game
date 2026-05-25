@@ -23,12 +23,12 @@ namespace Networking
 
         private void OnEnable()
         {
-            ServerStartup.ClientInstance += SignIn;
+            // ServerStartup.ClientInstance += SignIn;
         }
 
         private void OnDisable()
         {
-            ServerStartup.ClientInstance -= SignIn;
+            // ServerStartup.ClientInstance -= SignIn;
         }
 
         private async void SignIn()

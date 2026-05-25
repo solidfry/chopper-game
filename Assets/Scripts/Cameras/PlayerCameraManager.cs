@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Cinemachine;
+using Unity.Cinemachine;
 using Events;
 using UnityEngine;
 using UnityEngine.InputSystem;

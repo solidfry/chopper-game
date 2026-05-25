@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-using Cinemachine;
+using Unity.Cinemachine;
 using Enums;
 using Events;
 using UnityEngine;
@@ -60,16 +60,16 @@ namespace Cameras
         
         void SetCameraValues(float amplitude, float frequency, CinemachineBasicMultiChannelPerlin _noise)
         { 
-            _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, amplitude, .25f);
-            _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, frequency, .25f);
+            _noise.AmplitudeGain = Mathf.Lerp(_noise.AmplitudeGain, amplitude, .25f);
+            _noise.FrequencyGain = Mathf.Lerp(_noise.FrequencyGain, frequency, .25f);
         }
         
         IEnumerator ResetCamera(float lengthInSeconds, CinemachineBasicMultiChannelPerlin _noise)
         {
             yield return new WaitForSeconds(lengthInSeconds);
             
-            _noise.m_AmplitudeGain = Mathf.Lerp(_noise.m_AmplitudeGain, _defaultAmplitude, 1);
-            _noise.m_FrequencyGain = Mathf.Lerp(_noise.m_FrequencyGain, _defaultFrequency, 1);
+            _noise.AmplitudeGain = Mathf.Lerp(_noise.AmplitudeGain, _defaultAmplitude, 1);
+            _noise.FrequencyGain = Mathf.Lerp(_noise.FrequencyGain, _defaultFrequency, 1);
             
         }
 
@@ -82,8 +82,8 @@ namespace Cameras
         
         private void SetDefaultNoiseValues()
         {
-            _defaultFrequency = noise.m_FrequencyGain;
-            _defaultAmplitude = noise.m_AmplitudeGain;
+            _defaultFrequency = noise.FrequencyGain;
+            _defaultAmplitude = noise.AmplitudeGain;
         }
     }
 }
