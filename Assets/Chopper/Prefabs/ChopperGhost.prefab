@@ -97,14 +97,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03b65618544fd0241bb2cb23301ae434, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Flight.ChopperAuthoring
-  collectiveRange: 0.7
-  maxPitchRate: 45
-  maxYawRate: 40
-  maxRollRate: 60
-  turnResponse: 4
-  quadraticDrag: {x: 0.006, y: 0.004, z: 0.0011}
-  linearDrag: {x: 0.4, y: 0.3, z: 0.05}
-  weathervane: 0.015
+  gravityScale: 1.6
+  collectiveRange: 0.9
+  maxPitchRate: 70
+  maxYawRate: 55
+  maxRollRate: 100
+  turnResponse: 9
+  quadraticDrag: {x: 0.004, y: 0.003, z: 0.0018}
+  linearDrag: {x: 0.15, y: 0.15, z: 0.02}
+  weathervane: 0.01
   autoLevel: 0
   dashBoost: 0.6
   dashCooldown: 2

@@ -75,8 +75,11 @@ namespace Chopper.Simulation.Flight
                 var yaw = math.clamp(input.Yaw, -1f, 1f);
                 var roll = math.clamp(input.Roll, -1f, 1f);
 
-                // Lift along the rotor axis. Zero collective = exactly hover lift when level.
-                var liftAcceleration = Gravity * (1f + thrust * config.CollectiveRange);
+                // Extra weight on top of physics gravity, then lift along the rotor axis.
+                // Zero collective = exactly hover lift when level.
+                var weight = Gravity * config.GravityScale;
+                velocity.Linear -= worldUp * (Gravity * (config.GravityScale - 1f) * DeltaTime);
+                var liftAcceleration = weight * (1f + thrust * config.CollectiveRange);
                 velocity.Linear += up * (liftAcceleration * DeltaTime);
 
                 // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.

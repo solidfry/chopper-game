@@ -10,6 +10,8 @@ namespace Chopper.Simulation.Flight
     /// </summary>
     public struct ChopperFlightConfig : IComponentData
     {
+        /// <summary>Gravity multiplier for this chopper. Above 1 = heavier, drops and climbs feel punchier.</summary>
+        public float GravityScale;
         /// <summary>Extra lift from full collective, as a fraction of hover lift (0.6 = 1.6 g up, 0.4 g down).</summary>
         public float CollectiveRange;
 
