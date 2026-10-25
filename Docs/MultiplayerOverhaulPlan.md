@@ -52,6 +52,36 @@ Unity 6.6 features to use:
 
 Remove: `com.unity.services.multiplay`, `com.unity.services.matchmaker` (now in multiplayer package), `com.unity.multiplayer.samples.coop`, ParrelSync, `com.unity.ide.vscode`.
 
+## 1b. Code modernisation (all code, not only netcode)
+
+**Goal:** modern, testable code. No global singletons where possible.
+
+Current state: 25 scripts use `Singleton<T>` / `SingletonPersistent<T>` / `SingletonNetwork<T>` (`Utilities/Singleton.cs`), `.Instance` or `NetworkManager.Singleton`. `Events/GameEvents.cs` has 41 static events used as a global bus.
+
+### Rules
+- **No `Singleton<T>` base classes.** Delete `Utilities/Singleton.cs` at the end of the port.
+- **ECS singletons are allowed.** `SystemAPI.GetSingleton<T>()` (match state, game mode config, nuke state) is per-world data, not a global object. It works with server/client worlds and thin clients.
+- **GameObject side uses dependency injection** with **VContainer**: one root `LifetimeScope` (services: auth, matchmaking, Steam, save, audio, settings) and child scopes per scene (menu, hangar, match). Classes get dependencies by constructor or `[Inject]`, behind interfaces (`IMatchmakingService`, `IPlayerProfileService`, `IAudioService`, `INotificationService`).
+- **Plain C# services, not MonoBehaviours**, when no Unity lifecycle is needed (e.g. `MatchmakerClient`, `ProfileLoader` logic, `ColourManager`).
+- **Replace static `GameEvents`:**
+  - Simulation events (kill, death, hit, nuke state) → ECS components/buffers, read by presentation systems.
+  - UI/presentation events → typed message bus scoped by VContainer (VContainer + MessagePipe), or ScriptableObject event channels for designer-wired events.
+  - No `static event` / `static Action` fields.
+- **Async:** use `Awaitable` (Unity 6) or UniTask with `CancellationToken` (cancel on scene unload / destroy). No `async void` except UI event handlers. No polling loops with `Task.Delay` (current `MatchmakerClient.PollTicketStatus`).
+- **No domain reload safe:** no static mutable state, so Unity 6.6 fast Enter Play Mode works without bugs.
+
+### Other modern practice
+- **Assembly definitions** per feature (`Chopper.Simulation`, `Chopper.Presentation`, `Chopper.Services`, `Chopper.UI`, `Chopper.Tests`). Faster compile, clear dependencies (presentation can read simulation, never the reverse).
+- **C# style:** `readonly` structs for data, `sealed` classes by default, file-scoped namespaces, nullable annotations on new service code, `[SerializeField] private` fields (no public fields like `Weapon.firingCooldownTimer`).
+- **Data:** ScriptableObjects for design data (chassis, modules, weapons, modes) → baked to ECS blob assets. Native `Dictionary` serialisation in 6.6 for lookup tables.
+- **UI:** UI Toolkit for new menus and the hangar (USS styles suit the green cyberpunk theme). Keep the in-flight HUD on current UGUI + Shapes until it needs a rewrite.
+- **Input:** keep the generated `PlayerControls` class; read input in one ECS input system that writes the `ICommandData`.
+- **Quality:** `.editorconfig` + Roslyn analysers; Unity Test Framework edit-mode tests for services and loadout validation, play-mode tests for netcode (prediction, lag-comp tick alignment).
+- **Remove dead code:** commented-out `ServerStartup.cs`, `TempNetworkGameManager.cs`, commented blocks in `LobbyManager.cs`, unused jobs (`Weapons/Jobs`, `PlayerInteraction/Jobs`).
+
+### Order
+Do this together with the ECS port, feature by feature — not as a separate pass. Each feature that moves to ECS also moves its GameObject side to DI and drops its singleton/static events. New code (services, hangar, progression) follows these rules from day one.
+
 ## 2. Netcode architecture
 
 - **Dedicated server, server-authoritative.** Server tick 60 Hz simulation, snapshot send 30 Hz (`ClientServerTickRate`).
@@ -186,7 +216,7 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 
 | Phase | Work | Result |
 |---|---|---|
-| **0. Upgrade** | ~~Upgrade to 6.3, package updates, API fixes, remove Multiplay~~ (done in `v2`). Left: 6.3 → 6.6; add Entities/N4E/Physics; remove NGO + ParrelSync | Project opens on 6.6 and runs offline |
+| **0. Upgrade** | ~~Upgrade to 6.3, package updates, API fixes, remove Multiplay~~ (done in `v2`). Left: 6.3 → 6.6; add Entities/N4E/Physics; remove NGO + ParrelSync; add VContainer (+ MessagePipe), assembly definitions, .editorconfig | Project opens on 6.6 and runs offline |
 | **1. ECS core** | Chopper physics + input in Netcode for Entities; predicted movement; interpolated remotes; presentation GameObjects; HUD/camera bridge | 2+ choppers fly smoothly at 150 ms ping |
 | **2. Combat** | Hitscan with lag compensation; predicted projectiles; server health/death/respawn; hit confirm; VFX from events | FFA playable on new netcode |
 | **3. Services** | Steam sign-in; Sessions party; Matchmaker queues; Edgegap allocator; backfill; reconnect | One-click Play to a hosted match |
