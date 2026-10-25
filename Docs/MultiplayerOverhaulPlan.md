@@ -227,6 +227,28 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 
 **Effect on roadmap:** start all new work from `v2`, not `main`. Phase 0 is ~70% done. Left in Phase 0: 6.3 → 6.6 upgrade, add Entities / Netcode for Entities / Unity Physics, remove NGO + ParrelSync, fix `WeaponSlot` firing bugs (only if NGO build must stay playable during the port), delete the commented-out `ServerStartup.cs`.
 
+## 7c. Progress log (25 Oct 2026)
+
+**Phase 0 — done.**
+- Unity 6.6 (6000.6.7f1). MK Glow, Buto, GameAnalytics removed (incompatible). Renderers on Forward+.
+- Packages: Entities, Entities Graphics, Netcode for Entities, Unity Physics (6.6.0), VContainer 1.19.0, MessagePipe 1.8.2, UniTask 2.5.11, MCP for Unity.
+- NGO and ParrelSync removed. NGO gameplay code kept for reference in `Assets/Scripts/_LegacyNGO~` (not compiled).
+- `.gitattributes`, `.editorconfig`, `Chopper.*` assembly definitions (`Assets/Chopper/README.md`).
+- `ChopperBootstrap`: menus run with a local world only; `TrainingRange` scene starts a local server + client.
+
+**Phase 1 — in progress.**
+- Done: `TrainingRange` scene (ground, pillars, targets), owner-predicted chopper ghost (`Assets/Chopper/Prefabs/ChopperGhost.prefab`), GoInGame spawn, input, chase camera, Rigidbody interpolation (fixes per-tick jitter).
+- Flight model (`ChopperFlightSystem`): Battlefield 6 Little Bird target — gravity ×1.6, collective, tilt compensation, rate-based rotation, anisotropic drag, weathervane, dash. No flight assist (auto-level off).
+- Controls: W/S collective, Left Ctrl descend, A/D yaw, mouse = pitch/roll (aim-style, 0.12 deg/px), arrows also pitch/roll, Shift dash.
+- **Parked: flight feel tuning.** "Feels better" — revisit later. Knobs: `ChopperAuthoring` on the prefab, `MouseDegreesPerPixel` + pitch invert in `ChopperInputSystem`, camera FOV/pull-back on `ChopperCameraRig`.
+- Left: UI Toolkit HUD (speed, altitude, dash), Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
+
+**Known follow-ups**
+- Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
+- Export `.blend` models to `.fbx` so the project does not need Blender.
+- Pin `com.coplaydev.unity-mcp` to a version instead of `#main`.
+- Old scenes (`Multiplayer`, `Training`, `FreeForAll`, `TeamDeathMatch`, `SampleScene`) have missing legacy scripts; delete or rebuild during later phases.
+
 ## 8. Phased roadmap
 
 | Phase | Work | Result |
