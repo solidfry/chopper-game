@@ -1,4 +1,3 @@
-using GameAnalyticsSDK;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,10 +12,8 @@ namespace Utilities
             _button = GetComponent<Button>();
         }
 
+        // TODO: send $"Player_Pressed_{name}" via Unity Analytics (com.unity.services.analytics). GameAnalytics SDK was removed.
         private void Start() =>
-            _button.onClick.AddListener(() =>
-            {
-                GameAnalytics.NewDesignEvent($"Player_Pressed_{this.gameObject.name}", 0);
-            });
+            _button.onClick.AddListener(() => { });
     }
 }
