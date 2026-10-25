@@ -21,15 +21,8 @@ namespace Networking
 
         private string _ticketId;
 
-        private void OnEnable()
-        {
-            // ServerStartup.ClientInstance += SignIn;
-        }
-
-        private void OnDisable()
-        {
-            // ServerStartup.ClientInstance -= SignIn;
-        }
+        // TODO: SignIn was called from ServerStartup (removed with Multiplay). Phase 3 replaces this class
+        // with a Steam sign-in + Multiplayer Services matchmaking service.
 
         private async void SignIn()
         {
