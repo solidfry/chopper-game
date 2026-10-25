@@ -279,11 +279,12 @@ namespace Shapes {
 		internal override bool HasDetailLevels => false;
 		internal override bool HasScaleModes => false;
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.QuadMesh[0];
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matQuad[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matQuad[BlendMode];
 
-		private protected override Bounds GetBounds_Internal() {
-			Vector3 min = Vector3.Min( Vector3.Min( a, b ), c );
-			Vector3 max = Vector3.Max( Vector3.Max( a, b ), c );
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
+			Vector3 dNet = IsUsingAutoD ? DAuto : d;
+			Vector3 min = Vector3.Min( Vector3.Min( Vector3.Min( a, b ), c ), dNet );
+			Vector3 max = Vector3.Max( Vector3.Max( Vector3.Max( a, b ), c ), dNet );
 			return new Bounds( ( min + max ) / 2, ShapesMath.Abs( max - min ) );
 		}
 

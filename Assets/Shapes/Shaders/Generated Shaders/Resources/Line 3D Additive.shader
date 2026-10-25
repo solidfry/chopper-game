@@ -11,6 +11,127 @@ Shader "Shapes/Line 3D Additive" {
 		_ColorMask ("Color Mask", int) = 15
 	}
 	SubShader {
+		PackageRequirements {
+			"com.unity.render-pipelines.high-definition"
+		}
+		Tags {
+			"ForceNoShadowCasting" = "True"
+			"RenderPipeline" = "HDRenderPipeline"
+			"IgnoreProjector" = "True"
+			"Queue" = "Transparent"
+			"RenderType" = "Transparent"
+			"DisableBatching" = "True"
+		}
+		Pass {
+			Name "ForwardOnly"
+			Tags { "LightMode" = "ForwardOnly" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			ZTest [_ZTest]
+			Offset [_ZOffsetFactor], [_ZOffsetUnits]
+			ColorMask [_ColorMask]
+			ZWrite Off
+			Blend One One
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma prefer_hlslcc gles
+				#pragma exclude_renderers d3d11_9x
+				#pragma target 2.0
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+		Pass {
+			Name "DepthForwardOnly"
+			Tags { "LightMode" = "DepthForwardOnly" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma prefer_hlslcc gles
+				#pragma exclude_renderers d3d11_9x
+				#pragma target 2.0
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+		Pass {
+			Name "Picking"
+			Tags { "LightMode" = "Picking" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma prefer_hlslcc gles
+				#pragma exclude_renderers d3d11_9x
+				#pragma target 2.0
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
+				#define SCENE_VIEW_PICKING
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+		Pass {
+			Name "Selection"
+			Tags { "LightMode" = "SceneSelectionPass" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma prefer_hlslcc gles
+				#pragma exclude_renderers d3d11_9x
+				#pragma target 2.0
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
+				#define SCENE_VIEW_OUTLINE_MASK
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+	}
+	SubShader {
+		PackageRequirements {
+			"com.unity.render-pipelines.universal"
+		}
 		Tags {
 			"ForceNoShadowCasting" = "True"
 			"RenderPipeline" = "UniversalPipeline"
@@ -117,6 +238,85 @@ Shader "Shapes/Line 3D Additive" {
 				#pragma prefer_hlslcc gles
 				#pragma exclude_renderers d3d11_9x
 				#pragma target 2.0
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
+				#define SCENE_VIEW_OUTLINE_MASK
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+	}
+	SubShader {
+		Tags {
+			"ForceNoShadowCasting" = "True"
+			"IgnoreProjector" = "True"
+			"Queue" = "Transparent"
+			"RenderType" = "Transparent"
+			"DisableBatching" = "True"
+		}
+		Pass {
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			ZTest [_ZTest]
+			Offset [_ZOffsetFactor], [_ZOffsetUnits]
+			ColorMask [_ColorMask]
+			ZWrite Off
+			Blend One One
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+		Pass {
+			Name "Picking"
+			Tags { "LightMode" = "Picking" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
+				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
+				#define ADDITIVE
+				#pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
+				#define SCENE_VIEW_PICKING
+				#include "../../Core/Line 3D Core.cginc"
+			ENDHLSL
+		}
+		Pass {
+			Name "Selection"
+			Tags { "LightMode" = "SceneSelectionPass" }
+			Stencil {
+				Comp [_StencilComp]
+				Pass [_StencilOpPass]
+				Ref [_StencilID]
+				ReadMask [_StencilReadMask]
+				WriteMask [_StencilWriteMask]
+			}
+			Cull Off
+			HLSLPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_fog
+				#pragma multi_compile_instancing
 				#pragma multi_compile __ CAP_ROUND CAP_SQUARE
 				#define ADDITIVE
 				#pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap

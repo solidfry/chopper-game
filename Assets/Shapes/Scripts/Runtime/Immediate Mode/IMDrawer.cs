@@ -88,7 +88,8 @@ namespace Shapes {
 				// see if we can merge with the current mpb (which may or may not be equal to prevMpb)
 				if( metaMpb.PreAppendCheck( drawState, mtx ) == false ) {
 					// we can't append it for whatever reason
-					DrawCommand.CurrentWritingCommandBuffer.drawCalls.Add( metaMpb.ExtractDrawCall() ); // finalize previous buffer
+					ShapeDrawCall drawCall = metaMpb.ExtractDrawCall();
+					DrawCommand.CurrentWritingCommandBuffer.drawCalls.Add( drawCall ); // finalize previous buffer
 					if( metaMpb.PreAppendCheck( drawState, mtx ) == false ) // append again now that the call has been dispatched
 						Debug.LogWarning( "MetaMpb somehow not ready to be initialized" ); // really should never happen
 				}
@@ -140,7 +141,8 @@ namespace Shapes {
 				Graphics.DrawMeshNow( drawState.mesh, mtx, drawState.submesh );
 			} else if( allowInstancing == false ) {
 				// finalize the draw if we're not using instancing
-				DrawCommand.CurrentWritingCommandBuffer.drawCalls.Add( metaMpb.ExtractDrawCall() );
+				ShapeDrawCall drawCall = metaMpb.ExtractDrawCall();
+				DrawCommand.CurrentWritingCommandBuffer.drawCalls.Add( drawCall );
 			}
 		}
 

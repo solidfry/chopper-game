@@ -13,6 +13,7 @@ namespace Shapes {
 		const MethodImplOptions INLINE = MethodImplOptions.AggressiveInlining;
 
 		public const float TAU = 6.28318530718f;
+		public const double DEG_TO_RAD = 0.0174532925199432957692369076848861271344287188854172545609719144;
 		[MethodImpl( INLINE )] public static float Frac( float x ) => x - Mathf.Floor( x );
 		[MethodImpl( INLINE )] public static float Eerp( float a, float b, float t ) => Mathf.Pow( a, 1 - t ) * Mathf.Pow( b, t );
 		[MethodImpl( INLINE )] public static float SmoothCos01( float x ) => Mathf.Cos( x * Mathf.PI ) * -0.5f + 0.5f;
@@ -274,6 +275,59 @@ namespace Shapes {
 			return angSum;
 		}
 
+		/// <summary>Assumes no projection</summary>
+		public static Matrix4x4 AffineMtxMul( Matrix4x4 lhs, Matrix4x4 rhs ) {
+			Matrix4x4 m;
+			m.m00 = (float)( (double)lhs.m00 * rhs.m00 + lhs.m01 * (double)rhs.m10 + (double)lhs.m02 * rhs.m20 );
+			m.m01 = (float)( (double)lhs.m00 * rhs.m01 + lhs.m01 * (double)rhs.m11 + (double)lhs.m02 * rhs.m21 );
+			m.m02 = (float)( (double)lhs.m00 * rhs.m02 + lhs.m01 * (double)rhs.m12 + (double)lhs.m02 * rhs.m22 );
+			m.m03 = (float)( (double)lhs.m00 * rhs.m03 + lhs.m01 * (double)rhs.m13 + (double)lhs.m02 * rhs.m23 + lhs.m03 );
+			m.m10 = (float)( (double)lhs.m10 * rhs.m00 + lhs.m11 * (double)rhs.m10 + (double)lhs.m12 * rhs.m20 );
+			m.m11 = (float)( (double)lhs.m10 * rhs.m01 + lhs.m11 * (double)rhs.m11 + (double)lhs.m12 * rhs.m21 );
+			m.m12 = (float)( (double)lhs.m10 * rhs.m02 + lhs.m11 * (double)rhs.m12 + (double)lhs.m12 * rhs.m22 );
+			m.m13 = (float)( (double)lhs.m10 * rhs.m03 + lhs.m11 * (double)rhs.m13 + (double)lhs.m12 * rhs.m23 + lhs.m13 );
+			m.m20 = (float)( (double)lhs.m20 * rhs.m00 + lhs.m21 * (double)rhs.m10 + (double)lhs.m22 * rhs.m20 );
+			m.m21 = (float)( (double)lhs.m20 * rhs.m01 + lhs.m21 * (double)rhs.m11 + (double)lhs.m22 * rhs.m21 );
+			m.m22 = (float)( (double)lhs.m20 * rhs.m02 + lhs.m21 * (double)rhs.m12 + (double)lhs.m22 * rhs.m22 );
+			m.m23 = (float)( (double)lhs.m20 * rhs.m03 + lhs.m21 * (double)rhs.m13 + (double)lhs.m22 * rhs.m23 + lhs.m23 );
+			m.m30 = 0;
+			m.m31 = 0;
+			m.m32 = 0;
+			m.m33 = 1;
+			return m;
+		}
+
+		/// <summary>The unnormalized cosinc or cosc function (1-cos(x))/x, properly handling the removable singularity around x = 0</summary>
+		/// <param name="x">The input value for the Cosinc function</param>
+		public static float Cosinc( float x ) => (float)Cosinc( (double)x );
+
+		/// <inheritdoc cref="Cosinc(float)"/>
+		public static double Cosinc( double x ) {
+			if( System.Math.Abs( x ) < 0.01 )
+				return x / 2 - ( x * x * x ) / 24; // approximate the singularity w. a polynomial, based on the taylor series expansion
+			return ( 1 - System.Math.Cos( x ) ) / x;
+		}
+
+		const double SINC_W = 0.01;
+		const double SINC_P_C2 = -1 / 6.0;
+		const double SINC_P_C4 = 1 / 120.0;
+
+		/// <summary>The unnormalized sinc function sin(x)/x, properly handling the removable singularity around x = 0</summary>
+		/// <param name="x">The input value for the Sinc function</param>
+		public static float Sinc( float x ) => (float)Sinc( (double)x );
+
+		/// <inheritdoc cref="Sinc(float)"/>
+		public static double Sinc( double x ) {
+			x = System.Math.Abs( x ); // sinc is symmetric
+			if( x < SINC_W ) {
+				// approximate the singularity w. a polynomial
+				double x2 = x * x;
+				double x4 = x2 * x2;
+				return 1 + SINC_P_C2 * x2 + SINC_P_C4 * x4;
+			}
+
+			return System.Math.Sin( x ) / x;
+		}
 
 	}
 

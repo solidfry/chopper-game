@@ -66,16 +66,14 @@ namespace Shapes {
 		}
 
 		internal override bool HasDetailLevels => true;
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matTorus[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matTorus[BlendMode];
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.TorusMesh[(int)detailLevel];
 
-		private protected override Bounds GetBounds_Internal() {
-			if( radiusSpace != ThicknessSpace.Meters )
-				return new Bounds( default, Vector3.one );
-			// presume 0 world space padding when pixels or noots are used
-			float padding = thicknessSpace == ThicknessSpace.Meters ? thickness : 0f;
-			float xySize = radius * 2 + padding;
-			return new Bounds( Vector3.zero, new Vector3( xySize, xySize, padding ) );
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
+			float sizeXY = radiusSpace == ThicknessSpace.Meters ? radius * 2 : 0f;
+			float sizeZ = thicknessSpace == ThicknessSpace.Meters ? thickness : 0f;
+			sizeXY += sizeZ;
+			return new Bounds( Vector3.zero, new Vector3( sizeXY, sizeXY, sizeZ ) );
 		}
 
 	}

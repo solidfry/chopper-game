@@ -502,7 +502,14 @@ namespace Shapes {
 							g += new Param( $"Rect rect // {DOC_TEXT_RECT}" );
 						}
 
-						g += $"string content // {DOC_TEXT_CONTENT}";
+						string contentParam = $"string content // {DOC_TEXT_CONTENT}";
+						if( manualElement ) {
+							// when using elements, you don't have to specify the text
+							g += new CombinatorialParams( contentParam );
+						} else {
+							g += contentParam;
+						}
+
 						g += new CombinatorialParams( $"TextAlign align // {DOC_TEXT_ALIGN}", $"float fontSize // {DOC_TEXT_FONT_SIZE}", $"TMP_FontAsset font // {DOC_TEXT_FONT}", $"Color color // {DOC_COLOR}" );
 						g.GenerateAndAppend( lines );
 					}

@@ -1,45 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-using Object = UnityEngine.Object;
 
 // Shapes © Freya Holmér - https://twitter.com/FreyaHolmer/
 // Website & Documentation - https://acegikmo.com/shapes/
 namespace Shapes {
 
-	[ExecuteAlways] public class ShapesTextPool : MonoBehaviour {
-
+	public abstract class ShapesObjPool<T, P> : MonoBehaviour where T : Component where P : ShapesObjPool<T, P> {
 		const int ALLOCATION_COUNT_WARNING = 500;
 		const int ALLOCATION_COUNT_CAP = 1000;
 
 		int ElementCount => elementsPassive.Count + elementsActive.Count;
-		Stack<TextMeshPro> elementsPassive = new Stack<TextMeshPro>();
-		Dictionary<int, TextMeshPro> elementsActive = new Dictionary<int, TextMeshPro>();
-		public TextMeshPro ImmediateModeElement => GetElement( -1 );
+		Stack<T> elementsPassive = new Stack<T>();
+		Dictionary<int, T> elementsActive = new Dictionary<int, T>();
+		public T ImmediateModeElement => GetElement( -1 );
 
 		public static int InstanceElementCount => InstanceExists ? Instance.ElementCount : 0;
 		public static int InstanceElementCountActive => InstanceExists ? Instance.elementsActive.Count : 0;
 		public static bool InstanceExists => instance != null;
-		static ShapesTextPool instance;
-		public static ShapesTextPool Instance {
+
+		public abstract string PoolTypeName { get; } // override pls
+
+		static P instance;
+		public static P Instance {
 			get {
 				if( instance == null ) {
-					instance = Object.FindObjectOfType<ShapesTextPool>();
+					instance = FindAnyObjectByType<P>();
 					if( instance == null )
-						instance = ShapesTextPool.CreatePool();
+						instance = CreatePool();
 				}
 
 				return instance;
 			}
 		}
 
-		static ShapesTextPool CreatePool() {
-			GameObject holder = new GameObject( "Shapes Text Pool" );
+		static P CreatePool() {
+			GameObject holder = new();
 			if( Application.isPlaying )
 				DontDestroyOnLoad( holder ); // might be a lil gross, not sure
-			ShapesTextPool text = holder.AddComponent<ShapesTextPool>();
-			holder.hideFlags = HideFlags.HideAndDontSave;
+			P text = holder.AddComponent<P>();
+			holder.hideFlags = HideFlags.HideAndDontSave; // todo: debug
 			return text;
 		}
 
@@ -52,22 +52,23 @@ namespace Shapes {
 		}
 
 		void OnEnable() {
+			this.gameObject.name = $"Shapes {PoolTypeName} Pool";
 			ClearData();
-			instance = this;
+			instance = (P)this;
 		}
 
 		void OnDisable() {
 			ClearData();
 		}
 
-		public TextMeshPro GetElement( int id ) {
-			if( elementsActive.TryGetValue( id, out TextMeshPro tmp ) == false )
+		public T GetElement( int id ) {
+			if( elementsActive.TryGetValue( id, out T tmp ) == false )
 				tmp = AllocateElement( id );
 			return tmp;
 		}
 
-		public TextMeshPro AllocateElement( int id ) {
-			TextMeshPro elem = null;
+		public T AllocateElement( int id ) {
+			T elem = null;
 			// try find non-null passive elements
 			while( elem == null && elementsPassive.Count > 0 )
 				elem = elementsPassive.Pop();
@@ -82,7 +83,7 @@ namespace Shapes {
 		}
 
 		public void ReleaseElement( int id ) {
-			if( elementsActive.TryGetValue( id, out TextMeshPro tmp ) ) {
+			if( elementsActive.TryGetValue( id, out T tmp ) ) {
 				elementsActive.Remove( id );
 				elementsPassive.Push( tmp );
 			} else {
@@ -90,29 +91,39 @@ namespace Shapes {
 			}
 		}
 
-		TextMeshPro CreateElement( int id ) {
+		T CreateElement( int id ) {
 			int totalCount = ElementCount;
 			if( totalCount > ALLOCATION_COUNT_CAP ) {
-				Debug.LogError( $"Text element allocation cap of {ALLOCATION_COUNT_CAP} reached. You are probably leaking and not properly disposing text elements" );
+				Debug.LogError( $"Text element allocation cap of {ALLOCATION_COUNT_CAP} reached. You are probably leaking and not properly disposing {PoolTypeName.ToLower()} elements" );
 				return null;
 			}
 
 			if( totalCount > ALLOCATION_COUNT_WARNING )
-				Debug.LogWarning( $"Allocating more than {ALLOCATION_COUNT_WARNING} text elements. You are probably leaking and not properly disposing text objects" );
+				Debug.LogWarning( $"Allocating more than {ALLOCATION_COUNT_WARNING} {PoolTypeName.ToLower()} elements. You are probably leaking and not properly disposing text objects" );
 
-			GameObject elem = new GameObject( id == -1 ? "Immediate Mode Text" : id.ToString() );
+			GameObject elem = new GameObject( id == -1 ? $"Immediate Mode {PoolTypeName}" : id.ToString() );
 			elem.transform.SetParent( transform, false );
 			elem.transform.localPosition = Vector3.zero;
 			elem.hideFlags = HideFlags.HideAndDontSave;
 
-			TextMeshPro tmp = elem.AddComponent<TextMeshPro>();
-			tmp.enableWordWrapping = false;
-			tmp.overflowMode = TextOverflowModes.Overflow;
-
-			// mesh renderer should exist now due to TMP requiring the component
-			tmp.GetComponent<MeshRenderer>().enabled = false;
-
+			T tmp = elem.AddComponent<T>();
+			OnCreatedNewComponent( tmp );
 			return tmp;
+		}
+
+		public abstract void OnCreatedNewComponent( T comp );
+
+	}
+
+	[ExecuteAlways] public class ShapesTextPool : ShapesObjPool<TextMeshProShapes, ShapesTextPool> {
+
+		public override string PoolTypeName => "Text";
+
+		public override void OnCreatedNewComponent( TextMeshProShapes comp ) {
+			comp.textWrappingMode = TextWrappingModes.NoWrap;
+			comp.overflowMode = TextOverflowModes.Overflow;
+			// mesh renderer should exist now due to TMP requiring the component
+			comp.GetComponent<MeshRenderer>().enabled = false;
 		}
 
 	}

@@ -127,6 +127,7 @@ namespace Shapes {
 
 		/// <summary>Sets all points and their corresponding colors for this polyline</summary>
 		public void SetPoints( IReadOnlyCollection<Vector2> points, IReadOnlyCollection<Color> colors = null ) {
+			meshOutOfDate = true;
 			this.points.Clear();
 			if( colors == null ) {
 				AddPoints( points.Select( p => new PolylinePoint( p, Color.white ) ) );
@@ -188,14 +189,16 @@ namespace Shapes {
 
 		private protected override void ShapeClampRanges() => thickness = Mathf.Max( 0f, thickness );
 
-		private protected override Material[] GetMaterials() {
-			if( joins.HasJoinMesh() )
-				return new[] { ShapesMaterialUtils.GetPolylineMat( joins )[BlendMode], ShapesMaterialUtils.GetPolylineJoinsMat( joins )[BlendMode] };
-			return new[] { ShapesMaterialUtils.GetPolylineMat( joins )[BlendMode] };
+		private protected override int MaterialCount => joins.HasJoinMesh() ? 2 : 1;
+
+		private protected override void GetMaterials( Material[] mats ) {
+			mats[0] = ShapesMaterialUtils.GetPolylineMat( joins )[BlendMode];
+			if( MaterialCount == 2 )
+				mats[1] = ShapesMaterialUtils.GetPolylineJoinsMat( joins )[BlendMode];
 		}
 
 		// todo: this doesn't take point thickness or thickness space into account
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			if( points.Count < 2 )
 				return default;
 			Vector3 min = Vector3.one * float.MaxValue;
@@ -208,7 +211,9 @@ namespace Shapes {
 			if( geometry == PolylineGeometry.Flat2D )
 				min.z = max.z = 0;
 
-			return new Bounds( ( max + min ) * 0.5f, ( max - min ) + Vector3.one * ( thickness * 0.5f ) );
+			float extraScale = joins == PolylineJoins.Miter ? 2.41421356237f : 1f;
+			float thickSize = thicknessSpace == ThicknessSpace.Meters ? thickness * extraScale : 0f;
+			return new Bounds( ( max + min ) * 0.5f, ( max - min ) + Vector3.one * thickSize );
 		}
 
 	}

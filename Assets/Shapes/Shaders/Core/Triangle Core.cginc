@@ -180,6 +180,7 @@ inline half SdfToMaskBordered( half sdf, bool hollow, half halfThickness, out ha
 
 inline half GetRadialMask( VertexOutput i, out half tRadial ) {
 
+    tRadial = 0;
     half roundness = PROP(_Roundness);
     bool hollow = PROP(_Hollow) > 0;
 

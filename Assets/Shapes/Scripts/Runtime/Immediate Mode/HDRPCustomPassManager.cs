@@ -1,25 +1,23 @@
-﻿#if SHAPES_HDRP
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
 
+#if HDRP_INSTALLED
+using UnityEngine.Rendering.HighDefinition;
 #endif
 
 // Shapes © Freya Holmér - https://twitter.com/FreyaHolmer/
 // Website & Documentation - https://acegikmo.com/shapes/
 namespace Shapes {
 
-	#if SHAPES_HDRP
-	[ExecuteAlways]
-	public class HDRPCustomPassManager : MonoBehaviour {
+	#if HDRP_INSTALLED
+	[ExecuteAlways] public class HDRPCustomPassManager : MonoBehaviour {
 
 		static HDRPCustomPassManager instance;
 		public static HDRPCustomPassManager Instance {
 			get {
 				if( instance == null ) {
 					// no cached one, see if we can find it in the scene
-					if( ( instance = FindObjectOfType<HDRPCustomPassManager>() ) == null ) {
+					if( ( instance = FindAnyObjectByType<HDRPCustomPassManager>() ) == null ) {
 						// nothing in the scene, create it
 						GameObject go = new GameObject( "Shapes HDRP Manager" ) { hideFlags = HideFlags.DontSave };
 						instance = go.AddComponent<HDRPCustomPassManager>();
@@ -57,7 +55,7 @@ namespace Shapes {
 				volume.runInEditMode = true;
 					#endif
 
-				volume.AddPassOfType( typeof(ShapesRenderPass) ); // this pass branches internally
+				volume.AddPassOfType( typeof(ShapesRenderPassHdrp) ); // this pass branches internally
 			}
 
 			volumes[injPt] = volume;

@@ -8,9 +8,6 @@ namespace Shapes {
 	[ExecuteAlways]
 	public class ImmediateModePanel : MonoBehaviour {
 
-		public bool drawRelativeToPanel = true;
-		public bool useDrawingScope = true;
-
 		ImmediateModeCanvas imCanvas;
 		ImmediateModeCanvas ImCanvas => imCanvas != null ? imCanvas : ( imCanvas = GetComponentInParent<ImmediateModeCanvas>() );
 		public bool Valid => ImCanvas != null;
@@ -28,29 +25,15 @@ namespace Shapes {
 				ImCanvas.Remove( this );
 		}
 
-		internal void DrawPanel() {
+		internal void DrawPanel( ImCanvasContext ctx ) {
 			RectTransform tf = transform as RectTransform;
-
-			if( useDrawingScope )
-				Draw.Push();
-
-			if( drawRelativeToPanel ) {
-				Draw.PushMatrix();
-				Draw.Matrix *= Matrix4x4.TRS( tf.localPosition, tf.localRotation, tf.localScale );
-			}
-
-			DrawPanelShapes( tf.rect );
-
-			if( drawRelativeToPanel )
-				Draw.PopMatrix();
-
-			if( useDrawingScope )
-				Draw.Pop();
+			DrawPanelShapes( tf.rect, ctx );
 		}
 
 		/// <summary>The method to draw the content of this panel</summary>
 		/// <param name="rect">The rect of this panel, in UI space</param>
-		public virtual void DrawPanelShapes( Rect rect ) {
+		/// <param name="ctx">The current UI drawing context</param>
+		public virtual void DrawPanelShapes( Rect rect, ImCanvasContext ctx ) {
 			// override this!
 		}
 

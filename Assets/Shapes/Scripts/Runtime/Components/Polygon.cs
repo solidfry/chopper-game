@@ -109,22 +109,23 @@ namespace Shapes {
 
 		internal override bool HasScaleModes => false;
 		internal override bool HasDetailLevels => false;
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matPolygon[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matPolygon[BlendMode];
 		private protected override MeshUpdateMode MeshUpdateMode => MeshUpdateMode.SelfGenerated;
 
 		private protected override void GenerateMesh() => ShapesMeshGen.GenPolygonMesh( Mesh, points, triangulation );
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			if( points.Count < 2 )
 				return default;
-			Vector3 min = Vector3.one * float.MaxValue;
-			Vector3 max = Vector3.one * float.MinValue;
-			foreach( Vector3 pt in points ) {
-				min = Vector3.Min( min, pt );
-				max = Vector3.Max( max, pt );
+			Vector2 min = Vector2.one * float.MaxValue;
+			Vector2 max = Vector2.one * float.MinValue;
+			foreach( Vector2 pt in points ) {
+				min = Vector2.Min( min, pt );
+				max = Vector2.Max( max, pt );
 			}
 
-			return new Bounds( ( max + min ) * 0.5f, max - min );
+			Bounds b = new Bounds( ( max + min ) * 0.5f, max - min );
+			return b;
 		}
 
 	}

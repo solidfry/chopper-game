@@ -4,8 +4,9 @@
 #define SHAPES_INCLUDED_MATH
 
 // iOS metal and vulkan seems to convert half to float,
-// so overloads error out as redefinitions of the float functions
-#define SUPPORTS_LOWP_OVERLOADS (defined(SHADER_API_METAL) == false && defined(SHADER_API_VULKAN) == false)
+// so overloads error out as redefinitions of the float functions.
+// Commenting this out because I don't think this actually ever mattered
+// #define SUPPORTS_LOWP_OVERLOADS (defined(SHADER_API_METAL) == false && defined(SHADER_API_VULKAN) == false && defined(SHADER_API_WEBGPU) == false)
 
 // constants
 #define TAU 6.28318530718
@@ -46,17 +47,6 @@ half Remap( half iMin, half iMax, half oMin, half oMax, half v ) {
 inline bool IsBetween( half v, half min, half max ) {
     return v > min && v < max;
 }
-
-// iOS metal seem to convert half to float, so these overloads error out as redefinitions of the above functions
-#if SUPPORTS_LOWP_OVERLOADS 
-inline half InverseLerp( half a, half b, half v ) {         return (v - a) / (b - a); }
-inline half2 InverseLerp( half2 a, half2 b, half2 v ) {     return (v - a) / (b - a); }
-half2 Remap( half2 iMin, half2 iMax, half2 oMin, half2 oMax, half2 v ) {
-    half2 t = InverseLerp( iMin, iMax, v );
-    return lerp( oMin, oMax, t );
-}
-#endif
-
 
 inline float Round( float a, float divs ){
 	return round(a*divs)/divs;

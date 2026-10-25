@@ -38,7 +38,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -171,8 +170,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cae980fbeb97c84d83a47feda4f0316, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  drawRelativeToPanel: 1
-  useDrawingScope: 1
   fillAmount: 0.315
   colorGradient:
     serializedVersion: 2
@@ -238,7 +235,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: -2.6}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 34.599976, y: -146.79999}
+  m_AnchoredPosition: {x: 34.6, y: -146.8}
   m_SizeDelta: {x: 244.8051, y: 38.486084}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1130067863
@@ -253,8 +250,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cae980fbeb97c84d83a47feda4f0316, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  drawRelativeToPanel: 1
-  useDrawingScope: 1
   fillAmount: 1
   colorGradient:
     serializedVersion: 2
@@ -356,8 +351,8 @@ Canvas:
   m_GameObject: {fileID: 1326275555}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 1
-  m_Camera: {fileID: 1632866075}
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -484,7 +479,6 @@ GameObject:
   - component: {fileID: 1632866076}
   - component: {fileID: 1632866075}
   - component: {fileID: 1632866074}
-  - component: {fileID: 1632866077}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -566,50 +560,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1632866077
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1632866073}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_RenderShadows: 1
-  m_RequiresDepthTextureOption: 2
-  m_RequiresOpaqueTextureOption: 2
-  m_CameraType: 0
-  m_Cameras: []
-  m_RendererIndex: -1
-  m_VolumeLayerMask:
-    serializedVersion: 2
-    m_Bits: 1
-  m_VolumeTrigger: {fileID: 0}
-  m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
-  m_AntialiasingQuality: 2
-  m_StopNaN: 0
-  m_Dithering: 0
-  m_ClearDepth: 1
-  m_AllowXRRendering: 1
-  m_AllowHDROutput: 1
-  m_UseScreenCoordOverride: 0
-  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
-  m_RequiresDepthTexture: 0
-  m_RequiresColorTexture: 0
-  m_Version: 2
-  m_TaaSettings:
-    quality: 3
-    frameInfluence: 0.1
-    jitterScale: 1
-    mipBias: 0
-    varianceClampScale: 0.9
-    contrastAdaptiveSharpening: 0
 --- !u!1 &2025160608
 GameObject:
   m_ObjectHideFlags: 0
@@ -643,7 +593,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 35.799988, y: -69.899994}
+  m_AnchoredPosition: {x: 35.8, y: -69.9}
   m_SizeDelta: {x: 452.3821, y: 47.588}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &2025160610
@@ -658,8 +608,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cae980fbeb97c84d83a47feda4f0316, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  drawRelativeToPanel: 1
-  useDrawingScope: 1
   fillAmount: 0.117
   colorGradient:
     serializedVersion: 2

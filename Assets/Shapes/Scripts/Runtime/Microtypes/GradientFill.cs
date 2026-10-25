@@ -28,10 +28,10 @@ namespace Shapes {
 		public FillSpace space;
 
 		/// <summary>The start color of the gradient. For radial gradients, this is the inner color</summary>
-		public Color colorStart;
+		[ShapesColorField( true )] public Color colorStart;
 
 		/// <summary>The end color of the gradient. For radial gradients, this is the outer color</summary>
-		public Color colorEnd;
+		[ShapesColorField( true )] public Color colorEnd;
 
 		/// <summary>The starting point of linear gradients, in the given space</summary>
 		public Vector3 linearStart;

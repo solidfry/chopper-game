@@ -102,15 +102,14 @@ namespace Shapes {
 		#endif
 
 		internal override bool HasDetailLevels => false;
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matRegularPolygon[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matRegularPolygon[BlendMode];
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			if( radiusSpace != ThicknessSpace.Meters )
-				return new Bounds( Vector3.zero, Vector3.one );
+				return new Bounds( Vector3.zero, Vector3.zero );
 			// presume 0 world space padding when pixels or noots are used
-			float padding = thicknessSpace == ThicknessSpace.Meters ? thickness * .5f : 0f;
-			float apothem = border ? radius + padding : radius;
-			float size = apothem * 2;
+			float size = radiusSpace == ThicknessSpace.Meters ? radius * 2 : 0f;
+			size += thicknessSpace == ThicknessSpace.Meters ? thickness : 0f;
 			return new Bounds( Vector3.zero, new Vector3( size, size, 0f ) );
 		}
 

@@ -14,14 +14,16 @@ namespace Shapes {
 		static Stack<Mesh> meshPool = new Stack<Mesh>();
 
 		public static Mesh GetMesh() {
-			if( meshPool.Count > 0 )
-				return meshPool.Pop();
+			if( meshPool.Count > 0 ) {
+				Mesh m = meshPool.Pop();
+				m.Clear();
+				return m;
+			}
 			meshesAllocated++;
 			return new Mesh { name = "Pooled Mesh", hideFlags = HideFlags.DontSave };
 		}
 
 		public static void Release( Mesh m ) {
-			m.Clear();
 			meshPool.Push( m );
 		}
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -7,7 +8,7 @@ using UnityEngine;
 namespace Shapes {
 
 	public class PointPath<T> : DisposableMesh {
-		
+
 		protected List<T> path = new List<T>();
 		public int Count => path.Count;
 		public T LastPoint => path[path.Count - 1];
@@ -16,12 +17,12 @@ namespace Shapes {
 			hasData = true;
 			meshDirty = true;
 		}
-		
+
 		public void ClearAllPoints() {
 			path.Clear();
 			hasData = false;
 		}
-		
+
 		public T this[ int i ] {
 			get => path[i];
 			set {
@@ -34,7 +35,17 @@ namespace Shapes {
 			path[index] = point;
 			meshDirty = true;
 		}
-		
+
+		public void RemovePointAt( int index ) {
+			int preCount = path.Count;
+			if( index < 0 || index >= preCount )
+				throw new IndexOutOfRangeException();
+			path.RemoveAt( index );
+			meshDirty = true;
+			if( preCount == 1 )
+				hasData = false;
+		}
+
 		public void AddPoint( T p ) {
 			if( hasData == false )
 				OnSetFirstDataPoint();
@@ -42,9 +53,9 @@ namespace Shapes {
 			hasData = true;
 			meshDirty = true;
 		}
-		
+
 		public void AddPoints( params T[] pts ) => AddPoints( (IEnumerable<T>)pts );
-		
+
 		public void AddPoints( IEnumerable<T> ptsToAdd ) {
 			int prevCount = path.Count;
 			path.AddRange( ptsToAdd );
@@ -58,7 +69,7 @@ namespace Shapes {
 				meshDirty = true;
 			}
 		}
-		
+
 		protected bool CheckCanAddContinuePoint( [CallerMemberName] string callerName = null ) {
 			if( hasData == false ) {
 				Debug.LogWarning( $"{callerName} requires adding a point before calling it, to determine starting point" );

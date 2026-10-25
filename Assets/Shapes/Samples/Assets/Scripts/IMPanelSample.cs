@@ -9,7 +9,7 @@ namespace Shapes {
 		public Gradient colorGradient;
 		public string title = "Title";
 
-		public override void DrawPanelShapes( Rect rect ) {
+		public override void DrawPanelShapes( Rect rect, ImCanvasContext ctx ) {
 			if( colorGradient == null )
 				return; // just in case it hasn't initialized
 

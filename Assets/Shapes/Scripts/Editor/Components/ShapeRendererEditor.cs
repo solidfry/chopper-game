@@ -16,6 +16,7 @@ namespace Shapes {
 
 		static bool showDepth = false;
 		static bool showStencil = false;
+		static bool showCulling = false;
 
 		// ShapeRenderer
 		protected SerializedProperty propColor;
@@ -32,6 +33,8 @@ namespace Shapes {
 		SerializedProperty propScaleMode = null;
 		SerializedProperty propDetailLevel = null;
 		SerializedProperty propRenderQueue = null;
+		SerializedProperty propCulling = null;
+		SerializedProperty propBoundsPadding = null;
 
 		// MeshRenderer
 		SerializedObject soRnd;
@@ -98,6 +101,9 @@ namespace Shapes {
 		static GUIContent stencilReadMaskGuiContent = new GUIContent( "Read Mask", "Bitmask for reading stencil values" );
 		static GUIContent stencilWriteMaskGuiContent = new GUIContent( "Write Mask", "Bitmask for writing stencil values" );
 
+		static GUIContent cullingContent = new GUIContent( "Culling", "Whether to use a calculated local space bounding box for frustum culling, or the global bounds setting" );
+		static GUIContent boundsPaddingContent = new GUIContent( "Padding", "Amount of local space padding in meters, to add to the bounds used for culling, when using CalculatedLocal culling" );
+
 		public virtual void OnEnable() {
 			soRnd = new SerializedObject( targets.Select( t => ( (Component)t ).GetComponent<MeshRenderer>() as Object ).ToArray() );
 			propSortingOrder = soRnd.FindProperty( "m_SortingOrder" );
@@ -109,6 +115,26 @@ namespace Shapes {
 			// hide mesh filter/renderer components
 			foreach( ShapeRenderer shape in targets.Cast<ShapeRenderer>() )
 				shape.HideMeshFilterRenderer();
+
+			SceneView.duringSceneGui += SceneViewOnduringSceneGui;
+		}
+
+		public virtual void OnDisable() {
+			SceneView.duringSceneGui -= SceneViewOnduringSceneGui;
+		}
+
+		void SceneViewOnduringSceneGui( SceneView obj ) {
+			if( showCulling == false )
+				return;
+			foreach( ShapeRenderer shape in targets.OfType<ShapeRenderer>() ) {
+				Renderer r = shape.GetComponent<Renderer>();
+				if( r == null )
+					return;
+				Bounds bounds = r.localBounds;
+				Handles.matrix = shape.transform.localToWorldMatrix;
+				Handles.color = Color.white;
+				Handles.DrawWireCube( bounds.center, bounds.extents * 2 );
+			}
 		}
 
 		void FindAllProperties() {
@@ -130,7 +156,7 @@ namespace Shapes {
 
 		bool updateMeshFromEditorChange = false;
 
-		protected void BeginProperties( bool showColor = true, bool canEditDetailLevel = true ) {
+		protected void BeginProperties( bool showColor = true, bool canEditDetailLevel = true, bool isCustomMesh = false ) {
 			soRnd.Update();
 
 			using( new ShapesUI.GroupScope() ) {
@@ -163,6 +189,21 @@ namespace Shapes {
 						EditorGUILayout.PropertyField( propStencilRefID, stencilIDGuiContent );
 						EditorGUILayout.PropertyField( propStencilReadMask, stencilReadMaskGuiContent );
 						EditorGUILayout.PropertyField( propStencilWriteMask, stencilWriteMaskGuiContent );
+					}
+				}
+				// Culling/bounds
+				using( new EditorGUI.IndentLevelScope( 1 ) ) {
+					if( showCulling = EditorGUILayout.Foldout( showCulling, "Culling" ) ) {
+						if( isCustomMesh == false )
+							EditorGUILayout.PropertyField( propCulling, cullingContent );
+						using( new EditorGUI.DisabledScope( isCustomMesh == false && propCulling.enumValueIndex == 1 ) )
+							EditorGUILayout.PropertyField( propBoundsPadding, boundsPaddingContent );
+						if( targets.Length == 1 && target is ShapeRenderer sh ) {
+							using( new EditorGUI.IndentLevelScope( 1 ) ) {
+								using( new EditorGUI.DisabledScope( true ) )
+									EditorGUILayout.BoundsField( sh.GetComponent<MeshRenderer>().localBounds );
+							}
+						}
 					}
 				}
 

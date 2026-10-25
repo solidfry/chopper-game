@@ -93,7 +93,7 @@ VertexOutput vert (VertexInput v) {
 FRAG_OUTPUT_V4 frag( VertexOutput i ) : SV_Target {
     UNITY_SETUP_INSTANCE_ID(i);
     #if QUAD_INTERPOLATION_QUALITY == 0
-        return ShapesOutput( i.color, 1 );
+        return SHAPES_OUTPUT( i.color, 1, i );
     #else
         #if QUAD_INTERPOLATION_QUALITY == 1
             half2 uv = i.uv;

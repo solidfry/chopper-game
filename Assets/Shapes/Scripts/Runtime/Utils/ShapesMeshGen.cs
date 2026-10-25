@@ -36,9 +36,10 @@ namespace Shapes {
 			meshJoinsTriangles.Clear();
 
 			int pointCount = path.Count;
-
-			if( pointCount < 2 )
+			if( pointCount < 2 ) {
+				mesh.Clear(); // fixes 628-polyline-does-not-clear-mesh-when-point-count-2, 604-polyline-rendering-after-all-points-have-been-removed
 				return;
+			}
 			if( pointCount == 2 && closed )
 				closed = false;
 

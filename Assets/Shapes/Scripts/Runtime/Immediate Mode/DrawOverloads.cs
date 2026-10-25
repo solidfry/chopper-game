@@ -3135,6 +3135,118 @@ namespace Shapes {
 		[MethodImpl( INLINE )] public static void Torus( float radius, float thickness, float angleRadStart, float angleRadEnd ) => Torus_Internal( radius, thickness, angleRadStart, angleRadEnd, Color );
 		/// <summary>Draws a 3D torus with a given radius and thickness</summary><param name="radius">The radius of this torus</param><param name="thickness">The thickness of the torus</param><param name="angleRadStart">The start angle of the torus, in radians</param><param name="angleRadEnd">The end angle of the torus, in radians</param><param name="color">The color of the torus</param>
 		[MethodImpl( INLINE )] public static void Torus( float radius, float thickness, float angleRadStart, float angleRadEnd, Color color ) => Torus_Internal( radius, thickness, angleRadStart, angleRadEnd, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, Font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( false, null, element, default, default, font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="content">The text to display</param>
 		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, string content ) {
 			Draw.PushMatrix();
@@ -3245,6 +3357,118 @@ namespace Shapes {
 			Draw.PushMatrix();
 			Draw.Translate( pos );
 			Text_Internal( false, content, element, default, default, font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, Font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Vector3 pos, Quaternion rot, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( false, null, element, default, default, font, fontSize, align, color );
 			Draw.PopMatrix();
 		}
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the text</param><param name="rot">The orientation of the text</param><param name="content">The text to display</param>
@@ -3359,6 +3583,38 @@ namespace Shapes {
 			Text_Internal( false, content, element, default, default, font, fontSize, align, color );
 			Draw.PopMatrix();
 		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element ) => Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align ) => Text_Internal( false, null, element, default, default, Font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, float fontSize ) => Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, float fontSize ) => Text_Internal( false, null, element, default, default, Font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TMP_FontAsset font ) => Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, TMP_FontAsset font ) => Text_Internal( false, null, element, default, default, font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, float fontSize, TMP_FontAsset font ) => Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, float fontSize, TMP_FontAsset font ) => Text_Internal( false, null, element, default, default, font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, Color color ) => Text_Internal( false, null, element, default, default, Font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, Color color ) => Text_Internal( false, null, element, default, default, Font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, float fontSize, Color color ) => Text_Internal( false, null, element, default, default, Font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, float fontSize, Color color ) => Text_Internal( false, null, element, default, default, Font, fontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TMP_FontAsset font, Color color ) => Text_Internal( false, null, element, default, default, font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, TMP_FontAsset font, Color color ) => Text_Internal( false, null, element, default, default, font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( false, null, element, default, default, font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
+		[MethodImpl( INLINE )] public static void Text( TextElement element, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( false, null, element, default, default, font, fontSize, align, color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="content">The text to display</param>
 		[MethodImpl( INLINE )] public static void Text( TextElement element, string content ) => Text_Internal( false, content, element, default, default, Font, FontSize, TextAlign, Color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="content">The text to display</param><param name="align">The text alignment to use</param>
@@ -3647,6 +3903,118 @@ namespace Shapes {
 		[MethodImpl( INLINE )] public static void Text( string content, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( false, content, null, default, default, font, fontSize, TextAlign, color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="content">The text to display</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the text</param>
 		[MethodImpl( INLINE )] public static void Text( string content, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( false, content, null, default, default, font, fontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Translate( pos );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="content">The text to display</param>
 		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Vector2 pivot, Vector2 size, string content ) {
 			Draw.PushMatrix();
@@ -3757,6 +4125,118 @@ namespace Shapes {
 			Draw.PushMatrix();
 			Draw.Translate( pos );
 			Text_Internal( true, content, element, pivot, size, font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, float fontSize ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, align, Color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, Font, fontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, FontSize, align, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, color );
+			Draw.PopMatrix();
+		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector3 pos, Quaternion rot, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) {
+			Draw.PushMatrix();
+			Draw.Matrix *= Matrix4x4.TRS( pos, rot, Vector3.one );
+			Text_Internal( true, null, element, pivot, size, font, fontSize, align, color );
 			Draw.PopMatrix();
 		}
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pos">The position of the textrect</param><param name="rot">The orientation of the textrect</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="content">The text to display</param>
@@ -3871,6 +4351,38 @@ namespace Shapes {
 			Text_Internal( true, content, element, pivot, size, font, fontSize, align, color );
 			Draw.PopMatrix();
 		}
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size ) => Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align ) => Text_Internal( true, null, element, pivot, size, Font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, float fontSize ) => Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, float fontSize ) => Text_Internal( true, null, element, pivot, size, Font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TMP_FontAsset font ) => Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font ) => Text_Internal( true, null, element, pivot, size, font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font ) => Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font ) => Text_Internal( true, null, element, pivot, size, font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, Color color ) => Text_Internal( true, null, element, pivot, size, Font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, Color color ) => Text_Internal( true, null, element, pivot, size, Font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, float fontSize, Color color ) => Text_Internal( true, null, element, pivot, size, Font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, Color color ) => Text_Internal( true, null, element, pivot, size, Font, fontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TMP_FontAsset font, Color color ) => Text_Internal( true, null, element, pivot, size, font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, TMP_FontAsset font, Color color ) => Text_Internal( true, null, element, pivot, size, font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( true, null, element, pivot, size, font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( true, null, element, pivot, size, font, fontSize, align, color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="content">The text to display</param>
 		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Vector2 pivot, Vector2 size, string content ) => Text_Internal( true, content, element, pivot, size, Font, FontSize, TextAlign, Color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="content">The text to display</param><param name="align">The text alignment to use</param>
@@ -4159,6 +4671,38 @@ namespace Shapes {
 		[MethodImpl( INLINE )] public static void TextRect( Vector2 pivot, Vector2 size, string content, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( true, content, null, pivot, size, font, fontSize, TextAlign, color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="pivot">The normalized pivot of the local space rectangle for text positioning, like Unity's RectTransform</param><param name="size">The local space size of the rectangle to draw text the in</param><param name="content">The text to display</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
 		[MethodImpl( INLINE )] public static void TextRect( Vector2 pivot, Vector2 size, string content, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) => Text_Internal( true, content, null, pivot, size, font, fontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect ) => TextRect_Internal( null, element, rect, Font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align ) => TextRect_Internal( null, element, rect, Font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, float fontSize ) => TextRect_Internal( null, element, rect, Font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, float fontSize ) => TextRect_Internal( null, element, rect, Font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TMP_FontAsset font ) => TextRect_Internal( null, element, rect, font, FontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, TMP_FontAsset font ) => TextRect_Internal( null, element, rect, font, FontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, float fontSize, TMP_FontAsset font ) => TextRect_Internal( null, element, rect, font, fontSize, TextAlign, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, float fontSize, TMP_FontAsset font ) => TextRect_Internal( null, element, rect, font, fontSize, align, Color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, Color color ) => TextRect_Internal( null, element, rect, Font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, Color color ) => TextRect_Internal( null, element, rect, Font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, float fontSize, Color color ) => TextRect_Internal( null, element, rect, Font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, float fontSize, Color color ) => TextRect_Internal( null, element, rect, Font, fontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TMP_FontAsset font, Color color ) => TextRect_Internal( null, element, rect, font, FontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, TMP_FontAsset font, Color color ) => TextRect_Internal( null, element, rect, font, FontSize, align, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, float fontSize, TMP_FontAsset font, Color color ) => TextRect_Internal( null, element, rect, font, fontSize, TextAlign, color );
+		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="align">The text alignment to use</param><param name="fontSize">The text alignment to use</param><param name="font">The font to use</param><param name="color">The color of the textrect</param>
+		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, TextAlign align, float fontSize, TMP_FontAsset font, Color color ) => TextRect_Internal( null, element, rect, font, fontSize, align, color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="content">The text to display</param>
 		[MethodImpl( INLINE )] public static void TextRect( TextElement element, Rect rect, string content ) => TextRect_Internal( content, element, rect, Font, FontSize, TextAlign, Color );
 		/// <summary>Draws text using Text Mesh Pro</summary><param name="element">The text element to use when drawing this text</param><param name="rect">The local space rectangle to display text within</param><param name="content">The text to display</param><param name="align">The text alignment to use</param>

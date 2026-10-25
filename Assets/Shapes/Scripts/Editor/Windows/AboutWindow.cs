@@ -44,13 +44,13 @@ namespace Shapes {
 		static Color colF15 = new Color( 1f, 0.0666666f, 0.333333f, 1f );
 
 		GUIStyle labelStyle;
-		GUIStyle LabelStyle => labelStyle ?? ( labelStyle = new GUIStyle( GUI.skin.label ) { active = { textColor = Color.white }, normal = { textColor = Color.white } } );
+		GUIStyle LabelStyle => labelStyle ??= new GUIStyle( GUI.skin.label ) { active = { textColor = Color.white }, normal = { textColor = Color.white } };
 		GUIStyle linkStyle;
-		GUIStyle LinkStyle => linkStyle ?? ( linkStyle = new GUIStyle( LabelStyle ) { hover = { textColor = colF15 } } );
+		GUIStyle LinkStyle => linkStyle ??= new GUIStyle( LabelStyle ) { hover = { textColor = colF15 } };
 		GUIStyle titleStyle;
-		GUIStyle TitleStyle => titleStyle ?? ( titleStyle = new GUIStyle( EditorStyles.boldLabel ) { fontSize = 26, alignment = TextAnchor.MiddleCenter, active = { textColor = Color.white }, normal = { textColor = Color.white } } );
+		GUIStyle TitleStyle => titleStyle ??= new GUIStyle( EditorStyles.boldLabel ) { fontSize = 26, alignment = TextAnchor.MiddleCenter, active = { textColor = Color.white }, normal = { textColor = Color.white } };
 		GUIStyle labelCentered;
-		GUIStyle LabelCentered => labelCentered ?? ( labelCentered = new GUIStyle( GUI.skin.label ) { alignment = TextAnchor.MiddleCenter, active = { textColor = Color.white }, normal = { textColor = Color.white } } );
+		GUIStyle LabelCentered => labelCentered ??= new GUIStyle( GUI.skin.label ) { alignment = TextAnchor.MiddleCenter, active = { textColor = Color.white }, normal = { textColor = Color.white } };
 
 		[NonSerialized] string newVersionAvailable = null;
 		[NonSerialized] UnityWebRequest req;
@@ -113,7 +113,6 @@ namespace Shapes {
 				}
 			}
 		}
-
 
 		void OnGUI() {
 			if( Event.current.type == EventType.Repaint )

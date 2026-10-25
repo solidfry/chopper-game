@@ -122,13 +122,16 @@ namespace Shapes {
 		ShapeDrawCall sdc;
 
 		public ShapeDrawCall ExtractDrawCall() {
+			bool useOverrideMpb = mpbOverride != null && this is MpbCustomMesh;
+
 			if( HasMultipleInstances ) {
-				sdc = new ShapeDrawCall( drawState, instanceCount, matrices );
+				sdc = new ShapeDrawCall( drawState, instanceCount, matrices, useOverrideMpb ? mpbOverride : null );
 				matrices = ArrayPool<Matrix4x4>.Alloc( UnityInfo.INSTANCES_MAX ); // passed it off to the instanced call
 			} else
-				sdc = new ShapeDrawCall( drawState, matrices[0] );
+				sdc = new ShapeDrawCall( drawState, matrices[0], useOverrideMpb ? mpbOverride : null );
 
-			TransferAllProperties();
+			if( useOverrideMpb == false )
+				TransferAllProperties();
 			Dispose();
 			return sdc;
 		}
@@ -141,15 +144,11 @@ namespace Shapes {
 		}
 
 		internal void TransferAllProperties() {
-			if( this is MpbCustomMesh ) {
-				if( mpbOverride != null )
-					sdc.mpb = mpbOverride;
-				return; // don't transfer anything else
-			}
 			// all shapes have a color property (except TMP text)
+			if( this is MpbCustomMesh )
+				return; // nothing to transfer. todo: transfer maybe color at least
 			if( this is MpbText == false )
 				Transfer( ShapesMaterialUtils.propColor, color );
-
 
 			if( this is IFillableMpb fillable ) {
 				Transfer( ShapesMaterialUtils.propFillType, fillable.fillType );

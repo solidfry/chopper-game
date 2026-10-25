@@ -30,13 +30,12 @@ namespace Shapes {
 		internal override bool HasDetailLevels => true;
 		internal override bool HasScaleModes => false;
 		private protected override void ShapeClampRanges() => radius = Mathf.Max( 0f, radius );
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matSphere[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matSphere[BlendMode];
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.SphereMesh[(int)detailLevel];
 
-		private protected override Bounds GetBounds_Internal() {
-			if( radiusSpace != ThicknessSpace.Meters )
-				return new Bounds( Vector3.zero, Vector3.one );
-			return new Bounds( Vector3.zero, Vector3.one * ( radius * 2 ) );
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
+			float size = radiusSpace == ThicknessSpace.Meters ? 2 * radius : 0f;
+			return new Bounds( Vector3.zero, new Vector3( size, size, size ) );
 		}
 
 	}

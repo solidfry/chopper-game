@@ -169,9 +169,9 @@ namespace Shapes {
 		}
 		#endif
 
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.GetRectMaterial( type )[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.GetRectMaterial( type )[BlendMode];
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			Vector2 size = new Vector2( width, height );
 			Vector2 center = pivot == RectPivot.Center ? default : size / 2f;
 			return new Bounds( center, size );

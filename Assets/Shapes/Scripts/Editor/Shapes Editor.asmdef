@@ -1,5 +1,6 @@
 {
     "name": "ShapesEditor",
+    "rootNamespace": "",
     "references": [
         "ShapesRuntime",
         "Unity.TextMeshPro",
@@ -15,6 +16,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0",
+            "define": "URP_INSTALLED"
+        },
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "17.0",
+            "define": "HDRP_INSTALLED"
+        }
+    ],
     "noEngineReferences": false
 }

@@ -5,16 +5,16 @@ namespace Shapes {
 	public class IMCanvasSample : ImmediateModeCanvas {
 
 		// this is called automatically by the base class, in an existing Draw.Command context
-		public override void DrawCanvasShapes( Rect rect ) {
+		public override void DrawCanvasShapes( ImCanvasContext ctx ) {
 			// The Rect input above is the full region of the UI,
 			// usually the region of the entire screen, in UI coordinates
 
 			// Draw a large ring, fitting it both horizontally and vertically:
-			float radius = ( Mathf.Min( rect.width, rect.height ) / 2 ) * 0.9f;
+			float radius = ( Mathf.Min( ctx.canvasRect.width, ctx.canvasRect.height ) / 2 ) * 0.9f;
 			Draw.Ring( Vector3.zero, Quaternion.identity, radius, thickness: 1, new Color( 1, 1, 1, 0.3f ) );
 
 			// Draw a rounded border around the whole screen:
-			Draw.RectangleBorder( rect, 8f, cornerRadius: 16, Color.white );
+			Draw.RectangleBorder( ctx.canvasRect, 8f, cornerRadius: 16, Color.white );
 
 			// Draws all ImmediateModePanel child objects.
 			// in this case, they are health/stamina/magic bars:

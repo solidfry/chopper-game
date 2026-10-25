@@ -44,7 +44,7 @@ namespace Shapes {
 		}
 
 		public override void OnInspectorGUI() {
-			base.BeginProperties();
+			base.BeginProperties( isCustomMesh: true );
 			if( Event.current.type == EventType.Layout )
 				showZ = targets.Any( x => ( (Polyline)x ).Geometry != PolylineGeometry.Flat2D );
 			EditorGUILayout.PropertyField( propGeometry );

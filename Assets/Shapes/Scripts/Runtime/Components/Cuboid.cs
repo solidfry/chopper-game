@@ -30,12 +30,12 @@ namespace Shapes {
 		internal override bool HasDetailLevels => false;
 		internal override bool HasScaleModes => false;
 		private protected override void ShapeClampRanges() => size = Vector3.Max( default, size );
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matCuboid[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matCuboid[BlendMode];
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.CuboidMesh[0];
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			if( sizeSpace != ThicknessSpace.Meters )
-				return new Bounds( default, Vector3.one );
+				return new Bounds( default, Vector3.zero );
 			return new Bounds( default, size );
 		}
 

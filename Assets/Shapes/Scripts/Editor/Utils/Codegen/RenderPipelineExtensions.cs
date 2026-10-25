@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 // Shapes © Freya Holmér - https://twitter.com/FreyaHolmer/
 // Website & Documentation - https://acegikmo.com/shapes/
@@ -16,11 +17,20 @@ namespace Shapes {
 			}
 		}
 
-		public static string PreprocessorDefineName( this RenderPipeline rp ) {
+		public static string LegacyPreprocessorDefineName( this RenderPipeline rp ) {
 			switch( rp ) {
 				case RenderPipeline.Legacy: return "SHAPES_BIRP";
 				case RenderPipeline.URP:    return "SHAPES_URP";
 				case RenderPipeline.HDRP:   return "SHAPES_HDRP";
+				default:                    throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		public static string PackageName( this RenderPipeline rp ) {
+			switch( rp ) {
+				case RenderPipeline.URP:    return "com.unity.render-pipelines.universal";
+				case RenderPipeline.HDRP:   return "com.unity.render-pipelines.high-definition";
+				case RenderPipeline.Legacy: throw new InvalidEnumArgumentException();
 				default:                    throw new ArgumentOutOfRangeException();
 			}
 		}

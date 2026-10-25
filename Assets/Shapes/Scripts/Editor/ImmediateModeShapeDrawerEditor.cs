@@ -25,13 +25,28 @@ namespace Shapes {
 			DrawShapes( cam );
 		}
 
-		#if (SHAPES_URP || SHAPES_HDRP)
-			public virtual void OnEnable() => UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += DrawShapesSRP;
-			public virtual void OnDisable() => UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= DrawShapesSRP;
-			void DrawShapesSRP( UnityEngine.Rendering.ScriptableRenderContext ctx, Camera cam ) => OnCameraPreRender( cam );
-		#else
-		public virtual void OnEnable() => Camera.onPreRender += OnCameraPreRender;
-		public virtual void OnDisable() => Camera.onPreRender -= OnCameraPreRender;
+		public virtual void OnEnable() {
+			if( UnityInfo.CurrentRp == RenderPipeline.Legacy ) {
+				Camera.onPreRender += OnCameraPreRender;
+			} else {
+				#if URP_INSTALLED || HDRP_INSTALLED
+				UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += DrawShapesSRP;
+				#endif
+			}
+		}
+
+		public virtual void OnDisable() {
+			if( UnityInfo.CurrentRp == RenderPipeline.Legacy ) {
+				Camera.onPreRender -= OnCameraPreRender;
+			} else {
+				#if URP_INSTALLED || HDRP_INSTALLED
+				UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= DrawShapesSRP;
+				#endif
+			}
+		}
+
+		#if URP_INSTALLED || HDRP_INSTALLED
+		void DrawShapesSRP( UnityEngine.Rendering.ScriptableRenderContext ctx, Camera cam ) => OnCameraPreRender( cam );
 		#endif
 
 	}

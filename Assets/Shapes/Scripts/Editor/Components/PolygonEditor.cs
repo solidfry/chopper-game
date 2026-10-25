@@ -42,7 +42,7 @@ namespace Shapes {
 		}
 
 		public override void OnInspectorGUI() {
-			base.BeginProperties();
+			base.BeginProperties( isCustomMesh: true );
 			EditorGUILayout.PropertyField( propTriangulation );
 
 			bool changed = fillEditor.DrawProperties( this );

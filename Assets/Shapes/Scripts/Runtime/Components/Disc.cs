@@ -228,18 +228,12 @@ namespace Shapes {
 		}
 		#endif
 
-		private protected override Material[] GetMaterials() {
-			return new[] { ShapesMaterialUtils.GetDiscMaterial( type )[BlendMode] };
-		}
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.GetDiscMaterial( type )[BlendMode];
 
-		private protected override Bounds GetBounds_Internal() {
-			if( radiusSpace != ThicknessSpace.Meters )
-				return new Bounds( Vector3.zero, Vector3.one );
-			// presume 0 world space padding when pixels or noots are used
-			float padding = thicknessSpace == ThicknessSpace.Meters ? thickness * .5f : 0f;
-			float apothem = HasThickness ? radius + padding : radius;
-			float size = apothem * 2;
-			return new Bounds( Vector3.zero, new Vector3( size, size, 0f ) );
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
+			float s = radiusSpace == ThicknessSpace.Meters ? 2 * radius : 0f;
+			s += ( HasThickness && thicknessSpace == ThicknessSpace.Meters ) ? thickness : 0f;
+			return new Bounds( Vector3.zero, new Vector3( s, s, geometry == DiscGeometry.Billboard ? s : 0 ) );
 		}
 
 	}

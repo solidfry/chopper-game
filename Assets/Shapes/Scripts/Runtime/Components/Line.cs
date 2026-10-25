@@ -110,8 +110,7 @@ namespace Shapes {
 			SetAllDashValues( now: false );
 		}
 
-
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			// presume 0 world space padding when pixels or noots are used
 			float padding = thicknessSpace == ThicknessSpace.Meters ? thickness : 0f;
 			Vector3 center = ( start + end ) / 2f;
@@ -119,7 +118,7 @@ namespace Shapes {
 			return new Bounds( center, size );
 		}
 
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.GetLineMat( geometry, endCaps )[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.GetLineMat( geometry, endCaps )[BlendMode];
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.GetLineMesh( geometry, endCaps, detailLevel );
 		internal override bool HasDetailLevels => true;
 

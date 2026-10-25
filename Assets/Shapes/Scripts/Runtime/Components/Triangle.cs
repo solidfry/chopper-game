@@ -204,9 +204,9 @@ namespace Shapes {
 
 		internal override bool HasDetailLevels => false;
 		private protected override Mesh GetInitialMeshAsset() => ShapesMeshUtils.TriangleMesh[0];
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matTriangle[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matTriangle[BlendMode];
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			Vector3 min = Vector3.Min( Vector3.Min( a, b ), c );
 			Vector3 max = Vector3.Max( Vector3.Max( a, b ), c );
 			return new Bounds( ( min + max ) / 2, ShapesMath.Abs( max - min ) );

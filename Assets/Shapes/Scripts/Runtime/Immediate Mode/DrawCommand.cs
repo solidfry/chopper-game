@@ -1,18 +1,22 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
-#if SHAPES_URP
+#if URP_INSTALLED
 using UnityEngine.Rendering.Universal;
-#elif SHAPES_HDRP
-using UnityEngine.Rendering.HighDefinition;
+#endif
 
+#if HDRP_INSTALLED
+using UnityEngine.Rendering.HighDefinition;
 #endif
 
 
@@ -33,10 +37,8 @@ namespace Shapes {
 		internal static Dictionary<Camera, List<DrawCommand>> cBuffersRendering = new Dictionary<Camera, List<DrawCommand>>(); // to avoid decentralized nullchecking for every onPostRender event
 
 		static DrawCommand() {
-			#if !(SHAPES_URP || SHAPES_HDRP)
-			Camera.onPostRender += OnPostRenderBuiltInRP;
-			#endif
-
+			if( UnityInfo.CurrentRp == RenderPipeline.Legacy )
+				Camera.onPostRender += OnPostRenderBuiltInRP;
 			SceneManager.sceneUnloaded += scene => FlushNullCameras();
 			#if UNITY_EDITOR
 			AssemblyReloadEvents.beforeAssemblyReload += ClearAllCommands; // to prevent leaking when reloading scripts
@@ -68,15 +70,20 @@ namespace Shapes {
 		}
 
 		static void RegisterCommand( DrawCommand cmd ) {
-			#if SHAPES_HDRP
-			// make sure we have the volumes ready to read from the rendering buffers
-			HDRPCustomPassManager.Instance.MakeSureVolumeExistsForInjectionPoint( cmd.camEvt );
-			#elif SHAPES_URP
-			// shapes import script will ensure you have the pass added to your renderer, the rest is already handled
-			#else
-			// if we're in built-in RP, then we need to explicitly add this to the camera
-			cmd.AddToCamera();
-			#endif
+			switch( UnityInfo.CurrentRp ) {
+				case RenderPipeline.Legacy:
+					// if we're in built-in RP, then we need to explicitly add this to the camera
+					cmd.AddToCamera();
+					break;
+				case RenderPipeline.HDRP:
+					// make sure we have the volumes ready to read from the rendering buffers
+					#if HDRP_INSTALLED
+					HDRPCustomPassManager.Instance.MakeSureVolumeExistsForInjectionPoint( cmd.camEvtHdrp );
+					#endif
+					break;
+				case RenderPipeline.URP: break; // shapes import script will ensure you have the pass added to your renderer, the rest is already handled
+				default:                 throw new ArgumentOutOfRangeException();
+			}
 
 			if( cBuffersRendering.TryGetValue( cmd.cam, out List<DrawCommand> list ) == false ) {
 				cBuffersRendering.Add( cmd.cam, list = new List<DrawCommand>() );
@@ -85,7 +92,7 @@ namespace Shapes {
 			list.Add( cmd );
 		}
 
-		#if SHAPES_URP || SHAPES_HDRP
+		#if URP_INSTALLED || HDRP_INSTALLED
 		internal static void OnCommandRendered( DrawCommand cmd ) {
 			cmd.hasRendered = true;
 			if( cBuffersRendering.TryGetValue( cmd.cam, out List<DrawCommand> drawCmds ) ) {
@@ -94,7 +101,8 @@ namespace Shapes {
 			} else
 				Debug.LogError( $"Tried to remove unlisted draw command {cmd.id}" );
 		}
-		#else
+		#endif
+
 		// this is all extremely cursed but there is literally no way to know when a command is done drawing in the built-in RP
 		static void OnPostRenderBuiltInRP( Camera cam ) {
 			if( cBuffersRendering.TryGetValue( cam, out List<DrawCommand> drawCmds ) ) {
@@ -106,7 +114,6 @@ namespace Shapes {
 				}
 			}
 		}
-		#endif
 
 		#endregion
 
@@ -119,22 +126,37 @@ namespace Shapes {
 		internal readonly List<Object> cachedAssets = new List<Object>();
 		internal readonly List<DisposableMesh> cachedMeshes = new List<DisposableMesh>();
 		internal readonly List<ShapeDrawCall> drawCalls = new List<ShapeDrawCall>();
-		#if SHAPES_URP
-		public RenderPassEvent camEvt;
-		#elif SHAPES_HDRP
-		public CustomPassInjectionPoint camEvt;
-		#else
-		CameraEvent camEvt;
+		int camEvt = 0;
+
+		#if URP_INSTALLED
+		public RenderPassEvent camEvtUrp {
+			get => (RenderPassEvent)camEvt;
+			set => camEvt = (int)value;
+		}
 		#endif
 
-
-		#if SHAPES_URP
-		internal DrawCommand Initialize( Camera cam, RenderPassEvent cameraEvent = RenderPassEvent.BeforeRenderingPostProcessing ) {
-		#elif SHAPES_HDRP
-		internal DrawCommand Initialize( Camera cam, CustomPassInjectionPoint cameraEvent = CustomPassInjectionPoint.BeforePostProcess ) {
-		#else
-		internal DrawCommand Initialize( Camera cam, CameraEvent cameraEvent = CameraEvent.BeforeImageEffects ) {
+		#if HDRP_INSTALLED
+		public CustomPassInjectionPoint camEvtHdrp {
+			get => (CustomPassInjectionPoint)camEvt;
+			set => camEvt = (int)value;
+		}
 		#endif
+
+		public CameraEvent camEvtBirp {
+			get => (CameraEvent)camEvt;
+			set => camEvt = (int)value;
+		}
+
+		#if URP_INSTALLED
+		internal DrawCommand Initialize( Camera cam, RenderPassEvent cameraEvent = RenderPassEvent.BeforeRenderingPostProcessing ) => Initialize( cam, (int)cameraEvent );
+		#endif
+		#if HDRP_INSTALLED
+		internal DrawCommand Initialize( Camera cam, CustomPassInjectionPoint cameraEvent = CustomPassInjectionPoint.BeforePostProcess ) => Initialize( cam, (int)cameraEvent );
+		#endif
+
+		internal DrawCommand Initialize( Camera cam, CameraEvent cameraEvent = CameraEvent.BeforeImageEffects ) => Initialize( cam, (int)cameraEvent );
+
+		DrawCommand Initialize( Camera cam, int cameraEvent ) {
 			this.cam = cam;
 			this.id = bufferID++;
 			hasValidCamera = cam != null;
@@ -149,6 +171,12 @@ namespace Shapes {
 			return this;
 		}
 
+		#if URP_INSTALLED
+		internal void AppendToBuffer( RasterCommandBuffer cmd ) {
+			foreach( ShapeDrawCall draw in drawCalls )
+				draw.AddToCommandBuffer( cmd );
+		}
+		#endif
 
 		internal void AppendToBuffer( CommandBuffer cmd ) {
 			foreach( ShapeDrawCall draw in drawCalls )
@@ -157,9 +185,8 @@ namespace Shapes {
 
 		void Clear() { // prepares for removing it from the list, if we want to delete it
 			CleanupCachedAssetsAndMeshes();
-			#if !SHAPES_URP && !SHAPES_HDRP
-			RemoveFromCamera();
-			#endif
+			if( UnityInfo.CurrentRp == RenderPipeline.Legacy )
+				RemoveFromCamera();
 			hasRendered = false;
 			for( int i = 0; i < drawCalls.Count; i++ )
 				drawCalls[i].Cleanup();
@@ -183,45 +210,46 @@ namespace Shapes {
 			// make sure the last mpb gets added if it exists
 			if( IMDrawer.metaMpbPrevious != null && IMDrawer.metaMpbPrevious.HasContent )
 				drawCalls.Add( IMDrawer.metaMpbPrevious.ExtractDrawCall() );
+			if( UnityInfo.CurrentRp == RenderPipeline.HDRP ) {
+				#if HDRP_INSTALLED
+				RegisterCommand( this );
+				#endif
+			} else {
+				if( hasValidCamera ) RegisterCommand( this );
+			}
 
-			#if SHAPES_HDRP
-			RegisterCommand( this );
-			#else
-			if( hasValidCamera ) RegisterCommand( this );
-			#endif
 			drawCommandWriteNestLevel--;
 			cBuffersWriting.Pop();
 			if( pushPopState )
 				Draw.Pop();
 		}
 
-		#if !(SHAPES_URP || SHAPES_HDRP)
+		// only built-in RP adds buffers directly to cameras
+		CommandBuffer cmdBufBirp;
 
+		// Built-in RP only
+		void AddToCamera() {
+			cmdBufBirp = ObjectPool<CommandBuffer>.Alloc();
+			cmdBufBirp.name = "Shapes Command Buffer";
+			AppendToBuffer( cmdBufBirp );
+			cam.AddCommandBuffer( camEvtBirp, cmdBufBirp );
+		}
+
+		// Built-in RP only
 		private bool CheckIfRenderIsDone() {
 			if( hasRendered ) return true; // done
 			hasRendered = true;
 			return false; // not done
 		}
 
-		// only built-in RP adds buffers directly to cameras
-		CommandBuffer cmdBuf;
-
-		void AddToCamera() {
-			cmdBuf = ObjectPool<CommandBuffer>.Alloc();
-			cmdBuf.name = "Shapes Command Buffer";
-			AppendToBuffer( cmdBuf );
-			cam.AddCommandBuffer( camEvt, cmdBuf );
-		}
-
+		// Built-in RP only
 		void RemoveFromCamera() {
 			if( cam != null )
-				cam.RemoveCommandBuffer( camEvt, cmdBuf );
-			cmdBuf.Clear();
-			ObjectPool<CommandBuffer>.Free( cmdBuf );
-			cmdBuf = null;
+				cam.RemoveCommandBuffer( camEvtBirp, cmdBufBirp );
+			cmdBufBirp.Clear();
+			ObjectPool<CommandBuffer>.Free( cmdBufBirp );
+			cmdBufBirp = null;
 		}
-		#endif
-
 
 	}
 

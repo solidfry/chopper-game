@@ -56,13 +56,13 @@ namespace Shapes {
 
 		internal override bool HasDetailLevels => true;
 		internal override bool HasScaleModes => false;
-		private protected override Material[] GetMaterials() => new[] { ShapesMaterialUtils.matCone[BlendMode] };
+		private protected override void GetMaterials( Material[] mats ) => mats[0] = ShapesMaterialUtils.matCone[BlendMode];
 		private protected override Mesh GetInitialMeshAsset() => fillCap ? ShapesMeshUtils.ConeMesh[(int)detailLevel] : ShapesMeshUtils.ConeMeshUncapped[(int)detailLevel];
 
-		private protected override Bounds GetBounds_Internal() {
+		private protected override Bounds GetUnpaddedLocalBounds_Internal() {
 			if( sizeSpace != ThicknessSpace.Meters )
-				return new Bounds( Vector3.zero, Vector3.one );
-			return new Bounds( Vector3.zero, new Vector3( radius * 2, radius * 2, length ) );
+				return new Bounds( Vector3.zero, Vector3.zero );
+			return new Bounds( new Vector3( 0, 0, length / 2 ), new Vector3( radius * 2, radius * 2, length ) );
 		}
 
 	}

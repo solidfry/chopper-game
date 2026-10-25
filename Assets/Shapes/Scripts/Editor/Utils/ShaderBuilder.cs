@@ -48,7 +48,7 @@ namespace Shapes {
 
 		public BracketScope Scope( string line ) => new BracketScope( this, line );
 
-		public ShaderBuilder( string name, ShapesBlendMode blendMode, RenderPipeline rp ) {
+		public ShaderBuilder( string name, ShapesBlendMode blendMode ) {
 			this.blendMode = blendMode;
 			this.shaderName = name;
 
@@ -68,17 +68,24 @@ namespace Shapes {
 						AppendLine( "_MainTex (\"Texture\", 2D) = \"white\" {}" );
 				}
 
-				using( Scope( "SubShader" ) ) {
-					using( Scope( "Tags" ) ) { // subshader tags
-						AppendLines( rp.GetSubshaderTags() );
-						AppendLines( blendMode.GetSubshaderTags() );
-					}
+				// Create all render pipeline specific subshaders
+				foreach( RenderPipeline rp in Enum.GetValues( typeof(RenderPipeline) ).Cast<RenderPipeline>().Reverse() ) { // Reverse() to ensure legacy is last
+					using( Scope( "SubShader" ) ) {
+						if( rp != RenderPipeline.Legacy )
+							using( Scope( "PackageRequirements" ) ) { // subshader package requirements
+								AppendLine( $"\"{rp.PackageName()}\"" );
+							}
+						using( Scope( "Tags" ) ) { // subshader tags
+							AppendLines( rp.GetSubshaderTags() );
+							AppendLines( blendMode.GetSubshaderTags() );
+						}
 
-					AppendPass( ShaderPassType.Render, rp );
-					if( rp != RenderPipeline.Legacy )
-						AppendPass( ShaderPassType.DepthOnly, rp );
-					AppendPass( ShaderPassType.Picking, rp );
-					AppendPass( ShaderPassType.Selection, rp );
+						AppendPass( ShaderPassType.Render, rp );
+						if( rp != RenderPipeline.Legacy )
+							AppendPass( ShaderPassType.DepthOnly, rp );
+						AppendPass( ShaderPassType.Picking, rp );
+						AppendPass( ShaderPassType.Selection, rp );
+					}
 				}
 			}
 		}

@@ -57,11 +57,8 @@ namespace Shapes {
 
 		static int blendModeCount = System.Enum.GetNames( typeof(ShapesBlendMode) ).Length;
 
-		internal static void GenerateShadersAndMaterials( RenderPipeline targetRP ) {
-			Debug.Log( $"Regenerating shaders for {targetRP.PrettyName()}" );
-
-			// check if we need to update rp state
-			bool writeTargetRpToImportState = ShapesImportState.Instance.currentShaderRP != targetRP;
+		internal static void GenerateShadersAndMaterials() {
+			Debug.Log( $"Regenerating shaders and materials" );
 
 			// generate all shader paths & content
 			List<PathContent> shaderPathContents = GetShaderPathContents();
@@ -69,7 +66,6 @@ namespace Shapes {
 
 			// tally up all files we need to edit to make version control happy
 			List<string> filesToUnlock = new List<string>();
-			if( writeTargetRpToImportState ) filesToUnlock.Add( AssetDatabase.GetAssetPath( ShapesImportState.Instance ) );
 			filesToUnlock.AddRange( shaderPathContents.Select( x => x.path ) );
 			filesToUnlock.AddRange( pathMaterials.Where( x => x.mat != null ).Select( x => x.path ) );
 
@@ -78,23 +74,17 @@ namespace Shapes {
 				shaderPathContents.ForEach( pc => File.WriteAllText( pc.path, pc.content ) ); // write all shaders
 				AssetDatabase.Refresh( ImportAssetOptions.Default ); // reimport all assets to load newly generated shaders
 				pathMaterials.ForEach( x => x.GenerateOrUpdate() ); // generate all materials
-				if( writeTargetRpToImportState ) { // update the current shader state
-					ShapesImportState.Instance.currentShaderRP = targetRP;
-					EditorUtility.SetDirty( ShapesImportState.Instance );
-				}
-
 				AssetDatabase.Refresh( ImportAssetOptions.Default ); // reimport stuff
 			}
 		}
 
 		static List<PathContent> GetShaderPathContents() {
-			RenderPipeline rp = UnityInfo.GetCurrentRenderPipelineInUse();
 			List<PathContent> pcs = new List<PathContent>();
 			foreach( string name in StaticInit.shaderNames ) {
 				for( int i = 0; i < blendModeCount; i++ ) {
 					ShapesBlendMode blendMode = (ShapesBlendMode)i;
 					string path = $"{ShapesIO.GeneratedShadersFolder}/{name} {blendMode}.shader";
-					string shaderContents = new ShaderBuilder( name, blendMode, rp ).shader;
+					string shaderContents = new ShaderBuilder( name, blendMode ).shader;
 					pcs.Add( new PathContent( path, shaderContents ) );
 				}
 			}

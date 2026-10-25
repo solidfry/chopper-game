@@ -4,7 +4,6 @@ namespace Shapes {
 
 	public class Compass : MonoBehaviour {
 
-		[SerializeField] Color32 color = new Color32( 255, 255, 255, 255 );
 		public Vector2 position;
 		public float width = 1f;
 		[Range( 0, 0.01f )] public float lineThickness = 0.1f;
@@ -75,11 +74,11 @@ namespace Shapes {
 				Vector2 a = compArcOrigin + uiDir * bendRadius;
 				Vector2 b = compArcOrigin + uiDir * ( bendRadius - size * tickSize );
 				float fade = Mathf.InverseLerp( 0, tickEdgeFadeFraction, ( 1f - Mathf.Abs( tCompass * 2 - 1 ) ) );
-				Draw.Line( a, b, LineEndCap.None, color );
+				Draw.Line( a, b, LineEndCap.None, new Color( 1, 1, 1, fade ) );
 				if( label != null ) {
 					Draw.FontSize = fontSizeTickLabel;
 					Quaternion rotation = Quaternion.Euler( 0, 0, ( uiAng - ShapesMath.TAU / 4f ) * Mathf.Rad2Deg );
-					Draw.Text( b - uiDir * tickLabelOffset, rotation, label, TextAlign.Center, color );
+					Draw.Text( b - uiDir * tickLabelOffset, rotation, label, TextAlign.Center, new Color( 1, 1, 1, fade ) );
 				}
 			}
 		}

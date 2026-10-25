@@ -4,15 +4,12 @@ using System.IO;
 using Shapes;
 using UnityEditor;
 using UnityEngine;
-
-#if SHAPES_URP
 using System.Linq;
-#if UNITY_2021_2_OR_NEWER
-using URP_RND_DATA = UnityEngine.Rendering.Universal.ScriptableRendererData;
+using UnityEngine.Rendering;
+using RenderPipeline = Shapes.RenderPipeline;
 
-#else
-using URP_RND_DATA = UnityEngine.Rendering.Universal.ForwardRendererData;
-#endif
+#if URP_INSTALLED
+using UnityEngine.Rendering.Universal;
 #endif
 
 public class ShapesConfigWindow : EditorWindow {
@@ -53,8 +50,8 @@ public class ShapesConfigWindow : EditorWindow {
 	bool showBounds = false;
 
 	// render features holders (URP only)
-	#if SHAPES_URP
-	URP_RND_DATA[] urpRenderers;
+	#if URP_INSTALLED
+	ScriptableRendererData[] urpRenderers;
 	#endif
 
 
@@ -84,8 +81,8 @@ public class ShapesConfigWindow : EditorWindow {
 		LOCAL_ANTI_ALIASING_QUALITY = so.FindProperty( "LOCAL_ANTI_ALIASING_QUALITY" );
 		QUAD_INTERPOLATION_QUALITY = so.FindProperty( "QUAD_INTERPOLATION_QUALITY" );
 		NOOTS_ACROSS_SCREEN = so.FindProperty( "NOOTS_ACROSS_SCREEN" );
-		#if SHAPES_URP
-		urpRenderers = UnityInfo.LoadAllURPRenderData();
+		#if URP_INSTALLED
+		urpRenderers = UnityInfo.LoadAllURPRenderData().ToArray();
 		#endif
 	}
 
@@ -136,7 +133,7 @@ public class ShapesConfigWindow : EditorWindow {
 		using( ShapesUI.Group ) {
 			GUILayout.Label( "Advanced", EditorStyles.boldLabel );
 			if( ShapesUI.CenteredButton( new GUIContent( "Regenerate Shaders & Materials", "Generates all shaders and materials in Shapes" ) ) )
-				CodegenShaders.GenerateShadersAndMaterials( UnityInfo.GetCurrentRenderPipelineInUse() );
+				CodegenShaders.GenerateShadersAndMaterials();
 			if( ShapesUI.CenteredButton( new GUIContent( "Regenerate Draw Overloads", "Regenerates all Draw.X overload functions to DrawOverloads.cs" ) ) )
 				CodegenDrawOverloads.GenerateDrawOverloadsScript();
 			if( ShapesUI.CenteredButton( new GUIContent( "Regenerate Component Interfaces", "Regenerates all Shape component interfaces" ) ) )
@@ -168,75 +165,66 @@ public class ShapesConfigWindow : EditorWindow {
 		using( ShapesUI.Group ) {
 			GUILayout.Label( "Render Pipeline", EditorStyles.boldLabel );
 
-			//EditorGUILayout.HelpBox( "Unity's render pipeline landscape is a little messy, so you can use this section to sanity check that everything has been compiled correctly, as well as force-compile to a specific render pipeline", MessageType.Info );
-
-			// detect all states
-			RenderPipeline rp = UnityInfo.GetCurrentRenderPipelineInUse();
-			RenderPipeline rpShaders = ShapesImportState.Instance.currentShaderRP;
-			RenderPipeline? rpKeywords = ShapesImportState.TryGetPreprocessorRP( out RenderPipeline rpkw ) ? rpkw : (RenderPipeline?)null;
-
-
-			void RpSection( string desc, RenderPipeline pipe ) {
+			void RpSection( string desc, string pipe ) {
 				using( ShapesUI.Horizontal ) {
 					GUILayout.Label( desc, GUILayout.Width( 240 ) );
-					GUILayout.Label( "[" + pipe.ShortName() + "]", GUILayout.ExpandWidth( false ) );
+					GUILayout.Label( "[" + pipe + "]", GUILayout.ExpandWidth( false ) );
 				}
 			}
-
 
 			EditorGUILayout.BeginVertical( EditorStyles.helpBox );
 			// detected RP in Unity
-			RpSection( "Shapes detected you seem to be using:", rp );
-
-			// shaders
-			RpSection( "Shapes shaders were last compiled for:", rpShaders );
-			if( rpShaders != rp ) {
-				EditorGUILayout.HelpBox( "Shaders seem to be compiled to a different render pipeline. You might want to force-set to your render pipeline below", MessageType.Warning );
+			RpSection( "Default pipeline:", UnityInfo.DefaultRp.ShortName() );
+			RpSection( "Current pipeline:", UnityInfo.CurrentRp.ShortName() );
+			RpSection( "Installed pipelines:", string.Join( ", ", UnityInfo.RenderPipelinesAvailable.Select( x => x.ShortName() ) ) );
+			GUILayout.Space( 4 );
+			using( new EditorGUI.DisabledScope( true ) ) {
+				EditorGUILayout.ObjectField( new GUIContent( "Default Asset:" ), GraphicsSettings.defaultRenderPipeline, typeof(RenderPipelineAsset), allowSceneObjects: false );
+				EditorGUILayout.ObjectField( new GUIContent( "Current Asset:" ), UnityInfo.CurrentRpAsset, typeof(RenderPipelineAsset), allowSceneObjects: false );
 			}
 
-			// keywords
-			if( rpKeywords.HasValue ) {
-				RpSection( "Preprocessor keywords defined for:", rpKeywords.Value );
-
-				if( rpKeywords != rp ) {
-					EditorGUILayout.HelpBox( "Preprocessor keywords seem to be defined for a different render pipeline. You might want to force-set to your render pipeline below", MessageType.Warning );
-				}
-			} else {
-				EditorGUILayout.HelpBox( "Keywords are currently in a mixed state. Please force-set to your render pipeline below", MessageType.Error );
+			if( ShapesImportState.IsUsingLegacyPreprocessorKeywords( out string keywords ) ) {
+				EditorGUILayout.HelpBox( $"Your project is using older preprocessor keywords ({keywords}). You might want to use the force-refresh button below", MessageType.Warning );
 			}
 
 			// Render Feature check
-			#if SHAPES_URP
-			EditorGUILayout.Space(8);
-			GUILayout.Label( "URP renderers detected:", EditorStyles.boldLabel );
-			foreach( URP_RND_DATA data in urpRenderers ) {
-				EditorGUILayout.ObjectField( GUIContent.none, data, typeof(URP_RND_DATA), false/*, GUILayout.Width( 120 )*/ );
-				bool hasShapesRenderer = data.rendererFeatures.Any( x => x.GetType() == typeof(ShapesRenderFeature) );
-				if( hasShapesRenderer ) {
-					EditorGUILayout.HelpBox( "✔ Immediate mode ready", MessageType.None );
-				} else {
-					EditorGUILayout.HelpBox( $"{data.name} is missing a ShapesRenderFeature.\nImmediate mode drawing will not be supported unless you select this object and add the ShapesRenderFeature to it", MessageType.Error );
+			#if URP_INSTALLED
+			if( UnityInfo.CurrentRp == RenderPipeline.URP ) {
+				EditorGUILayout.Space( 8 );
+				GUILayout.Label( "URP renderers in project:", EditorStyles.boldLabel );
+				foreach( ScriptableRendererData data in urpRenderers ) {
+					EditorGUILayout.ObjectField( GUIContent.none, data, typeof(ScriptableRendererData), false /*, GUILayout.Width( 120 )*/ );
+					bool hasShapesRenderer = UnityInfo.IsReadyForImmediateMode( data );
+					if( hasShapesRenderer ) {
+						EditorGUILayout.HelpBox( "✔ Immediate mode ready", MessageType.None );
+					} else {
+						if( GUILayout.Button( "Add Shapes Render Feature" ) ) {
+							const string UNDO_STR = "Add Shapes render feature";
+							Undo.RecordObject( data, UNDO_STR );
+							ShapesRenderFeature srf = CreateInstance<ShapesRenderFeature>();
+							Undo.RegisterCreatedObjectUndo( srf, UNDO_STR );
+							AssetDatabase.AddObjectToAsset( srf, data );
+							srf.name = "Shapes Render Feature";
+							EditorUtility.SetDirty( data );
+							data.SetDirty();
+							data.rendererFeatures.Add( srf );
+						}
+						EditorGUILayout.HelpBox( $"{data.name} is missing a ShapesRenderFeature.\nImmediate mode drawing will not be supported unless you select this object and add the ShapesRenderFeature to it", MessageType.Error );
+					}
+					EditorGUILayout.Space( 8 );
 				}
-				EditorGUILayout.Space(8);
 			}
 			#endif
 
-
 			EditorGUILayout.EndVertical();
-
 
 			GUILayout.Space( 10 );
 
 			EditorGUILayout.BeginVertical( EditorStyles.helpBox );
 			EditorGUILayout.PropertyField( autoConfigureRenderPipeline, new GUIContent( "Auto-configure RP" ) );
 			using( new EditorGUI.DisabledScope( autoConfigureRenderPipeline.boolValue ) ) {
-				GUILayout.Label( "Force-set Shapes to:", EditorStyles.boldLabel );
-				using( ShapesUI.Horizontal ) {
-					for( int i = 0; i < 3; i++ ) {
-						RenderPipeline rpIter = (RenderPipeline)i;
-						if( GUILayout.Button( rpIter.ShortName() ) )
-							ShapesImportState.ForceSetRP( rpIter );
-					}
+				if( GUILayout.Button( "Force-refresh" ) ) {
+					ShapesImportState.ForceUpdateRpStuff();
 				}
 			}
 

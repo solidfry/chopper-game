@@ -423,7 +423,7 @@ namespace Shapes {
 		}
 
 		/// <inheritdoc cref="Shapes.TextStyle.wrap"/>
-		public static bool TextWrap {
+		public static TextWrappingModes TextWrap {
 			[MethodImpl( INLINE )] get => style.textStyle.wrap;
 			[MethodImpl( INLINE )] set => style.textStyle.wrap = value;
 		}
@@ -432,6 +432,18 @@ namespace Shapes {
 		public static TextOverflowModes TextOverflow {
 			[MethodImpl( INLINE )] get => style.textStyle.overflow;
 			[MethodImpl( INLINE )] set => style.textStyle.overflow = value;
+		}
+
+		/// <inheritdoc cref="Shapes.TextStyle.curvature"/>
+		public static float TextCurvature {
+			[MethodImpl( INLINE )] get => style.textStyle.curvature;
+			[MethodImpl( INLINE )] set => style.textStyle.curvature = value;
+		}
+		
+		/// <inheritdoc cref="Shapes.TextStyle.curvaturePivot"/>
+		public static Vector2 TextCurvaturePivot {
+			[MethodImpl( INLINE )] get => style.textStyle.curvaturePivot;
+			[MethodImpl( INLINE )] set => style.textStyle.curvaturePivot = value;
 		}
 
 		#endregion

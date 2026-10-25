@@ -16,9 +16,14 @@ namespace Shapes {
 		bool initializedComponents = false;
 		MeshRenderer rnd;
 		MeshFilter mf;
+		#if UNITY_6000_4_OR_NEWER
+		EntityId meshOwnerID;
+		#else
 		int meshOwnerID;
+		#endif
+
 		MaterialPropertyBlock mpb;
-		MaterialPropertyBlock Mpb => mpb ?? ( mpb = new MaterialPropertyBlock() ); // hecking, gosh, I want the C#8 ??= operator
+		MaterialPropertyBlock Mpb => mpb ??= new MaterialPropertyBlock();
 		Material[] instancedMaterials = null; // used when pass tags are anything but the default (eg ZTest != Less Equal, or scale offset is set, or a weird blend mode)
 		internal bool IsUsingUniqueMaterials => IsInstanced == false;
 
@@ -74,6 +79,24 @@ namespace Shapes {
 			set {
 				detailLevel = value;
 				UpdateMesh( force: true );
+			}
+		}
+		[SerializeField] private protected ShapeCulling culling = ShapeCulling.CalculatedLocal;
+		/// <summary>Whether to cull this shape when off-screen</summary>
+		public ShapeCulling Culling {
+			get => culling;
+			set {
+				culling = value;
+				UpdateBounds();
+			}
+		}
+		[SerializeField] private protected float boundsPadding = 0f;
+		/// <summary>How much to pad this bounding box in local space meters</summary>
+		public float BoundsPadding {
+			get => boundsPadding;
+			set {
+				boundsPadding = value;
+				UpdateBounds();
 			}
 		}
 
@@ -321,10 +344,11 @@ namespace Shapes {
 			TryDestroyInstancedMaterials( inOnDestroy: true );
 		}
 
-		private protected abstract Bounds GetBounds_Internal();
+		private protected abstract Bounds GetUnpaddedLocalBounds_Internal();
 		private protected abstract void SetAllMaterialProperties();
 		private protected virtual void ShapeClampRanges() => _ = 0;
-		private protected abstract Material[] GetMaterials();
+		private protected abstract void GetMaterials( Material[] mats );
+		private protected virtual int MaterialCount => 1;
 		private protected virtual void GenerateMesh() => _ = 0;
 		private protected virtual Mesh GetInitialMeshAsset() => ShapesMeshUtils.QuadMesh[HasDetailLevels ? (int)DetailLevel.Medium : 0];
 		private protected virtual MeshUpdateMode MeshUpdateMode => MeshUpdateMode.UseAsset;
@@ -333,8 +357,17 @@ namespace Shapes {
 		private protected virtual bool UseCamOnPreCull => false;
 		internal virtual void CamOnPreCull() => _ = 0;
 
-		void UpdateMeshBounds() => Mesh.bounds = GetBounds_Internal();
-
+		void UpdateBounds() {
+			Bounds b = GetBounds();
+			if( MeshUpdateMode is MeshUpdateMode.UseAssetCopy or MeshUpdateMode.SelfGenerated && Mesh != null ) {
+				Mesh.bounds = b;
+				rnd.ResetLocalBounds(); // don't override through instance
+			} else if( Culling == ShapeCulling.CalculatedLocal ) {
+				rnd.localBounds = b;
+			} else if( Culling == ShapeCulling.SimpleGlobal ) {
+				rnd.ResetLocalBounds(); // use mesh primitive bounds instead
+			}
+		}
 
 		void TryDestroyInstancedMaterials( bool inOnDestroy = false ) {
 			if( instancedMaterials != null ) {
@@ -388,24 +421,29 @@ namespace Shapes {
 			}
 		}
 
+		Material[] mats;
+
 		private protected void UpdateMaterial() {
-			Material[] targetMats = GetMaterials();
+			if( mats == null || mats.Length != MaterialCount )
+				mats = new Material[MaterialCount];
+			GetMaterials( mats );
 
 			// this means we have unique material properties for this shape, so, instantiate them
 			// but! only when they're in the scene
 			if( IsUsingUniqueMaterials ) {
-				MakeSureMaterialInstancesAreGood( targetMats );
-				targetMats = instancedMaterials;
+				MakeSureMaterialInstancesAreGood( mats );
+				for( int i = 0; i < mats.Length; i++ )
+					mats[i] = instancedMaterials[i];
 			}
 
 			VerifyComponents();
 
 			#if UNITY_EDITOR
 			if( EditorApplication.isPlaying == false )
-				UpdateMaterialsEditorMode( targetMats );
+				UpdateMaterialsEditorMode( mats );
 			else
 				#endif
-				rnd.sharedMaterials = targetMats;
+				rnd.sharedMaterials = mats;
 		}
 
 		#if UNITY_EDITOR
@@ -443,7 +481,11 @@ namespace Shapes {
 
 			// the next two modes are copy-sensitive, meaning that if we duplicate this object,
 			// we also have to duplicate the mesh and update which mesh the duplicate is pointing to
+			#if UNITY_6000_4_OR_NEWER
+			EntityId id = gameObject.GetEntityId();
+			#else
 			int id = gameObject.GetInstanceID();
+			#endif
 
 			bool createMesh = Mesh == null || meshOwnerID != id;
 
@@ -462,16 +504,21 @@ namespace Shapes {
 			} else if( force && mode == MeshUpdateMode.SelfGenerated ) {
 				GenerateMesh(); // update existing mesh
 			}
+			UpdateBounds();
 		}
 
-		/// <summary><para>Returns the local space bounds</para>
+		/// <summary><para>Returns the local space bounds, including the user specified padding</para>
 		/// <para>Note: This does not take into account screen space sizing, so it will only behave as you expect when using meters only</para></summary>
-		public Bounds GetBounds() => GetBounds_Internal();
+		public Bounds GetBounds() {
+			Bounds b = GetUnpaddedLocalBounds_Internal();
+			b.Expand( boundsPadding );
+			return b;
+		}
 
 		/// <summary><para>Returns the world space bounds of the local space bounds</para>
 		/// <para>Note: This does not take into account screen space sizing, so it will only behave as you expect when using meters only</para></summary>
 		public Bounds GetWorldBounds() {
-			Bounds localBounds = GetBounds_Internal();
+			Bounds localBounds = GetBounds();
 			Vector3 min = Vector3.one * float.MaxValue;
 			Vector3 max = Vector3.one * float.MinValue;
 
@@ -484,7 +531,7 @@ namespace Shapes {
 						max = Vector3.Max( max, wPt );
 					}
 
-			return new Bounds( ( max + min ) / 2f, max - min );
+			return new Bounds( ( max + min ) / 2f, ShapesMath.Abs( max - min ) );
 		}
 
 		void OnDidApplyAnimationProperties() => UpdateAllMaterialProperties(); // so this is not great but it works don't judge
@@ -535,8 +582,7 @@ namespace Shapes {
 		private protected void ApplyProperties() {
 			VerifyComponents(); // make sure components exists. rnd can be uninitialized if you modify an object that has never had awake called
 			rnd.SetPropertyBlock( Mpb );
-			if( MeshUpdateMode == MeshUpdateMode.UseAssetCopy )
-				UpdateMeshBounds();
+			UpdateBounds();
 		}
 
 		private protected void SetAllDashValues( DashStyle style, bool dashed, bool matchSpacingToSize, float thickness, bool setType, bool now ) {

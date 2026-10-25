@@ -23,7 +23,7 @@ public class ImmediateModeMonitor : EditorWindow {
 						 "Seeing this number rapidly increase is normal, as long as you don't see additional command buffers being added every frame\n\n" +
 						 "• If a command buffer is added every single frame, it means you are likely adding draw commands without rendering/consuming them. " +
 						 "A common pitfall is if you issue draw commands in Update(), but the camera isn't currently rendering, which can easily happen if you press play in the editor, but hide the game view. " +
-						 $"This will stack commands. Generally you'll want to issue draw commands on the {UnityInfo.ON_PRE_RENDER_NAME} event\n\n" +
+						 $"This will stack commands. Generally you'll want to issue draw commands on the {UnityInfo.OnPreRenderNameForCurrentPipeline} event\n\n" +
 						 "• Registered cameras without buffers is generally not an issue", EditorStyles.helpBox );
 
 		using( ShapesUI.Group ) {
