@@ -26,9 +26,10 @@ namespace Chopper.Presentation.Camera
                 if (_rig == null) return;
             }
 
+            // LocalToWorld here is the rendered pose: after transform update and physics graphical interpolation.
             foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<GhostOwnerIsLocal, ChopperFlightConfig>())
             {
-                _rig.SetTarget(localToWorld.ValueRO.Position, localToWorld.ValueRO.Rotation);
+                _rig.Follow(localToWorld.ValueRO.Position, localToWorld.ValueRO.Rotation, UnityEngine.Time.deltaTime);
                 break;
             }
         }

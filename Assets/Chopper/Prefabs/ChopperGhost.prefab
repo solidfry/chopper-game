@@ -61,7 +61,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!65 &7143323298366464714
@@ -98,10 +98,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Flight.ChopperAuthoring
   collectiveRange: 0.7
-  maxPitchRate: 80
-  maxYawRate: 70
-  maxRollRate: 110
-  turnResponse: 7
+  maxPitchRate: 45
+  maxYawRate: 40
+  maxRollRate: 60
+  turnResponse: 4
   quadraticDrag: {x: 0.006, y: 0.004, z: 0.0011}
   linearDrag: {x: 0.4, y: 0.3, z: 0.05}
   weathervane: 0.015

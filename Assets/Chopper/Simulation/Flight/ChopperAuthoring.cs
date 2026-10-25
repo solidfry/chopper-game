@@ -16,11 +16,11 @@ namespace Chopper.Simulation.Flight
         private float collectiveRange = 0.7f;
 
         [Header("Rotation (degrees per second at full input)")]
-        [SerializeField] private float maxPitchRate = 80f;
-        [SerializeField] private float maxYawRate = 70f;
-        [SerializeField] private float maxRollRate = 110f;
+        [SerializeField] private float maxPitchRate = 45f;
+        [SerializeField] private float maxYawRate = 40f;
+        [SerializeField] private float maxRollRate = 60f;
         [SerializeField, Tooltip("How fast rotation reaches the requested rate. Higher = crisper.")]
-        private float turnResponse = 7f;
+        private float turnResponse = 4f;
 
         [Header("Drag (local axes: x sideways, y vertical, z forward)")]
         [SerializeField] private Vector3 quadraticDrag = new(0.006f, 0.004f, 0.0011f);
