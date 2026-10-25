@@ -99,10 +99,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Flight.ChopperAuthoring
   gravityScale: 1.6
   collectiveRange: 0.9
-  maxPitchRate: 70
-  maxYawRate: 55
-  maxRollRate: 100
-  turnResponse: 9
+  tiltCompensation: 0.9
+  maxCompensatedTiltDegrees: 60
+  maxPitchRate: 90
+  maxYawRate: 70
+  maxRollRate: 140
+  turnResponse: 12
   quadraticDrag: {x: 0.004, y: 0.003, z: 0.0018}
   linearDrag: {x: 0.15, y: 0.15, z: 0.02}
   weathervane: 0.01

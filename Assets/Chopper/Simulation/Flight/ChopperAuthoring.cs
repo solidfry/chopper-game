@@ -16,13 +16,17 @@ namespace Chopper.Simulation.Flight
         private float gravityScale = 1.6f;
         [SerializeField, Range(0f, 1.5f), Tooltip("Extra lift at full collective, as a fraction of hover lift.")]
         private float collectiveRange = 0.9f;
+        [SerializeField, Range(0f, 1f), Tooltip("Lift grows with tilt to hold height. 1 = Battlefield: tilt is pure horizontal thrust.")]
+        private float tiltCompensation = 0.9f;
+        [SerializeField, Range(10f, 80f), Tooltip("Largest tilt (degrees) that is still compensated.")]
+        private float maxCompensatedTiltDegrees = 60f;
 
         [Header("Rotation (degrees per second at full input)")]
-        [SerializeField] private float maxPitchRate = 70f;
-        [SerializeField] private float maxYawRate = 55f;
-        [SerializeField] private float maxRollRate = 100f;
+        [SerializeField] private float maxPitchRate = 90f;
+        [SerializeField] private float maxYawRate = 70f;
+        [SerializeField] private float maxRollRate = 140f;
         [SerializeField, Tooltip("How fast rotation reaches the requested rate. Higher = snappier.")]
-        private float turnResponse = 9f;
+        private float turnResponse = 12f;
 
         [Header("Drag (local axes: x sideways, y vertical, z forward)")]
         [SerializeField] private Vector3 quadraticDrag = new(0.004f, 0.003f, 0.0018f);
@@ -45,6 +49,8 @@ namespace Chopper.Simulation.Flight
                 {
                     GravityScale = authoring.gravityScale,
                     CollectiveRange = authoring.collectiveRange,
+                    TiltCompensation = authoring.tiltCompensation,
+                    MaxCompensatedTilt = math.cos(math.radians(authoring.maxCompensatedTiltDegrees)),
                     MaxTurnRate = math.radians(new float3(authoring.maxPitchRate, authoring.maxYawRate, authoring.maxRollRate)),
                     TurnResponse = authoring.turnResponse,
                     QuadraticDrag = authoring.quadraticDrag,

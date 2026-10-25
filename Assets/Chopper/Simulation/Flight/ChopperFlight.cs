@@ -14,6 +14,13 @@ namespace Chopper.Simulation.Flight
         public float GravityScale;
         /// <summary>Extra lift from full collective, as a fraction of hover lift (0.6 = 1.6 g up, 0.4 g down).</summary>
         public float CollectiveRange;
+        /// <summary>
+        /// How much rotor lift grows with tilt to hold height (0 = real rotor, loses height when tilted;
+        /// 1 = Battlefield-style, tilt becomes pure horizontal thrust). Capped at <see cref="MaxCompensatedTilt"/>.
+        /// </summary>
+        public float TiltCompensation;
+        /// <summary>Cosine of the largest tilt that is still compensated (0.5 = 60 degrees).</summary>
+        public float MaxCompensatedTilt;
 
         /// <summary>Turn rate at full input, local axes (x = pitch, y = yaw, z = roll), radians per second.</summary>
         public float3 MaxTurnRate;

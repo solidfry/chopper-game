@@ -173,6 +173,16 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""MouseLook"",
+                    ""type"": ""Value"",
+                    ""id"": ""d724c962-c864-492e-8850-fc8fdccc59be"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -326,39 +336,6 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
-                    ""action"": ""Pitch"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""Mouse"",
-                    ""id"": ""be371502-42c7-43af-8baa-b6a5f20ef9f6"",
-                    ""path"": ""1DAxis"",
-                    ""interactions"": """",
-                    ""processors"": ""Scale(factor=0.08)"",
-                    ""groups"": """",
-                    ""action"": ""Pitch"",
-                    ""isComposite"": true,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""negative"",
-                    ""id"": ""cecb8aba-77cf-4445-8e5f-7ec35e0dd220"",
-                    ""path"": ""<Mouse>/delta/down"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Mouse and Keyboard"",
-                    ""action"": ""Pitch"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""positive"",
-                    ""id"": ""8d41ae11-d619-4701-a78b-d3a5b86a6e15"",
-                    ""path"": ""<Mouse>/delta/up"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Mouse and Keyboard"",
                     ""action"": ""Pitch"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -584,39 +561,6 @@ namespace Chopper.Simulation.Input
                     ""isPartOfComposite"": false
                 },
                 {
-                    ""name"": ""Mouse"",
-                    ""id"": ""299969e4-c062-41d7-beb7-252bc358e648"",
-                    ""path"": ""1DAxis"",
-                    ""interactions"": """",
-                    ""processors"": ""Scale(factor=0.05)"",
-                    ""groups"": """",
-                    ""action"": ""Roll"",
-                    ""isComposite"": true,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""negative"",
-                    ""id"": ""dfcd0398-e825-4683-9180-c34c1c151f72"",
-                    ""path"": ""<Mouse>/delta/left"",
-                    ""interactions"": """",
-                    ""processors"": ""Scale(factor=0.5)"",
-                    ""groups"": ""Mouse and Keyboard"",
-                    ""action"": ""Roll"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""positive"",
-                    ""id"": ""e9ca0bbf-d2c2-4cf1-ab0f-da931aebb895"",
-                    ""path"": ""<Mouse>/delta/right"",
-                    ""interactions"": """",
-                    ""processors"": ""Scale(factor=0.5)"",
-                    ""groups"": ""Mouse and Keyboard"",
-                    ""action"": ""Roll"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
                     ""name"": """",
                     ""id"": ""9cc71dbf-7148-44c5-a19f-1348fcd55d90"",
                     ""path"": ""<Gamepad>/buttonEast"",
@@ -646,6 +590,17 @@ namespace Chopper.Simulation.Input
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
                     ""action"": ""Fire3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""36fc6e48-86bc-41df-bb2e-cbcea7fabb24"",
+                    ""path"": ""<Mouse>/delta"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""MouseLook"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -692,6 +647,7 @@ namespace Chopper.Simulation.Input
             m_Flight_Fire2 = m_Flight.FindAction("Fire2", throwIfNotFound: true);
             m_Flight_Fire3 = m_Flight.FindAction("Fire3", throwIfNotFound: true);
             m_Flight_Dash = m_Flight.FindAction("Dash", throwIfNotFound: true);
+            m_Flight_MouseLook = m_Flight.FindAction("MouseLook", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -780,6 +736,7 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_Fire2;
         private readonly InputAction m_Flight_Fire3;
         private readonly InputAction m_Flight_Dash;
+        private readonly InputAction m_Flight_MouseLook;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
         /// </summary>
@@ -823,6 +780,10 @@ namespace Chopper.Simulation.Input
             /// Provides access to the underlying input action "Flight/Dash".
             /// </summary>
             public InputAction @Dash => m_Wrapper.m_Flight_Dash;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/MouseLook".
+            /// </summary>
+            public InputAction @MouseLook => m_Wrapper.m_Flight_MouseLook;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -873,6 +834,9 @@ namespace Chopper.Simulation.Input
                 @Dash.started += instance.OnDash;
                 @Dash.performed += instance.OnDash;
                 @Dash.canceled += instance.OnDash;
+                @MouseLook.started += instance.OnMouseLook;
+                @MouseLook.performed += instance.OnMouseLook;
+                @MouseLook.canceled += instance.OnMouseLook;
             }
 
             /// <summary>
@@ -908,6 +872,9 @@ namespace Chopper.Simulation.Input
                 @Dash.started -= instance.OnDash;
                 @Dash.performed -= instance.OnDash;
                 @Dash.canceled -= instance.OnDash;
+                @MouseLook.started -= instance.OnMouseLook;
+                @MouseLook.performed -= instance.OnMouseLook;
+                @MouseLook.canceled -= instance.OnMouseLook;
             }
 
             /// <summary>
@@ -1030,6 +997,13 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnDash(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "MouseLook" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnMouseLook(InputAction.CallbackContext context);
         }
     }
 }

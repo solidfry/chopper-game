@@ -80,6 +80,14 @@ namespace Chopper.Simulation.Flight
                 var weight = Gravity * config.GravityScale;
                 velocity.Linear -= worldUp * (Gravity * (config.GravityScale - 1f) * DeltaTime);
                 var liftAcceleration = weight * (1f + thrust * config.CollectiveRange);
+                // Tilt compensation: grow lift so its vertical part still holds height, and the extra goes into
+                // horizontal thrust. This is what makes tilting accelerate and flaring brake hard.
+                var uprightDot = math.dot(up, worldUp);
+                if (uprightDot > 0f)
+                {
+                    var compensation = 1f / math.max(uprightDot, config.MaxCompensatedTilt);
+                    liftAcceleration *= math.lerp(1f, compensation, config.TiltCompensation);
+                }
                 velocity.Linear += up * (liftAcceleration * DeltaTime);
 
                 // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.
