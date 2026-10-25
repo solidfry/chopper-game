@@ -1,7 +1,6 @@
 using Effects.Structs;
 using Enums;
 using GameLogic.ScriptableObjects;
-using Interactions;
 using UnityEngine;
 
 namespace Events
@@ -19,9 +18,6 @@ namespace Events
         public delegate void TogglePlayerControls(bool enable);
         public static TogglePlayerControls OnTogglePlayerControlsEvent;
 
-        public delegate void SendPlayerScore(NetworkPlayerScore playerScore);
-        public static SendPlayerScore OnSendPlayerScoreEvent;
-        
         public static PlayerKill OnPlayerKillEvent;
         public static PlayerDied OnPlayerDiedEvent;
         public static PlayerFreezeAll OnPlayerFreezeAllEvent;

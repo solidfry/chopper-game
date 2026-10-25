@@ -1,6 +1,5 @@
 using Audio;
 using UI;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Utilities;
@@ -11,7 +10,6 @@ namespace GameLogic
     {
         
         [Header("System Prefabs")]
-        [SerializeField] NetworkManager networkManagerPrefab;
         [SerializeField] CursorManager cursorManagerPrefab;
         [SerializeField] UIAudioManager uiAudioManagerPrefab;
         [SerializeField] ColourManager colourManagerPrefab;
@@ -19,10 +17,7 @@ namespace GameLogic
         [SerializeField] MusicManager musicManagerPrefab;
         
         [field: Header("Active Systems")]
-        [field:SerializeField ] 
-        public NetworkManager NetworkManager { get; private set; }
-        private bool _networkManagerIsActive;
-        [field:SerializeField ] 
+        [field:SerializeField ]
         public CursorManager CursorManager { get; private set; }
         private bool _cursorManagerIsActive;
         [field:SerializeField ] 
@@ -68,9 +63,6 @@ namespace GameLogic
 
         void SetSystemsActive()
         {
-            if (NetworkManager == null) 
-                NetworkManager = Instantiate(networkManagerPrefab);
-            
             if(CursorManager == null)
                 CursorManager = Instantiate(cursorManagerPrefab);
             
@@ -89,16 +81,14 @@ namespace GameLogic
         
         public bool CheckAllSystemsActive()
         {
-            _networkManagerIsActive = NetworkManager != null;
             _cursorManagerIsActive = CursorManager != null;
             _uiAudioManagerIsActive = UIAudioManager != null;
             _colourManagerIsActive = ColourManager != null;
             _notificationManagerIsActive = NotificationManager != null;
             _musicManagerIsActive = MusicManager != null;
             
-            allSystemsActive = 
-                _networkManagerIsActive 
-                               && _cursorManagerIsActive 
+            allSystemsActive =
+                _cursorManagerIsActive
                                && _uiAudioManagerIsActive 
                                && _colourManagerIsActive 
                                && _notificationManagerIsActive 

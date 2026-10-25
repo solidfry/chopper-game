@@ -1,6 +1,5 @@
 using Enums;
 using TMPro;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -29,14 +28,8 @@ namespace UI
         public void LoadLevelAsync(string sceneName) => SceneManager.LoadSceneAsync(sceneName);
         // public void LoadLevelAsyncViaEnum(Scenes scene) => SceneManager.LoadSceneAsync(scene.ToString());
         // public void LoadLevelAsyncViaEnumAdditive(Scenes scene) => SceneManager.LoadSceneAsync(scene.ToString(), LoadSceneMode.Additive);
-        // public void NetworkLoadLevelViaEnum(Scenes scene) => NetworkManager.Singleton.SceneManager.LoadScene(scene.ToString(), LoadSceneMode.Single);
         public void Quit() => Application.Quit();
-        public void LeaveGame()
-        {
-            if(NetworkManager.Singleton != null)
-                NetworkManager.Singleton.Shutdown();
-            
-            SceneManager.LoadScene(Scenes.MainMenu.ToString());
-        }
+        // TODO: shut down the Netcode for Entities client/server worlds here once the ECS match exists.
+        public void LeaveGame() => SceneManager.LoadScene(Scenes.MainMenu.ToString());
     }
 }

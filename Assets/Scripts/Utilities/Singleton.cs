@@ -1,12 +1,11 @@
-﻿using Unity.Netcode;
-using UnityEngine;
+﻿using UnityEngine;
 
 /*
     Generic classes for the use of singleton
-    there are 3 types:
+    there are 2 types:
     - MonoBehaviour -> for the use of singleton to normal MonoBehaviours
-    - NetworkBehaviour -> for the use of singleton that uses the NetworkBehaviours
     - Persistent -> when we need to make sure the object is not destroyed during the session
+    Legacy: new code must not use these (see Assets/Chopper/README.md).
 */
 
 public class Singleton<T> : MonoBehaviour where T : Component
@@ -41,57 +40,5 @@ public class SingletonPersistent<T> : MonoBehaviour where T : Component
         {
             Destroy(gameObject);
         }
-    }
-}
-
-public class SingletonNetwork<T> : NetworkBehaviour where T : Component
-{
-    public static T Instance { get; private set; }
-
-    public virtual void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this as T;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-    
-    
-    // TODO: Remove this when the bug is fixed, this is a workaround for a bug in the current version of Netcode For GameObjects
-    // https://github.com/Unity-Technologies/com.unity.netcode.gameobjects/issues/2755
-    [ServerRpc]
-    public void WorkaroundDummyServerRpc()
-    {
-
-    }
-}
-
-public class SingletonNetworkPersistent<T> : NetworkBehaviour where T : Component
-{
-    public static T Instance { get; private set; }
-
-    public virtual void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this as T;
-            DontDestroyOnLoad(this);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-    
-    // TODO: Remove this when the bug is fixed, this is a workaround for a bug in the current version of Netcode For GameObjects
-    // https://github.com/Unity-Technologies/com.unity.netcode.gameobjects/issues/2755
-    [ServerRpc]
-    public void WorkaroundDummyServerRpc()
-    {
-
     }
 }
