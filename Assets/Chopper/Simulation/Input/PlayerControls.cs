@@ -243,6 +243,28 @@ namespace Chopper.Simulation.Input
                     ""isPartOfComposite"": true
                 },
                 {
+                    ""name"": ""Descend"",
+                    ""id"": ""40f4e1a6-dd9b-45de-8e01-72ae6951a436"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Thrust"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""9bb618b9-efc8-49b0-93f4-0c582a678937"",
+                    ""path"": ""<Keyboard>/leftCtrl"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Thrust"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
                     ""name"": ""Keyboard"",
                     ""id"": ""4d17c954-57cd-4768-a1d9-9db853690136"",
                     ""path"": ""1DAxis"",
