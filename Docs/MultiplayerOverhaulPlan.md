@@ -19,6 +19,12 @@ Problems found:
 
 **Decisions (from user):** Unity 6.6, Netcode for Entities (built in) + Edgegap hosting behind Unity Matchmaker. Steam for identity and friends.
 
+### Locked decision: move to Netcode for Entities
+- **Status:** final. No prototype or go/no-go gate. No fallback to Netcode for GameObjects.
+- **Why:** built-in prediction, rollback and lag compensation (the hardest parts for a fast physics shooter); much lower bandwidth and server CPU; built into Unity 6.6; Unity's direction (NGO 3.0 runs on Netcode for Entities from 6.7 LTS); small codebase, and the netcode needs a rewrite anyway.
+- **Accepted costs:** ECS learning curve; flight feel must be re-tuned for Unity Physics; hybrid ECS simulation + GameObject presentation bridge; fewer tutorials and assets.
+- **Rule:** no new gameplay or netcode work in NGO. NGO code stays only until its ECS replacement exists, then it is deleted.
+
 ---
 
 ## 1. Target tech stack
