@@ -74,7 +74,22 @@ Current state: 25 scripts use `Singleton<T>` / `SingletonPersistent<T>` / `Singl
 - **Assembly definitions** per feature (`Chopper.Simulation`, `Chopper.Presentation`, `Chopper.Services`, `Chopper.UI`, `Chopper.Tests`). Faster compile, clear dependencies (presentation can read simulation, never the reverse).
 - **C# style:** `readonly` structs for data, `sealed` classes by default, file-scoped namespaces, nullable annotations on new service code, `[SerializeField] private` fields (no public fields like `Weapon.firingCooldownTimer`).
 - **Data:** ScriptableObjects for design data (chassis, modules, weapons, modes) → baked to ECS blob assets. Native `Dictionary` serialisation in 6.6 for lookup tables.
-- **UI:** UI Toolkit for new menus and the hangar (USS styles suit the green cyberpunk theme). Keep the in-flight HUD on current UGUI + Shapes until it needs a rewrite.
+- **UI:** move **all** UI to UI Toolkit (see below). No new UGUI.
+
+### UI Toolkit migration (all UI)
+- **Scope:** every screen in `Assets/Scripts/UI/**` and `UI/HUD/**` — main menu, navigation, game mode select, notifications, profile/avatar, scoreboard, match menu, end-match screen, timers, transitions, and the in-flight HUD. Plus the new hangar and progression screens.
+- **Structure:** UXML for layout, one shared USS theme (green cyberpunk: colour tokens, fonts, glow borders, scanline overlay) + per-screen USS. Reusable custom controls with `[UxmlElement]` (Unity 6): `StatBar`, `StatTile`, `CyberButton`, `NotificationToast`, `PlayerCard`, `CountdownTimer`.
+- **Data binding:** use Unity 6 runtime data binding (`dataSource` + `[CreateProperty]`) to view-model classes. ECS presentation systems write values (health, speed, altitude, score, timer) into the view models; UI never reads ECS or netcode directly.
+- **HUD:**
+  - Speed, altitude, health, ammo, timer, kill feed → screen-space UI Toolkit panel.
+  - Compass and reticle (now `CompassShapes.cs`, `Reticle.cs` with Shapes) → custom `VisualElement`s drawn with `Painter2D` (vector API).
+  - World markers (enemies, nuke, bases) → screen-space elements positioned from world-to-screen each frame (pooled), or world-space UI Toolkit panels where 3D placement is needed (`CanvasMovement.cs`, `WorldPlane.cs`).
+- **Navigation/input:** UI Toolkit focus navigation with Input System UI module; gamepad + keyboard + mouse. Replaces `NavigationManager`, `NavButtonHandler`, `ButtonManager`, `UIKeyPressEvent`, `UIButtonPressEvent`.
+- **Transitions:** USS transitions + `experimental.animation` for screen fades and the glitch effect (replaces `TransitionController` / `TransitionData`).
+- **Audio:** UI sounds from a small `UISoundBinder` that hooks control callbacks to `IAudioService` (replaces `UIAudioClipRequester`).
+- **Glow:** MK Glow post-process does not affect overlay UI Toolkit panels. Get neon glow from USS (layered borders, `text-shadow`, soft gradient images) or render the panel to a RenderTexture inside the camera stack where real bloom is needed (hangar).
+- **Shapes asset:** keep only if the hangar 3D scene still needs it; remove from UI.
+- **Order:** new screens (hangar, progression, matchmaking/party) first in UI Toolkit; then menus; HUD last, during Phase 2 when health/ammo come from ECS. Delete each UGUI prefab/script when its UI Toolkit version works.
 - **Input:** keep the generated `PlayerControls` class; read input in one ECS input system that writes the `ICommandData`.
 - **Quality:** `.editorconfig` + Roslyn analysers; Unity Test Framework edit-mode tests for services and loadout validation, play-mode tests for netcode (prediction, lag-comp tick alignment).
 - **Remove dead code:** commented-out `ServerStartup.cs`, `TempNetworkGameManager.cs`, commented blocks in `LobbyManager.cs`, unused jobs (`Weapons/Jobs`, `PlayerInteraction/Jobs`).
@@ -223,6 +238,7 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 | **4. Customisation** | 4 chassis, module data, weight budget, cyberpunk wireframe hangar with socket focus camera, server validation | Loadouts in matches |
 | **5. Progression** | Cloud Code grants, Cloud Save, levels, mastery, unlocks, leaderboards, Steam achievements | Persistent accounts |
 | **6. Modes** | TDM, then Capture the Nuke; bots | All 3 modes |
+| **UI (runs across phases)** | UI Toolkit theme + controls (Phase 0–1), hangar/party/progression (3–5), menus (3), HUD (2) | No UGUI left |
 | **7. Polish/scale** | Load tests with thin clients; bandwidth budget; anti-cheat checks; region tuning | Launch-ready |
 
 ## Critical files
@@ -230,7 +246,8 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Replace: `Networking/ClientNetworkTransform.cs`, `PlayerInteraction/PlayerAttackManager.cs`, `Weapons/AmmoEffectServer.cs`, `Weapons/AmmoEffectClient.cs`, `Weapons/ServerParticleHandler.cs`, `Interactions/NetworkHealth.cs`, `Server/ServerStartup.cs`, `Networking/MatchmakerClient.cs`.
 - Port to ECS systems: `PlayerInteraction/MovementController.cs`, `VehicleStabiliser.cs`, `Abilities/Dash.cs`, `PlayerInteraction/Networking/PlayerManager.cs`, `Networking/ServerSpawnManager.cs`, `Networking/ScoreManager.cs`, `GameLogic/NetworkMatchStateMachine.cs` + states.
 - Reuse data: `Weapons/ScriptableObjects/*`, `GameLogic/ScriptableObjects/GameMode.cs`, `MatchData.cs`, `TeamData.cs`, `PlayerData.cs`, `Enums/Chassis.cs`, `Enums/Team.cs`.
-- Keep (presentation): `UI/**`, `Audio/**`, `Cameras/**`, `Effects/**`.
+- Keep (presentation): `Audio/**`, `Cameras/**`, `Effects/**`.
+- Rewrite in UI Toolkit: `UI/**`, `UI/HUD/**` (keep logic only where useful, e.g. `Utilities/Speed.cs`).
 - New: `Packages/manifest.json` changes; Cloud Code modules (allocator, match results); Steam bootstrap.
 
 ## Verification
