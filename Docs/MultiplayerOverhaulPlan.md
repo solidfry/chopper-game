@@ -17,7 +17,7 @@ Problems found:
 8. **Multiplay hosting was shut down on 1 Apr 2026** — `Server/ServerStartup.cs` cannot get allocations. `AwaitAllocationId` also has an inverted check.
 9. Duplicated `MAXPLAYERS` (`ConnectionApprovalHandler`, `ServerStartup`); global static `GameEvents` hide data flow.
 
-**Decisions (from user):** Netcode for Entities (built into Unity 6.5) + Edgegap hosting behind Unity Matchmaker. Steam for identity and friends.
+**Decisions (from user):** Unity 6.6, Netcode for Entities (built in) + Edgegap hosting behind Unity Matchmaker. Steam for identity and friends.
 
 ---
 
@@ -25,17 +25,20 @@ Problems found:
 
 | Area | Choice |
 |---|---|
-| Engine | Unity 6.5 (6000.5), URP |
-| Simulation | Entities + Netcode for Entities (built-in in 6.5) + Unity Physics |
+| Engine | Unity 6.6 (6000.6, supported release, out 1 Sep 2026), URP. Move to 6.7 LTS when it ships |
+| Simulation | Entities + Netcode for Entities (built-in core package since 6.5, version fixed to editor) + Unity Physics |
 | Presentation | GameObjects for UI, HUD, audio, VFX, Cinemachine 3 (via ghost "presentation" GameObjects) |
 | Transport | Unity Transport (UTP), DTLS on |
 | Services | `com.unity.services.multiplayer` (Sessions + Matchmaker), Authentication, Cloud Save, Cloud Code, Leaderboards, Remote Config |
 | Hosting | Edgegap, started by a Cloud Code allocator from Matchmaker |
 | Steam | Steamworks.NET → session ticket → Unity Authentication Steam provider |
-| Tools | Netcode Profiler (now official in 6.5), Multiplayer Play Mode (replaces ParrelSync), Network Simulator |
+| Tools | Netcode Profiler (official since 6.5), Multiplayer Play Mode (replaces ParrelSync), Network Simulator |
 
-Unity 6.5 features to use:
-- Built-in Netcode for Entities (editor now requires the built-in version).
+Unity 6.6 features to use:
+- Built-in Netcode for Entities (editor requires the built-in version).
+- Native `Dictionary` serialisation — use for module/stat tables in SOs.
+- **Watch out:** new projects default to no domain reload on Enter Play Mode. Static state (`Events/GameEvents.cs`, `Utilities/Singleton.cs`) will not reset. ECS removes most of this; reset any remaining statics with `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`.
+- Future: NGO 3.0 runs on Netcode for Entities 7.0 from 6.7 LTS. Our ECS choice follows Unity's direction.
 - Netcode Profiler modules: prediction/interpolation ticks per snapshot.
 - `GhostVariantBakedOverride` to override ghost component sync in bakers.
 - Thin client worlds — run 20–30 bot clients in one editor for load tests.
@@ -154,11 +157,30 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
   - Best of 3 rounds. Score bonus for carry/arm/defuse feeds progression.
   - ECS: `NukeState` ghost component (server-owned), trigger zones via Unity Physics triggers, HUD markers on all clients.
 
+## 7b. Status of `v2` branch (checked 25 Oct 2026)
+
+`origin/v2` = 1 commit on top of `main`: `fa63b932` "v2 fixes" (26 May 2026). 474 files; most are asset-store materials re-saved by the upgrade.
+
+| Plan item | v2 status |
+|---|---|
+| Upgrade engine | **Done to 6000.3.10f1 (6.3 LTS)**, not 6.6 yet |
+| Package updates | **Done**: URP 17.3, Cinemachine 3.1.6, Input System 1.18, NGO 2.11.2, Multiplayer Tools 2.2.8, Test Framework 1.6 |
+| API fixes for upgrade | **Done**: `rb.velocity` → `linearVelocity` (`Dash.cs`, `VehicleStabiliser.cs`); `Cinemachine` → `Unity.Cinemachine` + noise API (`CameraShakeManager.cs`, `PlayerCameraManager.cs`, `PlayerManager.cs`, `OutputHudValues.cs`) |
+| Remove Multiplay | **Done**: `services.multiplay`, `services.matchmaker`, coop samples, vscode removed. `ServerStartup.cs` fully commented out |
+| Multiplayer Services package | **Added** (`com.unity.services.multiplayer` 2.2.2) but no code uses it yet |
+| Matchmaking | **Off**: `MatchmakerClient` sign-in hook commented out; no server start path |
+| Firing bugs, server authority, hit detection | Not started |
+| Netcode for Entities / ECS | Not started (still NGO) |
+| Steam, Edgegap, customisation, progression, TDM/CTN | Not started |
+| ParrelSync | Still in manifest (remove; use Multiplayer Play Mode) |
+
+**Effect on roadmap:** start all new work from `v2`, not `main`. Phase 0 is ~70% done. Left in Phase 0: 6.3 → 6.6 upgrade, add Entities / Netcode for Entities / Unity Physics, remove NGO + ParrelSync, fix `WeaponSlot` firing bugs (only if NGO build must stay playable during the port), delete the commented-out `ServerStartup.cs`.
+
 ## 8. Phased roadmap
 
 | Phase | Work | Result |
 |---|---|---|
-| **0. Upgrade** | Branch; upgrade to Unity 6.5; fix packages; fix `WeaponSlot` firing bugs; remove Multiplay code | Project opens and runs offline |
+| **0. Upgrade** | ~~Upgrade to 6.3, package updates, API fixes, remove Multiplay~~ (done in `v2`). Left: 6.3 → 6.6; add Entities/N4E/Physics; remove NGO + ParrelSync | Project opens on 6.6 and runs offline |
 | **1. ECS core** | Chopper physics + input in Netcode for Entities; predicted movement; interpolated remotes; presentation GameObjects; HUD/camera bridge | 2+ choppers fly smoothly at 150 ms ping |
 | **2. Combat** | Hitscan with lag compensation; predicted projectiles; server health/death/respawn; hit confirm; VFX from events | FFA playable on new netcode |
 | **3. Services** | Steam sign-in; Sessions party; Matchmaker queues; Edgegap allocator; backfill; reconnect | One-click Play to a hosted match |
