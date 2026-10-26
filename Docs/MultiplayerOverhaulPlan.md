@@ -279,7 +279,7 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
 - Export `.blend` models to `.fbx` so the project does not need Blender.
-- Pin `com.coplaydev.unity-mcp` to a version instead of `#main`.
+- ~~Pin `com.coplaydev.unity-mcp`~~ — pinned to the commit it was already locked to (`81542a7`). Move to a release tag (v10.3.0 is latest) when you want to update.
 - Old scenes (`Multiplayer`, `Training`, `FreeForAll`, `TeamDeathMatch`, `SampleScene`) have missing legacy scripts; delete or rebuild during later phases.
 
 ## 8. Phased roadmap
