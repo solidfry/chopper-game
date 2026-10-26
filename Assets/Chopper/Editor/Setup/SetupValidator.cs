@@ -87,14 +87,14 @@ namespace Chopper.Editor.Setup
             if (Object.FindAnyObjectByType<ChopperHudView>() == null)
                 problems.Add(new SetupProblem("Open scene has no HUD. Press 'Set up open scene'."));
 
-            // Gameplay content lives in the subscene; it is only visible here while the subscene is open.
-            if (!GameplaySceneSetup.TryFindGameplayScene(out _))
-            {
-                problems.Add(new SetupProblem("Gameplay subscene is closed (or has no ChopperSpawner): open it to check its contents."));
-                return;
-            }
+            // Gameplay content lives in the subscene; a closed one is opened for the check and closed again.
+            if (!GameplaySceneSetup.WithGameplayScene(scene => CheckGameplayScene(scene, problems), save: false))
+                problems.Add(new SetupProblem("No gameplay subscene found (a SubScene whose scene has a ChopperSpawner)."));
+        }
 
-            var physicsConfig = FindInLoadedScenes("NetCodePhysicsConfig");
+        private static void CheckGameplayScene(Scene scene, List<SetupProblem> problems)
+        {
+            var physicsConfig = FindInScene(scene, "NetCodePhysicsConfig");
             if (physicsConfig == null)
             {
                 problems.Add(new SetupProblem("No NetCodePhysicsConfig in the gameplay subscene. Press '4. Set up gameplay subscene'."));
@@ -106,26 +106,14 @@ namespace Chopper.Editor.Setup
                     problems.Add(new SetupProblem("NetCodePhysicsConfig: Enable Lag Compensation is off.", physicsConfig));
             }
 
-            if (Object.FindAnyObjectByType<ArenaBoundsAuthoring>() == null)
+            if (FindInScene(scene, nameof(ArenaBoundsAuthoring)) == null)
                 problems.Add(new SetupProblem("No arena bounds in the gameplay subscene. Press '4. Set up gameplay subscene'."));
-            if (Object.FindAnyObjectByType<TrainingTargetAuthoring>() == null)
+            if (FindInScene(scene, nameof(TrainingTargetAuthoring)) == null)
                 problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));
         }
 
-        private static Component FindInLoadedScenes(string typeName)
-        {
-            for (var i = 0; i < SceneManager.sceneCount; i++)
-            {
-                var scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded) continue;
-                foreach (var root in scene.GetRootGameObjects())
-                {
-                    var found = root.GetComponentsInChildren<Component>(true)
-                        .FirstOrDefault(c => c != null && c.GetType().Name == typeName);
-                    if (found != null) return found;
-                }
-            }
-            return null;
-        }
+        private static Component FindInScene(Scene scene, string typeName) => scene.GetRootGameObjects()
+            .SelectMany(r => r.GetComponentsInChildren<Component>(true))
+            .FirstOrDefault(c => c != null && c.GetType().Name == typeName);
     }
 }

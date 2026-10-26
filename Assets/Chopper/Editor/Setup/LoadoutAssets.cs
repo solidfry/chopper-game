@@ -55,7 +55,8 @@ namespace Chopper.Editor.Setup
                 // Nose (hitscan)
                 Module(101, "M134 Minigun", "Fast fire, low damage per shot.", SlotType.Nose, Stats(weight: 8f), 0, minigun),
                 Module(102, "20mm Autocannon", "Slow, heavy hits.", SlotType.Nose, Stats(weight: 14f), 3, autocannon),
-                Module(103, "Pulse Laser", "No bullet drop, overheats.", SlotType.Nose, Stats(weight: 12f), 8, laser),
+                // Lasers are a late unlock: the world is gritty and kinetic first.
+                Module(103, "Pulse Laser", "No bullet drop, overheats.", SlotType.Nose, Stats(weight: 12f), 20, laser),
                 // Pylons (projectiles). TODO: weapon definitions for missiles, bombs and mines.
                 Module(111, "Rocket Pod", "Unguided rockets with splash.", SlotType.Pylon, Stats(weight: 10f), 0, rocketPod),
                 Module(112, "Homing Missiles", "Lock on, then fire.", SlotType.Pylon, Stats(weight: 14f), 5),

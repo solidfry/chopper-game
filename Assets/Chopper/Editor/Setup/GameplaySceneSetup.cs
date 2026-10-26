@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Session;
@@ -11,7 +12,7 @@ namespace Chopper.Editor.Setup
     /// <summary>
     /// Sets up the gameplay subscene (the loaded scene that holds the <see cref="ChopperSpawnerAuthoring"/>):
     /// NetCodePhysicsConfig with lag compensation, arena bounds sized to the level, and training targets.
-    /// The subscene must be open for editing. Reuses what is already there.
+    /// A closed subscene is opened for the step and closed again (<see cref="WithGameplayScene"/>). Reuses what is already there.
     /// </summary>
     internal static class GameplaySceneSetup
     {
@@ -33,14 +34,59 @@ namespace Chopper.Editor.Setup
             return false;
         }
 
-        public static void Apply()
+        /// <summary>
+        /// Runs <paramref name="action"/> on the gameplay subscene. If it is closed, opens it additively, runs the action,
+        /// saves it when <paramref name="save"/> is true, and closes it again. Returns false if no gameplay subscene exists.
+        /// </summary>
+        public static bool WithGameplayScene(Action<Scene> action, bool save)
         {
-            if (!TryFindGameplayScene(out var scene))
+            if (TryFindGameplayScene(out var open))
             {
-                Debug.LogWarning("Setup: no open gameplay subscene (with a ChopperSpawner). Open the subscene for editing, then run step 4.");
-                return;
+                action(open);
+                return true;
             }
 
+            foreach (var path in SubScenePathsInOpenScenes())
+            {
+                var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+                try
+                {
+                    if (!scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<ChopperSpawnerAuthoring>(true) != null)) continue;
+                    action(scene);
+                    if (save && scene.isDirty) EditorSceneManager.SaveScene(scene);
+                    return true;
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, removeScene: true);
+                }
+            }
+            return false;
+        }
+
+        public static void Apply()
+        {
+            if (!WithGameplayScene(ApplyTo, save: true))
+                Debug.LogWarning("Setup: no gameplay subscene (a SubScene whose scene has a ChopperSpawner) in the open scene.");
+        }
+
+        /// <summary>Scene paths of the SubScene components in the open scenes (found by name: no Unity.Scenes reference).</summary>
+        private static string[] SubScenePathsInOpenScenes()
+        {
+            return Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(SceneManager.GetSceneAt)
+                .Where(s => s.isLoaded)
+                .SelectMany(s => s.GetRootGameObjects())
+                .SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true))
+                .Where(c => c != null && c.GetType().Name == "SubScene")
+                .Select(c => c.GetType().GetProperty("SceneAsset")?.GetValue(c) as SceneAsset)
+                .Where(asset => asset != null)
+                .Select(AssetDatabase.GetAssetPath)
+                .ToArray();
+        }
+
+        private static void ApplyTo(Scene scene)
+        {
             var settings = FindOrCreateSettingsObject(scene);
             EnsureLagCompensation(scene, settings);
             EnsureArenaBounds(scene, settings);
