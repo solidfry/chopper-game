@@ -20,6 +20,7 @@ namespace Chopper.Presentation.Bridge
         private PresentationContext _context;
 
         public GameConfig Config => config;
+        public ChopperCameraRig CameraRig => cameraRig;
 
         /// <summary>Made on first use, so UI that enables before this object still gets it.</summary>
         public PresentationContext Context => _context ??= new PresentationContext(config, transform, cameraRig);

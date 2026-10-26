@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// Sets up the open scene: one Presentation object (bridge to ECS) and the HUD document wired to it.
+    /// Sets up the open scene: one Presentation object (bridge to ECS), the chase camera, and the HUD document wired to it.
     /// Reuses what is already there.
     /// </summary>
     internal static class SceneSetup
@@ -26,7 +26,7 @@ namespace Chopper.Editor.Setup
                 bridge = Undo.AddComponent<PresentationBridge>(go);
             }
             Undo.RecordObject(bridge, "Configure Presentation");
-            bridge.Configure(config, Object.FindAnyObjectByType<ChopperCameraRig>());
+            bridge.Configure(config, EnsureCameraRig());
             EditorUtility.SetDirty(bridge);
 
             var hud = Object.FindAnyObjectByType<ChopperHudView>();
@@ -56,6 +56,24 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(sounds);
             EditorSceneManager.MarkSceneDirty(bridge.gameObject.scene);
             Selection.activeGameObject = bridge.gameObject;
+        }
+
+        /// <summary>The chase camera: on the existing main camera, or a new one if the scene has none.</summary>
+        private static ChopperCameraRig EnsureCameraRig()
+        {
+            var rig = Object.FindAnyObjectByType<ChopperCameraRig>(FindObjectsInactive.Include);
+            if (rig != null) return rig;
+
+            var camera = UnityEngine.Camera.main;
+            if (camera == null) camera = Object.FindAnyObjectByType<UnityEngine.Camera>(FindObjectsInactive.Include);
+            if (camera == null)
+            {
+                var go = new GameObject("Main Camera") { tag = "MainCamera" };
+                Undo.RegisterCreatedObjectUndo(go, "Add Main Camera");
+                camera = go.AddComponent<UnityEngine.Camera>();
+                go.AddComponent<AudioListener>();
+            }
+            return Undo.AddComponent<ChopperCameraRig>(camera.gameObject);
         }
 
         private static GameObject CreateHudObject()

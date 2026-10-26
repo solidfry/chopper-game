@@ -75,8 +75,13 @@ namespace Chopper.Editor.Setup
             else
             {
                 if (bridge.Config == null) problems.Add(new SetupProblem("Presentation bridge has no game config.", bridge));
-                if (Object.FindAnyObjectByType<ChopperCameraRig>() == null)
-                    problems.Add(new SetupProblem("Open scene has no ChopperCameraRig (chase camera).", bridge));
+                var rig = Object.FindAnyObjectByType<ChopperCameraRig>(FindObjectsInactive.Include);
+                if (rig == null)
+                    problems.Add(new SetupProblem("Open scene has no ChopperCameraRig (chase camera). Press '3. Set up open scene'.", bridge));
+                else if (!rig.isActiveAndEnabled)
+                    problems.Add(new SetupProblem("ChopperCameraRig is on a disabled object or component.", rig));
+                else if (bridge.CameraRig != rig)
+                    problems.Add(new SetupProblem("Presentation bridge does not point to the chase camera. Press '3. Set up open scene'.", bridge));
             }
 
             if (Object.FindAnyObjectByType<ChopperHudView>() == null)
