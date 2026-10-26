@@ -241,7 +241,8 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Flight model (`ChopperFlightSystem`): Battlefield 6 Little Bird target — gravity ×1.6, collective, tilt compensation, rate-based rotation, anisotropic drag, weathervane, dash. No flight assist (auto-level off).
 - Controls: W/S collective, Left Ctrl descend, A/D yaw, mouse = pitch/roll (aim-style, 0.12 deg/px), arrows also pitch/roll, Shift dash.
 - **Parked: flight feel tuning.** "Feels better" — revisit later. Knobs: `ChopperAuthoring` on the prefab, `MouseDegreesPerPixel` + pitch invert in `ChopperInputSystem`, camera FOV/pull-back on `ChopperCameraRig`.
-- Left: UI Toolkit HUD (speed, altitude, dash), Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
+- HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Add it with menu **Chopper → UI → Add HUD To Open Scene** (creates `UI/Settings/ChopperPanelSettings.asset`). Edit-mode tests: `ChopperHudModelTests`.
+- Left: Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
 
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).

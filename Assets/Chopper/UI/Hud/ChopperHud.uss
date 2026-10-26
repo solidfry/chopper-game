@@ -1,0 +1,107 @@
+.hud {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 32px;
+  justify-content: flex-end;
+  transition-property: opacity;
+  transition-duration: 0.2s;
+}
+
+.hud--hidden {
+  opacity: 0;
+}
+
+/* Speed and altitude, bottom left */
+.hud-readouts {
+  flex-direction: row;
+}
+
+.hud-readout {
+  flex-direction: row;
+  align-items: flex-end;
+  min-width: 190px;
+  margin-right: 16px;
+  padding: 6px 12px;
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-left-width: 3px;
+  border-left-color: var(--chopper-green);
+  border-radius: var(--chopper-radius);
+}
+
+.hud-readout__label {
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  margin-right: 8px;
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.hud-readout__value {
+  font-size: 40px;
+  color: var(--chopper-green);
+  -unity-text-align: lower-right;
+  flex-grow: 1;
+  padding: 0;
+  margin: 0;
+  /* Neon glow without post-processing */
+  text-shadow: 0 0 6px rgba(57, 255, 136, 0.35);
+}
+
+.hud-readout__unit {
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  margin-left: 6px;
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+/* Dash charge, under the readouts */
+.hud-dash {
+  flex-direction: row;
+  align-items: center;
+  width: 396px;
+  margin-top: 10px;
+}
+
+.hud-dash__label {
+  font-size: 14px;
+  color: var(--chopper-amber);
+  width: 54px;
+  padding: 0;
+}
+
+.hud-dash--ready .hud-dash__label {
+  color: var(--chopper-green);
+}
+
+.hud-dash__bar {
+  flex-grow: 1;
+  margin: 0;
+}
+
+.hud-dash__bar .unity-progress-bar__background {
+  height: 8px;
+  min-height: 8px;
+  background-color: var(--chopper-green-faint);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hud-dash__bar .unity-progress-bar__progress {
+  background-color: var(--chopper-amber);
+  border-radius: 0;
+}
+
+.hud-dash--ready .hud-dash__bar .unity-progress-bar__progress {
+  background-color: var(--chopper-green);
+}
+
+.hud-dash__bar .unity-progress-bar__title-container {
+  display: none;
+}

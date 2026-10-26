@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+  <Style src="ChopperHud.uss" />
+  <ui:VisualElement name="hud" class="hud hud--hidden" picking-mode="Ignore">
+    <ui:VisualElement name="readouts" class="hud-readouts" picking-mode="Ignore">
+      <ui:VisualElement name="speed" class="hud-readout" picking-mode="Ignore">
+        <ui:Label text="SPD" class="hud-readout__label" />
+        <ui:Label name="speed-value" text="0" class="hud-readout__value" />
+        <ui:Label text="KM/H" class="hud-readout__unit" />
+      </ui:VisualElement>
+      <ui:VisualElement name="altitude" class="hud-readout" picking-mode="Ignore">
+        <ui:Label text="ALT" class="hud-readout__label" />
+        <ui:Label name="altitude-value" text="0" class="hud-readout__value" />
+        <ui:Label text="M" class="hud-readout__unit" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="dash" class="hud-dash" picking-mode="Ignore">
+      <ui:Label text="DASH" class="hud-dash__label" />
+      <ui:ProgressBar name="dash-bar" low-value="0" high-value="1" value="1" class="hud-dash__bar" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

@@ -8,6 +8,7 @@ All new code goes here. Legacy code in `Assets/Scripts` stays in `Assembly-CShar
 | `Chopper.Services` | Plain C# services: sign-in, matchmaking, save, Steam, audio. Interfaces + implementations. | Unity packages only |
 | `Chopper.Presentation` | Bridges ECS → GameObjects: VFX, audio, camera, HUD view models. | Simulation, Services |
 | `Chopper.UI` | UI Toolkit screens, custom controls, USS/UXML. Reads view models only. | Presentation, Services |
+| `Chopper.Editor` | Editor tools and menu items (e.g. Chopper → UI → Add HUD To Open Scene). | Presentation, UI |
 | `Chopper.Tests.EditMode` | Edit-mode tests. | All of the above |
 
 Rules (see `Docs/MultiplayerOverhaulPlan.md`, section 1b):
