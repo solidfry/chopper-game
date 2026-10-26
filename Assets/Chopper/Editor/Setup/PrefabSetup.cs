@@ -6,7 +6,10 @@ using UnityEngine;
 
 namespace Chopper.Editor.Setup
 {
-    /// <summary>Gives the chopper ghost prefab its default loadout and the ghost settings lag compensation needs.</summary>
+    /// <summary>
+    /// Gives the chopper ghost prefab its default loadout, the ghost settings lag compensation needs, and the old
+    /// chopper's look (<see cref="LegacyChopperVisuals"/>).
+    /// </summary>
     internal static class PrefabSetup
     {
         public const string ChopperPrefabPath = "Assets/Chopper/Prefabs/ChopperGhost.prefab";
@@ -35,6 +38,7 @@ namespace Chopper.Editor.Setup
                     }
                 }
 
+                LegacyChopperVisuals.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, ChopperPrefabPath);
             }
             finally

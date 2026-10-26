@@ -59,6 +59,10 @@ namespace Chopper.Editor.Setup
             if (authoring == null || authoring.Chassis == null)
                 problems.Add(new SetupProblem("Chopper prefab has no chassis / default loadout. Press 'Set up chopper prefab'.", prefab));
 
+            var visuals = prefab.GetComponent<Chopper.Simulation.Visuals.ChopperVisualsAuthoring>();
+            if (visuals == null || visuals.Rotors.Length == 0)
+                problems.Add(new SetupProblem("Chopper prefab has no spinning rotors. Press 'Set up chopper prefab' (copies the old chopper's look).", prefab));
+
             var ghost = PrefabSetup.FindByTypeName(prefab, "GhostAuthoringComponent");
             var track = ghost != null ? new SerializedObject(ghost).FindProperty("TrackInterpolationDelay") : null;
             if (track != null && !track.boolValue)

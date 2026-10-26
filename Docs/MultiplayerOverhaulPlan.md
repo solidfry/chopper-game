@@ -307,6 +307,13 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Steps for you: add Steamworks.NET (UPM git URL) and a `steam_appid.txt`; set up the Steam provider in the Unity Dashboard; make a prefab with `RootLifetimeScope` and set it as root in VContainer settings.
 - Left: real matchmaker (Multiplayer Services sessions + Cloud Code allocator → Edgegap), party, rejoin, server reads the matchmaker payload and checks the loadout with `LoadoutRules.Validate`.
 
+**Look and feel: keep the old game's identity (user TODO, 27 Oct).** The world is a gritty, kinetic cyberpunk; match the old game wherever possible.
+- [x] HUD central and moving with the chopper: flight frame (ring, roll horizon, speed/alt right, dash left, hull below) sways up to 24 px against turns.
+- [x] Gun sound: the old one (`CloseExplosion_11`, pitch 1.45) on `Cue_GunFire`.
+- [x] Lasers are a late unlock (Pulse Laser level 20).
+- [x] Chopper look: Setup copies the old `ChopperNetworked` material overrides, rotor spin (SciFiRotation rates → `ChopperVisualsAuthoring` + `RotorSpinSystem`), spot light and smoke onto the ghost.
+- [ ] Compare in play with the old build: camera feel (old Cinemachine follow/cockpit cameras), rocket sound/feel, particle look, colours.
+
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
 - Export `.blend` models to `.fbx` so the project does not need Blender.
