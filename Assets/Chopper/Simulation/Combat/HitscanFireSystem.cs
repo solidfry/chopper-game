@@ -22,6 +22,8 @@ namespace Chopper.Simulation.Combat
     /// Without it the server ray-casts against the current world (no rewind).
     /// </summary>
     [BurstCompile]
+    // Not in the local (menu) world: it has no predicted group.
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(PredictedFixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(PhysicsSystemGroup))]
     public partial struct HitscanFireSystem : ISystem

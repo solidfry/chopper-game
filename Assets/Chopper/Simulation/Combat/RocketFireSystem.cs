@@ -15,6 +15,8 @@ namespace Chopper.Simulation.Combat
     /// <see cref="Rocket"/> and tells everyone; the owner's client draws its own rocket at once.
     /// </summary>
     [BurstCompile]
+    // Not in the local (menu) world: it has no predicted group.
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(PredictedFixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(PhysicsSystemGroup))]
     public partial struct RocketFireSystem : ISystem

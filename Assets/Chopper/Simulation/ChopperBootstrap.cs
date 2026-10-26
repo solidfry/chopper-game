@@ -18,7 +18,7 @@ namespace Chopper.Simulation
         public override bool Initialize(string defaultWorldName)
         {
             // TODO: Phase 3 replaces this check with session start from the menu (Multiplayer Services).
-            if (SceneManager.GetActiveScene().name == TrainingRangeScene)
+            if (IsGameplaySceneOpen())
             {
                 AutoConnectPort = LocalPort;
                 CreateDefaultClientServerWorlds();
@@ -28,6 +28,20 @@ namespace Chopper.Simulation
             AutoConnectPort = 0;
             CreateLocalWorld(defaultWorldName);
             return true;
+        }
+
+        /// <summary>
+        /// Checks every loaded scene, not only the active one: while its subscene is open for editing, the subscene
+        /// can be the active scene.
+        /// </summary>
+        private static bool IsGameplaySceneOpen()
+        {
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var name = SceneManager.GetSceneAt(i).name;
+                if (name == TrainingRangeScene || name.StartsWith(TrainingRangeScene + "_")) return true;
+            }
+            return false;
         }
     }
 }
