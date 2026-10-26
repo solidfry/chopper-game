@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d149d75e022ef944926b6cf54ffff19, type: 3}
+  m_Name: Chassis_Scout
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.ChassisDefinition
+  id: 1
+  displayName: Scout
+  description: Light. Flanks, scouts and fast nuke runs.
+  baseHealth: 70
+  weightBudget: 60
+  unlockLevel: 0
+  slots: 000103050607y
+  prefab: {fileID: 0}
+  flight:
+    GravityScale: 1.5
+    CollectiveRange: 0.9642857
+    TiltCompensation: 0.9
+    MaxCompensatedTiltDegrees: 60
+    MaxPitchRate: 120.000015
+    MaxYawRate: 93.333336
+    MaxRollRate: 186.66667
+    TurnResponse: 12
+    QuadraticDrag: {x: 0.004, y: 0.003, z: 0.0018}
+    LinearDrag: {x: 0.15, y: 0.15, z: 0.02}
+    Weathervane: 0.01
+    AutoLevel: 0
+    DashBoost: 0.6
+    DashCooldown: 1.6
+  crash:
+    SafeSpeedLoss: 8
+    DamagePerSpeedLoss: 4
