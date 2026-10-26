@@ -56,6 +56,16 @@ namespace Chopper.Simulation.Flight
         [SerializeField, Tooltip("Gun position in chopper space (z = forward).")]
         private Vector3 muzzleOffset = new(0f, -0.6f, 2.5f);
 
+        [Header("Pylon rockets")]
+        [SerializeField, Tooltip("Seconds between rockets.")] private float rocketInterval = 0.6f;
+        [SerializeField] private float rocketSpeed = 140f;
+        [SerializeField] private float rocketLifetime = 4f;
+        [SerializeField] private float rocketDirectDamage = 30f;
+        [SerializeField] private float rocketSplashDamage = 25f;
+        [SerializeField] private float rocketSplashRadius = 8f;
+        [SerializeField, Tooltip("Pylon position in chopper space.")]
+        private Vector3 rocketMuzzleOffset = new(1.4f, -0.8f, 1.5f);
+
         private sealed class Baker : Baker<ChopperAuthoring>
         {
             public override void Bake(ChopperAuthoring authoring)
@@ -96,6 +106,17 @@ namespace Chopper.Simulation.Flight
                     MuzzleOffset = authoring.muzzleOffset,
                 });
                 AddComponent<HitscanWeaponState>(entity);
+                AddComponent(entity, new RocketLauncherConfig
+                {
+                    FireInterval = authoring.rocketInterval,
+                    Speed = authoring.rocketSpeed,
+                    Lifetime = authoring.rocketLifetime,
+                    DirectDamage = authoring.rocketDirectDamage,
+                    SplashDamage = authoring.rocketSplashDamage,
+                    SplashRadius = authoring.rocketSplashRadius,
+                    MuzzleOffset = authoring.rocketMuzzleOffset,
+                });
+                AddComponent<RocketLauncherState>(entity);
             }
         }
     }

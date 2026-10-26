@@ -45,6 +45,7 @@ namespace Chopper.Simulation.Flight
             var roll = math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
             var dash = flight.Dash.WasPressedThisFrame();
             var fire = flight.Fire1.IsPressed();
+            var fireSecondary = flight.Fire2.IsPressed();
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
@@ -65,6 +66,7 @@ namespace Chopper.Simulation.Flight
                     Pitch = math.clamp(pitch + mousePitch, -1f, 1f),
                     Roll = math.clamp(roll + mouseRoll, -1f, 1f),
                     Fire = fire,
+                    FireSecondary = fireSecondary,
                 };
                 if (dash)
                     input.ValueRW.Dash.Set();

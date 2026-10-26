@@ -15,5 +15,7 @@ namespace Chopper.Simulation.Flight
         public InputEvent Dash;
         /// <summary>Held: the nose gun fires at its fire rate.</summary>
         public bool Fire;
+        /// <summary>Held: pylon rockets fire at their fire rate.</summary>
+        public bool FireSecondary;
     }
 }

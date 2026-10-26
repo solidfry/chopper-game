@@ -257,7 +257,9 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Kill credit: `LastAttacker` — a crash/bounds death within 5 s of a hit counts as the attacker's kill.
 - FFA match (`Simulation/Match`, server): `MatchScoreSystem` keeps kills/deaths per connection, timer (600 s), score limit (20), post-game (10 s), then next match. Clients get `ScoreRpc`, `KillFeedRpc`, `PlayerLeftRpc`, `MatchStateRpc`. Optional `MatchRulesAuthoring` in the subscene. No damage after the match ends.
 - HUD match layer (stays visible while dead): timer, your K/D, leader, kill feed, VICTORY/DRAW banner. `MatchHudModel` + `MatchHudSystem`.
-- Left: tracers / muzzle flash / impact VFX, victim damage direction + owner-only camera shake, rockets, player names (Steam, Phase 3).
+- Rockets (RMB, E, LB): `RocketFireSystem` (predicted fire rate), `RocketSystem` (server: one ray segment per tick, direct + splash damage with falloff, no self damage). Rockets are not ghosts: straight flight, so clients draw them from `RocketLaunchRpc` (others) or `LocalRocketLaunch` (own, at once). `Presentation/Effects/RocketVisualSystem` uses placeholder shapes; swap for prefabs/VFX Graph.
+  - Deviation from section 3B: no predicted projectile ghosts. Simpler and cheaper; revisit for guided missiles (they need ghosts).
+- Left: tracers / muzzle flash / impact VFX for the gun, victim damage direction + owner-only camera shake, player names (Steam, Phase 3).
 
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
