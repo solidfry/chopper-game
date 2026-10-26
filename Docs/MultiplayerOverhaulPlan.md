@@ -269,6 +269,13 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Menu **Chopper → Loadout → Create Default Catalog** makes `Assets/Chopper/Data/Loadout` with 4 chassis (Scout, Gunship, Assault, Lifter) and 23 modules from section 5.
 - Left: apply `LoadoutStats` + weapon modules at server spawn, loadout in the GoInGame request / matchmaker ticket, chassis prefabs with sockets, hangar UI.
 
+**Phase 3 — started (26 Oct, code only; needs the editor and accounts to test).**
+- `Chopper.Services`: `IPlatformIdentity` (+ `OfflinePlatform`), `IAuthService` → `UnityAuthService` (Steam ticket when available, anonymous otherwise), `IMatchmakingService` (+ `LocalMatchmakingService` for dev), queue names.
+- `Chopper.Services.Steam`: `SteamPlatform` (Web API ticket for identity `unityauthenticationservice`, callbacks via VContainer `ITickable`). Compiles only with Steamworks.NET installed.
+- `Chopper.App`: `RootLifetimeScope` + `SignInOnStart`.
+- Steps for you: add Steamworks.NET (UPM git URL) and a `steam_appid.txt`; set up the Steam provider in the Unity Dashboard; make a prefab with `RootLifetimeScope` and set it as root in VContainer settings.
+- Left: real matchmaker (Multiplayer Services sessions + Cloud Code allocator → Edgegap), party, rejoin, server reads the matchmaker payload and checks the loadout with `LoadoutRules.Validate`.
+
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
 - Export `.blend` models to `.fbx` so the project does not need Blender.
