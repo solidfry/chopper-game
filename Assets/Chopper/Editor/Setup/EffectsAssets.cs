@@ -1,15 +1,14 @@
 using Chopper.Presentation.Effects;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 
-namespace Chopper.Editor
+namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// One-click combat effects: creates the settings asset (filled with the Sci-Fi Arsenal prefabs the old game used)
-    /// if missing, and adds a Combat Effects object to the open scene. Safe to run again.
+    /// Combat effects settings, filled with the Sci-Fi Arsenal prefabs the old game used. Creates it if missing.
     /// </summary>
-    internal static class CombatEffectsSceneSetup
+    internal static class EffectsAssets
     {
         private const string SettingsPath = "Assets/Chopper/Data/Effects/CombatEffectsSettings.asset";
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Prefabs/Combat";
@@ -22,32 +21,23 @@ namespace Chopper.Editor
         private const string RocketMuzzleFlash = "Assets/Prefabs/Projectiles/ProjectilePrefabs/Rocket/RocketMuzzleFlashOrange.prefab";
         private const string RocketImpact = "Assets/Prefabs/Projectiles/ProjectilePrefabs/Rocket/RedFireRocketImpactV3.prefab";
 
-        [MenuItem("Chopper/Effects/Add Combat Effects To Open Scene")]
-        private static void AddToOpenScene()
-        {
-            var settings = GetOrCreateSettings();
-            var host = Object.FindFirstObjectByType<CombatEffectsHost>();
-            if (host == null)
-            {
-                var go = new GameObject("Combat Effects");
-                Undo.RegisterCreatedObjectUndo(go, "Add Combat Effects");
-                host = Undo.AddComponent<CombatEffectsHost>(go);
-            }
-
-            Undo.RecordObject(host, "Configure Combat Effects");
-            host.SetSettings(settings);
-            EditorUtility.SetDirty(host);
-            EditorSceneManager.MarkSceneDirty(host.gameObject.scene);
-            Selection.activeGameObject = host.gameObject;
-        }
-
-        private static CombatEffectsSettings GetOrCreateSettings()
+        public static CombatEffectsSettings Ensure(AudioMixer mixer)
         {
             var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(SettingsPath);
-            if (settings != null) return settings;
+            if (settings != null)
+            {
+                // Repair: route prefab sounds once the mixer exists.
+                if (settings.EffectsMixerGroup == null && mixer != null)
+                {
+                    settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
+                    EditorUtility.SetDirty(settings);
+                }
+                return settings;
+            }
 
             settings = ScriptableObject.CreateInstance<CombatEffectsSettings>();
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
+            if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
             AssetDatabase.CreateAsset(settings, SettingsPath);

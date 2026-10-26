@@ -10,10 +10,11 @@ All new code goes here. Legacy code in `Assets/Scripts` stays in `Assembly-CShar
 | `Chopper.Presentation` | Bridges ECS → GameObjects: VFX, audio, camera, HUD view models. | Simulation, Services |
 | `Chopper.UI` | UI Toolkit screens, custom controls, USS/UXML. Reads view models only. | Presentation, Services |
 | `Chopper.App` | Composition root (VContainer `RootLifetimeScope`) and start-up flow. | Services, Services.Steam |
-| `Chopper.Editor` | Editor tools and menu items (Chopper → UI → Add HUD To Open Scene, Chopper → Loadout → Create Default Catalog). | Simulation, Presentation, UI |
+| `Chopper.Editor` | The **Chopper → Setup** window: create/repair config, set up prefab and scene, validate. Add new setup steps and checks there. | Simulation, Presentation, UI |
 | `Chopper.Tests.EditMode` | Edit-mode tests. | All of the above |
 
 Rules (see `Docs/MultiplayerOverhaulPlan.md`, section 1b):
 - Dependencies point one way. Simulation never references Presentation or UI.
 - No `Singleton<T>`, no `static event`, no static mutable state.
 - New code never references `Assets/Scripts` (Assembly-CSharp cannot be referenced anyway).
+- Systemic design (plan section 1c): settings hang off `GameConfig`; content is definition assets; presentation systems derive from `PresentationSystemBase`; simulation events reach presentation only through `PresentationEventSystem` → messages.

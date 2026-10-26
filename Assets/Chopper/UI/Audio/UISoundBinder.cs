@@ -1,4 +1,5 @@
 using Chopper.Presentation.Audio;
+using Chopper.Presentation.Bridge;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -12,13 +13,22 @@ namespace Chopper.UI.Audio
     [RequireComponent(typeof(UIDocument))]
     public sealed class UISoundBinder : MonoBehaviour
     {
-        private AudioHost _audio;
+        [SerializeField, Tooltip("Scene presentation bridge; it owns the audio service and the sound library.")]
+        private PresentationBridge bridge;
+
+        private PresentationContext _context;
         private VisualElement _root;
         private VisualElement _lastHovered;
 
         private void OnEnable()
         {
-            _audio = FindFirstObjectByType<AudioHost>();
+            if (bridge == null)
+            {
+                Debug.LogError($"{name}: no presentation bridge set. Run Chopper → Setup.", this);
+                enabled = false;
+                return;
+            }
+            _context = bridge.Context;
             _root = GetComponent<UIDocument>().rootVisualElement;
             // Trickle down: the root sees the event before the button handles it.
             _root.RegisterCallback<ClickEvent>(OnClick, TrickleDown.TrickleDown);
@@ -38,7 +48,7 @@ namespace Chopper.UI.Audio
         {
             var button = ButtonFrom(evt.target);
             if (button != null && button.enabledInHierarchy)
-                Play(_audio != null && _audio.Library != null ? _audio.Library.UIClick : null);
+                Play(_context.Sounds != null ? _context.Sounds.UIClick : null);
         }
 
         private void OnPointerOver(PointerOverEvent evt)
@@ -47,7 +57,7 @@ namespace Chopper.UI.Audio
             // Pointer-over fires again for each child of the button; play once per button.
             if (button == null || button == _lastHovered) return;
             _lastHovered = button;
-            Play(_audio != null && _audio.Library != null ? _audio.Library.UINavigate : null);
+            Play(_context.Sounds != null ? _context.Sounds.UINavigate : null);
         }
 
         private void OnFocusIn(FocusInEvent evt)
@@ -55,13 +65,16 @@ namespace Chopper.UI.Audio
             var button = ButtonFrom(evt.target);
             if (button == null || button == _lastHovered) return;
             _lastHovered = button;
-            Play(_audio != null && _audio.Library != null ? _audio.Library.UINavigate : null);
+            Play(_context.Sounds != null ? _context.Sounds.UINavigate : null);
         }
 
         private void Play(SoundCue cue)
         {
-            if (cue != null) _audio.Audio.Play(cue);
+            if (cue != null) _context.Audio.Play(cue);
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetBridge(PresentationBridge value) => bridge = value;
 
         /// <summary>The button the event is on, also when it hit the button's label or icon.</summary>
         private static Button ButtonFrom(IEventHandler target)

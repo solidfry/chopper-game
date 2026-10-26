@@ -1,70 +1,39 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chopper.Presentation.Audio;
-using Chopper.Presentation.Effects;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace Chopper.Editor
+namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// One-click audio: creates the sound cues and library from the project's existing sounds (if missing), routes the
-    /// combat effects to the Effects mixer group, and adds an Audio object (plus match music) to the open scene.
-    /// Safe to run again. Swap any clip on the cue assets afterwards.
+    /// Sound cues and library made from the project's existing sounds. Creates them if missing; swap any clip on the
+    /// cue assets afterwards.
     /// </summary>
-    internal static class AudioSceneSetup
+    internal static class AudioAssets
     {
         private const string Folder = "Assets/Chopper/Data/Audio";
         private const string LibraryPath = Folder + "/SoundLibrary.asset";
-        private const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
-        private const string EffectsSettingsPath = "Assets/Chopper/Data/Effects/CombatEffectsSettings.asset";
         private const string MatchMusic = "Assets/Sound/Music/3- Dark Fantasy Studio- Demons from Mars (seamless).mp3";
 
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
 
-        [MenuItem("Chopper/Audio/Add Audio To Open Scene")]
-        private static void AddToOpenScene()
+        public const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
+        public const string MatchMusicPath = MatchMusic;
+
+        public static AudioMixer LoadMixer()
         {
             var mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
-            if (mixer == null)
-            {
-                Debug.LogError($"Audio setup: no mixer at {MixerPath}.");
-                return;
-            }
-
-            var library = GetOrCreateLibrary(mixer);
-            RouteCombatEffects(mixer);
-
-            var host = Object.FindFirstObjectByType<AudioHost>();
-            if (host == null)
-            {
-                var go = new GameObject("Audio");
-                Undo.RegisterCreatedObjectUndo(go, "Add Audio");
-                host = Undo.AddComponent<AudioHost>(go);
-            }
-            Undo.RecordObject(host, "Configure Audio");
-            host.SetLibrary(library);
-            EditorUtility.SetDirty(host);
-
-            var music = host.GetComponent<SceneMusic>();
-            if (music == null)
-            {
-                music = Undo.AddComponent<SceneMusic>(host.gameObject);
-                music.SetTrack(AssetDatabase.LoadAssetAtPath<AudioClip>(MatchMusic));
-                EditorUtility.SetDirty(music);
-            }
-
-            EditorSceneManager.MarkSceneDirty(host.gameObject.scene);
-            Selection.activeGameObject = host.gameObject;
+            if (mixer == null) Debug.LogError($"Audio setup: no mixer at {MixerPath}.");
+            return mixer;
         }
 
-        private static SoundLibrary GetOrCreateLibrary(AudioMixer mixer)
+        public static SoundLibrary Ensure(AudioMixer mixer)
         {
             var library = AssetDatabase.LoadAssetAtPath<SoundLibrary>(LibraryPath);
-            if (library != null) return library;
+            if (library != null || mixer == null) return library;
             System.IO.Directory.CreateDirectory(Folder);
 
             var effects = Group(mixer, "Effects");
@@ -96,16 +65,6 @@ namespace Chopper.Editor
             return library;
         }
 
-        /// <summary>Effect prefab sounds (rocket, explosions) follow the Effects volume.</summary>
-        private static void RouteCombatEffects(AudioMixer mixer)
-        {
-            var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(EffectsSettingsPath);
-            if (settings == null || settings.EffectsMixerGroup != null) return;
-            settings.SetEffectsMixerGroup(Group(mixer, "Effects"));
-            EditorUtility.SetDirty(settings);
-            AssetDatabase.SaveAssets();
-        }
-
         private static SoundCue Cue(string name, AudioClip[] clips, AudioMixerGroup group, float volume, float blend, int voices,
             float cooldown = 0f, float pitch = 1f)
         {
@@ -133,7 +92,7 @@ namespace Chopper.Editor
             .Where(clip => clip != null)
             .ToArray();
 
-        private static AudioMixerGroup Group(AudioMixer mixer, string name)
+        public static AudioMixerGroup Group(AudioMixer mixer, string name)
         {
             var group = mixer.FindMatchingGroups(name).FirstOrDefault(g => g.name == name);
             if (group == null) Debug.LogWarning($"Audio setup: mixer has no '{name}' group.");

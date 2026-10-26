@@ -1,14 +1,16 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Config;
 using UnityEngine;
 using UnityEngine.Audio;
 
 namespace Chopper.Presentation.Effects
 {
     /// <summary>
-    /// Which effect prefabs combat uses. Defaults (menu Chopper → Effects → Add Combat Effects To Open Scene) are the
+    /// Which effect prefabs combat uses. Defaults (made by Chopper → Setup) are the
     /// Sci-Fi Arsenal prefabs the old game used. Any slot can be empty: that effect is then not shown.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Effects/Combat Effects Settings", fileName = "CombatEffectsSettings")]
-    public sealed class CombatEffectsSettings : ScriptableObject
+    public sealed class CombatEffectsSettings : ScriptableObject, IValidatedAsset
     {
         [Header("Nose gun")]
         [SerializeField, Tooltip("Looping projectile visual, flown from the muzzle to where the shot ends. Pooled.")]
@@ -50,6 +52,15 @@ namespace Chopper.Presentation.Effects
         public float OneShotLifetime => oneShotLifetime;
         public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
         public bool GunBulletAudio => gunBulletAudio;
+
+        public void CollectProblems(List<string> problems)
+        {
+            if (gunBullet == null) problems.Add($"{name}: no gun bullet prefab.");
+            if (gunImpact == null) problems.Add($"{name}: no gun impact prefab.");
+            if (rocket == null) problems.Add($"{name}: no rocket prefab.");
+            if (rocketImpact == null) problems.Add($"{name}: no rocket impact prefab.");
+            if (effectsMixerGroup == null) problems.Add($"{name}: no effects mixer group, so prefab sounds skip the volume setting.");
+        }
 
         /// <summary>Editor only: used by the scene setup tool.</summary>
         public void Initialise(GameObject bullet, GameObject gunFlash, GameObject gunHit, GameObject rocketVisual,

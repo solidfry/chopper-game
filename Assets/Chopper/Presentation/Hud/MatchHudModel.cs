@@ -9,7 +9,7 @@ namespace Chopper.Presentation.Hud
 {
     /// <summary>
     /// View model for the match part of the HUD: timer, scores, kill feed and the end-of-match banner.
-    /// <see cref="MatchHudSystem"/> fills it from server RPCs; UI Toolkit reads it through data binding.
+    /// <see cref="Feedback.MatchFeedback"/> fills it from match messages; UI Toolkit reads it through data binding.
     /// </summary>
     public sealed class MatchHudModel : INotifyBindablePropertyChanged
     {

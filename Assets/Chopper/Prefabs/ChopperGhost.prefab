@@ -97,20 +97,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03b65618544fd0241bb2cb23301ae434, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Flight.ChopperAuthoring
-  gravityScale: 1.6
-  collectiveRange: 0.9
-  tiltCompensation: 0.9
-  maxCompensatedTiltDegrees: 60
-  maxPitchRate: 90
-  maxYawRate: 70
-  maxRollRate: 140
-  turnResponse: 12
-  quadraticDrag: {x: 0.004, y: 0.003, z: 0.0018}
-  linearDrag: {x: 0.15, y: 0.15, z: 0.02}
-  weathervane: 0.01
-  autoLevel: 0
-  dashBoost: 0.6
-  dashCooldown: 2
+  chassis: {fileID: 0}
+  modules: []
 --- !u!114 &5179570715733496795
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -137,7 +125,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.NetCode.Authoring.Hybrid::Unity.NetCode.GhostAuthoringComponent
   HasOwner: 1
   SupportAutoCommandTarget: 1
-  TrackInterpolationDelay: 0
+  TrackInterpolationDelay: 1
   GhostGroup: 0
   UsePreSerialization: 0
   UseSingleBaseline: 0

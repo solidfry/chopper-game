@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Config;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -8,7 +10,7 @@ namespace Chopper.Presentation.Audio
     /// voice limit). Play it through <see cref="IAudioService"/>.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Audio/Sound Cue", fileName = "SoundCue")]
-    public sealed class SoundCue : ScriptableObject
+    public sealed class SoundCue : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("One is picked at random, never the same one twice in a row.")]
         private AudioClip[] clips = System.Array.Empty<AudioClip>();
@@ -43,6 +45,14 @@ namespace Chopper.Presentation.Audio
         public int MaxVoices => Mathf.Max(1, maxVoices);
         public float Cooldown => cooldown;
         public bool HasClips => clips.Length > 0;
+
+        public void CollectProblems(List<string> problems)
+        {
+            if (clips.Length == 0) problems.Add($"{name}: no clips.");
+            foreach (var clip in clips)
+                if (clip == null) { problems.Add($"{name}: empty clip entry."); break; }
+            if (output == null) problems.Add($"{name}: no mixer group, so no volume setting covers it.");
+        }
 
         public AudioClip PickClip()
         {

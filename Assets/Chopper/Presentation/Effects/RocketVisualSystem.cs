@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
-using Chopper.Simulation.Combat;
+using Chopper.Presentation.Bridge;
+using Chopper.Presentation.Events;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -10,13 +12,13 @@ using UnityEngine;
 namespace Chopper.Presentation.Effects
 {
     /// <summary>
-    /// Client only. Draws rockets from launch data (own predicted launches at once, other players' from the server):
-    /// muzzle flash, the rocket visual in flight, and an impact where it hits. Visual only: the client ray-casts its own
-    /// world to know where to stop; the server decides damage. Prefabs come from the scene's <see cref="CombatEffectsHost"/>.
+    /// Client only. Draws rockets from <see cref="RocketLaunched"/> messages: muzzle flash, the rocket visual in flight,
+    /// and an impact where it hits. Visual only: the client ray-casts its own world to know where to stop; the server
+    /// decides damage. Prefabs come from the presentation context.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    public partial class RocketVisualSystem : SystemBase
+    public partial class RocketVisualSystem : PresentationSystemBase
     {
         private sealed class RocketVisual
         {
@@ -29,64 +31,66 @@ namespace Chopper.Presentation.Effects
         }
 
         private readonly List<RocketVisual> _rockets = new();
-        private EntityQuery _localLaunches;
-        private EntityQuery _remoteLaunches;
-        private CombatEffectsHost _host;
+        private readonly List<RocketLaunched> _launches = new();
+        private PresentationContext _context;
+        private IDisposable _subscription;
 
         protected override void OnCreate()
         {
+            base.OnCreate();
             RequireForUpdate<NetworkStreamInGame>();
-            _localLaunches = SystemAPI.QueryBuilder().WithAll<LocalRocketLaunch>().Build();
-            _remoteLaunches = SystemAPI.QueryBuilder().WithAll<RocketLaunchRpc, ReceiveRpcCommandRequest>().Build();
         }
+
+        protected override void OnDestroy() => _subscription?.Dispose();
 
         protected override void OnUpdate()
         {
-            if (_host == null)
-                _host = Object.FindFirstObjectByType<CombatEffectsHost>();
+            if (!TryGetContext(out var context)) return;
+            Bind(context);
 
-            var settings = _host != null ? _host.Settings : null;
-            var localId = SystemAPI.TryGetSingleton<NetworkId>(out var id) ? id.Value : 0;
-            if (settings != null)
-                SpawnLaunches(settings, localId);
-
-            // Always consume, also without effects, so launch entities do not pile up.
-            EntityManager.DestroyEntity(_localLaunches);
-            EntityManager.DestroyEntity(_remoteLaunches);
-
-            if (settings == null || !SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
-            var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
-            MoveRockets(settings, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime);
-        }
-
-        private void SpawnLaunches(CombatEffectsSettings settings, int localId)
-        {
-            foreach (var launch in SystemAPI.Query<RefRO<LocalRocketLaunch>>())
-                Spawn(settings, launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, localId);
-
-            foreach (var launch in SystemAPI.Query<RefRO<RocketLaunchRpc>>().WithAll<ReceiveRpcCommandRequest>())
+            var effects = context.Effects;
+            if (effects.Settings == null)
             {
-                // Our own rockets are already drawn from prediction.
-                if (launch.ValueRO.ShooterNetworkId == localId) continue;
-                Spawn(settings, launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, launch.ValueRO.ShooterNetworkId);
+                _launches.Clear();
+                return;
             }
+
+            foreach (var launch in _launches)
+                Spawn(effects, launch);
+            _launches.Clear();
+
+            if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
+            var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime);
         }
 
-        private void Spawn(CombatEffectsSettings settings, float3 position, float3 velocity, float lifetime, int shooterNetworkId)
+        /// <summary>Subscribes to the context's launches; a new context (scene change) drops the old rockets.</summary>
+        private void Bind(PresentationContext context)
         {
-            var rotation = Quaternion.LookRotation(velocity);
-            _host.SpawnOneShot(settings.RocketMuzzleFlash, position, rotation);
+            if (_context == context) return;
+            _subscription?.Dispose();
+            _rockets.Clear();
+            _launches.Clear();
+            _context = context;
+            // Messages arrive earlier in the frame (PresentationEventSystem); spawn them in OnUpdate.
+            _subscription = context.Events.Subscribe<RocketLaunched>(_launches.Add);
+        }
+
+        private void Spawn(CombatEffects effects, in RocketLaunched launch)
+        {
+            var rotation = Quaternion.LookRotation(launch.Velocity);
+            effects.SpawnOneShot(effects.Settings.RocketMuzzleFlash, launch.Position, rotation);
             _rockets.Add(new RocketVisual
             {
-                GameObject = _host.SpawnPooled(settings.Rocket, position, rotation),
-                Position = position,
-                Velocity = velocity,
-                Remaining = lifetime,
-                ShooterNetworkId = shooterNetworkId,
+                GameObject = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation),
+                Position = launch.Position,
+                Velocity = launch.Velocity,
+                Remaining = launch.Lifetime,
+                ShooterNetworkId = launch.ShooterNetworkId,
             });
         }
 
-        private void MoveRockets(CombatEffectsSettings settings, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
+        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
             {
@@ -95,8 +99,8 @@ namespace Chopper.Presentation.Effects
 
                 if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact))
                 {
-                    _host.SpawnOneShot(settings.RocketImpact, impact, Quaternion.LookRotation(-rocket.Velocity));
-                    Finish(i, settings, impact);
+                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, Quaternion.LookRotation(-rocket.Velocity));
+                    Finish(effects, i, impact);
                     continue;
                 }
 
@@ -104,7 +108,7 @@ namespace Chopper.Presentation.Effects
                 rocket.Remaining -= deltaTime;
                 if (rocket.Remaining <= 0f)
                 {
-                    Finish(i, settings, end);
+                    Finish(effects, i, end);
                     continue;
                 }
                 if (rocket.GameObject != null)
@@ -113,13 +117,13 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Stops the rocket; its smoke trail fades before the pool takes it back.</summary>
-        private void Finish(int index, CombatEffectsSettings settings, float3 position)
+        private void Finish(CombatEffects effects, int index, float3 position)
         {
             var visual = _rockets[index].GameObject;
             if (visual != null)
             {
                 visual.transform.position = position;
-                _host.Pool.Release(visual, settings.RocketTrailLinger);
+                effects.Release(visual, effects.Settings.RocketTrailLinger);
             }
             _rockets.RemoveAt(index);
         }

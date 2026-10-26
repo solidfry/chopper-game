@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Flight;
 using Unity.Entities;
@@ -16,7 +17,7 @@ namespace Chopper.Presentation.Audio
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    public partial class ChopperAudioSystem : SystemBase
+    public partial class ChopperAudioSystem : PresentationSystemBase
     {
         /// <summary>Speed (m/s) at which the rotor reaches its highest pitch.</summary>
         private const float FullPitchSpeed = 80f;
@@ -26,30 +27,35 @@ namespace Chopper.Presentation.Audio
         private readonly Dictionary<Entity, SoundLoop> _rotors = new();
         private readonly HashSet<Entity> _seen = new();
         private readonly List<Entity> _gone = new();
-        private AudioHost _host;
+        private IAudioService _audio;
         private SoundLoop _alarm;
         private float _lastDashCooldown;
 
         protected override void OnCreate()
         {
+            base.OnCreate();
             RequireForUpdate<NetworkStreamInGame>();
         }
 
-        protected override void OnDestroy()
-        {
-            if (_host == null) return;
-            foreach (var loop in _rotors.Values) _host.Audio.StopLoop(loop);
-            _host.Audio.StopLoop(_alarm);
-        }
+        protected override void OnDestroy() => StopAll();
 
         protected override void OnUpdate()
         {
-            if (_host == null)
-                _host = Object.FindFirstObjectByType<AudioHost>();
-            if (_host == null || _host.Library == null) return;
+            if (!TryGetContext(out var context) || context.Sounds == null)
+            {
+                StopAll();
+                return;
+            }
 
-            var audio = _host.Audio;
-            var library = _host.Library;
+            // New context (scene change): its audio service has new voices.
+            if (_audio != context.Audio)
+            {
+                StopAll();
+                _audio = context.Audio;
+            }
+
+            var audio = _audio;
+            var library = context.Sounds;
             var hasBounds = SystemAPI.TryGetSingleton<ArenaBounds>(out var bounds);
             var outOfBounds = false;
 
@@ -79,6 +85,17 @@ namespace Chopper.Presentation.Audio
 
             StopMissingRotors(audio);
             UpdateAlarm(audio, library, outOfBounds);
+        }
+
+        private void StopAll()
+        {
+            if (_audio != null)
+            {
+                foreach (var loop in _rotors.Values) _audio.StopLoop(loop);
+                _audio.StopLoop(_alarm);
+            }
+            _rotors.Clear();
+            _alarm = null;
         }
 
         private void PlayDashIfUsed(IAudioService audio, SoundLibrary library, Entity entity, Vector3 position)

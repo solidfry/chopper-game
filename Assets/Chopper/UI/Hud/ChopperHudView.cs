@@ -1,3 +1,4 @@
+using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Hud;
 using Unity.Properties;
 using UnityEngine;
@@ -8,10 +9,14 @@ namespace Chopper.UI.Hud
     /// <summary>
     /// Binds the in-flight HUD (<c>ChopperHud.uxml</c>) to the <see cref="ChopperHudModel"/>. Layout and style live in
     /// UXML/USS; this class only sets up bindings and the few class toggles that USS cannot express.
+    /// The view models come from the scene's <see cref="PresentationBridge"/>.
     /// </summary>
-    [RequireComponent(typeof(UIDocument), typeof(ChopperHudModelHost))]
+    [RequireComponent(typeof(UIDocument))]
     public sealed class ChopperHudView : MonoBehaviour
     {
+        [SerializeField, Tooltip("Scene presentation bridge; it owns the HUD view models.")]
+        private PresentationBridge bridge;
+
         private const string HiddenClass = "hud--hidden";
         private const string DashReadyClass = "hud-dash--ready";
         private const string HealthLowClass = "hud-readout--low";
@@ -34,9 +39,14 @@ namespace Chopper.UI.Hud
 
         private void OnEnable()
         {
-            var host = GetComponent<ChopperHudModelHost>();
-            _model = host.Model;
-            _match = host.Match;
+            if (bridge == null)
+            {
+                Debug.LogError($"{name}: no presentation bridge set. Run Chopper → Setup.", this);
+                enabled = false;
+                return;
+            }
+            _model = bridge.Context.Hud;
+            _match = bridge.Context.Match;
 
             var root = GetComponent<UIDocument>().rootVisualElement.Q("hud");
             _chopper = root.Q("chopper");
@@ -76,6 +86,9 @@ namespace Chopper.UI.Hud
             if (_match != null)
                 _match.propertyChanged -= OnMatchChanged;
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetBridge(PresentationBridge value) => bridge = value;
 
         private static void Bind(VisualElement element, string targetProperty, string modelProperty)
         {

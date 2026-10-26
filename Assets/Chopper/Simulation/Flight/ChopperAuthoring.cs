@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using Chopper.Simulation.Combat;
+using Chopper.Simulation.Definitions;
+using Chopper.Simulation.Loadout;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -7,116 +10,166 @@ namespace Chopper.Simulation.Flight
 {
     /// <summary>
     /// Put on the chopper ghost prefab together with a Rigidbody (useGravity on, low damping, Interpolate) and colliders.
-    /// Defaults aim for an aggressive Battlefield 6 Little Bird: snappy rotation, heavy momentum, ~300 km/h top speed.
+    /// All tuning comes from assets: the chassis (flight feel, health, crash) and its default loadout (modules scale the
+    /// stats; the nose and pylon modules give the weapons). The values go through <see cref="LoadoutRules.Compute"/>,
+    /// the same rules the hangar and the server use. TODO: the server applies each player's own loadout at spawn.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ChopperAuthoring : MonoBehaviour
     {
-        [Header("Weight and lift")]
-        [SerializeField, Tooltip("Gravity multiplier. Above 1 = heavier; drops and climbs feel punchier.")]
-        private float gravityScale = 1.6f;
-        [SerializeField, Range(0f, 1.5f), Tooltip("Extra lift at full collective, as a fraction of hover lift.")]
-        private float collectiveRange = 0.9f;
-        [SerializeField, Range(0f, 1f), Tooltip("Lift grows with tilt to hold height. 1 = Battlefield: tilt is pure horizontal thrust.")]
-        private float tiltCompensation = 0.9f;
-        [SerializeField, Range(10f, 80f), Tooltip("Largest tilt (degrees) that is still compensated.")]
-        private float maxCompensatedTiltDegrees = 60f;
+        [SerializeField] private ChassisDefinition chassis;
+        [SerializeField, Tooltip("Default loadout: one module per chassis slot, same order. Empty entries leave a slot empty.")]
+        private ModuleDefinition[] modules = System.Array.Empty<ModuleDefinition>();
 
-        [Header("Rotation (degrees per second at full input)")]
-        [SerializeField] private float maxPitchRate = 90f;
-        [SerializeField] private float maxYawRate = 70f;
-        [SerializeField] private float maxRollRate = 140f;
-        [SerializeField, Tooltip("How fast rotation reaches the requested rate. Higher = snappier.")]
-        private float turnResponse = 12f;
+        public ChassisDefinition Chassis => chassis;
 
-        [Header("Drag (local axes: x sideways, y vertical, z forward)")]
-        [SerializeField] private Vector3 quadraticDrag = new(0.004f, 0.003f, 0.0018f);
-        [SerializeField] private Vector3 linearDrag = new(0.15f, 0.15f, 0.02f);
-        [SerializeField, Tooltip("Nose turns into the direction of travel at speed.")]
-        private float weathervane = 0.01f;
-        [SerializeField, Tooltip("Flight assist: levels the chopper when there is no pitch/roll input. 0 = off (Battlefield default).")]
-        private float autoLevel;
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetLoadout(ChassisDefinition chassisDefinition, ModuleDefinition[] defaultModules)
+        {
+            chassis = chassisDefinition;
+            modules = defaultModules;
+        }
 
-        [Header("Dash")]
-        [SerializeField] private float dashBoost = 0.6f;
-        [SerializeField] private float dashCooldown = 2f;
+        /// <summary>Catalog made of only the assets on this prefab, for <see cref="LoadoutRules"/>.</summary>
+        private sealed class PrefabCatalog : ILoadoutCatalog, IPlayerUnlocks
+        {
+            private readonly ChassisSpec _chassis;
+            private readonly Dictionary<ushort, ModuleSpec> _modules = new();
 
-        // TODO: Phase 4 replaces these with the chassis (health) and nose weapon module.
-        [Header("Health")]
-        [SerializeField] private float maxHealth = 100f;
-        [SerializeField, Tooltip("Speed loss in one tick (m/s) that does no crash damage.")]
-        private float safeSpeedLoss = 8f;
-        [SerializeField, Tooltip("Crash damage per m/s of speed loss above the safe value.")]
-        private float crashDamagePerSpeedLoss = 4f;
+            public PrefabCatalog(ChassisDefinition chassis, IEnumerable<ModuleDefinition> modules)
+            {
+                _chassis = chassis.ToSpec();
+                foreach (var module in modules)
+                    if (module != null) _modules[module.Id] = module.ToSpec();
+            }
 
-        [Header("Nose gun (hitscan)")]
-        [SerializeField, Tooltip("Shots per minute.")] private float roundsPerMinute = 750f;
-        [SerializeField] private float damagePerShot = 8f;
-        [SerializeField] private float range = 600f;
-        [SerializeField, Tooltip("Gun position in chopper space (z = forward).")]
-        private Vector3 muzzleOffset = new(0f, -0.6f, 2.5f);
+            public bool TryGetChassis(ushort id, out ChassisSpec chassis)
+            {
+                chassis = _chassis;
+                return id == _chassis.Id;
+            }
 
-        [Header("Pylon rockets")]
-        [SerializeField, Tooltip("Seconds between rockets.")] private float rocketInterval = 0.6f;
-        [SerializeField] private float rocketSpeed = 140f;
-        [SerializeField] private float rocketLifetime = 4f;
-        [SerializeField] private float rocketDirectDamage = 30f;
-        [SerializeField] private float rocketSplashDamage = 25f;
-        [SerializeField] private float rocketSplashRadius = 8f;
-        [SerializeField, Tooltip("Pylon position in chopper space.")]
-        private Vector3 rocketMuzzleOffset = new(1.4f, -0.8f, 1.5f);
+            public bool TryGetModule(ushort id, out ModuleSpec module) => _modules.TryGetValue(id, out module);
+
+            // The default loadout is not limited by level or ownership.
+            public int Level => int.MaxValue;
+            public bool Owns(ushort moduleId) => true;
+        }
 
         private sealed class Baker : Baker<ChopperAuthoring>
         {
+            private const float FallbackHealth = 100f;
+
             public override void Bake(ChopperAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
+                var chassis = authoring.chassis;
+                var modules = authoring.modules ?? System.Array.Empty<ModuleDefinition>();
+
+                // Re-bake when any of the assets change.
+                if (chassis != null) DependsOn(chassis);
+                foreach (var module in modules)
+                {
+                    if (module == null) continue;
+                    DependsOn(module);
+                    if (module.Weapon != null) DependsOn(module.Weapon);
+                }
+
+                var stats = ComputeStats(authoring, chassis, modules);
+                var flight = chassis != null ? chassis.Flight : new FlightTuning();
+                var crash = chassis != null ? chassis.Crash : new CrashTuning();
+
                 AddComponent(entity, new ChopperFlightConfig
                 {
-                    GravityScale = authoring.gravityScale,
-                    CollectiveRange = authoring.collectiveRange,
-                    TiltCompensation = authoring.tiltCompensation,
-                    MaxCompensatedTilt = math.cos(math.radians(authoring.maxCompensatedTiltDegrees)),
-                    MaxTurnRate = math.radians(new float3(authoring.maxPitchRate, authoring.maxYawRate, authoring.maxRollRate)),
-                    TurnResponse = authoring.turnResponse,
-                    QuadraticDrag = authoring.quadraticDrag,
-                    LinearDrag = authoring.linearDrag,
-                    Weathervane = authoring.weathervane,
-                    AutoLevel = authoring.autoLevel,
-                    DashBoost = authoring.dashBoost,
-                    DashCooldown = authoring.dashCooldown,
+                    GravityScale = flight.GravityScale,
+                    CollectiveRange = flight.CollectiveRange * stats.LiftMultiplier,
+                    TiltCompensation = flight.TiltCompensation,
+                    MaxCompensatedTilt = math.cos(math.radians(flight.MaxCompensatedTiltDegrees)),
+                    MaxTurnRate = math.radians(new float3(flight.MaxPitchRate, flight.MaxYawRate, flight.MaxRollRate)) * stats.TurnRateMultiplier,
+                    TurnResponse = flight.TurnResponse,
+                    QuadraticDrag = flight.QuadraticDrag,
+                    LinearDrag = flight.LinearDrag,
+                    Weathervane = flight.Weathervane,
+                    AutoLevel = flight.AutoLevel,
+                    DashBoost = flight.DashBoost,
+                    DashCooldown = flight.DashCooldown * stats.DashCooldownMultiplier,
                 });
                 AddComponent<ChopperFlightState>(entity);
                 AddComponent<ChopperInput>(entity);
 
-                AddComponent(entity, new Health { Current = authoring.maxHealth, Max = authoring.maxHealth });
+                AddComponent(entity, new Health { Current = stats.Health, Max = stats.Health });
                 AddBuffer<DamageEvent>(entity);
                 AddComponent<LastAttacker>(entity);
                 AddComponent(entity, new CrashDamageConfig
                 {
-                    SafeSpeedLoss = authoring.safeSpeedLoss,
-                    DamagePerSpeedLoss = authoring.crashDamagePerSpeedLoss,
+                    SafeSpeedLoss = crash.SafeSpeedLoss,
+                    DamagePerSpeedLoss = crash.DamagePerSpeedLoss,
                 });
                 AddComponent<CrashSensor>(entity);
-                AddComponent(entity, new HitscanWeaponConfig
+
+                BakeWeapons(entity, modules);
+            }
+
+            private static LoadoutStats ComputeStats(ChopperAuthoring authoring, ChassisDefinition chassis, ModuleDefinition[] modules)
+            {
+                if (chassis == null)
                 {
-                    FireInterval = 60f / math.max(1f, authoring.roundsPerMinute),
-                    Damage = authoring.damagePerShot,
-                    Range = authoring.range,
-                    MuzzleOffset = authoring.muzzleOffset,
-                });
-                AddComponent<HitscanWeaponState>(entity);
-                AddComponent(entity, new RocketLauncherConfig
+                    Debug.LogWarning($"{authoring.name}: no chassis set. Using default flight and {FallbackHealth} HP. " +
+                                     "Run Chopper → Setup to assign one.", authoring);
+                    return new LoadoutStats(FallbackHealth, 0f, 0f, 1f, 1f, 1f);
+                }
+
+                var ids = new ushort[chassis.Slots.Count];
+                for (var i = 0; i < ids.Length && i < modules.Length; i++)
+                    ids[i] = modules[i] != null ? modules[i].Id : LoadoutSelection.EmptySlot;
+
+                var catalog = new PrefabCatalog(chassis, modules);
+                var selection = new LoadoutSelection(chassis.Id, ids);
+                var result = LoadoutRules.Validate(selection, catalog, catalog);
+                if (!result.IsValid)
+                    Debug.LogWarning($"{authoring.name}: default loadout is not valid ({result}).", authoring);
+
+                return LoadoutRules.Compute(catalog.TryGetChassis(chassis.Id, out var spec) ? spec : chassis.ToSpec(), selection, catalog);
+            }
+
+            /// <summary>First nose module with a hitscan weapon is the gun; first pylon with rockets is the launcher.</summary>
+            private void BakeWeapons(Entity entity, ModuleDefinition[] modules)
+            {
+                HitscanWeaponDefinition gun = null;
+                RocketWeaponDefinition rockets = null;
+                foreach (var module in modules)
                 {
-                    FireInterval = authoring.rocketInterval,
-                    Speed = authoring.rocketSpeed,
-                    Lifetime = authoring.rocketLifetime,
-                    DirectDamage = authoring.rocketDirectDamage,
-                    SplashDamage = authoring.rocketSplashDamage,
-                    SplashRadius = authoring.rocketSplashRadius,
-                    MuzzleOffset = authoring.rocketMuzzleOffset,
-                });
-                AddComponent<RocketLauncherState>(entity);
+                    if (module == null) continue;
+                    if (gun == null && module.Weapon is HitscanWeaponDefinition hitscan) gun = hitscan;
+                    if (rockets == null && module.Weapon is RocketWeaponDefinition rocket) rockets = rocket;
+                }
+
+                if (gun != null)
+                {
+                    AddComponent(entity, new HitscanWeaponConfig
+                    {
+                        FireInterval = gun.FireInterval,
+                        Damage = gun.DamagePerShot,
+                        Range = gun.Range,
+                        MuzzleOffset = gun.MuzzleOffset,
+                    });
+                    AddComponent<HitscanWeaponState>(entity);
+                }
+
+                if (rockets != null)
+                {
+                    AddComponent(entity, new RocketLauncherConfig
+                    {
+                        FireInterval = rockets.FireInterval,
+                        Speed = rockets.Speed,
+                        Lifetime = rockets.Lifetime,
+                        DirectDamage = rockets.DirectDamage,
+                        SplashDamage = rockets.SplashDamage,
+                        SplashRadius = rockets.SplashRadius,
+                        MuzzleOffset = rockets.MuzzleOffset,
+                    });
+                    AddComponent<RocketLauncherState>(entity);
+                }
             }
         }
     }

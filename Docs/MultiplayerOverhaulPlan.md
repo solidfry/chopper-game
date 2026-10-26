@@ -111,7 +111,12 @@ Rules:
 - **Validation at the control point.** Each definition asset validates itself (`OnValidate`), and the setup window lists all problems in one place.
 - **Before adding a system:** check whether an existing mechanism covers it; extend that instead of adding a parallel one.
 
-**Current drift to fix** (written before this rule): 17 `FindFirstObjectByType` look-ups, 3 scene hosts (`ChopperHudModelHost`, `CombatEffectsHost`, `AudioHost`), 4 separate setup menus, RPCs consumed in 4 systems, weapon/health/crash tuning inline on `ChopperAuthoring`.
+**How it is built now (26 Oct refactor):**
+- Config root: `Presentation/Config/GameConfig` → loadout catalog, sound library, combat effects, match music, panel settings, HUD layout. Every asset implements `IValidatedAsset` (`Simulation/Config`).
+- Bridge: one scene `PresentationBridge` (config + camera rig) owns a `PresentationContext` (audio, effects, HUD models, camera, events; one `Tick`). `PresentationBridgeSystem` is the only scene search; systems derive from `PresentationSystemBase` and call `TryGetContext`.
+- Events: `PresentationEventSystem` is the only reader of RPCs / event entities; it publishes MessagePipe messages (`Events/PresentationMessages.cs`) on the context's `PresentationEvents`. `Feedback/CombatFeedback` and `Feedback/MatchFeedback` subscribe.
+- Definitions: `ChassisDefinition` holds `FlightTuning` + `CrashTuning`; weapon modules point to `HitscanWeaponDefinition` / `RocketWeaponDefinition`. `ChopperAuthoring` only references a chassis + default loadout; its baker runs `LoadoutRules.Compute`. The Gunship's base values are calibrated so its default loadout flies exactly like the tuned Little Bird.
+- Editor: one window, **Chopper → Setup**: create/repair config, set up chopper prefab, set up open scene, validate (config, prefab, scene, subscene contents).
 
 ## 2. Netcode architecture
 
@@ -257,7 +262,7 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Flight model (`ChopperFlightSystem`): Battlefield 6 Little Bird target — gravity ×1.6, collective, tilt compensation, rate-based rotation, anisotropic drag, weathervane, dash. No flight assist (auto-level off).
 - Controls: W/S collective, Left Ctrl descend, A/D yaw, mouse = pitch/roll (aim-style, 0.12 deg/px), arrows also pitch/roll, Shift dash.
 - **Parked: flight feel tuning.** "Feels better" — revisit later. Knobs: `ChopperAuthoring` on the prefab, `MouseDegreesPerPixel` + pitch invert in `ChopperInputSystem`, camera FOV/pull-back on `ChopperCameraRig`.
-- HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Add it with menu **Chopper → UI → Add HUD To Open Scene** (creates `UI/Settings/ChopperPanelSettings.asset`). Edit-mode tests: `ChopperHudModelTests`.
+- HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Set up with **Chopper → Setup**. Edit-mode tests: `ChopperHudModelTests`.
 - Left: Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
 
 **Phase 2 — started (26 Oct, written without the editor — needs a compile + play check).**
@@ -276,23 +281,23 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Rockets (RMB, E, LB): `RocketFireSystem` (predicted fire rate), `RocketSystem` (server: one ray segment per tick, direct + splash damage with falloff, no self damage). Rockets are not ghosts: straight flight, so clients draw them from `RocketLaunchRpc` (others) or `LocalRocketLaunch` (own, at once). `Presentation/Effects/RocketVisualSystem` draws them with the existing prefabs (see effects line below).
   - Deviation from section 3B: no predicted projectile ghosts. Simpler and cheaper; revisit for guided missiles (they need ghosts).
 - Gun effects: `HitscanWeaponState.ShotCount` ghost field; `Presentation/Effects/GunEffectsSystem` shows muzzle flash, bullet visual and impact for every chopper.
-- Effects use the existing prefabs (Sci-Fi Arsenal, as the old game): gun `BulletRed` + `RedFireSmallMuzzleFlash` + `RedFireImpact`; rockets `OrangeRocketMissile` + `RocketMuzzleFlashOrange` + `RedFireRocketImpactV3`. Set in `Data/Effects/CombatEffectsSettings.asset`; menu **Chopper → Effects → Add Combat Effects To Open Scene**. Projectiles are pooled (`EffectPool`); flashes and impacts are not, because the pack's `SciFiLightFade` destroys its light.
+- Effects use the existing prefabs (Sci-Fi Arsenal, as the old game): gun `BulletRed` + `RedFireSmallMuzzleFlash` + `RedFireImpact`; rockets `OrangeRocketMissile` + `RocketMuzzleFlashOrange` + `RedFireRocketImpactV3`. Set in `Data/Effects/CombatEffectsSettings.asset` (made by **Chopper → Setup**). Projectiles are pooled (`EffectPool`); flashes and impacts are not, because the pack's `SciFiLightFade` destroys its light.
 - Hits taken: server sends `DamageTakenRpc` to the victim only → camera shake (`ChopperCameraRig.AddShake`) + red damage direction ring on the HUD (`DamageFeedbackSystem`).
 - Left: real VFX/audio, player names (Steam, Phase 3), 4-player Network Simulator test of all of Phase 2.
 
 **Audio (26 Oct, written without the editor).**
-- `Presentation/Audio`: `SoundCue` (clip variations, volume/pitch jitter, 2D/3D, mixer group, voice limit, cooldown), `SoundLibrary` (every sound the code asks for), `IAudioService` → `AudioService` (32 pooled one-shot voices, loop voices, music cross-fade, volumes saved in PlayerPrefs), `AudioHost` (scene owner), `SceneMusic`.
+- `Presentation/Audio`: `SoundCue` (clip variations, volume/pitch jitter, 2D/3D, mixer group, voice limit, cooldown), `SoundLibrary` (every sound the code asks for), `IAudioService` → `AudioService` (32 pooled one-shot voices, loop voices, music cross-fade, volumes saved in PlayerPrefs), owned by the `PresentationContext`.
 - `ChopperAudioSystem`: rotor loop per chopper (own mostly 2D, others 3D, pitch with speed), dash sound, out-of-bounds alarm loop.
 - Hooked in: gun fire (per shot, voice-limited), hit/kill confirm (one per frame), damage taken, match end. Effect prefab sounds (rockets, explosions) go to the Effects mixer group; `BulletRed`'s per-bullet explosion sound is muted by default.
 - `Chopper.UI/Audio/UISoundBinder`: click / hover / focus sounds for every UI Toolkit button in a document.
 - Mixer `Audio/AudioMix/Mix.mixer`: exposed `MasterVolume`, `MusicVolume`, `EffectsVolume`, `UIVolume`, `AmbientVolume`.
-- Menu **Chopper → Audio → Add Audio To Open Scene** makes `Data/Audio` cues + library from existing sounds and adds Audio + match music to the scene.
+- **Chopper → Setup** makes `Data/Audio` cues + library from existing sounds; match music is on the `GameConfig`.
 - Placeholder picks to replace: gun fire (`shoot_pulsegun`), dash, hit/kill confirm. Old `Assets/Scripts/Audio` (MusicManager, UIAudioManager) can go once menus move to UI Toolkit.
 
 **Phase 4 — started (26 Oct, data and rules only; written without the editor).**
 - `Simulation/Loadout`: `ChassisDefinition`, `ModuleDefinition`, `LoadoutCatalog` (ScriptableObjects) → plain `ChassisSpec`/`ModuleSpec`.
 - `LoadoutRules.Validate` (server check: chassis/module ids, slot type, chassis-only modules, level, ownership, weight budget) and `LoadoutRules.Compute` (health, weight, lift/turn/dash multipliers with weight penalty). Edit-mode tests: `LoadoutRulesTests`.
-- Menu **Chopper → Loadout → Create Default Catalog** makes `Assets/Chopper/Data/Loadout` with 4 chassis (Scout, Gunship, Assault, Lifter) and 23 modules from section 5.
+- **Chopper → Setup** makes `Assets/Chopper/Data/Loadout`: 4 chassis (with flight tuning), 4 weapon definitions, 23 modules from section 5.
 - Left: apply `LoadoutStats` + weapon modules at server spawn, loadout in the GoInGame request / matchmaker ticket, chassis prefabs with sockets, hangar UI.
 
 **Phase 3 — started (26 Oct, code only; needs the editor and accounts to test).**

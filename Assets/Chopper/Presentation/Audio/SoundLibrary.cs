@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Config;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -5,10 +7,10 @@ namespace Chopper.Presentation.Audio
 {
     /// <summary>
     /// Every sound the game code asks for, in one asset. Code asks for "the gun fire sound", designers pick the clips.
-    /// Any cue can be empty: that sound is then not played. Made by menu Chopper → Audio → Add Audio To Open Scene.
+    /// Any cue can be empty: that sound is then not played. Made by Chopper → Setup.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Audio/Sound Library", fileName = "SoundLibrary")]
-    public sealed class SoundLibrary : ScriptableObject
+    public sealed class SoundLibrary : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("Needs exposed volume parameters named <Channel>Volume (MasterVolume, MusicVolume, ...).")]
         private AudioMixer mixer;
@@ -46,6 +48,29 @@ namespace Chopper.Presentation.Audio
         public SoundCue MatchEnd => matchEnd;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
+
+        public void CollectProblems(List<string> problems)
+        {
+            if (mixer == null) problems.Add($"{name}: no audio mixer.");
+            if (musicGroup == null) problems.Add($"{name}: no music mixer group.");
+            Check(rotorLocal, nameof(rotorLocal), problems);
+            Check(rotorRemote, nameof(rotorRemote), problems);
+            Check(dash, nameof(dash), problems);
+            Check(gunFire, nameof(gunFire), problems);
+            Check(hitConfirm, nameof(hitConfirm), problems);
+            Check(killConfirm, nameof(killConfirm), problems);
+            Check(damageTaken, nameof(damageTaken), problems);
+            Check(outOfBoundsAlarm, nameof(outOfBoundsAlarm), problems);
+            Check(matchEnd, nameof(matchEnd), problems);
+            Check(uiClick, nameof(uiClick), problems);
+            Check(uiNavigate, nameof(uiNavigate), problems);
+        }
+
+        private void Check(SoundCue cue, string slot, List<string> problems)
+        {
+            if (cue == null) problems.Add($"{name}: no cue for {slot} (that sound will not play).");
+            else cue.CollectProblems(problems);
+        }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void Initialise(AudioMixer audioMixer, AudioMixerGroup music, SoundCue localRotor, SoundCue remoteRotor, SoundCue dashCue,

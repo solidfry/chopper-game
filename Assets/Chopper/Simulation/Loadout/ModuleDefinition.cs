@@ -1,13 +1,16 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Config;
+using Chopper.Simulation.Definitions;
 using UnityEngine;
 
 namespace Chopper.Simulation.Loadout
 {
     /// <summary>
-    /// Design data for one module (rotor, engine, armour, weapon, utility). TODO: link weapon modules to their
-    /// weapon tuning (hitscan / rocket configs) when the server spawns choppers from loadouts.
+    /// Design data for one module (rotor, engine, armour, weapon, utility). Weapon modules point to their weapon
+    /// tuning (<see cref="WeaponDefinition"/>).
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Module", fileName = "Module")]
-    public sealed class ModuleDefinition : ScriptableObject
+    public sealed class ModuleDefinition : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("Unique, never 0, never reused. Saved in player loadouts.")]
         private ushort id;
@@ -20,12 +23,30 @@ namespace Chopper.Simulation.Loadout
         private ChassisDefinition[] allowedChassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField, Tooltip("Mesh shown on the chassis socket (hangar and in game).")]
         private GameObject visual;
+        [SerializeField, Tooltip("Nose: a hitscan weapon. Pylon: a rocket weapon. Empty for non-weapon modules.")]
+        private WeaponDefinition weapon;
 
         public ushort Id => id;
         public string DisplayName => displayName;
         public string Description => description;
         public SlotType Slot => slot;
         public GameObject Visual => visual;
+        public WeaponDefinition Weapon => weapon;
+        public ModuleStats Stats => stats;
+
+        public void CollectProblems(List<string> problems)
+        {
+            if (id == 0) problems.Add($"{name}: id must not be 0.");
+            if (string.IsNullOrWhiteSpace(displayName)) problems.Add($"{name}: no display name.");
+            if (stats.Weight < 0f) problems.Add($"{name}: weight must not be below 0.");
+            if (weapon is HitscanWeaponDefinition && slot != SlotType.Nose)
+                problems.Add($"{name}: a hitscan weapon must be in the Nose slot.");
+            if (weapon is RocketWeaponDefinition && slot != SlotType.Pylon)
+                problems.Add($"{name}: a rocket weapon must be in a Pylon slot.");
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetWeapon(WeaponDefinition definition) => weapon = definition;
 
         public ModuleSpec ToSpec()
         {

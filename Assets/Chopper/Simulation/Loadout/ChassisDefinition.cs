@@ -1,10 +1,13 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Config;
+using Chopper.Simulation.Flight;
 using UnityEngine;
 
 namespace Chopper.Simulation.Loadout
 {
     /// <summary>Design data for one chassis (Scout, Gunship, Assault, Lifter).</summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Chassis", fileName = "Chassis")]
-    public sealed class ChassisDefinition : ScriptableObject
+    public sealed class ChassisDefinition : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("Unique, never 0, never reused. Saved in player loadouts.")]
         private ushort id;
@@ -17,17 +20,34 @@ namespace Chopper.Simulation.Loadout
         private SlotType[] slots = { SlotType.Nose, SlotType.Pylon, SlotType.Utility, SlotType.Rotor, SlotType.Engine, SlotType.Armour };
         [SerializeField, Tooltip("Chopper ghost prefab for this chassis (sockets named after the slots).")]
         private GameObject prefab;
+        [SerializeField, Tooltip("Base flight feel. Modules scale it (lift, turn rate, dash).")]
+        private FlightTuning flight = new();
+        [SerializeField] private CrashTuning crash = new();
 
         public ushort Id => id;
         public string DisplayName => displayName;
         public string Description => description;
         public GameObject Prefab => prefab;
+        public FlightTuning Flight => flight;
+        public CrashTuning Crash => crash;
+        public IReadOnlyList<SlotType> Slots => slots;
+
+        public void CollectProblems(List<string> problems)
+        {
+            if (id == 0) problems.Add($"{name}: id must not be 0.");
+            if (string.IsNullOrWhiteSpace(displayName)) problems.Add($"{name}: no display name.");
+            if (slots == null || slots.Length == 0) problems.Add($"{name}: no slots.");
+            if (baseHealth <= 0f) problems.Add($"{name}: base health must be above 0.");
+            if (weightBudget <= 0f) problems.Add($"{name}: weight budget must be above 0.");
+        }
 
         public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel);
 
         /// <summary>Editor only: used by the default catalog tool.</summary>
-        public void Initialise(ushort chassisId, string name, string text, float health, float budget, int level, SlotType[] slotLayout)
+        public void Initialise(ushort chassisId, string name, string text, float health, float budget, int level, SlotType[] slotLayout,
+            FlightTuning flightTuning)
         {
+            flight = flightTuning;
             id = chassisId;
             displayName = name;
             description = text;

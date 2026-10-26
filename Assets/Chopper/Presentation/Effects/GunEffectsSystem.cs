@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Chopper.Presentation.Audio;
+using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Combat;
 using Unity.Collections;
 using Unity.Entities;
@@ -15,12 +15,11 @@ namespace Chopper.Presentation.Effects
     /// Client only. Nose gun effects for every chopper, from <see cref="HitscanWeaponState.ShotCount"/> (predicted for
     /// the local player, replicated for others): muzzle flash, a bullet visual flown to where the shot ends, and an
     /// impact if it hit something. Cosmetic: the client ray-casts its own world; the server decides hits.
-    /// The gun fire sound comes from the Sound Library (<see cref="AudioHost"/>).
-    /// Prefabs come from the scene's <see cref="CombatEffectsHost"/>.
+    /// Prefabs and sounds come from the presentation context.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
-    public partial class GunEffectsSystem : SystemBase
+    public partial class GunEffectsSystem : PresentationSystemBase
     {
         /// <summary>A big jump (late join, packet loss) draws at most this many shots.</summary>
         private const uint MaxShotsPerFrame = 3;
@@ -38,25 +37,27 @@ namespace Chopper.Presentation.Effects
         private readonly Dictionary<Entity, uint> _seen = new();
         private readonly Dictionary<Entity, float> _lastFlashTime = new();
         private readonly List<Bullet> _bullets = new();
-        private CombatEffectsHost _host;
-        private AudioHost _audio;
+        private CombatEffects _effects;
 
         protected override void OnCreate()
         {
+            base.OnCreate();
             RequireForUpdate<NetworkStreamInGame>();
         }
 
         protected override void OnUpdate()
         {
-            if (_host == null)
-                _host = Object.FindFirstObjectByType<CombatEffectsHost>();
-            if (_host == null || _host.Settings == null) return;
+            if (!TryGetContext(out var context) || context.Effects.Settings == null) return;
+            if (_effects != context.Effects)
+            {
+                // New context: the old pool is gone with its bullets.
+                _bullets.Clear();
+                _effects = context.Effects;
+            }
 
-            if (_audio == null)
-                _audio = Object.FindFirstObjectByType<AudioHost>();
-            var gunSound = _audio != null && _audio.Library != null ? _audio.Library.GunFire : null;
-
-            var settings = _host.Settings;
+            var audio = context.Audio;
+            var gunSound = context.Sounds != null ? context.Sounds.GunFire : null;
+            var settings = _effects.Settings;
             MoveBullets(settings, UnityEngine.Time.deltaTime);
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var world = physics.CollisionWorld;
@@ -78,12 +79,11 @@ namespace Chopper.Presentation.Effects
 
                 if (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval)
                 {
-                    _host.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
+                    _effects.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
                     _lastFlashTime[entity] = now;
                 }
 
-                if (gunSound != null)
-                    _audio.Audio.Play(gunSound, muzzle);
+                audio.Play(gunSound, muzzle);
 
                 var hit = RayCast(world, entity, muzzle, forward, config.ValueRO.Range, out var distance);
                 var shots = math.min(count - last, MaxShotsPerFrame);
@@ -107,11 +107,11 @@ namespace Chopper.Presentation.Effects
 
         private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, bool hit)
         {
-            var visual = _host.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
+            var visual = _effects.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
             if (visual == null)
             {
                 // No bullet visual set: show the impact at once.
-                if (hit) _host.SpawnOneShot(settings.GunImpact, muzzle + forward * distance, Quaternion.LookRotation(-forward));
+                if (hit) _effects.SpawnOneShot(settings.GunImpact, muzzle + forward * distance, Quaternion.LookRotation(-forward));
                 return;
             }
 
@@ -135,8 +135,8 @@ namespace Chopper.Presentation.Effects
                 }
 
                 if (bullet.Impact)
-                    _host.SpawnOneShot(settings.GunImpact, bullet.Position, Quaternion.LookRotation(-bullet.Direction));
-                _host.Pool.Release(bullet.Visual);
+                    _effects.SpawnOneShot(settings.GunImpact, bullet.Position, Quaternion.LookRotation(-bullet.Direction));
+                _effects.Release(bullet.Visual);
                 _bullets.RemoveAt(i);
             }
         }

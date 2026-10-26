@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using Chopper.Simulation.Config;
 using UnityEngine;
 
 namespace Chopper.Simulation.Loadout
 {
     /// <summary>All chassis and modules in the game. One asset; the hangar and the server both read it.</summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Catalog", fileName = "LoadoutCatalog")]
-    public sealed class LoadoutCatalog : ScriptableObject, ILoadoutCatalog
+    public sealed class LoadoutCatalog : ScriptableObject, ILoadoutCatalog, IValidatedAsset
     {
         [SerializeField] private ChassisDefinition[] chassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField] private ModuleDefinition[] modules = System.Array.Empty<ModuleDefinition>();
@@ -42,7 +43,27 @@ namespace Chopper.Simulation.Loadout
         {
             _chassis = null;
             _modules = null;
-            WarnDuplicates();
+        }
+
+        /// <summary>Duplicate or 0 ids, empty entries, and each definition's own problems.</summary>
+        public void CollectProblems(List<string> problems)
+        {
+            var seen = new HashSet<ushort>();
+            foreach (var definition in chassis)
+            {
+                if (definition == null) { problems.Add($"{name}: empty chassis entry."); continue; }
+                if (!seen.Add(definition.Id)) problems.Add($"{name}: chassis id {definition.Id} is used twice.");
+                definition.CollectProblems(problems);
+            }
+
+            seen.Clear();
+            foreach (var definition in modules)
+            {
+                if (definition == null) { problems.Add($"{name}: empty module entry."); continue; }
+                if (!seen.Add(definition.Id)) problems.Add($"{name}: module id {definition.Id} is used twice.");
+                definition.CollectProblems(problems);
+                if (definition.Weapon != null) definition.Weapon.CollectProblems(problems);
+            }
         }
 
         private void Build()
@@ -54,19 +75,6 @@ namespace Chopper.Simulation.Loadout
                 if (definition != null) _chassis[definition.Id] = definition.ToSpec();
             foreach (var definition in modules)
                 if (definition != null) _modules[definition.Id] = definition.ToSpec();
-        }
-
-        private void WarnDuplicates()
-        {
-            var seen = new HashSet<ushort>();
-            foreach (var definition in chassis)
-                if (definition != null && (definition.Id == 0 || !seen.Add(definition.Id)))
-                    Debug.LogWarning($"Chassis '{definition.name}' has id {definition.Id}: ids must be unique and not 0.", this);
-
-            seen.Clear();
-            foreach (var definition in modules)
-                if (definition != null && (definition.Id == 0 || !seen.Add(definition.Id)))
-                    Debug.LogWarning($"Module '{definition.name}' has id {definition.Id}: ids must be unique and not 0.", this);
         }
     }
 }
