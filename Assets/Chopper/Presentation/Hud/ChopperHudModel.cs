@@ -32,6 +32,7 @@ namespace Chopper.Presentation.Hud
         private float _killMarkerTime;
         private bool _hitMarkerVisible;
         private bool _killMarkerVisible;
+        private bool _outOfBounds;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -129,6 +130,14 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _killMarkerVisible, value, nameof(KillMarkerVisible));
         }
 
+        /// <summary>True while the chopper is outside the arena and taking damage.</summary>
+        [CreateProperty]
+        public bool OutOfBounds
+        {
+            get => _outOfBounds;
+            set => Set(ref _outOfBounds, value, nameof(OutOfBounds));
+        }
+
         public void Update(float speedMetresPerSecond, float altitudeMetres, float dashCooldownRemaining, float dashCooldown)
         {
             HasChopper = true;
@@ -179,6 +188,7 @@ namespace Chopper.Presentation.Hud
         {
             HasChopper = false;
             AimVisible = false;
+            OutOfBounds = false;
         }
 
         private void Set<T>(ref T field, T value, string propertyName)

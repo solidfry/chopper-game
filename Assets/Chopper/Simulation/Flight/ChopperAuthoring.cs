@@ -44,6 +44,10 @@ namespace Chopper.Simulation.Flight
         // TODO: Phase 4 replaces these with the chassis (health) and nose weapon module.
         [Header("Health")]
         [SerializeField] private float maxHealth = 100f;
+        [SerializeField, Tooltip("Speed loss in one tick (m/s) that does no crash damage.")]
+        private float safeSpeedLoss = 8f;
+        [SerializeField, Tooltip("Crash damage per m/s of speed loss above the safe value.")]
+        private float crashDamagePerSpeedLoss = 4f;
 
         [Header("Nose gun (hitscan)")]
         [SerializeField, Tooltip("Shots per minute.")] private float roundsPerMinute = 750f;
@@ -77,6 +81,13 @@ namespace Chopper.Simulation.Flight
 
                 AddComponent(entity, new Health { Current = authoring.maxHealth, Max = authoring.maxHealth });
                 AddBuffer<DamageEvent>(entity);
+                AddComponent<LastAttacker>(entity);
+                AddComponent(entity, new CrashDamageConfig
+                {
+                    SafeSpeedLoss = authoring.safeSpeedLoss,
+                    DamagePerSpeedLoss = authoring.crashDamagePerSpeedLoss,
+                });
+                AddComponent<CrashSensor>(entity);
                 AddComponent(entity, new HitscanWeaponConfig
                 {
                     FireInterval = 60f / math.max(1f, authoring.roundsPerMinute),

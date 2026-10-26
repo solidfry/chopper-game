@@ -252,8 +252,12 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Input: `ChopperInput.Fire` from `Flight/Fire1` (LMB, Q, RB). Health and gun baked from `ChopperAuthoring` (100 HP, 750 rpm, 8 dmg, 600 m) until Phase 4 modules.
 - HUD: health readout (red when low), gun reticle at the aim point, hit/kill marker from server confirms only.
 - `TrainingTargetAuthoring`: server-only damageable target that resets after 3 s, for single-player hit tests.
-- Editor steps: add `NetCodePhysicsConfig` (Lag Compensation on) to the TrainingRange subscene; add `TrainingTargetAuthoring` to the targets.
-- Left: tracers / muzzle flash / impact VFX from replicated events, victim damage direction + owner-only camera shake, server crash/bounds damage, predicted projectile ghosts (rockets), kill feed + FFA score.
+- Editor steps: add `NetCodePhysicsConfig` (Lag Compensation on) to the TrainingRange subscene; add `TrainingTargetAuthoring` to the targets; add `ArenaBoundsAuthoring` and size it to the map.
+- Crash damage (`EnvironmentDamageSystem`, server): from speed loss per tick, so colliders need no collision events. Out-of-bounds damage from `ArenaBoundsAuthoring` (box in the subscene); HUD shows "RETURN TO COMBAT AREA".
+- Kill credit: `LastAttacker` — a crash/bounds death within 5 s of a hit counts as the attacker's kill.
+- FFA match (`Simulation/Match`, server): `MatchScoreSystem` keeps kills/deaths per connection, timer (600 s), score limit (20), post-game (10 s), then next match. Clients get `ScoreRpc`, `KillFeedRpc`, `PlayerLeftRpc`, `MatchStateRpc`. Optional `MatchRulesAuthoring` in the subscene. No damage after the match ends.
+- HUD match layer (stays visible while dead): timer, your K/D, leader, kill feed, VICTORY/DRAW banner. `MatchHudModel` + `MatchHudSystem`.
+- Left: tracers / muzzle flash / impact VFX, victim damage direction + owner-only camera shake, rockets, player names (Steam, Phase 3).
 
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).

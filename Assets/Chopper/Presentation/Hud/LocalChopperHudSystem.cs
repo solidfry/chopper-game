@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Chopper.Presentation.Hud
 {
     /// <summary>
-    /// Writes the local player's chopper values (speed, altitude, dash, health, gun aim) into the scene's HUD model,
+    /// Writes the local player's chopper values (speed, altitude, dash, health, gun aim, out of bounds) into the scene's HUD model,
     /// and turns server hit confirms into hit markers.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -39,6 +39,7 @@ namespace Chopper.Presentation.Hud
             if (model == null) return;
 
             model.Tick(UnityEngine.Time.deltaTime);
+            var hasBounds = SystemAPI.TryGetSingleton<ArenaBounds>(out var bounds);
 
             foreach (var (velocity, state, config, health, gun, localToWorld) in SystemAPI
                          .Query<RefRO<PhysicsVelocity>, RefRO<ChopperFlightState>, RefRO<ChopperFlightConfig>,
@@ -52,6 +53,7 @@ namespace Chopper.Presentation.Hud
                     config.ValueRO.DashCooldown);
                 model.UpdateHealth(health.ValueRO.Current, health.ValueRO.Max);
                 UpdateAim(model, gun.ValueRO, localToWorld.ValueRO);
+                model.OutOfBounds = hasBounds && !bounds.Contains(localToWorld.ValueRO.Position);
                 return;
             }
 

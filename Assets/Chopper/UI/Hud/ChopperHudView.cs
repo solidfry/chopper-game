@@ -18,36 +18,59 @@ namespace Chopper.UI.Hud
         private const string AimHiddenClass = "hud-aim--hidden";
         private const string HitClass = "hud-aim--hit";
         private const string KillClass = "hud-aim--kill";
+        private const string WarningHiddenClass = "hud-warning--hidden";
+        private const string BannerHiddenClass = "hud-match__banner--hidden";
 
         private ChopperHudModel _model;
-        private VisualElement _root;
+        private MatchHudModel _match;
+        private VisualElement _chopper;
+        private VisualElement _boundsWarning;
+        private VisualElement _banner;
         private VisualElement _dash;
         private VisualElement _health;
         private VisualElement _aim;
 
         private void OnEnable()
         {
-            _model = GetComponent<ChopperHudModelHost>().Model;
-            _root = GetComponent<UIDocument>().rootVisualElement.Q("hud");
-            _dash = _root.Q("dash");
-            _health = _root.Q("health");
-            _aim = _root.Q("aim");
+            var host = GetComponent<ChopperHudModelHost>();
+            _model = host.Model;
+            _match = host.Match;
 
-            _root.dataSource = _model;
-            Bind(_root.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
-            Bind(_root.Q<Label>("speed-value"), "text", nameof(ChopperHudModel.SpeedText));
-            Bind(_root.Q<Label>("altitude-value"), "text", nameof(ChopperHudModel.AltitudeText));
-            Bind(_root.Q<ProgressBar>("dash-bar"), "value", nameof(ChopperHudModel.DashCharge));
+            var root = GetComponent<UIDocument>().rootVisualElement.Q("hud");
+            _chopper = root.Q("chopper");
+            _dash = _chopper.Q("dash");
+            _health = _chopper.Q("health");
+            _aim = _chopper.Q("aim");
+            _boundsWarning = _chopper.Q("bounds-warning");
+
+            _chopper.dataSource = _model;
+            Bind(_chopper.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
+            Bind(_chopper.Q<Label>("speed-value"), "text", nameof(ChopperHudModel.SpeedText));
+            Bind(_chopper.Q<Label>("altitude-value"), "text", nameof(ChopperHudModel.AltitudeText));
+            Bind(_chopper.Q<ProgressBar>("dash-bar"), "value", nameof(ChopperHudModel.DashCharge));
+
+            var match = root.Q("match");
+            _banner = match.Q("banner");
+            match.dataSource = _match;
+            Bind(match.Q<Label>("timer"), "text", nameof(MatchHudModel.TimerText));
+            Bind(match.Q<Label>("local-score"), "text", nameof(MatchHudModel.LocalScoreText));
+            Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
+            Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
+            Bind(_banner, "text", nameof(MatchHudModel.BannerText));
 
             _model.propertyChanged += OnModelChanged;
+            _match.propertyChanged += OnMatchChanged;
             RefreshClasses();
             RefreshAim();
+            RefreshBanner();
         }
 
         private void OnDisable()
         {
             if (_model != null)
                 _model.propertyChanged -= OnModelChanged;
+            if (_match != null)
+                _match.propertyChanged -= OnMatchChanged;
         }
 
         private static void Bind(VisualElement element, string targetProperty, string modelProperty)
@@ -66,6 +89,7 @@ namespace Chopper.UI.Hud
             else if (args.propertyName == nameof(ChopperHudModel.HasChopper) ||
                      args.propertyName == nameof(ChopperHudModel.DashReady) ||
                      args.propertyName == nameof(ChopperHudModel.HealthLow) ||
+                     args.propertyName == nameof(ChopperHudModel.OutOfBounds) ||
                      args.propertyName == nameof(ChopperHudModel.AimVisible) ||
                      args.propertyName == nameof(ChopperHudModel.HitMarkerVisible) ||
                      args.propertyName == nameof(ChopperHudModel.KillMarkerVisible))
@@ -74,13 +98,22 @@ namespace Chopper.UI.Hud
 
         private void RefreshClasses()
         {
-            _root.EnableInClassList(HiddenClass, !_model.HasChopper);
+            _chopper.EnableInClassList(HiddenClass, !_model.HasChopper);
+            _boundsWarning.EnableInClassList(WarningHiddenClass, !_model.OutOfBounds);
             _dash.EnableInClassList(DashReadyClass, _model.DashReady);
             _health.EnableInClassList(HealthLowClass, _model.HealthLow);
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
         }
+
+        private void OnMatchChanged(object sender, BindablePropertyChangedEventArgs args)
+        {
+            if (args.propertyName == nameof(MatchHudModel.BannerVisible))
+                RefreshBanner();
+        }
+
+        private void RefreshBanner() => _banner.EnableInClassList(BannerHiddenClass, !_match.BannerVisible);
 
         /// <summary>Viewport y goes up, panel top goes down.</summary>
         private void RefreshAim()
