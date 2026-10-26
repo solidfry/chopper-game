@@ -32,6 +32,7 @@ namespace Chopper.Simulation.Session
                 var request = ecb.CreateEntity();
                 ecb.AddComponent<GoInGameRequest>(request);
                 ecb.AddComponent(request, new SendRpcCommandRequest { TargetConnection = connection });
+                UnityEngine.Debug.Log("[Client] Connected; asking the server for a chopper.");
             }
             ecb.Playback(state.EntityManager);
         }
@@ -63,6 +64,7 @@ namespace Chopper.Simulation.Session
                 ecb.AddComponent<NetworkStreamInGame>(connection);
 
                 ChopperSpawning.Spawn(ecb, spawner, connection, networkId);
+                UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper spawned.");
 
                 ecb.DestroyEntity(requestEntity);
             }
