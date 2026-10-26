@@ -193,6 +193,21 @@ Flow: **Launch → Steam auto sign-in → Main menu → Play (one button) → Lo
 - Stats applied as ECS components (`ChopperStats`, `WeaponSlot` buffer). Visuals attach module meshes to chassis sockets.
 - Up to 5 saved loadouts per player; swap at respawn.
 
+### Modular build: "lego" sockets (design, not built yet)
+Goal: every chopper is a chassis plus modules that snap onto socket locations. The current ghost (Cobra model, copied old materials, rotor spin on the root) is a placeholder until this exists.
+
+What exists already: chassis slot lists, module slot types, `ModuleDefinition.Visual` (unused), `LoadoutRules` (validate + stats), weapons baked from modules, Setup/Validate window.
+
+Plan:
+1. **Sockets on the chassis.** Each chassis prefab has `SocketAuthoring` markers: slot type + index (e.g. `Pylon 0`, `Pylon 1`), plus a hangar focus pose (camera position, FOV, chopper rotation). Slot order on `ChassisDefinition` = socket order.
+2. **Module prefabs.** Each module's visual prefab snaps to its socket (pivot = attach point). A module carries its own presentation data: rotor spin rate, lights, smoke, muzzle points. Rotor spin moves from the chopper root to rotor modules.
+3. **Loadout on the network.** Server spawns the chassis ghost and stores the loadout (chassis id + `ushort` per slot) in a small ghost buffer. Clients attach module visuals locally from the catalog — no visual data on the wire.
+4. **Per-player stats and weapons.** At spawn the server validates the player's loadout (`LoadoutRules.Validate`, unlocks from Cloud Save), then applies `LoadoutRules.Compute` and the weapon modules — replacing today's baked default loadout. Weapon muzzle offsets come from the socket, not `WeaponDefinition.MuzzleOffset`.
+5. **Hangar.** The wireframe hangar uses the same sockets and module prefabs, so the hangar shows exactly what flies.
+6. **Setup and Validate.** Checks: every chassis has a socket for each slot; every module has a visual; socket and slot types match; focus pose set.
+
+Open questions: one ghost prefab per chassis vs one generic ghost; module visuals as entities (baked prefabs) or companion GameObjects; damage states per module.
+
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
 - **Chopper view:** 3D wireframe render of the chassis. URP full-screen/renderer feature or a wireframe Shader Graph (barycentric edges) in green. Installed modules render solid-glow; empty sockets pulse.
