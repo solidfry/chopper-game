@@ -18,7 +18,7 @@ namespace Chopper.Editor.Setup
     {
         public static void Apply(GameConfig config)
         {
-            var bridge = Object.FindFirstObjectByType<PresentationBridge>();
+            var bridge = Object.FindAnyObjectByType<PresentationBridge>();
             if (bridge == null)
             {
                 var go = new GameObject("Presentation");
@@ -26,10 +26,10 @@ namespace Chopper.Editor.Setup
                 bridge = Undo.AddComponent<PresentationBridge>(go);
             }
             Undo.RecordObject(bridge, "Configure Presentation");
-            bridge.Configure(config, Object.FindFirstObjectByType<ChopperCameraRig>());
+            bridge.Configure(config, Object.FindAnyObjectByType<ChopperCameraRig>());
             EditorUtility.SetDirty(bridge);
 
-            var hud = Object.FindFirstObjectByType<ChopperHudView>();
+            var hud = Object.FindAnyObjectByType<ChopperHudView>();
             var hudObject = hud != null ? hud.gameObject : CreateHudObject();
             // Old HUD objects held a component that no longer exists.
             GameObjectUtility.RemoveMonoBehavioursWithMissingScript(hudObject);

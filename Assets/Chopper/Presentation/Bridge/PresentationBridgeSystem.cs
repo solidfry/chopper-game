@@ -3,15 +3,15 @@ using UnityEngine;
 
 namespace Chopper.Presentation.Bridge
 {
-    /// <summary>Managed singleton in the client world: the scene's presentation context.</summary>
-    public sealed class PresentationContextRef : IComponentData
+    /// <summary>Singleton in the client world: the scene's presentation bridge (unmanaged, holds an object reference).</summary>
+    public struct PresentationBridgeRef : IComponentData
     {
-        public PresentationContext Value;
+        public UnityObjectRef<PresentationBridge> Bridge;
     }
 
     /// <summary>
     /// Client only. Finds the scene's <see cref="PresentationBridge"/> (the only scene search in presentation code)
-    /// and puts its context in the world. Re-binds after a scene change.
+    /// and puts a reference to it in the world. Re-binds after a scene change.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup), OrderFirst = true)]
@@ -19,22 +19,20 @@ namespace Chopper.Presentation.Bridge
     {
         private const double RetrySeconds = 1.0;
 
-        private EntityQuery _contextQuery;
+        private EntityQuery _bridgeQuery;
         private double _nextSearch;
 
         protected override void OnCreate()
         {
-            _contextQuery = GetEntityQuery(ComponentType.ReadOnly<PresentationContextRef>());
+            _bridgeQuery = GetEntityQuery(ComponentType.ReadOnly<PresentationBridgeRef>());
         }
 
         protected override void OnUpdate()
         {
-            if (!_contextQuery.IsEmpty)
+            if (!_bridgeQuery.IsEmpty)
             {
-                var entity = _contextQuery.GetSingletonEntity();
-                var current = EntityManager.GetComponentObject<PresentationContextRef>(entity);
-                if (current.Value != null && !current.Value.IsDisposed) return;
-                EntityManager.DestroyEntity(entity);
+                if (PresentationSystemBase.IsUsable(_bridgeQuery.GetSingleton<PresentationBridgeRef>())) return;
+                EntityManager.DestroyEntity(_bridgeQuery);
             }
 
             // No bridge yet (scene loading, or a scene without presentation): look again later, not every frame.
@@ -42,12 +40,12 @@ namespace Chopper.Presentation.Bridge
             if (now < _nextSearch) return;
             _nextSearch = now + RetrySeconds;
 
-            var bridge = Object.FindFirstObjectByType<PresentationBridge>();
+            var bridge = Object.FindAnyObjectByType<PresentationBridge>();
             if (bridge == null) return;
 
             var holder = EntityManager.CreateEntity();
-            EntityManager.SetName(holder, "PresentationContext");
-            EntityManager.AddComponentObject(holder, new PresentationContextRef { Value = bridge.Context });
+            EntityManager.SetName(holder, "PresentationBridge");
+            EntityManager.AddComponentData(holder, new PresentationBridgeRef { Bridge = bridge });
         }
     }
 
@@ -57,19 +55,28 @@ namespace Chopper.Presentation.Bridge
     /// </summary>
     public abstract partial class PresentationSystemBase : SystemBase
     {
-        private EntityQuery _contextQuery;
+        private EntityQuery _bridgeQuery;
 
         protected override void OnCreate()
         {
-            _contextQuery = GetEntityQuery(ComponentType.ReadOnly<PresentationContextRef>());
+            _bridgeQuery = GetEntityQuery(ComponentType.ReadOnly<PresentationBridgeRef>());
         }
 
         protected bool TryGetContext(out PresentationContext context)
         {
             context = null;
-            if (_contextQuery.IsEmpty) return false;
-            context = EntityManager.GetComponentObject<PresentationContextRef>(_contextQuery.GetSingletonEntity()).Value;
-            return context != null && !context.IsDisposed;
+            if (_bridgeQuery.IsEmpty) return false;
+            var reference = _bridgeQuery.GetSingleton<PresentationBridgeRef>();
+            if (!IsUsable(reference)) return false;
+            context = reference.Bridge.Value.Context;
+            return true;
+        }
+
+        /// <summary>False once the bridge object is destroyed (scene unload) or its context is disposed.</summary>
+        internal static bool IsUsable(in PresentationBridgeRef reference)
+        {
+            var bridge = reference.Bridge.Value;
+            return bridge != null && !bridge.Context.IsDisposed;
         }
     }
 }

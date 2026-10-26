@@ -67,7 +67,7 @@ namespace Chopper.Editor.Setup
 
         private static void CheckScene(List<SetupProblem> problems)
         {
-            var bridge = Object.FindFirstObjectByType<PresentationBridge>();
+            var bridge = Object.FindAnyObjectByType<PresentationBridge>();
             if (bridge == null)
             {
                 problems.Add(new SetupProblem("Open scene has no Presentation bridge. Press 'Set up open scene'."));
@@ -75,11 +75,11 @@ namespace Chopper.Editor.Setup
             else
             {
                 if (bridge.Config == null) problems.Add(new SetupProblem("Presentation bridge has no game config.", bridge));
-                if (Object.FindFirstObjectByType<ChopperCameraRig>() == null)
+                if (Object.FindAnyObjectByType<ChopperCameraRig>() == null)
                     problems.Add(new SetupProblem("Open scene has no ChopperCameraRig (chase camera).", bridge));
             }
 
-            if (Object.FindFirstObjectByType<ChopperHudView>() == null)
+            if (Object.FindAnyObjectByType<ChopperHudView>() == null)
                 problems.Add(new SetupProblem("Open scene has no HUD. Press 'Set up open scene'."));
 
             // Gameplay content lives in the subscene; it is only visible here while the subscene is open.
@@ -96,7 +96,7 @@ namespace Chopper.Editor.Setup
                     problems.Add(new SetupProblem("NetCodePhysicsConfig: Enable Lag Compensation is off.", physicsConfig));
             }
 
-            if (Object.FindFirstObjectByType<ArenaBoundsAuthoring>() == null)
+            if (Object.FindAnyObjectByType<ArenaBoundsAuthoring>() == null)
                 problems.Add(new SetupProblem("No ArenaBoundsAuthoring found (open subscene): no out-of-bounds damage."));
         }
 
