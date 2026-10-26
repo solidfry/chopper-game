@@ -32,6 +32,8 @@ namespace Chopper.UI.Hud
         private VisualElement _chopper;
         private VisualElement _boundsWarning;
         private VisualElement _damageRing;
+        private VisualElement _frame;
+        private VisualElement _horizon;
         private VisualElement _banner;
         private VisualElement _dash;
         private VisualElement _health;
@@ -55,6 +57,8 @@ namespace Chopper.UI.Hud
             _aim = _chopper.Q("aim");
             _boundsWarning = _chopper.Q("bounds-warning");
             _damageRing = _chopper.Q("damage-ring");
+            _frame = _chopper.Q("frame");
+            _horizon = _chopper.Q("horizon");
 
             _chopper.dataSource = _model;
             Bind(_chopper.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
@@ -76,6 +80,8 @@ namespace Chopper.UI.Hud
             RefreshClasses();
             RefreshAim();
             RefreshDamageDirection();
+            RefreshSway();
+            RefreshHorizon();
             RefreshBanner();
         }
 
@@ -103,6 +109,10 @@ namespace Chopper.UI.Hud
         {
             if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
+            else if (args.propertyName == nameof(ChopperHudModel.Sway))
+                RefreshSway();
+            else if (args.propertyName == nameof(ChopperHudModel.RollDegrees))
+                RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
                 RefreshDamageDirection();
             else if (args.propertyName == nameof(ChopperHudModel.HasChopper) ||
@@ -127,6 +137,15 @@ namespace Chopper.UI.Hud
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
         }
+
+        private void RefreshSway()
+        {
+            var sway = _model.Sway;
+            _frame.style.translate = new Translate(sway.x, sway.y);
+        }
+
+        /// <summary>UI rotation is clockwise; a left bank turns the horizon clockwise.</summary>
+        private void RefreshHorizon() => _horizon.style.rotate = new Rotate(Angle.Degrees(_model.RollDegrees));
 
         private void RefreshDamageDirection()
         {

@@ -16,9 +16,63 @@
   transition-duration: 0.2s;
 }
 
-.hud-panels {
-  padding: 32px;
-  justify-content: flex-end;
+/* Flight frame, centre of the view */
+.hud-frame-layer {
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-frame {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-frame__ring {
+  width: 400px;
+  height: 400px;
+  border-radius: 200px;
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-frame__horizon {
+  flex-direction: row;
+  align-items: center;
+  width: 320px;
+}
+
+.hud-frame__horizon-line {
+  flex-grow: 1;
+  height: 2px;
+  background-color: var(--chopper-green-dim);
+}
+
+.hud-frame__horizon-gap {
+  width: 80px;
+}
+
+.hud-frame__side {
+  width: 220px;
+}
+
+.hud-frame__side--left {
+  align-items: flex-end;
+  padding-right: 24px;
+}
+
+.hud-frame__side--right {
+  align-items: flex-start;
+  padding-left: 24px;
+}
+
+.hud-frame__hull {
+  position: absolute;
+  bottom: -64px;
+  left: 50%;
+  translate: -50% 0;
 }
 
 .hud--hidden {
@@ -109,17 +163,13 @@
   text-shadow: 0 0 8px rgba(255, 64, 64, 0.4);
 }
 
-/* Speed and altitude, bottom left */
-.hud-readouts {
-  flex-direction: row;
-}
-
+/* Readout panels (speed, altitude, hull) */
 .hud-readout {
   flex-direction: row;
   align-items: flex-end;
-  min-width: 190px;
-  margin-right: 16px;
-  padding: 6px 12px;
+  min-width: 170px;
+  margin-bottom: 10px;
+  padding: 4px 10px;
   background-color: var(--chopper-panel);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
@@ -137,7 +187,7 @@
 }
 
 .hud-readout__value {
-  font-size: 40px;
+  font-size: 32px;
   color: var(--chopper-green);
   -unity-text-align: lower-right;
   flex-grow: 1;
@@ -239,8 +289,6 @@
 .hud-dash {
   flex-direction: row;
   align-items: center;
-  width: 396px;
-  margin-top: 10px;
 }
 
 .hud-dash__label {
@@ -255,7 +303,7 @@
 }
 
 .hud-dash__bar {
-  flex-grow: 1;
+  width: 120px;
   margin: 0;
 }
 

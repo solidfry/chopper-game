@@ -10,7 +10,7 @@ using Unity.Transforms;
 namespace Chopper.Presentation.Hud
 {
     /// <summary>
-    /// Writes the local player's chopper values (speed, altitude, dash, health, gun aim, out of bounds) into the HUD
+    /// Writes the local player's chopper values (speed, altitude, dash, health, attitude, gun aim, out of bounds) into the HUD
     /// model. Hit markers come from messages (<see cref="Feedback.CombatFeedback"/>).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -32,8 +32,8 @@ namespace Chopper.Presentation.Hud
             var model = context.Hud;
             var hasBounds = SystemAPI.TryGetSingleton<ArenaBounds>(out var bounds);
 
-            foreach (var (velocity, state, config, health, localToWorld, entity) in SystemAPI
-                         .Query<RefRO<PhysicsVelocity>, RefRO<ChopperFlightState>, RefRO<ChopperFlightConfig>,
+            foreach (var (velocity, mass, state, config, health, localToWorld, entity) in SystemAPI
+                         .Query<RefRO<PhysicsVelocity>, RefRO<PhysicsMass>, RefRO<ChopperFlightState>, RefRO<ChopperFlightConfig>,
                              RefRO<Health>, RefRO<LocalToWorld>>()
                          .WithAll<GhostOwnerIsLocal>()
                          .WithEntityAccess())
@@ -45,6 +45,7 @@ namespace Chopper.Presentation.Hud
                     config.ValueRO.DashCooldown);
                 model.UpdateHealth(health.ValueRO.Current, health.ValueRO.Max);
                 model.OutOfBounds = hasBounds && !bounds.Contains(localToWorld.ValueRO.Position);
+                UpdateAttitude(model, localToWorld.ValueRO, velocity.ValueRO, mass.ValueRO);
 
                 // The gun is a module: a loadout without one has no reticle.
                 if (SystemAPI.HasComponent<HitscanWeaponConfig>(entity))
@@ -55,6 +56,16 @@ namespace Chopper.Presentation.Hud
             }
 
             model.ClearChopper();
+        }
+
+        /// <summary>Bank angle for the horizon line, and turn rates (chopper axes) for the frame sway.</summary>
+        private static void UpdateAttitude(ChopperHudModel model, in LocalToWorld pose, in PhysicsVelocity velocity, in PhysicsMass mass)
+        {
+            var worldUp = math.up();
+            var roll = math.degrees(math.atan2(math.dot(pose.Right, worldUp), math.dot(pose.Up, worldUp)));
+            // Same conversion as the flight model: angular velocity is stored in inertia space.
+            var localRate = math.degrees(math.mul(mass.InertiaOrientation, velocity.Angular));
+            model.UpdateAttitude(roll, yawRate: localRate.y, pitchRate: localRate.x);
         }
 
         private static void UpdateAim(ChopperHudModel model, in HitscanWeaponConfig gun, in LocalToWorld pose)

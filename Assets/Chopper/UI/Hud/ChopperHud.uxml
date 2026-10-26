@@ -28,26 +28,36 @@
           <ui:VisualElement name="hit-marker" class="hud-aim__hit" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
-      <ui:VisualElement name="panels" class="hud-layer hud-panels" picking-mode="Ignore">
-        <ui:VisualElement name="readouts" class="hud-readouts" picking-mode="Ignore">
-          <ui:VisualElement name="health" class="hud-readout" picking-mode="Ignore">
-            <ui:Label text="HP" class="hud-readout__label" />
+      <!-- Flight frame: centred on the view like the old HUD; it sways with turns (see ChopperHudView). -->
+      <ui:VisualElement name="frame-layer" class="hud-layer hud-frame-layer" picking-mode="Ignore">
+        <ui:VisualElement name="frame" class="hud-frame" picking-mode="Ignore">
+          <ui:VisualElement name="dash" class="hud-frame__side hud-frame__side--left hud-dash" picking-mode="Ignore">
+            <ui:Label text="DASH" class="hud-dash__label" />
+            <ui:ProgressBar name="dash-bar" low-value="0" high-value="1" value="1" class="hud-dash__bar" />
+          </ui:VisualElement>
+          <ui:VisualElement name="ring" class="hud-frame__ring" picking-mode="Ignore">
+            <ui:VisualElement name="horizon" class="hud-frame__horizon" picking-mode="Ignore">
+              <ui:VisualElement class="hud-frame__horizon-line" picking-mode="Ignore" />
+              <ui:VisualElement class="hud-frame__horizon-gap" picking-mode="Ignore" />
+              <ui:VisualElement class="hud-frame__horizon-line" picking-mode="Ignore" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement name="readouts" class="hud-frame__side hud-frame__side--right" picking-mode="Ignore">
+            <ui:VisualElement name="speed" class="hud-readout" picking-mode="Ignore">
+              <ui:Label text="SPD" class="hud-readout__label" />
+              <ui:Label name="speed-value" text="0" class="hud-readout__value" />
+              <ui:Label text="KM/H" class="hud-readout__unit" />
+            </ui:VisualElement>
+            <ui:VisualElement name="altitude" class="hud-readout" picking-mode="Ignore">
+              <ui:Label text="ALT" class="hud-readout__label" />
+              <ui:Label name="altitude-value" text="0" class="hud-readout__value" />
+              <ui:Label text="M" class="hud-readout__unit" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement name="health" class="hud-readout hud-frame__hull" picking-mode="Ignore">
+            <ui:Label text="HULL" class="hud-readout__label" />
             <ui:Label name="health-value" text="0" class="hud-readout__value" />
           </ui:VisualElement>
-          <ui:VisualElement name="speed" class="hud-readout" picking-mode="Ignore">
-            <ui:Label text="SPD" class="hud-readout__label" />
-            <ui:Label name="speed-value" text="0" class="hud-readout__value" />
-            <ui:Label text="KM/H" class="hud-readout__unit" />
-          </ui:VisualElement>
-          <ui:VisualElement name="altitude" class="hud-readout" picking-mode="Ignore">
-            <ui:Label text="ALT" class="hud-readout__label" />
-            <ui:Label name="altitude-value" text="0" class="hud-readout__value" />
-            <ui:Label text="M" class="hud-readout__unit" />
-          </ui:VisualElement>
-        </ui:VisualElement>
-        <ui:VisualElement name="dash" class="hud-dash" picking-mode="Ignore">
-          <ui:Label text="DASH" class="hud-dash__label" />
-          <ui:ProgressBar name="dash-bar" low-value="0" high-value="1" value="1" class="hud-dash__bar" />
         </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>

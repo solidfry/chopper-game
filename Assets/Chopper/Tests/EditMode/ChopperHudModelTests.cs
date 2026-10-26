@@ -117,5 +117,32 @@ namespace Chopper.Tests
             model.Tick(ChopperHudModel.DamageIndicatorDuration + 0.01f);
             Assert.That(model.DamageIndicatorVisible, Is.False);
         }
+
+        [Test]
+        public void UpdateAttitude_RoundsRollToHalfDegrees()
+        {
+            var model = new ChopperHudModel();
+            model.UpdateAttitude(rollDegrees: 12.3f, yawRate: 0f, pitchRate: 0f);
+            Assert.That(model.RollDegrees, Is.EqualTo(12.5f));
+        }
+
+        [Test]
+        public void Sway_LagsBehindTurnsAndStaysWithinLimit()
+        {
+            var model = new ChopperHudModel();
+            model.UpdateAttitude(0f, yawRate: 1000f, pitchRate: -1000f);
+
+            model.Tick(0.016f);
+            Assert.That(model.Sway.x, Is.LessThan(0f), "Turning right swings the frame left.");
+            Assert.That(model.Sway.x, Is.GreaterThan(-ChopperHudModel.MaxSway), "One frame does not reach the target.");
+
+            for (var i = 0; i < 300; i++) model.Tick(0.016f);
+            Assert.That(model.Sway.x, Is.EqualTo(-ChopperHudModel.MaxSway).Within(0.5f));
+            Assert.That(model.Sway.y, Is.EqualTo(ChopperHudModel.MaxSway).Within(0.5f));
+
+            model.ClearChopper();
+            for (var i = 0; i < 300; i++) model.Tick(0.016f);
+            Assert.That(model.Sway.magnitude, Is.LessThan(0.5f), "With no chopper the frame returns to the centre.");
+        }
     }
 }

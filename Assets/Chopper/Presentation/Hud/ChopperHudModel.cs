@@ -18,6 +18,12 @@ namespace Chopper.Presentation.Hud
         public const float HitMarkerDuration = 0.15f;
         public const float KillMarkerDuration = 0.6f;
         public const float DamageIndicatorDuration = 1f;
+        /// <summary>Most the flight frame moves from the centre, in pixels (the old HUD used 24).</summary>
+        public const float MaxSway = 24f;
+        /// <summary>Pixels of sway per degree per second of turn rate.</summary>
+        private const float SwayPerDegreePerSecond = 0.2f;
+        /// <summary>How fast the frame follows the target sway (1/s). Lower = more lag, more weight.</summary>
+        private const float SwayResponse = 6f;
 
         private bool _hasChopper;
         private string _speedText = "0";
@@ -37,6 +43,10 @@ namespace Chopper.Presentation.Hud
         private float _damageIndicatorTime;
         private bool _damageIndicatorVisible;
         private float _damageDirectionDegrees;
+        private float _rollDegrees;
+        private Vector2 _sway;
+        private Vector2 _swayTarget;
+        private Vector2 _swaySmoothed;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -158,6 +168,34 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _damageDirectionDegrees, value, nameof(DamageDirectionDegrees));
         }
 
+        /// <summary>Chopper bank angle: positive = rolled left. The horizon line turns by this much (steps of 0.5°).</summary>
+        [CreateProperty]
+        public float RollDegrees
+        {
+            get => _rollDegrees;
+            private set => Set(ref _rollDegrees, value, nameof(RollDegrees));
+        }
+
+        /// <summary>Flight frame offset in pixels (x right, y down). Lags behind turns, so the HUD feels kinetic.</summary>
+        [CreateProperty]
+        public Vector2 Sway
+        {
+            get => _sway;
+            private set => Set(ref _sway, value, nameof(Sway));
+        }
+
+        /// <param name="rollDegrees">Positive = rolled left.</param>
+        /// <param name="yawRate">Degrees per second, positive = nose right.</param>
+        /// <param name="pitchRate">Degrees per second, positive = nose down.</param>
+        public void UpdateAttitude(float rollDegrees, float yawRate, float pitchRate)
+        {
+            RollDegrees = MathF.Round(rollDegrees * 2f) / 2f;
+            // The frame swings against the turn, like a head-up display on a moving head.
+            _swayTarget = new Vector2(
+                Math.Clamp(-yawRate * SwayPerDegreePerSecond, -MaxSway, MaxSway),
+                Math.Clamp(-pitchRate * SwayPerDegreePerSecond, -MaxSway, MaxSway));
+        }
+
         public void Update(float speedMetresPerSecond, float altitudeMetres, float dashCooldownRemaining, float dashCooldown)
         {
             HasChopper = true;
@@ -212,6 +250,9 @@ namespace Chopper.Presentation.Hud
             HitMarkerVisible = _hitMarkerTime > 0f;
             KillMarkerVisible = _killMarkerTime > 0f;
             DamageIndicatorVisible = _damageIndicatorTime > 0f;
+
+            _swaySmoothed = Vector2.Lerp(_swaySmoothed, _swayTarget, 1f - MathF.Exp(-SwayResponse * deltaTime));
+            Sway = new Vector2(MathF.Round(_swaySmoothed.x * 2f) / 2f, MathF.Round(_swaySmoothed.y * 2f) / 2f);
         }
 
         public void ClearChopper()
@@ -219,6 +260,7 @@ namespace Chopper.Presentation.Hud
             HasChopper = false;
             AimVisible = false;
             OutOfBounds = false;
+            _swayTarget = Vector2.zero;
         }
 
         private void Set<T>(ref T field, T value, string propertyName)
