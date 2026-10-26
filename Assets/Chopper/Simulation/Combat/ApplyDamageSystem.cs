@@ -4,6 +4,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
+using Unity.Physics.Systems;
 using Unity.Transforms;
 
 namespace Chopper.Simulation.Combat
@@ -16,7 +17,7 @@ namespace Chopper.Simulation.Combat
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateInGroup(typeof(PredictedFixedStepSimulationSystemGroup))]
+    [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(HitscanFireSystem))]
     public partial struct ApplyDamageSystem : ISystem
     {

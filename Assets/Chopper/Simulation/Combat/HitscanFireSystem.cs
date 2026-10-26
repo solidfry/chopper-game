@@ -22,10 +22,10 @@ namespace Chopper.Simulation.Combat
     /// Without it the server ray-casts against the current world (no rewind).
     /// </summary>
     [BurstCompile]
-    // Not in the local (menu) world: it has no predicted group.
+    // Not in the local (menu) world: combat needs client/server worlds.
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateInGroup(typeof(PredictedFixedStepSimulationSystemGroup))]
-    [UpdateAfter(typeof(PhysicsSystemGroup))]
+    [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
+    [UpdateAfter(typeof(ExportPhysicsWorld))]
     public partial struct HitscanFireSystem : ISystem
     {
         /// <summary>Players with more ping than this must lead their targets. Stops "shot behind cover".</summary>

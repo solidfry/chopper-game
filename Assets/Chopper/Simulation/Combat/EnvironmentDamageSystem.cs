@@ -14,8 +14,8 @@ namespace Chopper.Simulation.Combat
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateInGroup(typeof(PredictedFixedStepSimulationSystemGroup))]
-    [UpdateAfter(typeof(PhysicsSystemGroup))]
+    [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
+    [UpdateAfter(typeof(ExportPhysicsWorld))]
     [UpdateBefore(typeof(ApplyDamageSystem))]
     public partial struct EnvironmentDamageSystem : ISystem
     {
