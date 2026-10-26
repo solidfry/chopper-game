@@ -11,6 +11,8 @@ namespace Chopper.Simulation.Session
         public quaternion Rotation;
         /// <summary>Sideways gap between players so they do not spawn inside each other.</summary>
         public float Spacing;
+        /// <summary>Seconds between death and the new chopper.</summary>
+        public float RespawnDelay;
     }
 
     /// <summary>Put in the gameplay subscene. Its transform is the first spawn point.</summary>
@@ -18,6 +20,7 @@ namespace Chopper.Simulation.Session
     {
         [SerializeField] private GameObject chopperPrefab;
         [SerializeField] private float spacing = 20f;
+        [SerializeField] private float respawnDelay = 3f;
 
         private sealed class Baker : Baker<ChopperSpawnerAuthoring>
         {
@@ -31,6 +34,7 @@ namespace Chopper.Simulation.Session
                     Position = transform.position,
                     Rotation = transform.rotation,
                     Spacing = authoring.spacing,
+                    RespawnDelay = authoring.respawnDelay,
                 });
             }
         }

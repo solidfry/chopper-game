@@ -244,6 +244,17 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Add it with menu **Chopper → UI → Add HUD To Open Scene** (creates `UI/Settings/ChopperPanelSettings.asset`). Edit-mode tests: `ChopperHudModelTests`.
 - Left: Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
 
+**Phase 2 — started (26 Oct, written without the editor — needs a compile + play check).**
+- `Simulation/Combat`: `Health` (server-written ghost field), `DamageEvent` buffer (server only), `HitscanWeaponConfig/State`, `HitConfirmRpc`.
+- `HitscanFireSystem`: predicted fire rate; server ray-cast against `PhysicsWorldHistorySingleton` at the shooter's interpolation delay, capped at 200 ms. Falls back to no rewind if the history is missing.
+- `ApplyDamageSystem` (server): applies damage, sends `HitConfirmRpc` to the shooter (hit / kill).
+- `ChopperRespawnSystem` (server): dead chopper despawns, new one after `ChopperSpawner.RespawnDelay` (3 s). Spawn code shared in `ChopperSpawning`.
+- Input: `ChopperInput.Fire` from `Flight/Fire1` (LMB, Q, RB). Health and gun baked from `ChopperAuthoring` (100 HP, 750 rpm, 8 dmg, 600 m) until Phase 4 modules.
+- HUD: health readout (red when low), gun reticle at the aim point, hit/kill marker from server confirms only.
+- `TrainingTargetAuthoring`: server-only damageable target that resets after 3 s, for single-player hit tests.
+- Editor steps: add `NetCodePhysicsConfig` (Lag Compensation on) to the TrainingRange subscene; add `TrainingTargetAuthoring` to the targets.
+- Left: tracers / muzzle flash / impact VFX from replicated events, victim damage direction + owner-only camera shake, server crash/bounds damage, predicted projectile ghosts (rockets), kill feed + FFA score.
+
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
 - Export `.blend` models to `.fbx` so the project does not need Blender.

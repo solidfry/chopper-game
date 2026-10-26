@@ -1,3 +1,4 @@
+using Chopper.Simulation.Combat;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -40,6 +41,17 @@ namespace Chopper.Simulation.Flight
         [SerializeField] private float dashBoost = 0.6f;
         [SerializeField] private float dashCooldown = 2f;
 
+        // TODO: Phase 4 replaces these with the chassis (health) and nose weapon module.
+        [Header("Health")]
+        [SerializeField] private float maxHealth = 100f;
+
+        [Header("Nose gun (hitscan)")]
+        [SerializeField, Tooltip("Shots per minute.")] private float roundsPerMinute = 750f;
+        [SerializeField] private float damagePerShot = 8f;
+        [SerializeField] private float range = 600f;
+        [SerializeField, Tooltip("Gun position in chopper space (z = forward).")]
+        private Vector3 muzzleOffset = new(0f, -0.6f, 2.5f);
+
         private sealed class Baker : Baker<ChopperAuthoring>
         {
             public override void Bake(ChopperAuthoring authoring)
@@ -62,6 +74,17 @@ namespace Chopper.Simulation.Flight
                 });
                 AddComponent<ChopperFlightState>(entity);
                 AddComponent<ChopperInput>(entity);
+
+                AddComponent(entity, new Health { Current = authoring.maxHealth, Max = authoring.maxHealth });
+                AddBuffer<DamageEvent>(entity);
+                AddComponent(entity, new HitscanWeaponConfig
+                {
+                    FireInterval = 60f / math.max(1f, authoring.roundsPerMinute),
+                    Damage = authoring.damagePerShot,
+                    Range = authoring.range,
+                    MuzzleOffset = authoring.muzzleOffset,
+                });
+                AddComponent<HitscanWeaponState>(entity);
             }
         }
     }

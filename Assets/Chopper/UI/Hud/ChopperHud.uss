@@ -4,10 +4,21 @@
   top: 0;
   right: 0;
   bottom: 0;
-  padding: 32px;
-  justify-content: flex-end;
   transition-property: opacity;
   transition-duration: 0.2s;
+}
+
+.hud-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.hud-panels {
+  padding: 32px;
+  justify-content: flex-end;
 }
 
 .hud--hidden {
@@ -58,6 +69,61 @@
   margin-left: 6px;
   margin-bottom: 6px;
   padding: 0;
+}
+
+/* Health turns red when low */
+.hud-readout--low {
+  border-left-color: var(--chopper-red);
+}
+
+.hud-readout--low .hud-readout__value {
+  color: var(--chopper-red);
+  text-shadow: 0 0 6px rgba(255, 64, 64, 0.35);
+}
+
+/* Gun reticle. Left/top are set from code (where the gun points); translate centres it on that point. */
+.hud-aim {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  translate: -50% -50%;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  border-color: var(--chopper-green-dim);
+  border-radius: 14px;
+}
+
+.hud-aim--hidden {
+  display: none;
+}
+
+.hud-aim__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--chopper-green);
+}
+
+/* Hit marker: a diamond around the reticle, shown only on a server hit confirm */
+.hud-aim__hit {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  rotate: 45deg;
+  border-width: 2px;
+  border-color: var(--chopper-text);
+  opacity: 0;
+}
+
+.hud-aim--hit .hud-aim__hit {
+  opacity: 1;
+}
+
+.hud-aim--kill .hud-aim__hit {
+  opacity: 1;
+  border-color: var(--chopper-red);
+  scale: 1.4 1.4;
 }
 
 /* Dash charge, under the readouts */

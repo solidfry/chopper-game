@@ -13,5 +13,7 @@ namespace Chopper.Simulation.Flight
         public float Pitch;
         public float Roll;
         public InputEvent Dash;
+        /// <summary>Held: the nose gun fires at its fire rate.</summary>
+        public bool Fire;
     }
 }

@@ -1,9 +1,7 @@
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.NetCode;
-using Unity.Transforms;
 
 namespace Chopper.Simulation.Session
 {
@@ -64,14 +62,7 @@ namespace Chopper.Simulation.Session
                 var networkId = SystemAPI.GetComponent<NetworkId>(connection).Value;
                 ecb.AddComponent<NetworkStreamInGame>(connection);
 
-                var right = math.mul(spawner.Rotation, math.right());
-                var position = spawner.Position + right * (spawner.Spacing * (networkId - 1));
-
-                var chopper = ecb.Instantiate(spawner.Prefab);
-                ecb.SetComponent(chopper, LocalTransform.FromPositionRotation(position, spawner.Rotation));
-                ecb.SetComponent(chopper, new GhostOwner { NetworkId = networkId });
-                // Despawn the chopper when the connection goes away.
-                ecb.AppendToBuffer(connection, new LinkedEntityGroup { Value = chopper });
+                ChopperSpawning.Spawn(ecb, spawner, connection, networkId);
 
                 ecb.DestroyEntity(requestEntity);
             }

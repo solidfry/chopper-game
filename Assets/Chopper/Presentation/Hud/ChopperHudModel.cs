@@ -1,5 +1,6 @@
 using System;
 using Unity.Properties;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Chopper.Presentation.Hud
@@ -12,12 +13,25 @@ namespace Chopper.Presentation.Hud
     public sealed class ChopperHudModel : INotifyBindablePropertyChanged
     {
         private const float MetresPerSecondToKilometresPerHour = 3.6f;
+        private const float LowHealthFraction = 0.3f;
+        /// <summary>How long a hit marker shows, seconds.</summary>
+        public const float HitMarkerDuration = 0.15f;
+        public const float KillMarkerDuration = 0.6f;
 
         private bool _hasChopper;
         private string _speedText = "0";
         private string _altitudeText = "0";
         private float _dashCharge = 1f;
         private bool _dashReady = true;
+        private string _healthText = "0";
+        private float _healthFraction = 1f;
+        private bool _healthLow;
+        private bool _aimVisible;
+        private Vector2 _aimViewport = new(0.5f, 0.5f);
+        private float _hitMarkerTime;
+        private float _killMarkerTime;
+        private bool _hitMarkerVisible;
+        private bool _killMarkerVisible;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -60,6 +74,61 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _dashReady, value, nameof(DashReady));
         }
 
+        /// <summary>Hit points, whole numbers.</summary>
+        [CreateProperty]
+        public string HealthText
+        {
+            get => _healthText;
+            private set => Set(ref _healthText, value, nameof(HealthText));
+        }
+
+        /// <summary>0 (dead) to 1 (full), steps of 1%.</summary>
+        [CreateProperty]
+        public float HealthFraction
+        {
+            get => _healthFraction;
+            private set => Set(ref _healthFraction, value, nameof(HealthFraction));
+        }
+
+        [CreateProperty]
+        public bool HealthLow
+        {
+            get => _healthLow;
+            private set => Set(ref _healthLow, value, nameof(HealthLow));
+        }
+
+        /// <summary>False when the gun's aim point is behind the camera.</summary>
+        [CreateProperty]
+        public bool AimVisible
+        {
+            get => _aimVisible;
+            private set => Set(ref _aimVisible, value, nameof(AimVisible));
+        }
+
+        /// <summary>Where the gun points on screen: viewport space, (0,0) bottom left to (1,1) top right.</summary>
+        [CreateProperty]
+        public Vector2 AimViewport
+        {
+            get => _aimViewport;
+            private set => Set(ref _aimViewport, value, nameof(AimViewport));
+        }
+
+        /// <summary>True for a short time after the server confirms a hit.</summary>
+        [CreateProperty]
+        public bool HitMarkerVisible
+        {
+            get => _hitMarkerVisible;
+            private set => Set(ref _hitMarkerVisible, value, nameof(HitMarkerVisible));
+        }
+
+        /// <summary>True for a short time after the server confirms a kill.</summary>
+        [CreateProperty]
+        public bool KillMarkerVisible
+        {
+            get => _killMarkerVisible;
+            private set => Set(ref _killMarkerVisible, value, nameof(KillMarkerVisible));
+        }
+
         public void Update(float speedMetresPerSecond, float altitudeMetres, float dashCooldownRemaining, float dashCooldown)
         {
             HasChopper = true;
@@ -71,7 +140,46 @@ namespace Chopper.Presentation.Hud
             DashReady = dashCooldownRemaining <= 0f;
         }
 
-        public void ClearChopper() => HasChopper = false;
+        public void UpdateHealth(float current, float max)
+        {
+            var fraction = max > 0f ? Math.Clamp(current / max, 0f, 1f) : 0f;
+            HealthText = ((int)MathF.Ceiling(MathF.Max(0f, current))).ToString();
+            HealthFraction = MathF.Round(fraction * 100f) / 100f;
+            HealthLow = fraction < LowHealthFraction;
+        }
+
+        /// <param name="viewport">Aim point in viewport space; z below 0 means behind the camera.</param>
+        public void UpdateAim(Vector3 viewport)
+        {
+            AimVisible = viewport.z > 0f;
+            if (AimVisible)
+                AimViewport = new Vector2(MathF.Round(viewport.x * 1000f) / 1000f, MathF.Round(viewport.y * 1000f) / 1000f);
+        }
+
+        /// <summary>Called for each hit the server confirms.</summary>
+        public void ShowHit(bool killed)
+        {
+            _hitMarkerTime = HitMarkerDuration;
+            HitMarkerVisible = true;
+            if (!killed) return;
+            _killMarkerTime = KillMarkerDuration;
+            KillMarkerVisible = true;
+        }
+
+        /// <summary>Counts down the hit and kill markers. Call once per frame.</summary>
+        public void Tick(float deltaTime)
+        {
+            _hitMarkerTime = MathF.Max(0f, _hitMarkerTime - deltaTime);
+            _killMarkerTime = MathF.Max(0f, _killMarkerTime - deltaTime);
+            HitMarkerVisible = _hitMarkerTime > 0f;
+            KillMarkerVisible = _killMarkerTime > 0f;
+        }
+
+        public void ClearChopper()
+        {
+            HasChopper = false;
+            AimVisible = false;
+        }
 
         private void Set<T>(ref T field, T value, string propertyName)
         {
