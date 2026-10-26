@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Chopper.Presentation.Effects
@@ -11,6 +12,7 @@ namespace Chopper.Presentation.Effects
     {
         [SerializeField] private CombatEffectsSettings settings;
 
+        private readonly List<AudioSource> _audioBuffer = new();
         private EffectPool _pool;
 
         public CombatEffectsSettings Settings => settings;
@@ -21,7 +23,35 @@ namespace Chopper.Presentation.Effects
         {
             if (prefab == null || settings == null) return;
             var instance = Instantiate(prefab, position, rotation, transform);
+            RouteAudio(instance, mute: false);
             Destroy(instance, settings.OneShotLifetime);
+        }
+
+        /// <summary>Pooled projectile visual. <paramref name="muteAudio"/> silences the prefab's own sounds.</summary>
+        public GameObject SpawnPooled(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
+        {
+            var instance = Pool.Spawn(prefab, position, rotation);
+            if (instance != null) RouteAudio(instance, muteAudio);
+            return instance;
+        }
+
+        /// <summary>Sends the prefab's sounds to the Effects mixer group, so the effects volume setting covers them.</summary>
+        private void RouteAudio(GameObject instance, bool mute)
+        {
+            instance.GetComponentsInChildren(true, _audioBuffer);
+            foreach (var source in _audioBuffer)
+            {
+                if (mute)
+                {
+                    source.Stop();
+                    source.enabled = false;
+                    continue;
+                }
+                source.enabled = true;
+                if (settings.EffectsMixerGroup != null)
+                    source.outputAudioMixerGroup = settings.EffectsMixerGroup;
+            }
+            _audioBuffer.Clear();
         }
 
         /// <summary>Editor only: used by the scene setup tool.</summary>

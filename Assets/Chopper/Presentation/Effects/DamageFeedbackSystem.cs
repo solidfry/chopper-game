@@ -1,3 +1,4 @@
+using Chopper.Presentation.Audio;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Hud;
 using Chopper.Simulation.Combat;
@@ -8,8 +9,8 @@ using UnityEngine;
 namespace Chopper.Presentation.Effects
 {
     /// <summary>
-    /// Client only. Hits taken (<see cref="DamageTakenRpc"/>, sent only to the victim) shake the camera and show
-    /// where the hit came from on the HUD.
+    /// Client only. Hits taken (<see cref="DamageTakenRpc"/>, sent only to the victim) shake the camera, play the
+    /// damage sound and show where the hit came from on the HUD.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -20,6 +21,7 @@ namespace Chopper.Presentation.Effects
 
         private ChopperCameraRig _rig;
         private ChopperHudModelHost _hud;
+        private AudioHost _audio;
         private EntityQuery _damageTaken;
 
         protected override void OnCreate()
@@ -33,9 +35,13 @@ namespace Chopper.Presentation.Effects
             if (_damageTaken.IsEmpty) return;
             if (_rig == null) _rig = Object.FindFirstObjectByType<ChopperCameraRig>();
             if (_hud == null) _hud = Object.FindFirstObjectByType<ChopperHudModelHost>();
+            if (_audio == null) _audio = Object.FindFirstObjectByType<AudioHost>();
 
             foreach (var damage in SystemAPI.Query<RefRO<DamageTakenRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
+                if (_audio != null && _audio.Library != null)
+                    _audio.Audio.Play(_audio.Library.DamageTaken);
+
                 if (_rig != null)
                     _rig.AddShake(Mathf.Clamp01(damage.ValueRO.Amount / FullTraumaDamage));
 

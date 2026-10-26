@@ -264,6 +264,15 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Hits taken: server sends `DamageTakenRpc` to the victim only → camera shake (`ChopperCameraRig.AddShake`) + red damage direction ring on the HUD (`DamageFeedbackSystem`).
 - Left: real VFX/audio, player names (Steam, Phase 3), 4-player Network Simulator test of all of Phase 2.
 
+**Audio (26 Oct, written without the editor).**
+- `Presentation/Audio`: `SoundCue` (clip variations, volume/pitch jitter, 2D/3D, mixer group, voice limit, cooldown), `SoundLibrary` (every sound the code asks for), `IAudioService` → `AudioService` (32 pooled one-shot voices, loop voices, music cross-fade, volumes saved in PlayerPrefs), `AudioHost` (scene owner), `SceneMusic`.
+- `ChopperAudioSystem`: rotor loop per chopper (own mostly 2D, others 3D, pitch with speed), dash sound, out-of-bounds alarm loop.
+- Hooked in: gun fire (per shot, voice-limited), hit/kill confirm (one per frame), damage taken, match end. Effect prefab sounds (rockets, explosions) go to the Effects mixer group; `BulletRed`'s per-bullet explosion sound is muted by default.
+- `Chopper.UI/Audio/UISoundBinder`: click / hover / focus sounds for every UI Toolkit button in a document.
+- Mixer `Audio/AudioMix/Mix.mixer`: exposed `MasterVolume`, `MusicVolume`, `EffectsVolume`, `UIVolume`, `AmbientVolume`.
+- Menu **Chopper → Audio → Add Audio To Open Scene** makes `Data/Audio` cues + library from existing sounds and adds Audio + match music to the scene.
+- Placeholder picks to replace: gun fire (`shoot_pulsegun`), dash, hit/kill confirm. Old `Assets/Scripts/Audio` (MusicManager, UIAudioManager) can go once menus move to UI Toolkit.
+
 **Phase 4 — started (26 Oct, data and rules only; written without the editor).**
 - `Simulation/Loadout`: `ChassisDefinition`, `ModuleDefinition`, `LoadoutCatalog` (ScriptableObjects) → plain `ChassisSpec`/`ModuleSpec`.
 - `LoadoutRules.Validate` (server check: chassis/module ids, slot type, chassis-only modules, level, ownership, weight budget) and `LoadoutRules.Compute` (health, weight, lift/turn/dash multipliers with weight penalty). Edit-mode tests: `LoadoutRulesTests`.

@@ -1,3 +1,4 @@
+using Chopper.Presentation.Audio;
 using Chopper.Simulation.Match;
 using Unity.Entities;
 using Unity.NetCode;
@@ -11,6 +12,7 @@ namespace Chopper.Presentation.Hud
     public partial class MatchHudSystem : SystemBase
     {
         private ChopperHudModelHost _host;
+        private AudioHost _audio;
         private EntityQuery _scores;
         private EntityQuery _playersLeft;
         private EntityQuery _kills;
@@ -25,6 +27,13 @@ namespace Chopper.Presentation.Hud
             _matchStates = SystemAPI.QueryBuilder().WithAll<MatchStateRpc, ReceiveRpcCommandRequest>().Build();
         }
 
+        private void PlayMatchEnd()
+        {
+            if (_audio == null) _audio = Object.FindFirstObjectByType<AudioHost>();
+            if (_audio != null && _audio.Library != null)
+                _audio.Audio.Play(_audio.Library.MatchEnd);
+        }
+
         protected override void OnUpdate()
         {
             if (_host == null)
@@ -36,8 +45,11 @@ namespace Chopper.Presentation.Hud
                 if (SystemAPI.TryGetSingleton<NetworkId>(out var localId))
                     model.SetLocalPlayer(localId.Value);
 
+                var wasOver = model.BannerVisible;
                 foreach (var rpc in SystemAPI.Query<RefRO<MatchStateRpc>>().WithAll<ReceiveRpcCommandRequest>())
                     model.SetMatch((MatchPhase)rpc.ValueRO.Phase, rpc.ValueRO.TimeRemaining, rpc.ValueRO.WinnerNetworkId);
+                if (!wasOver && model.BannerVisible)
+                    PlayMatchEnd();
                 foreach (var rpc in SystemAPI.Query<RefRO<ScoreRpc>>().WithAll<ReceiveRpcCommandRequest>())
                     model.ApplyScore(rpc.ValueRO.NetworkId, rpc.ValueRO.Kills, rpc.ValueRO.Deaths);
                 foreach (var rpc in SystemAPI.Query<RefRO<PlayerLeftRpc>>().WithAll<ReceiveRpcCommandRequest>())

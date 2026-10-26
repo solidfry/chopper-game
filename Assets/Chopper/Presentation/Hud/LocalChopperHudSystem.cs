@@ -1,3 +1,4 @@
+using Chopper.Presentation.Audio;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Flight;
 using Unity.Entities;
@@ -11,7 +12,7 @@ namespace Chopper.Presentation.Hud
 {
     /// <summary>
     /// Writes the local player's chopper values (speed, altitude, dash, health, gun aim, out of bounds) into the scene's HUD model,
-    /// and turns server hit confirms into hit markers.
+    /// and turns server hit confirms into hit markers and hit sounds.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -21,6 +22,7 @@ namespace Chopper.Presentation.Hud
         private const float AimDistance = 200f;
 
         private ChopperHudModelHost _host;
+        private AudioHost _audio;
         private EntityQuery _hitConfirms;
 
         protected override void OnCreate()
@@ -64,11 +66,22 @@ namespace Chopper.Presentation.Hud
         private void ConsumeHitConfirms(ChopperHudModel model)
         {
             if (_hitConfirms.IsEmpty) return;
+            if (_audio == null) _audio = Object.FindFirstObjectByType<AudioHost>();
+            var library = _audio != null ? _audio.Library : null;
 
             if (model != null)
             {
                 foreach (var confirm in SystemAPI.Query<RefRO<HitConfirmRpc>>().WithAll<ReceiveRpcCommandRequest>())
                     model.ShowHit(confirm.ValueRO.Killed);
+            }
+
+            if (library != null)
+            {
+                // One sound per frame: a kill beats a hit, and fast guns do not stack hit sounds.
+                var killed = false;
+                foreach (var confirm in SystemAPI.Query<RefRO<HitConfirmRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                    killed |= confirm.ValueRO.Killed;
+                _audio.Audio.Play(killed ? library.KillConfirm : library.HitConfirm);
             }
             EntityManager.DestroyEntity(_hitConfirms);
         }

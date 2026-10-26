@@ -78,7 +78,7 @@ namespace Chopper.Presentation.Effects
             _host.SpawnOneShot(settings.RocketMuzzleFlash, position, rotation);
             _rockets.Add(new RocketVisual
             {
-                GameObject = _host.Pool.Spawn(settings.Rocket, position, rotation),
+                GameObject = _host.SpawnPooled(settings.Rocket, position, rotation),
                 Position = position,
                 Velocity = velocity,
                 Remaining = lifetime,

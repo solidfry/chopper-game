@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace Chopper.Presentation.Effects
 {
@@ -27,6 +28,12 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Seconds a rocket's smoke trail stays after it hits, before the pool takes it back.")]
         private float rocketTrailLinger = 2f;
 
+        [Header("Audio")]
+        [SerializeField, Tooltip("Mixer group for sounds inside the effect prefabs (rocket launch and flight, explosions).")]
+        private AudioMixerGroup effectsMixerGroup;
+        [SerializeField, Tooltip("BulletRed has an explosion sound per bullet. Off: the gun fire sound comes from the Sound Library instead.")]
+        private bool gunBulletAudio;
+
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
         private float oneShotLifetime = 3f;
@@ -41,6 +48,8 @@ namespace Chopper.Presentation.Effects
         public GameObject RocketImpact => rocketImpact;
         public float RocketTrailLinger => rocketTrailLinger;
         public float OneShotLifetime => oneShotLifetime;
+        public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
+        public bool GunBulletAudio => gunBulletAudio;
 
         /// <summary>Editor only: used by the scene setup tool.</summary>
         public void Initialise(GameObject bullet, GameObject gunFlash, GameObject gunHit, GameObject rocketVisual,
@@ -53,5 +62,8 @@ namespace Chopper.Presentation.Effects
             rocketMuzzleFlash = rocketFlash;
             rocketImpact = rocketHit;
         }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void SetEffectsMixerGroup(AudioMixerGroup group) => effectsMixerGroup = group;
     }
 }

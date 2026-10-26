@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chopper.Presentation.Audio;
 using Chopper.Simulation.Combat;
 using Unity.Collections;
 using Unity.Entities;
@@ -14,6 +15,7 @@ namespace Chopper.Presentation.Effects
     /// Client only. Nose gun effects for every chopper, from <see cref="HitscanWeaponState.ShotCount"/> (predicted for
     /// the local player, replicated for others): muzzle flash, a bullet visual flown to where the shot ends, and an
     /// impact if it hit something. Cosmetic: the client ray-casts its own world; the server decides hits.
+    /// The gun fire sound comes from the Sound Library (<see cref="AudioHost"/>).
     /// Prefabs come from the scene's <see cref="CombatEffectsHost"/>.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -37,6 +39,7 @@ namespace Chopper.Presentation.Effects
         private readonly Dictionary<Entity, float> _lastFlashTime = new();
         private readonly List<Bullet> _bullets = new();
         private CombatEffectsHost _host;
+        private AudioHost _audio;
 
         protected override void OnCreate()
         {
@@ -46,10 +49,12 @@ namespace Chopper.Presentation.Effects
         protected override void OnUpdate()
         {
             if (_host == null)
-            {
                 _host = Object.FindFirstObjectByType<CombatEffectsHost>();
-                if (_host == null || _host.Settings == null) return;
-            }
+            if (_host == null || _host.Settings == null) return;
+
+            if (_audio == null)
+                _audio = Object.FindFirstObjectByType<AudioHost>();
+            var gunSound = _audio != null && _audio.Library != null ? _audio.Library.GunFire : null;
 
             var settings = _host.Settings;
             MoveBullets(settings, UnityEngine.Time.deltaTime);
@@ -77,6 +82,9 @@ namespace Chopper.Presentation.Effects
                     _lastFlashTime[entity] = now;
                 }
 
+                if (gunSound != null)
+                    _audio.Audio.Play(gunSound, muzzle);
+
                 var hit = RayCast(world, entity, muzzle, forward, config.ValueRO.Range, out var distance);
                 var shots = math.min(count - last, MaxShotsPerFrame);
                 for (var i = 0u; i < shots; i++)
@@ -99,7 +107,7 @@ namespace Chopper.Presentation.Effects
 
         private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, bool hit)
         {
-            var visual = _host.Pool.Spawn(settings.GunBullet, muzzle, rotation);
+            var visual = _host.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
             if (visual == null)
             {
                 // No bullet visual set: show the impact at once.
