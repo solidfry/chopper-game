@@ -97,6 +97,22 @@ Current state: 25 scripts use `Singleton<T>` / `SingletonPersistent<T>` / `Singl
 ### Order
 Do this together with the ECS port, feature by feature — not as a separate pass. Each feature that moves to ECS also moves its GameObject side to DI and drops its singleton/static events. New code (services, hangar, progression) follows these rules from day one.
 
+## 1c. Systemic design (applies to every core system)
+
+**Goal:** few, shared mechanisms instead of one-off code per feature. Each system has clear control points for config and editor tools.
+
+Rules:
+- **One config root.** A `GameConfig` ScriptableObject references every system's settings asset (HUD, audio, effects, loadout catalog, match rules, flight/weapon tuning). Systems read config from it, never from scattered constants or inline authoring fields.
+- **Data, not code, for content.** Weapons, chassis, modules, modes, sounds and effects are definition assets. Code asks for "the gun fire cue" or "weapon 101"; designers pick values. Definitions bake to ECS components/blobs for simulation.
+- **One presentation bridge.** ECS presentation systems get services (audio, effects, HUD models, camera) from one bridge set up when the client world starts — not `FindFirstObjectByType` per system.
+- **One event path, simulation → presentation.** Server RPCs and predicted events are read by one dispatcher and published as typed messages (MessagePipe). Feature code subscribes; it does not query RPC entities itself.
+- **Shared building blocks.** Pools, cues, view models and setup steps are generic and reused (e.g. `EffectPool`, `SoundCue`).
+- **One editor entry point.** A Chopper Setup window: create/repair config assets, set up the open scene, and validate it (missing hosts, missing `NetCodePhysicsConfig`, empty cues, duplicate ids). No one-off menu per feature.
+- **Validation at the control point.** Each definition asset validates itself (`OnValidate`), and the setup window lists all problems in one place.
+- **Before adding a system:** check whether an existing mechanism covers it; extend that instead of adding a parallel one.
+
+**Current drift to fix** (written before this rule): 17 `FindFirstObjectByType` look-ups, 3 scene hosts (`ChopperHudModelHost`, `CombatEffectsHost`, `AudioHost`), 4 separate setup menus, RPCs consumed in 4 systems, weapon/health/crash tuning inline on `ChopperAuthoring`.
+
 ## 2. Netcode architecture
 
 - **Dedicated server, server-authoritative.** Server tick 60 Hz simulation, snapshot send 30 Hz (`ClientServerTickRate`).
