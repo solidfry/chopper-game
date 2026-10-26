@@ -6,47 +6,32 @@ using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Physics;
 using UnityEngine;
-using Collider = UnityEngine.Collider;
-using Material = UnityEngine.Material;
 
 namespace Chopper.Presentation.Effects
 {
     /// <summary>
-    /// Client only. Draws rockets from launch data (own predicted launches at once, other players' from the server)
-    /// and a blast where they hit. Visual only: the client ray-casts its own world to know where to stop; the server
-    /// decides damage. TODO: replace the placeholder shapes with rocket and explosion prefabs (VFX Graph).
+    /// Client only. Draws rockets from launch data (own predicted launches at once, other players' from the server):
+    /// muzzle flash, the rocket visual in flight, and an impact where it hits. Visual only: the client ray-casts its own
+    /// world to know where to stop; the server decides damage. Prefabs come from the scene's <see cref="CombatEffectsHost"/>.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class RocketVisualSystem : SystemBase
     {
-        private const float BlastSeconds = 0.35f;
-
         private sealed class RocketVisual
         {
             public GameObject GameObject;
             public float3 Position;
             public float3 Velocity;
             public float Remaining;
-            public float SplashRadius;
             /// <summary>Hits on this player's chopper are ignored (the rocket starts next to it).</summary>
             public int ShooterNetworkId;
         }
 
-        private sealed class BlastVisual
-        {
-            public GameObject GameObject;
-            public Material Material;
-            public float Radius;
-            public float Age;
-        }
-
         private readonly List<RocketVisual> _rockets = new();
-        private readonly List<BlastVisual> _blasts = new();
         private EntityQuery _localLaunches;
         private EntityQuery _remoteLaunches;
-        private Material _blastMaterial;
-        private Material _trailMaterial;
+        private CombatEffectsHost _host;
 
         protected override void OnCreate()
         {
@@ -55,44 +40,53 @@ namespace Chopper.Presentation.Effects
             _remoteLaunches = SystemAPI.QueryBuilder().WithAll<RocketLaunchRpc, ReceiveRpcCommandRequest>().Build();
         }
 
-        protected override void OnDestroy()
-        {
-            foreach (var rocket in _rockets) Object.Destroy(rocket.GameObject);
-            foreach (var blast in _blasts) DestroyBlast(blast);
-            if (_blastMaterial != null) Object.Destroy(_blastMaterial);
-            if (_trailMaterial != null) Object.Destroy(_trailMaterial);
-        }
-
         protected override void OnUpdate()
         {
-            var localId = SystemAPI.TryGetSingleton<NetworkId>(out var id) ? id.Value : 0;
-            SpawnLaunches(localId);
-            if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
+            if (_host == null)
+                _host = Object.FindFirstObjectByType<CombatEffectsHost>();
 
-            var deltaTime = UnityEngine.Time.deltaTime;
+            var settings = _host != null ? _host.Settings : null;
+            var localId = SystemAPI.TryGetSingleton<NetworkId>(out var id) ? id.Value : 0;
+            if (settings != null)
+                SpawnLaunches(settings, localId);
+
+            // Always consume, also without effects, so launch entities do not pile up.
+            EntityManager.DestroyEntity(_localLaunches);
+            EntityManager.DestroyEntity(_remoteLaunches);
+
+            if (settings == null || !SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
-            MoveRockets(physics.CollisionWorld, owners, deltaTime);
-            GrowBlasts(deltaTime);
+            MoveRockets(settings, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime);
         }
 
-        private void SpawnLaunches(int localId)
+        private void SpawnLaunches(CombatEffectsSettings settings, int localId)
         {
             foreach (var launch in SystemAPI.Query<RefRO<LocalRocketLaunch>>())
-                Spawn(launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, launch.ValueRO.SplashRadius, localId);
+                Spawn(settings, launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, localId);
 
             foreach (var launch in SystemAPI.Query<RefRO<RocketLaunchRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
                 // Our own rockets are already drawn from prediction.
                 if (launch.ValueRO.ShooterNetworkId == localId) continue;
-                Spawn(launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, launch.ValueRO.SplashRadius,
-                    launch.ValueRO.ShooterNetworkId);
+                Spawn(settings, launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, launch.ValueRO.ShooterNetworkId);
             }
-
-            EntityManager.DestroyEntity(_localLaunches);
-            EntityManager.DestroyEntity(_remoteLaunches);
         }
 
-        private void MoveRockets(in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
+        private void Spawn(CombatEffectsSettings settings, float3 position, float3 velocity, float lifetime, int shooterNetworkId)
+        {
+            var rotation = Quaternion.LookRotation(velocity);
+            _host.SpawnOneShot(settings.RocketMuzzleFlash, position, rotation);
+            _rockets.Add(new RocketVisual
+            {
+                GameObject = _host.Pool.Spawn(settings.Rocket, position, rotation),
+                Position = position,
+                Velocity = velocity,
+                Remaining = lifetime,
+                ShooterNetworkId = shooterNetworkId,
+            });
+        }
+
+        private void MoveRockets(CombatEffectsSettings settings, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
             {
@@ -101,8 +95,8 @@ namespace Chopper.Presentation.Effects
 
                 if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact))
                 {
-                    SpawnBlast(impact, rocket.SplashRadius);
-                    Remove(i);
+                    _host.SpawnOneShot(settings.RocketImpact, impact, Quaternion.LookRotation(-rocket.Velocity));
+                    Finish(i, settings, impact);
                     continue;
                 }
 
@@ -110,93 +104,24 @@ namespace Chopper.Presentation.Effects
                 rocket.Remaining -= deltaTime;
                 if (rocket.Remaining <= 0f)
                 {
-                    Remove(i);
+                    Finish(i, settings, end);
                     continue;
                 }
-                rocket.GameObject.transform.position = end;
+                if (rocket.GameObject != null)
+                    rocket.GameObject.transform.position = end;
             }
         }
 
-        private void GrowBlasts(float deltaTime)
+        /// <summary>Stops the rocket; its smoke trail fades before the pool takes it back.</summary>
+        private void Finish(int index, CombatEffectsSettings settings, float3 position)
         {
-            for (var i = _blasts.Count - 1; i >= 0; i--)
+            var visual = _rockets[index].GameObject;
+            if (visual != null)
             {
-                var blast = _blasts[i];
-                blast.Age += deltaTime;
-                var t = Mathf.Clamp01(blast.Age / BlastSeconds);
-                blast.GameObject.transform.localScale = Vector3.one * (blast.Radius * 2f * Mathf.Lerp(0.3f, 1f, t));
-                var colour = blast.Material.color;
-                colour.a = 1f - t;
-                blast.Material.color = colour;
-
-                if (t < 1f) continue;
-                DestroyBlast(blast);
-                _blasts.RemoveAt(i);
+                visual.transform.position = position;
+                _host.Pool.Release(visual, settings.RocketTrailLinger);
             }
-        }
-
-        private void Spawn(float3 position, float3 velocity, float lifetime, float splashRadius, int shooterNetworkId)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Rocket (visual)";
-            Object.Destroy(body.GetComponent<Collider>());
-            body.transform.SetPositionAndRotation(position, Quaternion.LookRotation(velocity) * Quaternion.Euler(90f, 0f, 0f));
-            body.transform.localScale = new Vector3(0.25f, 0.6f, 0.25f);
-
-            var trail = body.AddComponent<TrailRenderer>();
-            trail.time = 0.4f;
-            trail.startWidth = 0.4f;
-            trail.endWidth = 0f;
-            trail.sharedMaterial = TrailMaterial();
-            trail.startColor = new Color(1f, 0.85f, 0.5f, 0.9f);
-            trail.endColor = new Color(0.6f, 0.6f, 0.6f, 0f);
-
-            _rockets.Add(new RocketVisual
-            {
-                GameObject = body,
-                Position = position,
-                Velocity = velocity,
-                Remaining = lifetime,
-                SplashRadius = splashRadius,
-                ShooterNetworkId = shooterNetworkId,
-            });
-        }
-
-        private void SpawnBlast(float3 position, float radius)
-        {
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sphere.name = "Rocket blast (visual)";
-            Object.Destroy(sphere.GetComponent<Collider>());
-            sphere.transform.position = position;
-
-            var renderer = sphere.GetComponent<MeshRenderer>();
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            // Unity objects: compare with ==, not ??, so destroyed objects count as null.
-            if (_blastMaterial == null)
-                _blastMaterial = new Material(Shader.Find("Sprites/Default")) { color = new Color(1f, 0.6f, 0.2f, 1f) };
-            var material = new Material(_blastMaterial);
-            renderer.sharedMaterial = material;
-
-            _blasts.Add(new BlastVisual { GameObject = sphere, Material = material, Radius = math.max(1f, radius) });
-        }
-
-        private Material TrailMaterial()
-        {
-            if (_trailMaterial == null)
-                _trailMaterial = new Material(Shader.Find("Sprites/Default"));
-            return _trailMaterial;
-        }
-
-        private void Remove(int index)
-        {
-            Object.Destroy(_rockets[index].GameObject);
             _rockets.RemoveAt(index);
-        }
-
-        private static void DestroyBlast(BlastVisual blast)
-        {
-            Object.Destroy(blast.GameObject);
-            Object.Destroy(blast.Material);
         }
 
         private static bool TryHit(in CollisionWorld world, ComponentLookup<GhostOwner> owners, int shooterNetworkId,
