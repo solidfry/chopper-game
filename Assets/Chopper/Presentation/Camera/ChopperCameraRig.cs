@@ -6,6 +6,7 @@ namespace Chopper.Presentation.Camera
     /// Third-person chase camera. <see cref="LocalChopperCameraSystem"/> calls <see cref="Follow"/> once per frame,
     /// after the chopper's rendered pose is final, so the camera never lags a frame behind the chopper.
     /// Sense of speed: field of view and distance grow with speed; the camera rolls a little with the chopper.
+    /// Hits taken shake the camera (<see cref="AddShake"/>).
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
     public sealed class ChopperCameraRig : MonoBehaviour
@@ -27,6 +28,13 @@ namespace Chopper.Presentation.Camera
         private float fullEffectSpeed = 80f;
         [SerializeField] private float speedSmoothing = 3f;
 
+        [Header("Shake (hits taken)")]
+        [SerializeField, Tooltip("Largest shake angle in degrees, at full trauma.")]
+        private float maxShakeDegrees = 4f;
+        [SerializeField, Tooltip("Trauma lost per second.")]
+        private float shakeRecovery = 1.5f;
+        [SerializeField] private float shakeFrequency = 18f;
+
         [SerializeField] private bool lockCursor = true;
 
         private UnityEngine.Camera _camera;
@@ -35,6 +43,13 @@ namespace Chopper.Presentation.Camera
         private Vector3 _smoothedUp = Vector3.up;
         private Vector3 _lastTargetPosition;
         private float _smoothedSpeed;
+        private float _trauma;
+
+        /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
+        public void AddShake(float trauma)
+        {
+            _trauma = Mathf.Clamp01(_trauma + trauma);
+        }
 
         public void Follow(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
         {
@@ -69,7 +84,20 @@ namespace Chopper.Presentation.Camera
             var frame = Quaternion.LookRotation(_smoothedForward, _smoothedUp);
             var position = targetPosition + frame * (offset * (1f + maxPullBack * speed01));
             var lookPoint = targetPosition + _smoothedForward * lookAhead;
-            transform.SetPositionAndRotation(position, Quaternion.LookRotation(lookPoint - position, _smoothedUp));
+            transform.SetPositionAndRotation(position, Quaternion.LookRotation(lookPoint - position, _smoothedUp) * Shake(deltaTime));
+        }
+
+        private Quaternion Shake(float deltaTime)
+        {
+            if (_trauma <= 0f) return Quaternion.identity;
+            _trauma = Mathf.Max(0f, _trauma - shakeRecovery * deltaTime);
+
+            var amount = _trauma * _trauma * maxShakeDegrees;
+            var t = Time.time * shakeFrequency;
+            return Quaternion.Euler(
+                amount * (Mathf.PerlinNoise(t, 0.1f) * 2f - 1f),
+                amount * (Mathf.PerlinNoise(0.3f, t) * 2f - 1f),
+                amount * 0.5f * (Mathf.PerlinNoise(t, 0.7f) * 2f - 1f));
         }
 
         private void Awake()

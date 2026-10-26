@@ -259,7 +259,9 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - HUD match layer (stays visible while dead): timer, your K/D, leader, kill feed, VICTORY/DRAW banner. `MatchHudModel` + `MatchHudSystem`.
 - Rockets (RMB, E, LB): `RocketFireSystem` (predicted fire rate), `RocketSystem` (server: one ray segment per tick, direct + splash damage with falloff, no self damage). Rockets are not ghosts: straight flight, so clients draw them from `RocketLaunchRpc` (others) or `LocalRocketLaunch` (own, at once). `Presentation/Effects/RocketVisualSystem` uses placeholder shapes; swap for prefabs/VFX Graph.
   - Deviation from section 3B: no predicted projectile ghosts. Simpler and cheaper; revisit for guided missiles (they need ghosts).
-- Left: tracers / muzzle flash / impact VFX for the gun, victim damage direction + owner-only camera shake, player names (Steam, Phase 3).
+- Gun tracers: `HitscanWeaponState.ShotCount` ghost field; `Presentation/Effects/GunTracerSystem` draws a pooled line per new shot for every chopper. Placeholder; swap for VFX Graph (muzzle flash, impact).
+- Hits taken: server sends `DamageTakenRpc` to the victim only → camera shake (`ChopperCameraRig.AddShake`) + red damage direction ring on the HUD (`DamageFeedbackSystem`).
+- Left: real VFX/audio, player names (Steam, Phase 3), 4-player Network Simulator test of all of Phase 2.
 
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).

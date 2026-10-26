@@ -4,12 +4,14 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
+using Unity.Transforms;
 
 namespace Chopper.Simulation.Combat
 {
     /// <summary>
-    /// Server only. Applies this tick's <see cref="DamageEvent"/>s to <see cref="Health"/>, tells each shooter that it
-    /// hit (<see cref="HitConfirmRpc"/>) and reports kills (<see cref="KillEvent"/>). No damage after the match ends.
+    /// Server only. Applies this tick's <see cref="DamageEvent"/>s to <see cref="Health"/>. Tells each shooter that it
+    /// hit (<see cref="HitConfirmRpc"/>), each victim where the hit came from (<see cref="DamageTakenRpc"/>), and
+    /// reports kills (<see cref="KillEvent"/>). No damage after the match ends.
     /// Death is handled by <see cref="ChopperRespawnSystem"/>.
     /// </summary>
     [BurstCompile]
@@ -21,6 +23,7 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<ConnectionOwner> _connectionLookup;
         private ComponentLookup<GhostOwner> _ownerLookup;
         private ComponentLookup<LastAttacker> _lastAttackerLookup;
+        private ComponentLookup<LocalTransform> _transformLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -28,6 +31,7 @@ namespace Chopper.Simulation.Combat
             _connectionLookup = state.GetComponentLookup<ConnectionOwner>(isReadOnly: true);
             _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
             _lastAttackerLookup = state.GetComponentLookup<LastAttacker>();
+            _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -40,6 +44,7 @@ namespace Chopper.Simulation.Combat
             _connectionLookup.Update(ref state);
             _ownerLookup.Update(ref state);
             _lastAttackerLookup.Update(ref state);
+            _transformLookup.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (health, damage, victim) in SystemAPI.Query<RefRW<Health>, DynamicBuffer<DamageEvent>>().WithEntityAccess())
@@ -61,6 +66,19 @@ namespace Chopper.Simulation.Combat
                         var killer = attacker != 0 ? attacker : RecentAttacker(victim, now, rules.KillCreditSeconds);
                         var kill = ecb.CreateEntity();
                         ecb.AddComponent(kill, new KillEvent { KillerNetworkId = killer, VictimNetworkId = victimOwner.NetworkId });
+                    }
+
+                    if (_connectionLookup.TryGetComponent(victim, out var victimConnection))
+                    {
+                        var hasSource = _transformLookup.TryGetComponent(hit.Source, out var sourcePose);
+                        var taken = ecb.CreateEntity();
+                        ecb.AddComponent(taken, new DamageTakenRpc
+                        {
+                            Amount = hit.Amount,
+                            SourcePosition = sourcePose.Position,
+                            HasSource = hasSource,
+                        });
+                        ecb.AddComponent(taken, new SendRpcCommandRequest { TargetConnection = victimConnection.Value });
                     }
 
                     if (!_connectionLookup.TryGetComponent(hit.Source, out var shooter)) continue;

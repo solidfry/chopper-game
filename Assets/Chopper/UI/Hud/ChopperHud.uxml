@@ -17,6 +17,11 @@
       <ui:VisualElement name="bounds-warning" class="hud-warning hud-warning--hidden" picking-mode="Ignore">
         <ui:Label text="RETURN TO COMBAT AREA" class="hud-warning__text" />
       </ui:VisualElement>
+      <ui:VisualElement name="damage-layer" class="hud-layer hud-damage-layer" picking-mode="Ignore">
+        <ui:VisualElement name="damage-ring" class="hud-damage hud-damage--hidden" picking-mode="Ignore">
+          <ui:VisualElement class="hud-damage__arc" picking-mode="Ignore" />
+        </ui:VisualElement>
+      </ui:VisualElement>
       <ui:VisualElement name="aim-layer" class="hud-layer" picking-mode="Ignore">
         <ui:VisualElement name="aim" class="hud-aim" picking-mode="Ignore">
           <ui:VisualElement class="hud-aim__dot" picking-mode="Ignore" />

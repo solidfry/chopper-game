@@ -67,8 +67,9 @@ namespace Chopper.Simulation.Combat
                 weaponState.CooldownRemaining = math.max(0f, weaponState.CooldownRemaining - deltaTime);
                 if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f) continue;
                 weaponState.CooldownRemaining = config.ValueRO.FireInterval;
+                weaponState.ShotCount++;
 
-                // Clients only predict the fire rate. Tracers and muzzle flash come from presentation later.
+                // Clients only predict the fire rate and shot count; presentation draws tracers from the count.
                 if (!isServer) continue;
 
                 var collisionWorld = physicsWorld.CollisionWorld;

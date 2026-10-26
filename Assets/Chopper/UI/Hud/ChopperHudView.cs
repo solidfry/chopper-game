@@ -20,11 +20,13 @@ namespace Chopper.UI.Hud
         private const string KillClass = "hud-aim--kill";
         private const string WarningHiddenClass = "hud-warning--hidden";
         private const string BannerHiddenClass = "hud-match__banner--hidden";
+        private const string DamageHiddenClass = "hud-damage--hidden";
 
         private ChopperHudModel _model;
         private MatchHudModel _match;
         private VisualElement _chopper;
         private VisualElement _boundsWarning;
+        private VisualElement _damageRing;
         private VisualElement _banner;
         private VisualElement _dash;
         private VisualElement _health;
@@ -42,6 +44,7 @@ namespace Chopper.UI.Hud
             _health = _chopper.Q("health");
             _aim = _chopper.Q("aim");
             _boundsWarning = _chopper.Q("bounds-warning");
+            _damageRing = _chopper.Q("damage-ring");
 
             _chopper.dataSource = _model;
             Bind(_chopper.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
@@ -62,6 +65,7 @@ namespace Chopper.UI.Hud
             _match.propertyChanged += OnMatchChanged;
             RefreshClasses();
             RefreshAim();
+            RefreshDamageDirection();
             RefreshBanner();
         }
 
@@ -86,10 +90,13 @@ namespace Chopper.UI.Hud
         {
             if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
+            else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
+                RefreshDamageDirection();
             else if (args.propertyName == nameof(ChopperHudModel.HasChopper) ||
                      args.propertyName == nameof(ChopperHudModel.DashReady) ||
                      args.propertyName == nameof(ChopperHudModel.HealthLow) ||
                      args.propertyName == nameof(ChopperHudModel.OutOfBounds) ||
+                     args.propertyName == nameof(ChopperHudModel.DamageIndicatorVisible) ||
                      args.propertyName == nameof(ChopperHudModel.AimVisible) ||
                      args.propertyName == nameof(ChopperHudModel.HitMarkerVisible) ||
                      args.propertyName == nameof(ChopperHudModel.KillMarkerVisible))
@@ -100,11 +107,17 @@ namespace Chopper.UI.Hud
         {
             _chopper.EnableInClassList(HiddenClass, !_model.HasChopper);
             _boundsWarning.EnableInClassList(WarningHiddenClass, !_model.OutOfBounds);
+            _damageRing.EnableInClassList(DamageHiddenClass, !_model.DamageIndicatorVisible);
             _dash.EnableInClassList(DashReadyClass, _model.DashReady);
             _health.EnableInClassList(HealthLowClass, _model.HealthLow);
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
+        }
+
+        private void RefreshDamageDirection()
+        {
+            _damageRing.style.rotate = new Rotate(Angle.Degrees(_model.DamageDirectionDegrees));
         }
 
         private void OnMatchChanged(object sender, BindablePropertyChangedEventArgs args)

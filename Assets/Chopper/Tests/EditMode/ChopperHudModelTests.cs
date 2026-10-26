@@ -105,5 +105,17 @@ namespace Chopper.Tests
             model.Tick(ChopperHudModel.KillMarkerDuration);
             Assert.That(model.KillMarkerVisible, Is.False);
         }
+
+        [Test]
+        public void ShowDamageFrom_ShowsDirectionThenFades()
+        {
+            var model = new ChopperHudModel();
+            model.ShowDamageFrom(-91.6f);
+            Assert.That(model.DamageIndicatorVisible, Is.True);
+            Assert.That(model.DamageDirectionDegrees, Is.EqualTo(-92f));
+
+            model.Tick(ChopperHudModel.DamageIndicatorDuration + 0.01f);
+            Assert.That(model.DamageIndicatorVisible, Is.False);
+        }
     }
 }

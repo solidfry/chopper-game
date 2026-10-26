@@ -210,6 +210,31 @@
   scale: 1.4 1.4;
 }
 
+/* Damage direction: a ring round the screen centre, rotated from code; the arc points at the attacker */
+.hud-damage-layer {
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-damage {
+  width: 260px;
+  height: 260px;
+  align-items: center;
+  transition-property: opacity;
+  transition-duration: 0.3s;
+}
+
+.hud-damage--hidden {
+  opacity: 0;
+}
+
+.hud-damage__arc {
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--chopper-red);
+}
+
 /* Dash charge, under the readouts */
 .hud-dash {
   flex-direction: row;

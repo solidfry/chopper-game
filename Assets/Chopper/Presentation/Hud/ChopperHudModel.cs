@@ -17,6 +17,7 @@ namespace Chopper.Presentation.Hud
         /// <summary>How long a hit marker shows, seconds.</summary>
         public const float HitMarkerDuration = 0.15f;
         public const float KillMarkerDuration = 0.6f;
+        public const float DamageIndicatorDuration = 1f;
 
         private bool _hasChopper;
         private string _speedText = "0";
@@ -33,6 +34,9 @@ namespace Chopper.Presentation.Hud
         private bool _hitMarkerVisible;
         private bool _killMarkerVisible;
         private bool _outOfBounds;
+        private float _damageIndicatorTime;
+        private bool _damageIndicatorVisible;
+        private float _damageDirectionDegrees;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -138,6 +142,22 @@ namespace Chopper.Presentation.Hud
             set => Set(ref _outOfBounds, value, nameof(OutOfBounds));
         }
 
+        /// <summary>True for a short time after a hit from another player.</summary>
+        [CreateProperty]
+        public bool DamageIndicatorVisible
+        {
+            get => _damageIndicatorVisible;
+            private set => Set(ref _damageIndicatorVisible, value, nameof(DamageIndicatorVisible));
+        }
+
+        /// <summary>Where the last hit came from, seen from the camera: 0 = ahead, 90 = right, 180 = behind.</summary>
+        [CreateProperty]
+        public float DamageDirectionDegrees
+        {
+            get => _damageDirectionDegrees;
+            private set => Set(ref _damageDirectionDegrees, value, nameof(DamageDirectionDegrees));
+        }
+
         public void Update(float speedMetresPerSecond, float altitudeMetres, float dashCooldownRemaining, float dashCooldown)
         {
             HasChopper = true;
@@ -175,13 +195,23 @@ namespace Chopper.Presentation.Hud
             KillMarkerVisible = true;
         }
 
-        /// <summary>Counts down the hit and kill markers. Call once per frame.</summary>
+        /// <param name="directionDegrees">0 = ahead, 90 = right, 180 = behind (camera space).</param>
+        public void ShowDamageFrom(float directionDegrees)
+        {
+            DamageDirectionDegrees = MathF.Round(directionDegrees);
+            _damageIndicatorTime = DamageIndicatorDuration;
+            DamageIndicatorVisible = true;
+        }
+
+        /// <summary>Counts down the hit, kill and damage markers. Call once per frame.</summary>
         public void Tick(float deltaTime)
         {
             _hitMarkerTime = MathF.Max(0f, _hitMarkerTime - deltaTime);
             _killMarkerTime = MathF.Max(0f, _killMarkerTime - deltaTime);
+            _damageIndicatorTime = MathF.Max(0f, _damageIndicatorTime - deltaTime);
             HitMarkerVisible = _hitMarkerTime > 0f;
             KillMarkerVisible = _killMarkerTime > 0f;
+            DamageIndicatorVisible = _damageIndicatorTime > 0f;
         }
 
         public void ClearChopper()

@@ -35,6 +35,16 @@ namespace Chopper.Simulation.Combat
         public Entity Source;
     }
 
+    /// <summary>Server to victim: you took damage. Drives the damage direction indicator and camera shake.</summary>
+    public struct DamageTakenRpc : IRpcCommand
+    {
+        public float Amount;
+        /// <summary>World position of the attacker when it hit. Only valid if <see cref="HasSource"/>.</summary>
+        public float3 SourcePosition;
+        /// <summary>False for crash and bounds damage.</summary>
+        public bool HasSource;
+    }
+
     /// <summary>Server to shooter: your shot hit. Drives the hit marker, so the client never shows a fake hit.</summary>
     public struct HitConfirmRpc : IRpcCommand
     {
