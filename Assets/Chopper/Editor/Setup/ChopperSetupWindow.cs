@@ -25,11 +25,13 @@ namespace Chopper.Editor.Setup
             root.Add(new Button(() => Do(() => ConfigAssets.EnsureAll())) { text = "1. Create / repair config" });
             root.Add(new Button(() => Do(() => PrefabSetup.Apply(ConfigAssets.Load()))) { text = "2. Set up chopper prefab" });
             root.Add(new Button(() => Do(() => SceneSetup.Apply(ConfigAssets.Load()))) { text = "3. Set up open scene" });
+            root.Add(new Button(() => Do(GameplaySceneSetup.Apply)) { text = "4. Set up gameplay subscene (open it first)" });
             root.Add(new Button(() => Do(() =>
             {
                 var config = ConfigAssets.EnsureAll();
                 PrefabSetup.Apply(config);
                 SceneSetup.Apply(config);
+                if (GameplaySceneSetup.TryFindGameplayScene(out _)) GameplaySceneSetup.Apply();
             })) { text = "Do all" });
 
             var configRow = new Button(() =>

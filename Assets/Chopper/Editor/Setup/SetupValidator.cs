@@ -83,11 +83,16 @@ namespace Chopper.Editor.Setup
                 problems.Add(new SetupProblem("Open scene has no HUD. Press 'Set up open scene'."));
 
             // Gameplay content lives in the subscene; it is only visible here while the subscene is open.
+            if (!GameplaySceneSetup.TryFindGameplayScene(out _))
+            {
+                problems.Add(new SetupProblem("Gameplay subscene is closed (or has no ChopperSpawner): open it to check its contents."));
+                return;
+            }
+
             var physicsConfig = FindInLoadedScenes("NetCodePhysicsConfig");
             if (physicsConfig == null)
             {
-                problems.Add(new SetupProblem("No NetCodePhysicsConfig found. Add one (Lag Compensation on) to the gameplay subscene. " +
-                                              "If the subscene is closed, open it and validate again."));
+                problems.Add(new SetupProblem("No NetCodePhysicsConfig in the gameplay subscene. Press '4. Set up gameplay subscene'."));
             }
             else
             {
@@ -97,7 +102,9 @@ namespace Chopper.Editor.Setup
             }
 
             if (Object.FindAnyObjectByType<ArenaBoundsAuthoring>() == null)
-                problems.Add(new SetupProblem("No ArenaBoundsAuthoring found (open subscene): no out-of-bounds damage."));
+                problems.Add(new SetupProblem("No arena bounds in the gameplay subscene. Press '4. Set up gameplay subscene'."));
+            if (Object.FindAnyObjectByType<TrainingTargetAuthoring>() == null)
+                problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));
         }
 
         private static Component FindInLoadedScenes(string typeName)
