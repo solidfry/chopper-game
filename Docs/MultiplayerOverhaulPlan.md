@@ -263,6 +263,12 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Hits taken: server sends `DamageTakenRpc` to the victim only → camera shake (`ChopperCameraRig.AddShake`) + red damage direction ring on the HUD (`DamageFeedbackSystem`).
 - Left: real VFX/audio, player names (Steam, Phase 3), 4-player Network Simulator test of all of Phase 2.
 
+**Phase 4 — started (26 Oct, data and rules only; written without the editor).**
+- `Simulation/Loadout`: `ChassisDefinition`, `ModuleDefinition`, `LoadoutCatalog` (ScriptableObjects) → plain `ChassisSpec`/`ModuleSpec`.
+- `LoadoutRules.Validate` (server check: chassis/module ids, slot type, chassis-only modules, level, ownership, weight budget) and `LoadoutRules.Compute` (health, weight, lift/turn/dash multipliers with weight penalty). Edit-mode tests: `LoadoutRulesTests`.
+- Menu **Chopper → Loadout → Create Default Catalog** makes `Assets/Chopper/Data/Loadout` with 4 chassis (Scout, Gunship, Assault, Lifter) and 23 modules from section 5.
+- Left: apply `LoadoutStats` + weapon modules at server spawn, loadout in the GoInGame request / matchmaker ticket, chassis prefabs with sockets, hangar UI.
+
 **Known follow-ups**
 - Cinemachine 2 → 3 upgrade of the old camera prefabs (or drop them; the new rig does not use Cinemachine).
 - Export `.blend` models to `.fbx` so the project does not need Blender.
