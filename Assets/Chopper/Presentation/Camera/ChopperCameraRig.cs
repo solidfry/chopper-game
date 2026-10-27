@@ -143,7 +143,12 @@ namespace Chopper.Presentation.Camera
             transform.SetPositionAndRotation(eye, look * wobble * Shake(deltaTime));
         }
 
-        private void ApplyNearClip() => _camera.nearClipPlane = _cockpit ? cockpitNearClip : _chaseNearClip;
+        private void ApplyNearClip()
+        {
+            // Null after a script reload in play mode (Awake does not run again).
+            if (_camera == null) return;
+            _camera.nearClipPlane = _cockpit ? cockpitNearClip : _chaseNearClip;
+        }
 
         private void Update()
         {
