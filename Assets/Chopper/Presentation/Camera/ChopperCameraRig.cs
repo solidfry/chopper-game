@@ -46,6 +46,8 @@ namespace Chopper.Presentation.Camera
         [SerializeField, Tooltip("Where the pilot looks, chopper space (the old ReticalPosition).")]
         private Vector3 cockpitLookPoint = new(0f, -1.5f, 79f);
         [SerializeField] private float cockpitFieldOfView = 70f;
+        [SerializeField, Tooltip("Near clip plane in the cockpit. The canopy frame and dashboard are closer than the default 0.3 m.")]
+        private float cockpitNearClip = 0.05f;
         [SerializeField, Tooltip("Engine wobble, degrees.")] private float cockpitWobble = 0.25f;
         [SerializeField] private float cockpitWobbleFrequency = 6f;
 
@@ -59,6 +61,7 @@ namespace Chopper.Presentation.Camera
         private float _smoothedSpeed;
         private float _trauma;
         private bool _cockpit;
+        private float _chaseNearClip;
         /// <summary>A menu is open (<see cref="SetCursorFree"/>): no view switching.</summary>
         private bool _menuOpen;
 
@@ -72,6 +75,7 @@ namespace Chopper.Presentation.Camera
         {
             _cockpit = cockpit;
             PlayerPrefs.SetInt(CockpitKey, cockpit ? 1 : 0);
+            ApplyNearClip();
             // The chase camera snaps to the chopper again instead of swinging in from the old view.
             _hasTarget = false;
         }
@@ -139,6 +143,8 @@ namespace Chopper.Presentation.Camera
             transform.SetPositionAndRotation(eye, look * wobble * Shake(deltaTime));
         }
 
+        private void ApplyNearClip() => _camera.nearClipPlane = _cockpit ? cockpitNearClip : _chaseNearClip;
+
         private void Update()
         {
             var keyboard = Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
@@ -163,6 +169,8 @@ namespace Chopper.Presentation.Camera
         {
             _camera = GetComponent<UnityEngine.Camera>();
             _cockpit = PlayerPrefs.GetInt(CockpitKey, 0) != 0;
+            _chaseNearClip = _camera.nearClipPlane;
+            ApplyNearClip();
         }
 
         private void OnEnable()
