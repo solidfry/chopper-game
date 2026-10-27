@@ -1,6 +1,6 @@
 # Chopper game — notes for Claude
 
-- Plan and progress: `Docs/MultiplayerOverhaulPlan.md`. Work on branch `v2`. New code lives in `Assets/Chopper` (see its README for assemblies).
+- Start with `Docs/Handoff.md` (current state, open problems, next steps). Plan and progress: `Docs/MultiplayerOverhaulPlan.md`. Work on branch `v2`. New code lives in `Assets/Chopper` (see its README for assemblies).
 - Stack: Unity 6.6, Netcode for Entities, Unity Physics, URP, UI Toolkit, VContainer, MessagePipe, UniTask.
 - **Think systemically** (plan section 1c): one config root, data-driven definitions, one presentation bridge, one simulation→presentation event path, shared building blocks, one editor setup/validation window. Extend an existing mechanism before adding a new one.
 - No singletons, no static mutable state, no new UGUI.
