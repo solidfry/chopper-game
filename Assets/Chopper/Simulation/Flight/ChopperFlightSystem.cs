@@ -185,8 +185,8 @@ namespace Chopper.Simulation.Flight
             }
 
             /// <summary>
-            /// Held boost from a tank. Starts with a kick, then pushes along the nose (never down, so it does not dive into
-            /// the ground; nose up climbs). Ends when released or empty; the tank refills after a short wait, and only
+            /// Held boost from a tank. Starts with a kick, then pushes where the nose aims, up or down (aim down and boost =
+            /// dive). Ends when released or empty; the tank refills after a short wait, and only
             /// once the button is released.
             /// </summary>
             private void Boost(in ChopperInput input, in ChopperFlightConfig config, float3 noseAxis, ref PhysicsVelocity velocity,
@@ -194,7 +194,7 @@ namespace Chopper.Simulation.Flight
             {
                 var canBoost = state.Boosting ? state.BoostUsed < 1f : state.BoostUsed <= 1f - config.BoostStartEnergy;
                 var boosting = input.Boost && canBoost && config.BoostDuration > 0f;
-                var direction = math.normalizesafe(new float3(noseAxis.x, math.max(noseAxis.y, 0f), noseAxis.z), noseAxis);
+                var direction = math.normalizesafe(noseAxis, math.forward());
 
                 if (boosting)
                 {

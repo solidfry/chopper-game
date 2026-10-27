@@ -186,7 +186,8 @@ namespace Chopper.UI.Hud
 
         private void OnModelChanged(object sender, BindablePropertyChangedEventArgs args)
         {
-            if (_chopper == null) return;
+            // Also when the panel dropped the tree (rebuild) before the reload callback rebinds: no styles on dead elements.
+            if (_chopper == null || _chopper.panel == null) return;
             if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
@@ -284,7 +285,8 @@ namespace Chopper.UI.Hud
 
         private void OnMatchChanged(object sender, BindablePropertyChangedEventArgs args)
         {
-            if (_chopper == null) return;
+            // Also when the panel dropped the tree (rebuild) before the reload callback rebinds: no styles on dead elements.
+            if (_chopper == null || _chopper.panel == null) return;
             if (args.propertyName == nameof(MatchHudModel.BannerVisible))
                 RefreshBanner();
         }

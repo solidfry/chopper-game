@@ -20,6 +20,8 @@ namespace Chopper.Presentation.Hud
         /// <summary>The reticle shows where the gun points at this distance (or the gun range, if shorter).</summary>
         private const float AimDistance = 200f;
 
+        private MeasuredVelocity _velocity;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -38,8 +40,10 @@ namespace Chopper.Presentation.Hud
                          .WithAll<GhostOwnerIsLocal>()
                          .WithEntityAccess())
             {
+                // Speed from real movement: blocked (boosting into the ground), the physics velocity grows but the chopper does not move.
+                _velocity.Update(localToWorld.ValueRO.Position, SystemAPI.Time.DeltaTime);
                 model.Update(
-                    math.length(velocity.ValueRO.Linear),
+                    _velocity.Speed,
                     state.ValueRO.Altitude,
                     state.ValueRO.BoostEnergy,
                     state.ValueRO.Boosting,
@@ -57,6 +61,7 @@ namespace Chopper.Presentation.Hud
                 return;
             }
 
+            _velocity.Reset();
             model.ClearChopper();
         }
 

@@ -2,7 +2,6 @@ using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Flight;
 using Unity.Entities;
 using Unity.NetCode;
-using Unity.Physics;
 using Unity.Transforms;
 
 namespace Chopper.Presentation.Camera
@@ -17,6 +16,8 @@ namespace Chopper.Presentation.Camera
     {
         private const float BoostGlitchSeconds = 0.18f;
 
+        private MeasuredVelocity _velocity;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -29,17 +30,20 @@ namespace Chopper.Presentation.Camera
             var rig = context.CameraRig;
 
             // LocalToWorld here is the rendered pose: after transform update and physics graphical interpolation.
-            foreach (var (localToWorld, velocity, state) in SystemAPI
-                         .Query<RefRO<LocalToWorld>, RefRO<PhysicsVelocity>, RefRO<ChopperFlightState>>()
+            var deltaTime = UnityEngine.Time.deltaTime;
+            foreach (var (localToWorld, state) in SystemAPI
+                         .Query<RefRO<LocalToWorld>, RefRO<ChopperFlightState>>()
                          .WithAll<GhostOwnerIsLocal, ChopperFlightConfig>())
             {
+                // Real movement, not the physics velocity: blocked (boosting into the ground), the view must not speed up.
+                _velocity.Update(localToWorld.ValueRO.Position, deltaTime);
                 rig.Follow(new CameraTarget
                 {
                     Position = localToWorld.ValueRO.Position,
                     Rotation = localToWorld.ValueRO.Rotation,
-                    Velocity = velocity.ValueRO.Linear,
+                    Velocity = _velocity.Velocity,
                     Boosting = state.ValueRO.Boosting,
-                }, UnityEngine.Time.deltaTime);
+                }, deltaTime);
 
                 var glitch = rig.ActiveSettings.BoostHudGlitch;
                 if (rig.BoostKicked && glitch > 0f) context.HudLook.Disrupt(glitch, BoostGlitchSeconds);

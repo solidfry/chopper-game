@@ -20,6 +20,7 @@ namespace Chopper.UI.Hud
         private const string LeadHiddenClass = "hud-lead--hidden";
 
         private readonly WorldMarkerModel _model;
+        private readonly VisualElement _layer;
         private readonly VisualElement _lead;
         private readonly Slot[] _slots = new Slot[WorldMarkerModel.Capacity];
 
@@ -35,6 +36,7 @@ namespace Chopper.UI.Hud
         public WorldMarkerView(WorldMarkerModel model, VisualElement layer, VisualElement lead)
         {
             _model = model;
+            _layer = layer;
             _lead = lead;
             for (var i = 0; i < _slots.Length; i++)
                 _slots[i] = CreateSlot(layer);
@@ -71,6 +73,8 @@ namespace Chopper.UI.Hud
 
         private void Refresh()
         {
+            // The panel dropped this tree (rebuild before the view's reload callback): its elements can no longer be styled.
+            if (_layer.panel == null) return;
             var markers = _model.Markers;
             for (var i = 0; i < _slots.Length; i++)
             {

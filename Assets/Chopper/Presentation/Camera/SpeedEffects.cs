@@ -37,6 +37,7 @@ namespace Chopper.Presentation.Camera
         private readonly Vignette _vignette;
         private readonly ColorAdjustments _colour;
 
+        private readonly UniversalAdditionalCameraData _cameraData;
         private readonly ParticleSystem _lines;
         private readonly Material _lineMaterial;
         private float _flash;
@@ -45,9 +46,9 @@ namespace Chopper.Presentation.Camera
         {
             // Post effects need post processing on the camera; the volume is global and above scene volumes.
             // Stop NaN: one NaN/Inf pixel from any shader would otherwise spread through bloom and flash the whole screen.
-            var cameraData = camera.GetUniversalAdditionalCameraData();
-            cameraData.renderPostProcessing = true;
-            cameraData.stopNaN = true;
+            _cameraData = camera.GetUniversalAdditionalCameraData();
+            _cameraData.renderPostProcessing = settings.PostEffects;
+            _cameraData.stopNaN = true;
 
             _volumeObject = new GameObject("Speed Effects Volume");
             _volumeObject.transform.SetParent(cameraTransform, false);
@@ -80,7 +81,9 @@ namespace Chopper.Presentation.Camera
         /// <param name="kicked">A boost started this frame.</param>
         public void Apply(CameraSettings settings, float speed, float speed01, float boost, bool kicked, float deltaTime)
         {
+            // Off = no post processing on the camera at all (not only an empty volume), so it can be ruled out.
             _volume.weight = settings.PostEffects ? 1f : 0f;
+            if (_cameraData != null) _cameraData.renderPostProcessing = settings.PostEffects;
             var boost01 = Mathf.Clamp01(boost);
 
             if (kicked) _flash = 1f;
@@ -88,6 +91,9 @@ namespace Chopper.Presentation.Camera
 
             _bloom.intensity.Override(settings.BloomIntensity + 0.6f * boost01);
             _bloom.threshold.Override(settings.BloomThreshold);
+            // Clamp: a near-infinite pixel (smooth surface catching the sun) overflows the bloom chain and blacks out or
+            // whites out the whole frame. Stop NaN does not catch it: the pixel is not NaN.
+            _bloom.clamp.Override(settings.BloomClamp);
             _chromatic.intensity.Override(Mathf.Clamp01(settings.SpeedChromatic * speed01 + settings.BoostChromatic * boost));
             _lens.intensity.Override(Mathf.Clamp(settings.BoostLensDistortion * boost, -1f, 1f));
             _lens.scale.Override(1f - 0.06f * boost01);

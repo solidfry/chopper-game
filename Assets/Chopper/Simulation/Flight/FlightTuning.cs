@@ -53,7 +53,7 @@ namespace Chopper.Simulation.Flight
         public float BankResponse = 4f;
 
         [Header("Boost (held, uses a tank)")]
-        [Tooltip("Extra thrust along the nose while boosting, m/s². It never pushes down, so boosting does not dive.")]
+        [Tooltip("Extra thrust where the nose aims while boosting, m/s² (aim down = dive, aim up = climb).")]
         public float BoostAcceleration = 24f;
         [Tooltip("Speed added at once when a boost starts, m/s (the kick).")]
         public float BoostKick = 9f;

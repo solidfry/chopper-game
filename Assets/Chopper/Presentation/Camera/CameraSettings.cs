@@ -118,6 +118,8 @@ namespace Chopper.Presentation.Camera
         [SerializeField] private bool postEffects = true;
         [SerializeField] private float bloomIntensity = 0.7f;
         [SerializeField] private float bloomThreshold = 0.95f;
+        [SerializeField, Tooltip("Brightest value that goes into bloom. Stops one very bright pixel from flashing the whole screen.")]
+        private float bloomClamp = 20f;
         [SerializeField, Range(0f, 1f), Tooltip("Chromatic aberration at full speed / extra at full boost.")]
         private float speedChromatic = 0.12f;
         [SerializeField, Range(0f, 1f)] private float boostChromatic = 0.55f;
@@ -156,6 +158,7 @@ namespace Chopper.Presentation.Camera
         public bool PostEffects => postEffects;
         public float BloomIntensity => bloomIntensity;
         public float BloomThreshold => bloomThreshold;
+        public float BloomClamp => bloomClamp;
         public float SpeedChromatic => speedChromatic;
         public float BoostChromatic => boostChromatic;
         public float BoostLensDistortion => boostLensDistortion;
