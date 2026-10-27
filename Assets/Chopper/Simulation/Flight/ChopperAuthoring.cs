@@ -19,6 +19,14 @@ namespace Chopper.Simulation.Flight
         [SerializeField, Tooltip("Default loadout: one module per chassis slot, same order. Empty entries leave a slot empty.")]
         private ModuleDefinition[] modules = System.Array.Empty<ModuleDefinition>();
 
+        [Header("Network smoothing (own chopper)")]
+        [SerializeField, Tooltip("Server corrections larger than this (metres) snap at once (respawn, big desync).")]
+        private float smoothingMaxDistance = PredictionSmoothing.Default.MaxDistance;
+        [SerializeField, Range(0.05f, 1f), Tooltip("Part of a position correction applied per server update. 1 = snap, lower = softer but drifts longer.")]
+        private float smoothingPosition = PredictionSmoothing.Default.PositionFraction;
+        [SerializeField, Range(0.05f, 1f), Tooltip("Part of a rotation correction applied per server update.")]
+        private float smoothingRotation = PredictionSmoothing.Default.RotationFraction;
+
         public ChassisDefinition Chassis => chassis;
         public IReadOnlyList<ModuleDefinition> Modules => modules;
 
@@ -57,6 +65,12 @@ namespace Chopper.Simulation.Flight
                 AddComponent(entity, built.Flight);
                 AddComponent<ChopperFlightState>(entity);
                 AddComponent<ChopperInput>(entity);
+                AddComponent(entity, new PredictionSmoothing
+                {
+                    MaxDistance = authoring.smoothingMaxDistance,
+                    PositionFraction = authoring.smoothingPosition,
+                    RotationFraction = authoring.smoothingRotation,
+                });
 
                 AddComponent(entity, new Health { Current = built.Health, Max = built.Health });
                 AddBuffer<DamageEvent>(entity);
