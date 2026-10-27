@@ -25,6 +25,7 @@ namespace Chopper.Editor.Setup
                     var (chassis, modules) = LoadoutAssets.DefaultLoadout(config.LoadoutCatalog);
                     authoring.SetLoadout(chassis, modules);
                 }
+                if (authoring != null && config != null) UpgradeDefaultLoadout(authoring, config.LoadoutCatalog);
 
                 var ghost = FindByTypeName(root, "GhostAuthoringComponent");
                 if (ghost != null)
@@ -45,6 +46,26 @@ namespace Chopper.Editor.Setup
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+        }
+
+        /// <summary>
+        /// The first default loadout had two rocket pods. Once heat seekers exist, the second pylon gets Homing
+        /// Missiles, so the default chopper can test locks, missiles and flares. Changes nothing else.
+        /// </summary>
+        private static void UpgradeDefaultLoadout(ChopperAuthoring authoring, Chopper.Simulation.Loadout.LoadoutCatalog catalog)
+        {
+            const ushort rocketPod = 111;
+            var homing = catalog != null ? catalog.Modules.FirstOrDefault(m => m != null && m.Id == GuidedWeaponAssets.HomingMissilesId) : null;
+            if (authoring.Chassis == null || homing == null || homing.Weapon == null) return;
+
+            var modules = authoring.Modules.ToArray();
+            if (modules.Any(m => m != null && m.Id == GuidedWeaponAssets.HomingMissilesId)) return;
+            var rocketPods = modules.Select((m, i) => (m, i)).Where(x => x.m != null && x.m.Id == rocketPod).ToArray();
+            if (rocketPods.Length < 2) return;
+
+            modules[rocketPods[rocketPods.Length - 1].i] = homing;
+            authoring.SetLoadout(authoring.Chassis, modules);
+            Debug.Log("Setup: default loadout's second rocket pod is now Homing Missiles.");
         }
 
         /// <summary>Package components found by name, so this assembly does not depend on them.</summary>

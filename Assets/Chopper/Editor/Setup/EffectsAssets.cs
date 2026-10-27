@@ -21,11 +21,17 @@ namespace Chopper.Editor.Setup
         private const string RocketMuzzleFlash = "Assets/Prefabs/Projectiles/ProjectilePrefabs/Rocket/RocketMuzzleFlashOrange.prefab";
         private const string RocketImpact = "Assets/Prefabs/Projectiles/ProjectilePrefabs/Rocket/RedFireRocketImpactV3.prefab";
 
+        private const string Missile = SciFi + "/Missiles/Rockets/RedRocketMissile.prefab";
+        private const string Flare = SciFi + "/Missiles/Sparkler/YellowSparklerMissile.prefab";
+
         public static CombatEffectsSettings Ensure(AudioMixer mixer)
         {
             var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(SettingsPath);
             if (settings != null)
             {
+                // Repair: fill slots added after the asset was made (guided missiles, flares).
+                settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
+                EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
                 if (settings.EffectsMixerGroup == null && mixer != null)
                 {
@@ -37,6 +43,7 @@ namespace Chopper.Editor.Setup
 
             settings = ScriptableObject.CreateInstance<CombatEffectsSettings>();
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
+            settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));

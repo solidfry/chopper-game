@@ -154,18 +154,44 @@ namespace Chopper.Editor.Setup
             serialized.ApplyModifiedProperties();
         }
 
-        /// <summary>Objects named Target… with a collider become damageable training targets.</summary>
+        /// <summary>
+        /// Objects named Target… with a collider become damageable training targets, and pre-spawned ghosts (static,
+        /// interpolated), so clients see their health and the seeker lock on them.
+        /// </summary>
         private static int EnsureTrainingTargets(Scene scene)
         {
             var added = 0;
+            var ghostType = TypeCache.GetTypesDerivedFrom<MonoBehaviour>().FirstOrDefault(t => t.Name == "GhostAuthoringComponent");
             foreach (var collider in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Collider>(true)))
             {
                 var go = collider.gameObject;
-                if (!go.name.StartsWith(TargetPrefix) || go.GetComponent<TrainingTargetAuthoring>() != null) continue;
-                Undo.AddComponent<TrainingTargetAuthoring>(go);
-                added++;
+                if (!go.name.StartsWith(TargetPrefix)) continue;
+
+                if (go.GetComponent<TrainingTargetAuthoring>() == null)
+                {
+                    Undo.AddComponent<TrainingTargetAuthoring>(go);
+                    added++;
+                }
+
+                if (ghostType != null && go.GetComponent(ghostType) == null)
+                {
+                    // A ghost must be a root object: move it out of its group, keeping its place in the world.
+                    if (go.transform.parent != null)
+                        Undo.SetTransformParent(go.transform, null, true, "Make target a root ghost");
+                    var ghost = new SerializedObject(Undo.AddComponent(go, ghostType));
+                    SetInt(ghost, "DefaultGhostMode", 0);    // Interpolated
+                    SetInt(ghost, "SupportedGhostModes", 1); // Interpolated only
+                    SetInt(ghost, "OptimizationMode", 1);    // Static: sent only when it changes
+                    ghost.ApplyModifiedProperties();
+                }
             }
             return added;
+        }
+
+        private static void SetInt(SerializedObject target, string property, int value)
+        {
+            var p = target.FindProperty(property);
+            if (p != null) p.intValue = value;
         }
 
         private static Component FindInScene(Scene scene, string typeName) => scene.GetRootGameObjects()

@@ -23,6 +23,7 @@ namespace Chopper.Simulation.Flight
         private ModuleDefinition[] modules = System.Array.Empty<ModuleDefinition>();
 
         public ChassisDefinition Chassis => chassis;
+        public IReadOnlyList<ModuleDefinition> Modules => modules;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetLoadout(ChassisDefinition chassisDefinition, ModuleDefinition[] defaultModules)

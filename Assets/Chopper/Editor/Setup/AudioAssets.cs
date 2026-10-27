@@ -66,6 +66,14 @@ namespace Chopper.Editor.Setup
                 click: Slot(library.UIClick, () => Cue("UIClick", ClipsIn("Assets/Sound/UI/KeyboardSounds"), ui, 0.7f, blend: 0f, voices: 2)),
                 navigate: Slot(library.UINavigate, () => Cue("UINavigate", ClipsIn("Assets/Sound/UI/ComputerWirrSounds"), ui, 0.4f, blend: 0f, voices: 2, cooldown: 0.05f)));
 
+            // Targeting tones (placeholders from the effects pack; swap on the cue assets).
+            library.InitialiseTargeting(
+                Slot(library.LockTone, () => Cue("LockTone", Clips(SciFi + "/Loops/loop_laser.wav"), ui, 0.35f, blend: 0f, voices: 1, pitch: 0.8f)),
+                Slot(library.LockedTone, () => Cue("LockedTone", Clips(SciFi + "/Loops/loop_laser2.wav"), ui, 0.45f, blend: 0f, voices: 1, pitch: 1.3f)),
+                Slot(library.LockWarning, () => Cue("LockWarning", Clips(SciFi + "/Loops/loop_energy.wav"), ui, 0.4f, blend: 0f, voices: 1, pitch: 1.2f)),
+                Slot(library.MissileWarning, () => Cue("MissileWarning", Clips(SciFi + "/Loops/loop_lightning.wav"), ui, 0.55f, blend: 0f, voices: 1)),
+                Slot(library.Flares, () => Cue("Flares", Clips(SciFi + "/Impact/shoot_fireball.wav"), effects, 0.7f, blend: 1f, voices: 4)));
+
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
