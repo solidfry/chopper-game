@@ -60,6 +60,12 @@ Rules:
 - `UpdateAfter(PhysicsSystemGroup)` from another group is ignored: put post-physics systems in `PhysicsSystemGroup` with `OrderLast`.
 - `PhysicsWorldHistorySingleton` needs the `Unity.NetCode.Physics` assembly reference.
 
+## 4b. Newest work (not yet compiled)
+
+- Targeting, heat-seeking missiles (missile ghosts with predicted spawn), flares, pylon weapon cycling, lock and threat HUD, tones. See plan section 3b, "Built".
+- After pulling: Chopper → Setup → **Do all** (makes the missile prefab, weapon assets, effect/sound slots, re-bakes the default loadout, makes targets pre-spawned ghosts), then Validate.
+- Controls: RMB / E / LB fire the selected pylon; wheel / Tab / D-pad right switch pylon; Space / triggers drop flares.
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |
@@ -79,9 +85,8 @@ Rules:
    - each player's own loadout applied at spawn;
    - then the green wireframe hangar.
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
-   - server lock system with heat seekers and HUD lock brackets;
-   - guided missile ghosts, flares;
-   - air-to-ground missiles, cluster and swarm missiles;
+   - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
+   - next: cluster and swarm missiles;
    - world markers and a lead indicator;
    - retro 80s HUD look (CRT shader pass over the HUD, glitches driven by gameplay).
    It can run in parallel with step 2: the weapons are modules.

@@ -204,6 +204,15 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - **Control point:** a `HudLookSettings` asset on `GameConfig` (presets "Clean", "Vector", "CRT 84"; intensities). The player options get a "reduce flicker / effects" toggle (accessibility, photosensitivity). Validate checks the settings, the material and the renderer feature.
 - **Also:** the hangar uses the same look for its UI, so menus, hangar and HUD feel like one device.
 
+### Built (27 Oct, written without the editor — needs a compile + play check)
+- Decisions (owner): Battlefield-like missile ghosts (server-owned, interpolated for others, predicted spawn for the shooter); auto-lock; some missiles cannot dumb-fire (`RequiresLock`); one selected pylon weapon, cycled.
+- Simulation: `Targetable` (class, heat), server `TargetLockSystem` (cone, range, line of sight, lock time, flares block), `TargetLock` + `ThreatState` ghost fields; `PylonWeapon` buffer + `PylonSelection` + `PylonFireSystem` (rocket or guided); `GuidedMissile` ghost + `GuidedMissileSystem` (lead pursuit, proximity fuse, server detonation, `MissileDetonatedRpc`); flares (`CountermeasureSystem`); shared `Explosions` helper.
+- Data: `GuidedMissileDefinition` (Weapon_HeatSeekerAA: air, needs lock; Weapon_HeatSeekerAG: ground, can dumb-fire), `CountermeasureDefinition` (Ability_Flares) via new `ModuleAbilityDefinition`; module Ground Seeker (115). Default Gunship: rocket pod + homing missiles + flares.
+- Presentation: missile visual per ghost, impacts, flare bursts; HUD lock brackets, MISSILE / LOCK WARNING (blink faster as a missile closes in), missile direction ring, selected pylon, flares ready; lock / locked / warning / missile tones (`TargetingFeedback`).
+- Input: Fire3 (Space, triggers) = flares; mouse wheel / Tab / D-pad right = next pylon (read from devices; TODO move into the input actions asset).
+- Setup: missile ghost prefab, definitions, links, effect and sound slots; training targets become root pre-spawned ghosts.
+- Tests: `GuidanceTests`.
+
 ### Build order
 1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
 2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
