@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c2e13c94a83aae4bb1615643e3f888c, type: 3}
+  m_Name: Weapon_ClusterMissile
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Definitions.GuidedMissileDefinition
+  muzzleOffset: {x: 1.4, y: -0.8, z: 1.5}
+  fireInterval: 5
+  speed: 120
+  lifetime: 6
+  armTime: 0.15
+  missilePrefab: {fileID: 9053487813689996900, guid: f397188c652e20c448cd6cde57fd90ce, type: 3}
+  seeker: 1
+  targets: 2
+  lockConeDegrees: 12
+  lockRange: 900
+  lockTime: 1.5
+  requiresLock: 0
+  turnRate: 45
+  navigationGain: 2
+  proximityFuse: 3
+  directDamage: 30
+  splashDamage: 15
+  splashRadius: 6
+  salvoCount: 1
+  salvoInterval: 0.06
+  salvoSpreadDegrees: 0
+  flareResistance: 0
+  submunitions: 8
+  splitDistance: 60
+  splitTime: 1.8
+  submunitionSpeed: 90
+  spreadDegrees: 14
+  submunitionLifetime: 2.5
+  submunitionDirectDamage: 20
+  submunitionSplashDamage: 18
+  submunitionSplashRadius: 6

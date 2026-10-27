@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Session;
@@ -19,6 +20,7 @@ namespace Chopper.Editor.Setup
     {
         private const string SettingsObjectName = "Gameplay Settings";
         private const string TargetPrefix = "Target";
+        public const string TargetPrefabPath = "Assets/Chopper/Prefabs/TrainingTarget.prefab";
         /// <summary>Space around the level before out-of-bounds damage starts.</summary>
         private const float HorizontalMargin = 150f;
         private const float FlightCeiling = 600f;
@@ -171,37 +173,88 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>
-        /// Objects named Target… with a collider become damageable training targets, and pre-spawned ghosts (static,
-        /// interpolated), so clients see their health and the seeker lock on them.
+        /// Objects named Target… with a collider become damageable training targets and pre-spawned ghosts (static,
+        /// interpolated), so clients see their health and the seeker lock on them. Netcode accepts a pre-spawned ghost only
+        /// as the root instance of a ghost prefab, so each target is replaced by an instance of one shared
+        /// <see cref="TargetPrefabPath"/> prefab (made from the first target), in the same place.
         /// </summary>
         private static int EnsureTrainingTargets(Scene scene)
         {
-            var added = 0;
-            var ghostType = TypeCache.GetTypesDerivedFrom<MonoBehaviour>().FirstOrDefault(t => t.Name == "GhostAuthoringComponent");
-            foreach (var collider in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Collider>(true)))
+            var targets = TrainingTargetsIn(scene).ToList();
+            if (targets.Count == 0) return 0;
+
+            var prefab = EnsureTargetPrefab(targets[0]);
+            if (prefab == null) return 0;
+
+            var replaced = 0;
+            foreach (var go in targets)
             {
-                var go = collider.gameObject;
-                if (!go.name.StartsWith(TargetPrefix)) continue;
+                if (IsTargetPrefabInstance(go, prefab)) continue;
 
-                if (go.GetComponent<TrainingTargetAuthoring>() == null)
-                {
-                    Undo.AddComponent<TrainingTargetAuthoring>(go);
-                    added++;
-                }
-
-                if (ghostType != null && go.GetComponent(ghostType) == null)
-                {
-                    // A ghost must be a root object: move it out of its group, keeping its place in the world.
-                    if (go.transform.parent != null)
-                        Undo.SetTransformParent(go.transform, null, true, "Make target a root ghost");
-                    var ghost = new SerializedObject(Undo.AddComponent(go, ghostType));
-                    SetInt(ghost, "DefaultGhostMode", 0);    // Interpolated
-                    SetInt(ghost, "SupportedGhostModes", 1); // Interpolated only
-                    SetInt(ghost, "OptimizationMode", 1);    // Static: sent only when it changes
-                    ghost.ApplyModifiedProperties();
-                }
+                var source = go.transform;
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+                Undo.RegisterCreatedObjectUndo(instance, "Add training target");
+                instance.name = go.name;
+                instance.transform.SetPositionAndRotation(source.position, source.rotation);
+                instance.transform.localScale = source.lossyScale;
+                Undo.DestroyObjectImmediate(go);
+                replaced++;
             }
-            return added;
+            return replaced;
+        }
+
+        /// <summary>Objects named Target… that have a collider.</summary>
+        public static IEnumerable<GameObject> TrainingTargetsIn(Scene scene) => scene.GetRootGameObjects()
+            .SelectMany(r => r.GetComponentsInChildren<Collider>(true))
+            .Select(c => c.gameObject)
+            .Where(go => go.name.StartsWith(TargetPrefix))
+            .Distinct();
+
+        /// <summary>True when <paramref name="go"/> is the root of an instance of the training target prefab.</summary>
+        public static bool IsTargetPrefabInstance(GameObject go, GameObject prefab = null)
+        {
+            prefab ??= AssetDatabase.LoadAssetAtPath<GameObject>(TargetPrefabPath);
+            return prefab != null && PrefabUtility.IsAnyPrefabInstanceRoot(go) &&
+                   PrefabUtility.GetCorrespondingObjectFromSource(go) == prefab;
+        }
+
+        /// <summary>The shared target ghost prefab: a copy of <paramref name="template"/> (mesh, collider, material) at the origin.</summary>
+        private static GameObject EnsureTargetPrefab(GameObject template)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(TargetPrefabPath);
+            if (existing != null) return existing;
+
+            var ghostType = TypeCache.GetTypesDerivedFrom<MonoBehaviour>().FirstOrDefault(t => t.Name == "GhostAuthoringComponent");
+            if (ghostType == null)
+            {
+                Debug.LogError("Setup: GhostAuthoringComponent type not found. Is Netcode for Entities installed?");
+                return null;
+            }
+
+            var copy = UnityEngine.Object.Instantiate(template);
+            try
+            {
+                copy.name = "TrainingTarget";
+                copy.transform.SetParent(null, false);
+                copy.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                copy.transform.localScale = template.transform.lossyScale;
+
+                if (copy.GetComponent<TrainingTargetAuthoring>() == null) copy.AddComponent<TrainingTargetAuthoring>();
+                var ghostComponent = copy.GetComponent(ghostType);
+                if (ghostComponent == null) ghostComponent = copy.AddComponent(ghostType);
+                var ghost = new SerializedObject(ghostComponent);
+                SetInt(ghost, "DefaultGhostMode", 0);    // Interpolated
+                SetInt(ghost, "SupportedGhostModes", 1); // Interpolated only
+                SetInt(ghost, "OptimizationMode", 1);    // Static: sent only when it changes
+                ghost.ApplyModifiedPropertiesWithoutUndo();
+
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(TargetPrefabPath));
+                return PrefabUtility.SaveAsPrefabAsset(copy, TargetPrefabPath);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(copy);
+            }
         }
 
         private static void SetInt(SerializedObject target, string property, int value)

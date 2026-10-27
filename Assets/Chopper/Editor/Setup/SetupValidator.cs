@@ -161,6 +161,12 @@ namespace Chopper.Editor.Setup
                 problems.Add(new SetupProblem("Chopper spawner has no loadout catalog or missile prefab. Press '4. Set up gameplay subscene'.", spawner));
             if (FindInScene(scene, nameof(TrainingTargetAuthoring)) == null)
                 problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));
+            // Netcode: a pre-spawned ghost must be the root instance of a ghost prefab, or the subscene does not bake.
+            var loose = GameplaySceneSetup.TrainingTargetsIn(scene).Where(go => !GameplaySceneSetup.IsTargetPrefabInstance(go)).ToArray();
+            if (loose.Length > 0)
+                problems.Add(new SetupProblem(
+                    $"{loose.Length} training target(s) are not instances of {GameplaySceneSetup.TargetPrefabPath}, so they cannot be ghosts. Press '4. Set up gameplay subscene'.",
+                    loose[0]));
         }
 
         private static Component FindInScene(Scene scene, string typeName) => scene.GetRootGameObjects()
