@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Chopper.Presentation.Camera
 {
@@ -7,6 +8,8 @@ namespace Chopper.Presentation.Camera
     /// after the chopper's rendered pose is final, so the camera never lags a frame behind the chopper.
     /// Sense of speed: field of view and distance grow with speed; the camera rolls with the chopper on a short delay.
     /// Hits taken shake the camera (<see cref="AddShake"/>).
+    /// C (gamepad Y) switches to the cockpit view, like the old game's camera switch: fixed to the chopper at the pilot's
+    /// seat, looking at the gun's aim point, with a light wobble. The choice is saved.
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
     public sealed class ChopperCameraRig : MonoBehaviour
@@ -37,6 +40,15 @@ namespace Chopper.Presentation.Camera
         private float shakeRecovery = 1.5f;
         [SerializeField] private float shakeFrequency = 18f;
 
+        [Header("Cockpit view (C / gamepad Y)")]
+        [SerializeField, Tooltip("Pilot's eye in chopper space. From the old game's cockpit camera.")]
+        private Vector3 cockpitOffset = new(0f, -0.51f, 2.47f);
+        [SerializeField, Tooltip("Where the pilot looks, chopper space (the old ReticalPosition).")]
+        private Vector3 cockpitLookPoint = new(0f, -1.5f, 79f);
+        [SerializeField] private float cockpitFieldOfView = 70f;
+        [SerializeField, Tooltip("Engine wobble, degrees.")] private float cockpitWobble = 0.25f;
+        [SerializeField] private float cockpitWobbleFrequency = 6f;
+
         [SerializeField] private bool lockCursor = true;
 
         private UnityEngine.Camera _camera;
@@ -46,6 +58,23 @@ namespace Chopper.Presentation.Camera
         private Vector3 _lastTargetPosition;
         private float _smoothedSpeed;
         private float _trauma;
+        private bool _cockpit;
+        /// <summary>A menu is open (<see cref="SetCursorFree"/>): no view switching.</summary>
+        private bool _menuOpen;
+
+        private const string CockpitKey = "Chopper.Camera.Cockpit";
+
+        /// <summary>True while the view is inside the cockpit.</summary>
+        public bool IsCockpit => _cockpit;
+
+        /// <summary>Switches between chase and cockpit view (saved).</summary>
+        public void SetCockpit(bool cockpit)
+        {
+            _cockpit = cockpit;
+            PlayerPrefs.SetInt(CockpitKey, cockpit ? 1 : 0);
+            // The chase camera snaps to the chopper again instead of swinging in from the old view.
+            _hasTarget = false;
+        }
 
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
         public void AddShake(float trauma)
@@ -55,6 +84,12 @@ namespace Chopper.Presentation.Camera
 
         public void Follow(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
         {
+            if (_cockpit)
+            {
+                FollowCockpit(targetPosition, targetRotation, deltaTime);
+                return;
+            }
+
             var forward = targetRotation * Vector3.forward;
             // Near-vertical noses have no stable heading; keep the last one.
             if (Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f)
@@ -90,6 +125,27 @@ namespace Chopper.Presentation.Camera
             transform.SetPositionAndRotation(position, Quaternion.LookRotation(lookPoint - position, _smoothedUp) * Shake(deltaTime));
         }
 
+        /// <summary>Rigid to the chopper: the horizon tilts and turns with it, as from the pilot's seat.</summary>
+        private void FollowCockpit(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
+        {
+            _camera.fieldOfView = cockpitFieldOfView;
+            var eye = targetPosition + targetRotation * cockpitOffset;
+            var look = targetRotation * Quaternion.LookRotation(cockpitLookPoint - cockpitOffset, Vector3.up);
+            var t = Time.time * cockpitWobbleFrequency;
+            var wobble = Quaternion.Euler(
+                cockpitWobble * (Mathf.PerlinNoise(t, 0.4f) * 2f - 1f),
+                cockpitWobble * (Mathf.PerlinNoise(0.9f, t) * 2f - 1f),
+                0f);
+            transform.SetPositionAndRotation(eye, look * wobble * Shake(deltaTime));
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
+            var gamepad = Gamepad.current != null && Gamepad.current.buttonNorth.wasPressedThisFrame;
+            if ((keyboard || gamepad) && !_menuOpen) SetCockpit(!_cockpit);
+        }
+
         private Quaternion Shake(float deltaTime)
         {
             if (_trauma <= 0f) return Quaternion.identity;
@@ -106,6 +162,7 @@ namespace Chopper.Presentation.Camera
         private void Awake()
         {
             _camera = GetComponent<UnityEngine.Camera>();
+            _cockpit = PlayerPrefs.GetInt(CockpitKey, 0) != 0;
         }
 
         private void OnEnable()
@@ -118,6 +175,7 @@ namespace Chopper.Presentation.Camera
         /// <summary>Free: cursor visible and unlocked (a menu is open). Not free: back to this rig's setting.</summary>
         public void SetCursorFree(bool free)
         {
+            _menuOpen = free;
             var locked = !free && lockCursor && isActiveAndEnabled;
             Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = !locked;
