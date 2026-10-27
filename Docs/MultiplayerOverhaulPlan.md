@@ -435,6 +435,24 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - ~~Pin `com.coplaydev.unity-mcp`~~ — pinned to the commit it was already locked to (`81542a7`). Move to a release tag (v10.3.0 is latest) when you want to update.
 - Old scenes (`Multiplayer`, `Training`, `FreeForAll`, `TeamDeathMatch`, `SampleScene`) have missing legacy scripts; delete or rebuild during later phases.
 
+## 7d. Feel pass and style guide (28 Oct 2026, tested in play)
+
+**Done**
+- Boost replaces dash: held, from a tank; kick, then thrust where the nose aims (down = dive); refills after release. Rotor spools to W/S. Drag in the heading frame (fast flight holds height).
+- Camera: inertia lag, boost spring (FOV punch, pull-back), kick shake, engine rumble, HUD glitch on the kick. `SpeedEffects`: bloom (clamped), speed chromatic aberration, boost vignette and flash, speed lines. No motion blur, no lens distortion (both caused visual bugs).
+- HUD: segmented `ArcGauge` arcs (boost, hull), boosting state, readouts as style-guide cards. Speed shown from real movement (`MeasuredVelocity`).
+- Audio: deep boost kick (distant explosions) and roar (`loop_rocket2`, pitch 0.5).
+- Style guide: the Figma palette (GuildMaster file, node 2236-2315) is the theme in `UI/Theme/ChopperTheme.uss` (`--palette-*` + role tokens). Example screens: node 2236-2316.
+
+**Backlog (pick up after the main order in the handoff, or any time)**
+- [ ] Feel tuning with the owner: boost length and strength, shake and rumble, camera lag, turn speed (`CameraSettings`, `Chassis_*.asset` → Flight).
+- [ ] Match-end screen from the Figma design: kills (Console Green), deaths (Screamer Red), score (Lightning Yellow) cards, "MATCH ENDED" title.
+- [ ] Lobby screen from the Figma design: team A (Dream Cyan) / team B (Lightning Yellow) player cards, VS mark.
+- [ ] Server list screen from the Figma design.
+- [ ] Menus (home, modes, nav bar with Console Green active tab) from the Figma designs, as part of the UI Toolkit migration (section 1b).
+- [ ] Team colours on world markers (Dream Cyan / Lightning Yellow) when TDM exists.
+- [ ] Optional: a safe boost "bulge" (always-on lens distortion or a custom pass) if the boost needs more punch.
+
 ## 8. Phased roadmap
 
 | Phase | Work | Result |
