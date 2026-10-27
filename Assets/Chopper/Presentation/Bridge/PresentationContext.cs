@@ -48,6 +48,8 @@ namespace Chopper.Presentation.Bridge
         public EffectPool ModuleVisuals { get; }
         public ChopperHudModel Hud { get; } = new();
         public MatchHudModel Match { get; } = new();
+        /// <summary>Screen markers on other choppers and ground targets, and the rocket lead indicator.</summary>
+        public WorldMarkerModel Markers { get; } = new();
         /// <summary>Retro HUD look: the HUD view attaches its document; gameplay drives glitches.</summary>
         public HudLook HudLook { get; }
         /// <summary>Can be null (no chase camera in the scene).</summary>

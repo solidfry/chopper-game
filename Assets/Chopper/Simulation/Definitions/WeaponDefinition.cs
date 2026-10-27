@@ -10,7 +10,7 @@ namespace Chopper.Simulation.Definitions
     /// </summary>
     public abstract class WeaponDefinition : ScriptableObject, IValidatedAsset
     {
-        [SerializeField, Tooltip("Gun or pylon position in chopper space (z = forward). TODO: take it from the chassis socket.")]
+        [SerializeField, Tooltip("Gun or pylon position in chopper space (z = forward). Used only when the chassis has no matching socket (the socket wins).")]
         private Vector3 muzzleOffset = new(0f, -0.6f, 2.5f);
 
         public Vector3 MuzzleOffset => muzzleOffset;

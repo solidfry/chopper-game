@@ -79,12 +79,14 @@ Rules:
   - Gameplay drives it (`HudLookModel`): glitch on damage, flicker at low hull, pulse on your lock, noise as a missile closes in, drop-out on death and boot-up on spawn. `HudLook.Disrupt` is ready for EMP and hack.
   - Player options (saved in PlayerPrefs): `HudLook.Preset` and `HudLook.ReduceEffects` (no flicker, weaker glitches). No options screen yet.
   - Setup step 1 makes the settings and adds the feature to every URP renderer; Validate checks them.
+- **World markers and rocket lead** (plan section 3b, "Markers, lead, cluster — built"): a marker on every other chopper (red diamond) and ground target (amber square), closest 24, distance under it, health bar when near, filled when it is your lock target, edge arrow when off screen. A lead circle shows where to aim the selected rocket pod (lock target, else the target nearest the nose).
+- **Cluster missiles** (module 116 "Cluster Missiles", `Weapon_ClusterMissile`): a guided missile that splits into 8 submunitions near the target or after 1.8 s. Submunitions are server rockets; one RPC with a seed lets clients draw them. Any guided missile definition can be a cluster (Cluster section, 0 = off).
 - Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
 
 ### Editor steps after pulling
 1. Chopper → Setup → **Do all**, then **Validate**. Fix what it lists.
 2. Fix compile errors (nothing from 27 Oct is compiled yet). Send the console list to Claude if needed.
-3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon.
+3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon. Markers sit on the training targets; the lead circle shows with the rocket pod selected. Fit "Cluster Missiles" (change the default loadout or the chassis defaults) and fire it at a target: 8 bomblets.
 4. HUD look: the HUD should glow, with scanlines and a slight curve. Take a hit: the HUD glitches. Die: it drops out. If the HUD is gone or black: set the preset to Clean on `Data/Hud/HudLookSettings` (default preset) or clear the PlayerPrefs key `Chopper.HudLook.Preset`, and send the console to Claude. Check the HUD edges for dark fringes (alpha mode).
 5. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
 6. Run edit-mode tests (Window → General → Test Runner).
@@ -110,8 +112,8 @@ Rules:
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
    - done (not yet compiled): retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings`, gameplay glitches);
    - next for the look: tune it in play; options toggle for preset / reduce effects; phosphor persistence (last-frame blend); per-element Shader Graph UI materials; same look for menus and hangar;
-   - cluster and swarm missiles;
-   - world markers and a lead indicator.
+   - done (not yet compiled): cluster missiles, world markers, rocket lead indicator;
+   - next: swarm micro-missiles; team colours on markers when TDM exists; objective markers (nuke, bases).
    It can run in parallel with step 2: the weapons are modules.
 4. **Phase 3: services:**
    - Steamworks.NET and the Dashboard Steam provider;
@@ -148,4 +150,5 @@ Rules:
 | UI | `UI/Hud/ChopperHud.uxml/.uss`, `ChopperHudView.cs`, theme in `UI/Theme` |
 | HUD look | `Presentation/Hud/HudLook*.cs`, `HudLook.shader`; settings `Data/Hud/HudLookSettings.asset`; setup `Editor/Setup/HudLookAssets.cs` |
 | Editor | `Editor/Setup/*` (window, asset factories, validator) |
-| Tests | `Tests/EditMode/*` (HUD models, HUD look, health, loadout rules, loadout code, guidance, audio) |
+| Markers | `Presentation/Hud/WorldMarker*.cs`, `UI/Hud/WorldMarkerView.cs` |
+| Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio) |

@@ -9,7 +9,8 @@ namespace Chopper.Editor.Setup
 {
     /// <summary>
     /// Guided weapons and flares: the missile ghost prefab, heat-seeker definitions (air-to-air, air-to-ground), the
-    /// flares ability, and their links to modules (Homing Missiles, a new Ground Seeker, Flares). Creates or links only
+    /// cluster missile, the flares ability, and their links to modules (Homing Missiles, new Ground Seeker and Cluster
+    /// Missiles modules, Flares). Creates or links only
     /// what is missing; never overwrites tuned values.
     /// </summary>
     internal static class GuidedWeaponAssets
@@ -18,7 +19,8 @@ namespace Chopper.Editor.Setup
         private const string Folder = LoadoutAssets.Folder;
 
         public const ushort HomingMissilesId = 112;
-        private const ushort GroundSeekerId = 115;
+        public const ushort GroundSeekerId = 115;
+        public const ushort ClusterMissilesId = 116;
         private const ushort FlaresId = 131;
 
         public static void Ensure(LoadoutCatalog catalog)
@@ -40,11 +42,23 @@ namespace Chopper.Editor.Setup
                     turnDegreesPerSecond: 60f, gain: 2f, fuse: 3f, direct: 60f, splash: 35f, radius: 9f, interval: 3f, life: 8f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
+            var cluster = Definition<GuidedMissileDefinition>("Weapon_ClusterMissile", d =>
+            {
+                // Area denial: flies at the ground target (or straight when dumb-fired), splits into 8 bomblets.
+                d.Initialise(prefab, TargetClass.Ground, needsLock: false, cone: 12f, range: 900f, lockSeconds: 1.5f, missileSpeed: 120f,
+                    turnDegreesPerSecond: 45f, gain: 2f, fuse: 3f, direct: 30f, splash: 15f, radius: 6f, interval: 5f, life: 6f);
+                d.SetCluster(count: 8, distance: 60f, time: 1.8f, subSpeed: 90f, spread: 14f, subLifetime: 2.5f, direct: 20f, splash: 18f,
+                    radius: 6f);
+                d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
+            });
             var flares = Definition<CountermeasureDefinition>("Ability_Flares", _ => { });
 
             Link(catalog, HomingMissilesId, m => m.Weapon == null, m => m.SetWeapon(airToAir));
             Link(catalog, FlaresId, m => m.Ability == null, m => m.SetAbility(flares));
-            EnsureGroundSeekerModule(catalog, airToGround);
+            EnsureModule(catalog, GroundSeekerId, "Ground Seeker", "Heat-seeking air-to-ground missile. Dumb-fires without a lock.",
+                "Pylon_GroundSeeker", weight: 16f, unlockLevel: 6, airToGround);
+            EnsureModule(catalog, ClusterMissilesId, "Cluster Missiles", "Splits into bomblets over the target. Area denial.",
+                "Pylon_ClusterMissiles", weight: 18f, unlockLevel: 8, cluster);
             AssetDatabase.SaveAssets();
         }
 
@@ -103,21 +117,22 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(module);
         }
 
-        private static void EnsureGroundSeekerModule(LoadoutCatalog catalog, GuidedMissileDefinition weapon)
+        /// <summary>A pylon module for a weapon that has no module in the original catalog.</summary>
+        private static void EnsureModule(LoadoutCatalog catalog, ushort id, string displayName, string description, string assetName,
+            float weight, int unlockLevel, GuidedMissileDefinition weapon)
         {
-            if (catalog.Modules.Any(m => m != null && m.Id == GroundSeekerId)) return;
+            if (catalog.Modules.Any(m => m != null && m.Id == id)) return;
 
             var module = ScriptableObject.CreateInstance<ModuleDefinition>();
-            module.Initialise(GroundSeekerId, "Ground Seeker", "Heat-seeking air-to-ground missile. Dumb-fires without a lock.",
-                SlotType.Pylon, new ModuleStats
-                {
-                    Weight = 16f,
-                    LiftMultiplier = 1f,
-                    TurnRateMultiplier = 1f,
-                    DashCooldownMultiplier = 1f,
-                }, 6);
+            module.Initialise(id, displayName, description, SlotType.Pylon, new ModuleStats
+            {
+                Weight = weight,
+                LiftMultiplier = 1f,
+                TurnRateMultiplier = 1f,
+                DashCooldownMultiplier = 1f,
+            }, unlockLevel);
             module.SetWeapon(weapon);
-            AssetDatabase.CreateAsset(module, $"{Folder}/Pylon_GroundSeeker.asset");
+            AssetDatabase.CreateAsset(module, $"{Folder}/{assetName}.asset");
 
             catalog.Initialise(catalog.Chassis.ToArray(), catalog.Modules.Append(module).ToArray());
             EditorUtility.SetDirty(catalog);

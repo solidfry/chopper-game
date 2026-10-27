@@ -25,6 +25,10 @@ namespace Chopper.Simulation.Combat
         public float DirectDamage;
         public float SplashDamage;
         public float SplashRadius;
+        /// <summary>Cluster payload; <see cref="ClusterConfig.Count"/> 0 = a normal missile.</summary>
+        public ClusterConfig Cluster;
+        /// <summary>Server: time left to the timed split (clusters only).</summary>
+        public float SplitRemaining;
     }
 
     /// <summary>Server to all: a missile exploded here (its ghost is removed, so clients need the place).</summary>
@@ -57,6 +61,37 @@ namespace Chopper.Simulation.Combat
             var axis = math.normalizesafe(math.cross(heading, aim), math.up());
             var turned = math.mul(quaternion.AxisAngle(axis, maxTurn), heading);
             return math.normalizesafe(turned) * speed;
+        }
+
+        /// <summary>
+        /// Time for a straight projectile at <paramref name="projectileSpeed"/> (relative to the shooter) to meet a target
+        /// at <paramref name="relativePosition"/> moving at <paramref name="relativeVelocity"/> (both relative to the
+        /// shooter). False when the projectile can never catch it. The aim point is position + velocity × time.
+        /// </summary>
+        public static bool InterceptTime(float3 relativePosition, float3 relativeVelocity, float projectileSpeed, out float time)
+        {
+            // |p + v t| = s t  →  (v·v − s²) t² + 2 (p·v) t + p·p = 0
+            var a = math.dot(relativeVelocity, relativeVelocity) - projectileSpeed * projectileSpeed;
+            var b = 2f * math.dot(relativePosition, relativeVelocity);
+            var c = math.dot(relativePosition, relativePosition);
+            time = 0f;
+
+            if (math.abs(a) < 1e-4f)
+            {
+                // Target as fast as the projectile: one root, only if it comes towards us.
+                if (b >= 0f) return false;
+                time = -c / b;
+                return true;
+            }
+
+            var discriminant = b * b - 4f * a * c;
+            if (discriminant < 0f) return false;
+            var root = math.sqrt(discriminant);
+            var t1 = (-b - root) / (2f * a);
+            var t2 = (-b + root) / (2f * a);
+            // The smallest positive root.
+            time = t1 > 0f && (t1 < t2 || t2 <= 0f) ? t1 : t2;
+            return time > 0f;
         }
     }
 }

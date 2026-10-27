@@ -14,6 +14,8 @@ namespace Chopper.Simulation.Combat
     /// target drops flares loses it and flies straight. Runs predicted on the server and on the shooter's client, so
     /// the shooter's missile moves at once. Only the server detonates: on impact, near the target (proximity fuse) or
     /// at the end of its life; then it applies damage, tells clients where it exploded, and removes the ghost.
+    /// A cluster missile does not use the proximity fuse: near the target (or on its timer) the server splits it into
+    /// submunition <see cref="Rocket"/>s and sends one <see cref="ClusterSplitRpc"/>.
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
@@ -26,6 +28,7 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<PhysicsVelocity> _velocities;
         private ComponentLookup<CountermeasureState> _countermeasures;
         private BufferLookup<DamageEvent> _damage;
+        private ComponentLookup<GhostOwner> _owners;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -35,6 +38,7 @@ namespace Chopper.Simulation.Combat
             _velocities = state.GetComponentLookup<PhysicsVelocity>(isReadOnly: true);
             _countermeasures = state.GetComponentLookup<CountermeasureState>(isReadOnly: true);
             _damage = state.GetBufferLookup<DamageEvent>();
+            _owners = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -47,6 +51,7 @@ namespace Chopper.Simulation.Combat
             _velocities.Update(ref state);
             _countermeasures.Update(ref state);
             _damage.Update(ref state);
+            _owners.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (missileRef, transform, entity) in SystemAPI.Query<RefRW<GuidedMissile>, RefRW<LocalTransform>>()
@@ -84,7 +89,20 @@ namespace Chopper.Simulation.Combat
                 var directTarget = Entity.Null;
                 var detonateAt = end;
                 var detonate = false;
-                if (Explosions.TryRaycast(world, missile.Shooter, start, end, out var hit))
+                var impact = Explosions.TryRaycast(world, missile.Shooter, start, end, out var hit);
+                if (!impact && missile.Cluster.IsCluster)
+                {
+                    missile.SplitRemaining -= deltaTime;
+                    var targetDistance = hasTarget ? math.distance(end, targetPose.Position) : -1f;
+                    if (Cluster.ShouldSplit(missile.Cluster, math.min(missile.SplitRemaining, missile.Remaining), targetDistance))
+                    {
+                        Split(ecb, missile, end, _owners.TryGetComponent(entity, out var owner) ? owner.NetworkId : 0);
+                        ecb.DestroyEntity(entity);
+                    }
+                    continue;
+                }
+
+                if (impact)
                 {
                     detonate = true;
                     detonateAt = hit.Position;
@@ -111,6 +129,45 @@ namespace Chopper.Simulation.Combat
                 ecb.DestroyEntity(entity);
             }
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>Server: the submunitions (straight rockets, flown and damaged by <see cref="RocketSystem"/>) and one RPC for clients.</summary>
+        private static void Split(EntityCommandBuffer ecb, in GuidedMissile missile, float3 position, int shooterId)
+        {
+            var cluster = missile.Cluster;
+            var count = math.min((int)cluster.Count, Cluster.MaxCount);
+            var forward = math.normalizesafe(missile.Velocity, math.forward());
+            var seed = math.hash(new float4(position, missile.Remaining));
+
+            for (var i = 0; i < count; i++)
+            {
+                var rocket = ecb.CreateEntity();
+                ecb.AddComponent(rocket, new Rocket
+                {
+                    Position = position,
+                    Velocity = Cluster.Direction(forward, cluster.ConeCos, seed, i) * cluster.Speed,
+                    Remaining = cluster.Lifetime,
+                    Shooter = missile.Shooter,
+                    DirectDamage = cluster.DirectDamage,
+                    SplashDamage = cluster.SplashDamage,
+                    SplashRadius = cluster.SplashRadius,
+                });
+            }
+
+            var rpc = ecb.CreateEntity();
+            ecb.AddComponent(rpc, new ClusterSplitRpc
+            {
+                Position = position,
+                Forward = forward,
+                Speed = cluster.Speed,
+                ConeCos = cluster.ConeCos,
+                Lifetime = cluster.Lifetime,
+                SplashRadius = cluster.SplashRadius,
+                Seed = seed,
+                Count = (byte)count,
+                ShooterNetworkId = shooterId,
+            });
+            ecb.AddComponent<SendRpcCommandRequest>(rpc);
         }
     }
 }

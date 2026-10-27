@@ -38,6 +38,18 @@ namespace Chopper.Simulation.Definitions
         [SerializeField] private float splashDamage = 20f;
         [SerializeField] private float splashRadius = 6f;
 
+        [Header("Cluster (0 submunitions = normal missile)")]
+        [SerializeField, Range(0, Combat.Cluster.MaxCount), Tooltip("Splits into this many submunitions; no proximity fuse then.")]
+        private int submunitions;
+        [SerializeField, Tooltip("Splits this close to the target, metres.")] private float splitDistance = 60f;
+        [SerializeField, Tooltip("Splits this long after launch at the latest, seconds.")] private float splitTime = 1.8f;
+        [SerializeField] private float submunitionSpeed = 90f;
+        [SerializeField, Tooltip("Half-angle of the spread cone, degrees.")] private float spreadDegrees = 14f;
+        [SerializeField] private float submunitionLifetime = 2.5f;
+        [SerializeField] private float submunitionDirectDamage = 20f;
+        [SerializeField] private float submunitionSplashDamage = 18f;
+        [SerializeField] private float submunitionSplashRadius = 6f;
+
         public float FireInterval => fireInterval;
         public float Speed => speed;
         public float Lifetime => lifetime;
@@ -56,6 +68,19 @@ namespace Chopper.Simulation.Definitions
         public float SplashDamage => splashDamage;
         public float SplashRadius => splashRadius;
 
+        public ClusterConfig Cluster => new()
+        {
+            Count = (byte)Mathf.Clamp(submunitions, 0, Combat.Cluster.MaxCount),
+            SplitDistance = splitDistance,
+            SplitTime = splitTime,
+            Speed = submunitionSpeed,
+            ConeCos = Mathf.Cos(spreadDegrees * Mathf.Deg2Rad),
+            Lifetime = submunitionLifetime,
+            DirectDamage = submunitionDirectDamage,
+            SplashDamage = submunitionSplashDamage,
+            SplashRadius = submunitionSplashRadius,
+        };
+
         public override void CollectProblems(List<string> problems)
         {
             if (missilePrefab == null) problems.Add($"{name}: no missile ghost prefab.");
@@ -63,6 +88,8 @@ namespace Chopper.Simulation.Definitions
                 problems.Add($"{name}: missile prefab has no GuidedMissileAuthoring.");
             if (seeker != SeekerType.None && targets == TargetClass.None) problems.Add($"{name}: seeker has no target classes.");
             if (speed <= 0f || lifetime <= 0f || fireInterval <= 0f) problems.Add($"{name}: speed, lifetime and fire interval must be above 0.");
+            if (submunitions > 0 && (submunitionSpeed <= 0f || submunitionLifetime <= 0f || splitTime <= 0f))
+                problems.Add($"{name}: cluster submunition speed, lifetime and split time must be above 0.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -85,6 +112,21 @@ namespace Chopper.Simulation.Definitions
             splashRadius = radius;
             fireInterval = interval;
             lifetime = life;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetCluster(int count, float distance, float time, float subSpeed, float spread, float subLifetime, float direct,
+            float splash, float radius)
+        {
+            submunitions = count;
+            splitDistance = distance;
+            splitTime = time;
+            submunitionSpeed = subSpeed;
+            spreadDegrees = spread;
+            submunitionLifetime = subLifetime;
+            submunitionDirectDamage = direct;
+            submunitionSplashDamage = splash;
+            submunitionSplashRadius = radius;
         }
     }
 }

@@ -430,3 +430,108 @@
 .hud-flares--ready {
   color: var(--chopper-green);
 }
+
+/* World markers (WorldMarkerView). Left/top are set from code; translate centres the marker on that point. */
+.hud-marker {
+  position: absolute;
+  translate: -50% -50%;
+  align-items: center;
+}
+
+.hud-marker--hidden {
+  display: none;
+}
+
+.hud-marker__icon {
+  width: 14px;
+  height: 14px;
+  rotate: 45deg;
+  border-width: 2px;
+  border-color: var(--chopper-red);
+}
+
+.hud-marker--ground .hud-marker__icon {
+  rotate: 0deg;
+  border-color: var(--chopper-amber);
+}
+
+.hud-marker--locked .hud-marker__icon {
+  background-color: var(--chopper-red);
+}
+
+.hud-marker__distance {
+  position: absolute;
+  top: 18px;
+  font-size: 12px;
+  color: var(--chopper-text);
+  padding: 0;
+  -unity-text-align: middle-center;
+  white-space: nowrap;
+}
+
+.hud-marker__health {
+  position: absolute;
+  top: -10px;
+  width: 30px;
+  height: 3px;
+  background-color: var(--chopper-green-faint);
+}
+
+.hud-marker__health-fill {
+  height: 100%;
+  background-color: var(--chopper-red);
+}
+
+.hud-marker--no-health .hud-marker__health,
+.hud-marker--offscreen .hud-marker__health {
+  display: none;
+}
+
+/* Off screen: an arrow on the screen edge points at the target (rotated from code). */
+.hud-marker__arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left-width: 7px;
+  border-right-width: 7px;
+  border-bottom-width: 12px;
+  border-left-color: rgba(0, 0, 0, 0);
+  border-right-color: rgba(0, 0, 0, 0);
+  border-bottom-color: var(--chopper-red);
+  display: none;
+}
+
+.hud-marker--offscreen .hud-marker__icon {
+  display: none;
+}
+
+.hud-marker--offscreen .hud-marker__arrow {
+  display: flex;
+}
+
+.hud-marker--ground .hud-marker__arrow {
+  border-bottom-color: var(--chopper-amber);
+}
+
+/* Rocket lead indicator */
+.hud-lead {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  translate: -50% -50%;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  border-radius: 9px;
+}
+
+.hud-lead--hidden {
+  display: none;
+}
+
+.hud-lead__dot {
+  width: 4px;
+  height: 4px;
+  background-color: var(--chopper-green);
+}

@@ -30,7 +30,13 @@
           <ui:VisualElement class="hud-damage__arc" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
+      <!-- World markers: pooled elements made by WorldMarkerView -->
+      <ui:VisualElement name="markers" class="hud-layer" picking-mode="Ignore" />
       <ui:VisualElement name="aim-layer" class="hud-layer" picking-mode="Ignore">
+        <!-- Rocket lead: put the reticle here to hit the target -->
+        <ui:VisualElement name="lead" class="hud-lead hud-lead--hidden" picking-mode="Ignore">
+          <ui:VisualElement class="hud-lead__dot" picking-mode="Ignore" />
+        </ui:VisualElement>
         <!-- Seeker lock: brackets close in on the target as the lock builds -->
         <ui:VisualElement name="lock" class="hud-lock hud-lock--hidden" picking-mode="Ignore">
           <ui:Label name="lock-label" text="LOCK" class="hud-lock__label" />

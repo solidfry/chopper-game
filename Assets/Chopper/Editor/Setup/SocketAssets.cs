@@ -54,7 +54,8 @@ namespace Chopper.Editor.Setup
         {
             (new ushort[] { 101, 102, 103 }, "SM_Veh_Heli_Attach_Minigun"),
             (new ushort[] { 111 }, "SM_Veh_Heli_Attach_Rocket_Pod_02"),
-            (new ushort[] { GuidedWeaponAssets.HomingMissilesId, 115 }, "SM_Veh_Heli_Attach_Missle_01"),
+            (new ushort[] { GuidedWeaponAssets.HomingMissilesId, GuidedWeaponAssets.GroundSeekerId, GuidedWeaponAssets.ClusterMissilesId },
+                "SM_Veh_Heli_Attach_Missle_01"),
             (new ushort[] { 131 }, "SM_Veh_Attach_Flare_01"),
             (new ushort[] { 141 }, "SM_Veh_Attach_Winch_01"),
         };

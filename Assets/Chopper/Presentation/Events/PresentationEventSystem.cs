@@ -25,6 +25,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _remoteRockets;
         private EntityQuery _localRockets;
         private EntityQuery _missileDetonations;
+        private EntityQuery _clusterSplits;
         private int _localNetworkId;
 
         protected override void OnCreate()
@@ -39,6 +40,7 @@ namespace Chopper.Presentation.Events
             _remoteRockets = Rpc<RocketLaunchRpc>();
             _localRockets = GetEntityQuery(ComponentType.ReadOnly<LocalRocketLaunch>());
             _missileDetonations = Rpc<MissileDetonatedRpc>();
+            _clusterSplits = Rpc<ClusterSplitRpc>();
         }
 
         protected override void OnUpdate()
@@ -55,6 +57,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_remoteRockets);
             EntityManager.DestroyEntity(_localRockets);
             EntityManager.DestroyEntity(_missileDetonations);
+            EntityManager.DestroyEntity(_clusterSplits);
         }
 
         private void Publish(PresentationEvents events)
@@ -91,6 +94,17 @@ namespace Chopper.Presentation.Events
                 // Our own rockets were already published from prediction.
                 if (rpc.ValueRO.ShooterNetworkId == localId) continue;
                 events.Publish(new RocketLaunched(rpc.ValueRO.Position, rpc.ValueRO.Velocity, rpc.ValueRO.Lifetime, rpc.ValueRO.ShooterNetworkId));
+            }
+
+            // Cluster submunitions: rebuilt from the server's seed, drawn like rockets (also for the shooter: not predicted).
+            foreach (var rpc in SystemAPI.Query<RefRO<ClusterSplitRpc>>().WithAll<ReceiveRpcCommandRequest>())
+            {
+                var split = rpc.ValueRO;
+                for (var i = 0; i < split.Count; i++)
+                {
+                    var velocity = Cluster.Direction(split.Forward, split.ConeCos, split.Seed, i) * split.Speed;
+                    events.Publish(new RocketLaunched(split.Position, velocity, split.Lifetime, split.ShooterNetworkId));
+                }
             }
         }
 

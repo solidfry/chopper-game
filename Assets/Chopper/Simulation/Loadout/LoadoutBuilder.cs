@@ -179,6 +179,7 @@ namespace Chopper.Simulation.Loadout
             NavigationGain = missile.NavigationGain,
             ProximityFuse = missile.ProximityFuse,
             ArmTime = missile.ArmTime,
+            Cluster = missile.Cluster,
             MissilePrefab = missile.MissilePrefab != null && resolveMissilePrefab != null ? resolveMissilePrefab(missile.MissilePrefab) : Entity.Null,
         };
 

@@ -155,6 +155,8 @@ namespace Chopper.Simulation.Combat
                 DirectDamage = weapon.DirectDamage,
                 SplashDamage = weapon.SplashDamage,
                 SplashRadius = weapon.SplashRadius,
+                Cluster = weapon.Cluster,
+                SplitRemaining = weapon.Cluster.SplitTime,
             });
         }
     }

@@ -55,6 +55,7 @@ namespace Chopper.UI.Hud
         private VisualElement _health;
         private VisualElement _aim;
         private UIDocument _document;
+        private WorldMarkerView _markers;
 
         private void OnEnable()
         {
@@ -88,6 +89,7 @@ namespace Chopper.UI.Hud
             _flares = _chopper.Q("flares");
             Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
             _horizon = _chopper.Q("horizon");
+            _markers = new WorldMarkerView(bridge.Context.Markers, _chopper.Q("markers"), _chopper.Q("lead"));
 
             _chopper.dataSource = _model;
             Bind(_chopper.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
@@ -121,6 +123,8 @@ namespace Chopper.UI.Hud
         {
             if (bridge != null && _document != null && !bridge.Context.IsDisposed)
                 bridge.Context.HudLook.Detach(_document);
+            _markers?.Dispose();
+            _markers = null;
             if (_model != null)
                 _model.propertyChanged -= OnModelChanged;
             if (_match != null)

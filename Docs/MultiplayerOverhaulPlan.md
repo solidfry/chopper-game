@@ -222,12 +222,19 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - Setup step 1: settings asset + the feature on every URP renderer under Assets. Validate: settings, feature present, shader set, feature on.
 - Not built yet: phosphor persistence, per-element UI materials, options toggle, menus/hangar on the same look.
 
+### Markers, lead, cluster — built (27 Oct, written without the editor — needs a compile + play check)
+- `WorldMarkerSystem` (client, the one ECS reader for markers) fills `WorldMarkerModel` on `PresentationContext.Markers`: every other `Targetable` with `Health` in 2 km, closest 24, edge clamp + arrow angle when off screen or behind (`WorldMarkerModel.Place`), distance in 10 m steps, health bar under 400 m, lock target flag. One `Changed` event per frame.
+- `WorldMarkerView` (UI): a fixed pool of 24 elements made once; text only set when the distance changes. USS `hud-marker*`, `hud-lead*`.
+- Lead indicator: selected pylon = rocket → aim point from `Guidance.InterceptTime` (rockets keep the chopper's velocity, so the maths is relative to the chopper). Target = lock target, else the target nearest the nose in a 15° cone within rocket range. The hitscan gun has no lead (instant hit).
+- Cluster missiles: `ClusterConfig` on `GuidedMissileDefinition` → `PylonWeapon` → `GuidedMissile`. Server splits near the target (`SplitDistance`) or on a timer (no proximity fuse), spawns submunitions as `Rocket`s (`RocketSystem` flies and damages them), sends one `ClusterSplitRpc` with a seed; clients rebuild directions with `Cluster.Direction` and publish `RocketLaunched` per submunition. Data: `Weapon_ClusterMissile`, module 116 "Cluster Missiles".
+- Tests: `WorldMarkerModelTests`, `ClusterTests`, intercept tests in `GuidanceTests`.
+
 ### Build order
 1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
 2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
 3. Air-to-ground variant; ground targets in the training range.
-4. Cluster missiles; swarm micro-missiles.
-5. World markers + lead indicator; then the other weapons one behaviour at a time.
+4. Cluster missiles (**built, not compiled**); swarm micro-missiles.
+5. World markers + lead indicator (**built, not compiled**); then the other weapons one behaviour at a time.
 6. Retro HUD look: HUD to RenderTexture + full-screen CRT pass + `HudLookSettings`; then gameplay-driven glitches. **Built (not compiled), see above.**
 
 ## 4. Matchmaking — seamless flow

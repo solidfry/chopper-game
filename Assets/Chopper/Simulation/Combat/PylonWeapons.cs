@@ -47,6 +47,8 @@ namespace Chopper.Simulation.Combat
         /// <summary>Seconds after launch before the missile steers (it clears the launcher first).</summary>
         public float ArmTime;
         public Entity MissilePrefab;
+        /// <summary>Guided only: splits into submunitions (<see cref="ClusterConfig.Count"/> 0 = no).</summary>
+        public ClusterConfig Cluster;
     }
 
     /// <summary>Per-pylon cooldown, same order as <see cref="PylonWeapon"/>. Predicted on the owner.</summary>

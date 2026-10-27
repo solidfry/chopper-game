@@ -68,5 +68,28 @@ namespace Chopper.Tests
             Assert.That(withLead.x, Is.GreaterThan(1f));
             Assert.That(pursuit.x, Is.EqualTo(0f).Within(1e-3f));
         }
+
+        [Test]
+        public void InterceptTime_StationaryTargetIsDistanceOverSpeed()
+        {
+            Assert.That(Guidance.InterceptTime(new float3(0, 0, 100), float3.zero, 50f, out var time), Is.True);
+            Assert.That(time, Is.EqualTo(2f).Within(1e-4f));
+        }
+
+        [Test]
+        public void InterceptTime_CrossingTargetMeetsTheProjectile()
+        {
+            var position = new float3(0, 0, 200);
+            var velocity = new float3(30, 0, 0);
+            Assert.That(Guidance.InterceptTime(position, velocity, 100f, out var time), Is.True);
+            // At that time the target is exactly projectile speed × time away.
+            Assert.That(math.length(position + velocity * time), Is.EqualTo(100f * time).Within(1e-2f));
+        }
+
+        [Test]
+        public void InterceptTime_FalseWhenTheTargetRunsAwayFaster()
+        {
+            Assert.That(Guidance.InterceptTime(new float3(0, 0, 100), new float3(0, 0, 80), 50f, out _), Is.False);
+        }
     }
 }
