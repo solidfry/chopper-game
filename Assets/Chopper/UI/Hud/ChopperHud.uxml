@@ -11,16 +11,16 @@
         <ui:Label name="timer" text="00:00" class="hud-match__timer" />
         <ui:Label name="kill-feed" text="" class="hud-match__feed" />
       </ui:VisualElement>
-      <ui:Label name="banner" text="" class="hud-match__banner hud-match__banner--hidden" />
+      <ui:Label name="banner" text="" class="hud-match__banner hud-match__banner--hidden chopper-title" />
     </ui:VisualElement>
     <ui:VisualElement name="chopper" class="hud-layer hud--hidden" picking-mode="Ignore">
       <ui:VisualElement name="bounds-warning" class="hud-warning hud-warning--hidden" picking-mode="Ignore">
-        <ui:Label text="RETURN TO COMBAT AREA" class="hud-warning__text" />
+        <ui:Label text="RETURN TO COMBAT AREA" class="hud-warning__text chopper-title" />
       </ui:VisualElement>
       <!-- Threats against you: blinking, upper middle -->
       <ui:VisualElement name="threats" class="hud-threats" picking-mode="Ignore">
-        <ui:Label name="missile-warning" text="MISSILE" class="hud-threat hud-threat--missile hud-threat--hidden" />
-        <ui:Label name="lock-warning" text="LOCK WARNING" class="hud-threat hud-threat--lock hud-threat--hidden" />
+        <ui:Label name="missile-warning" text="MISSILE" class="hud-threat hud-threat--missile hud-threat--hidden chopper-title" />
+        <ui:Label name="lock-warning" text="LOCK WARNING" class="hud-threat hud-threat--lock hud-threat--hidden chopper-title" />
       </ui:VisualElement>
       <ui:VisualElement name="damage-layer" class="hud-layer hud-damage-layer" picking-mode="Ignore">
         <ui:VisualElement name="damage-ring" class="hud-damage hud-damage--hidden" picking-mode="Ignore">

@@ -114,15 +114,15 @@ namespace Chopper.UI.Hud
             _markers = new WorldMarkerView(bridge.Context.Markers, _chopper.Q("markers"), _chopper.Q("lead"));
 
             _chopper.dataSource = _model;
-            Bind(_chopper.Q<Label>("health-value"), "text", nameof(ChopperHudModel.HealthText));
-            Bind(_chopper.Q<Label>("speed-value"), "text", nameof(ChopperHudModel.SpeedText));
-            Bind(_chopper.Q<Label>("altitude-value"), "text", nameof(ChopperHudModel.AltitudeText));
+            BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));
+            BindNumber(_chopper.Q<Label>("speed-value"), nameof(ChopperHudModel.SpeedText));
+            BindNumber(_chopper.Q<Label>("altitude-value"), nameof(ChopperHudModel.AltitudeText));
             Bind(_chopper.Q<ProgressBar>("dash-bar"), "value", nameof(ChopperHudModel.DashCharge));
 
             var match = root.Q("match");
             _banner = match.Q("banner");
             match.dataSource = _match;
-            Bind(match.Q<Label>("timer"), "text", nameof(MatchHudModel.TimerText));
+            BindNumber(match.Q<Label>("timer"), nameof(MatchHudModel.TimerText));
             Bind(match.Q<Label>("local-score"), "text", nameof(MatchHudModel.LocalScoreText));
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
@@ -165,6 +165,18 @@ namespace Chopper.UI.Hud
                 dataSourcePath = new PropertyPath(modelProperty),
                 bindingMode = BindingMode.ToTarget,
             });
+        }
+
+        /// <summary>Text binding with fixed-width digits (<see cref="TabularText"/>), so changing numbers do not move the HUD.</summary>
+        private static void BindNumber(Label label, string modelProperty)
+        {
+            var binding = new DataBinding
+            {
+                dataSourcePath = new PropertyPath(modelProperty),
+                bindingMode = BindingMode.ToTarget,
+            };
+            binding.sourceToUiConverters.AddConverter((ref string value) => TabularText.Wrap(value));
+            label.SetBinding("text", binding);
         }
 
         private void OnModelChanged(object sender, BindablePropertyChangedEventArgs args)

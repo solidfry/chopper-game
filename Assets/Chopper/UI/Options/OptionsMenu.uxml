@@ -1,27 +1,33 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
   <Style src="OptionsMenu.uss" />
-  <!-- Options overlay: Escape / Start opens it (OptionsMenuView). Hidden at start. -->
+  <!-- Options overlay: Escape / Start opens it (OptionsMenuView). Hidden at start. Terminal style. -->
   <ui:VisualElement name="options" class="options options--hidden">
     <ui:VisualElement class="options__panel">
-      <ui:Label text="OPTIONS" class="options__title" />
+      <ui:VisualElement class="options__bar">
+        <ui:Label text="CHOPPER//SYS" class="options__bar-text chopper-title" />
+        <ui:Label text="ESC = CLOSE" class="options__bar-text" />
+      </ui:VisualElement>
+      <ui:VisualElement class="options__body">
+        <ui:Label text="&gt; OPTIONS_" class="options__title chopper-title" />
 
-      <ui:Label text="CONTROLS" class="options__section" />
-      <ui:DropdownField name="mouse-steer" label="MOUSE LEFT / RIGHT" class="options__row" />
-      <ui:Slider name="mouse-sensitivity" label="MOUSE SENSITIVITY" low-value="0.25" high-value="3" class="options__row" />
-      <ui:Toggle name="invert-pitch" label="INVERT PITCH" class="options__row" />
+        <ui:Label text="// CONTROLS" class="options__section chopper-title" />
+        <ui:DropdownField name="mouse-steer" label="MOUSE LEFT / RIGHT" class="options__row" />
+        <ui:Slider name="mouse-sensitivity" label="MOUSE SENSITIVITY" low-value="0.25" high-value="3" class="options__row" />
+        <ui:Toggle name="invert-pitch" label="INVERT PITCH" class="options__row" />
 
-      <ui:Label text="DISPLAY" class="options__section" />
-      <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
-      <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
+        <ui:Label text="// DISPLAY" class="options__section chopper-title" />
+        <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
+        <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
 
-      <ui:Label text="AUDIO" class="options__section" />
-      <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
-      <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />
-      <ui:Slider name="volume-effects" label="EFFECTS" low-value="0" high-value="1" class="options__row" />
-      <ui:Slider name="volume-ui" label="INTERFACE" low-value="0" high-value="1" class="options__row" />
-      <ui:Slider name="volume-ambient" label="AMBIENT" low-value="0" high-value="1" class="options__row" />
+        <ui:Label text="// AUDIO" class="options__section chopper-title" />
+        <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="volume-effects" label="EFFECTS" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="volume-ui" label="INTERFACE" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="volume-ambient" label="AMBIENT" low-value="0" high-value="1" class="options__row" />
 
-      <ui:Button name="resume" text="RESUME" class="options__button" />
+        <ui:Button name="resume" text="[ RESUME ]" class="options__button chopper-title" />
+      </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>
 </ui:UXML>

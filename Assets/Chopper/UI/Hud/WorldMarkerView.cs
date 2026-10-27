@@ -103,7 +103,7 @@ namespace Chopper.UI.Hud
             // Text only when it changes: no string per marker per frame.
             if (slot.ShownDistance == marker.Distance) return;
             slot.ShownDistance = marker.Distance;
-            slot.Distance.text = marker.Distance.ToString();
+            slot.Distance.text = TabularText.Wrap(marker.Distance.ToString());
         }
     }
 }

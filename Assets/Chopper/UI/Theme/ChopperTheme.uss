@@ -1,4 +1,9 @@
-/* Shared green cyberpunk theme. Colours and fonts only; screens add their own layout USS. */
+/* Shared green cyberpunk theme: colours, fonts and the terminal look of the standard controls.
+   Screens add their own layout USS.
+   Fonts are the old game's (Assets/Fonts): Ethnocentric ExtraLight for text (the old HUD and timer),
+   Ethnocentric Bold for titles and alerts (class chopper-title, as the old popups and intro).
+   Controls are restyled here (not per screen) because a dropdown's list opens at the panel root,
+   outside the screen that owns it. */
 :root {
   --chopper-green: #39ff88;
   --chopper-green-dim: rgba(57, 255, 136, 0.35);
@@ -6,11 +11,131 @@
   --chopper-amber: #ffb000;
   --chopper-red: #ff3b3b;
   --chopper-panel: rgba(4, 16, 10, 0.72);
+  --chopper-terminal: rgba(1, 8, 4, 0.94);
   --chopper-text: #d8ffe9;
 
   --chopper-border-width: 1px;
-  --chopper-radius: 2px;
+  --chopper-radius: 0;
 
-  -unity-font: url("../Fonts/Inconsolata-SemiBold.ttf");
+  -unity-font: url("/Assets/Fonts/Ethnocentric-ExtraLight.otf");
   color: var(--chopper-text);
+}
+
+.chopper-title {
+  -unity-font: url("/Assets/Fonts/Ethnocentric-Bold.otf");
+}
+
+/* ---- Terminal controls ---- */
+
+/* Field labels: dim green, like terminal prompts. */
+.unity-base-field__label {
+  color: var(--chopper-green);
+  opacity: 0.85;
+}
+
+/* Dropdown: a bracketed terminal field instead of the grey box. */
+.unity-base-popup-field__input {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+  color: var(--chopper-green);
+  padding: 2px 8px;
+}
+
+.unity-base-popup-field__input:hover,
+.unity-base-popup-field:focus .unity-base-popup-field__input {
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-faint);
+}
+
+.unity-base-popup-field__text {
+  color: var(--chopper-green);
+}
+
+.unity-base-popup-field__arrow {
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+/* The open list (drawn at the panel root). */
+.unity-base-dropdown__container-inner {
+  background-color: var(--chopper-terminal);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green);
+  border-radius: 0;
+}
+
+.unity-base-dropdown__item {
+  color: var(--chopper-text);
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-base-dropdown__item:hover,
+.unity-base-dropdown__item:checked {
+  background-color: var(--chopper-green-faint);
+  color: var(--chopper-green);
+}
+
+.unity-base-dropdown__label {
+  color: var(--chopper-text);
+}
+
+.unity-base-dropdown__item:hover .unity-base-dropdown__label,
+.unity-base-dropdown__item:checked .unity-base-dropdown__label {
+  color: var(--chopper-green);
+}
+
+.unity-base-dropdown__checkmark {
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+/* Slider: a thin line with a square cursor. Selectors as specific as the default theme's, so these win. */
+.unity-base-slider--horizontal .unity-base-slider__tracker,
+.unity-base-slider:hover .unity-base-slider__tracker,
+.unity-base-slider:focus .unity-base-slider__tracker {
+  background-color: var(--chopper-green-dim);
+  background-image: none;
+  border-width: 0;
+  border-radius: 0;
+  height: 2px;
+  margin-top: -1px;
+}
+
+.unity-base-slider--horizontal .unity-base-slider__dragger,
+.unity-base-slider:hover .unity-base-slider__dragger,
+.unity-base-slider:active .unity-base-slider__dragger,
+.unity-base-slider:focus .unity-base-slider__dragger {
+  background-color: var(--chopper-green);
+  background-image: none;
+  border-width: 0;
+  border-radius: 0;
+  width: 8px;
+  height: 16px;
+  margin-top: -8px;
+}
+
+.unity-base-slider__dragger-border {
+  display: none;
+}
+
+/* Focused field: brighter green, not the default blue. */
+.unity-base-field:focus > .unity-base-field__label,
+.unity-base-field:focus:enabled > .unity-base-field__label,
+.unity-base-field:hover > .unity-base-field__label,
+.unity-base-field:hover:enabled > .unity-base-field__label {
+  color: var(--chopper-text);
+  opacity: 1;
+}
+
+/* Toggle: an empty box, filled green when on. */
+.unity-toggle__checkmark {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+.unity-toggle:hover .unity-toggle__checkmark {
+  border-color: var(--chopper-green);
 }

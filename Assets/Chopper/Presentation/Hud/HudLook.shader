@@ -84,25 +84,29 @@ Shader "Hidden/Chopper/HudLook"
                 float4 blue = SampleHud(hudUv - split);
                 float4 hud = float4(red.r, middle.g, blue.b, max(middle.a, max(red.a, blue.a)));
 
-                // Phosphor glow: a cheap 8-tap blur of the HUD at two radii, added on top.
+                // Phosphor glow: a round blur (two rings of 8 taps, rotated against each other, outer ring weaker),
+                // added on top. A square tap pattern made a boxy halo round each glyph.
                 float2 texel = _ChopperHudSize.zw * glowRadius;
                 float3 bloom = 0;
-                bloom += SampleHud(hudUv + float2( 1,  0) * texel).rgb;
-                bloom += SampleHud(hudUv + float2(-1,  0) * texel).rgb;
-                bloom += SampleHud(hudUv + float2( 0,  1) * texel).rgb;
-                bloom += SampleHud(hudUv + float2( 0, -1) * texel).rgb;
-                bloom += SampleHud(hudUv + float2( 1,  1) * texel * 1.6).rgb;
-                bloom += SampleHud(hudUv + float2(-1,  1) * texel * 1.6).rgb;
-                bloom += SampleHud(hudUv + float2( 1, -1) * texel * 1.6).rgb;
-                bloom += SampleHud(hudUv + float2(-1, -1) * texel * 1.6).rgb;
+                [unroll] for (int i = 0; i < 8; i++)
+                {
+                    float angle = i * 0.78539816;
+                    float2 inner = float2(cos(angle), sin(angle));
+                    float2 outer = float2(cos(angle + 0.39269908), sin(angle + 0.39269908));
+                    bloom += SampleHud(hudUv + inner * texel).rgb * 0.65;
+                    bloom += SampleHud(hudUv + outer * texel * 2.0).rgb * 0.35;
+                }
                 bloom *= glow / 8.0;
 
-                // Scanlines, vignette, noise and flicker change the HUD only.
-                float scan = 0.5 + 0.5 * cos(hudUv.y * scanlineCount * 6.2831853);
+                // Scanlines, vignette, noise and flicker change the HUD only. Lines are at least 3 screen pixels apart:
+                // closer lines beat against the pixel grid and make blocky bands through the text.
+                float lineCount = min(scanlineCount, _ScreenParams.y / 3.0);
+                float scan = 0.5 + 0.5 * cos(hudUv.y * lineCount * 6.2831853);
                 float shade = lerp(1.0, scan, scanlines);
                 shade *= saturate(1.0 - vignette * edge * 0.5);
                 shade *= brightness;
-                float grain = (Hash(uv * _ChopperHudSize.xy + frac(_Time.y) * 91.7) - 0.5) * noise;
+                // Grain only on the glow and thin edges, not on the solid strokes, so text stays clean to read.
+                float grain = (Hash(uv * _ChopperHudSize.xy + frac(_Time.y) * 91.7) - 0.5) * noise * (1.0 - hud.a * 0.8);
 
                 // Phosphor trail: only what the HUD drew before and does not draw now (moving parts). Static parts
                 // give nothing, so text stays sharp. History holds max(now, old x decay), so history - now = the ghost.
