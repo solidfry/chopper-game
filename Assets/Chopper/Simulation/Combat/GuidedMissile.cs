@@ -29,6 +29,8 @@ namespace Chopper.Simulation.Combat
         public ClusterConfig Cluster;
         /// <summary>Server: time left to the timed split (clusters only).</summary>
         public float SplitRemaining;
+        /// <summary>Flares do not fool this one (part of a swarm salvo).</summary>
+        public bool IgnoresFlares;
     }
 
     /// <summary>Server to all: a missile exploded here (its ghost is removed, so clients need the place).</summary>

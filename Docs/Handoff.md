@@ -77,20 +77,24 @@ Rules:
   - The HUD panel renders into a texture; a URP renderer feature (`HudLookRendererFeature`, shader `Hidden/Chopper/HudLook`) draws it over the game with glow, scanlines, curvature, colour split, vignette, noise and flicker. The game view is not changed.
   - `HudLookSettings` on `GameConfig`: presets Clean (plain UI, no pass), Vector, CRT 84 (default); intensities; gameplay reactions.
   - Gameplay drives it (`HudLookModel`): glitch on damage, flicker at low hull, pulse on your lock, noise as a missile closes in, drop-out on death and boot-up on spawn. `HudLook.Disrupt` is ready for EMP and hack.
-  - Player options (saved in PlayerPrefs): `HudLook.Preset` and `HudLook.ReduceEffects` (no flicker, weaker glitches). No options screen yet.
+  - Player options (saved in PlayerPrefs): `HudLook.Preset` and `HudLook.ReduceEffects` (no flicker, weaker glitches), set in the options overlay.
+  - Phosphor trail: moving HUD parts leave a short fading ghost (two HUD-size history textures, ping-pong, in the same renderer feature). `Persistence` / `PersistenceTime` per preset.
   - Setup step 1 makes the settings and adds the feature to every URP renderer; Validate checks them.
 - **World markers and rocket lead** (plan section 3b, "Markers, lead, cluster — built"): a marker on every other chopper (red diamond) and ground target (amber square), closest 24, distance under it, health bar when near, filled when it is your lock target, edge arrow when off screen. A lead circle shows where to aim the selected rocket pod (lock target, else the target nearest the nose).
 - **Cluster missiles** (module 116 "Cluster Missiles", `Weapon_ClusterMissile`): a guided missile that splits into 8 submunitions near the target or after 1.8 s. Submunitions are server rockets; one RPC with a seed lets clients draw them. Any guided missile definition can be a cluster (Cluster section, 0 = off).
+- **Swarm Pod** (module 117, `Weapon_SwarmMissiles`): one trigger pull with a lock fires 10 small seekers, one every 0.06 s, fanned 20°; 3 of 10 ignore flares. Any guided missile can have a salvo (Salvo section on the definition).
+- **Options overlay** (Escape / gamepad Start): HUD look preset, reduce flicker / effects, 5 volume sliders. While open: cursor free, flight input neutral (`PlayerInputBlock` singleton, written by `InputBlockSystem` from `PresentationContext.MenuOpen`). First piece of the UI Toolkit menu port.
 - Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
 
 ### Editor steps after pulling
 1. Chopper → Setup → **Do all**, then **Validate**. Fix what it lists.
 2. Fix compile errors (nothing from 27 Oct is compiled yet). Send the console list to Claude if needed.
 3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon. Markers sit on the training targets; the lead circle shows with the rocket pod selected. Fit "Cluster Missiles" (change the default loadout or the chassis defaults) and fire it at a target: 8 bomblets.
-4. HUD look: the HUD should glow, with scanlines and a slight curve. Take a hit: the HUD glitches. Die: it drops out. If the HUD is gone or black: set the preset to Clean on `Data/Hud/HudLookSettings` (default preset) or clear the PlayerPrefs key `Chopper.HudLook.Preset`, and send the console to Claude. Check the HUD edges for dark fringes (alpha mode).
-5. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
-6. Run edit-mode tests (Window → General → Test Runner).
-7. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
+4. HUD look: the HUD should glow, with scanlines and a slight curve. The phosphor trail is off on a `HudLookSettings` asset made before this change: set Persistence (0.5) and Persistence Time (0.12) on the CRT 84 profile, or delete the asset and run Do all. Take a hit: the HUD glitches. Die: it drops out. If the HUD is gone or black: set the preset to Clean on `Data/Hud/HudLookSettings` (default preset) or clear the PlayerPrefs key `Chopper.HudLook.Preset`, and send the console to Claude. Check the HUD edges for dark fringes (alpha mode).
+5. Press Escape: the options overlay opens, the cursor shows, the chopper stops taking input. Change HUD look and volumes; press Escape again. Fit "Swarm Pod", lock a target, fire: 10 missiles fan out.
+6. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
+7. Run edit-mode tests (Window → General → Test Runner).
+8. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -111,9 +115,11 @@ Rules:
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
    - done (not yet compiled): retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings`, gameplay glitches);
-   - next for the look: tune it in play; options toggle for preset / reduce effects; phosphor persistence (last-frame blend); per-element Shader Graph UI materials; same look for menus and hangar;
+   - done (not yet compiled): options toggle for preset / reduce effects; phosphor persistence;
+   - next for the look: tune it in play; per-element Shader Graph UI materials; same look for menus and hangar;
    - done (not yet compiled): cluster missiles, world markers, rocket lead indicator;
-   - next: swarm micro-missiles; team colours on markers when TDM exists; objective markers (nuke, bases).
+   - done (not yet compiled): swarm micro-missiles (Swarm Pod);
+   - next: team colours on markers when TDM exists; objective markers (nuke, bases); the other weapons in the table (railgun, EMP, chain lightning...).
    It can run in parallel with step 2: the weapons are modules.
 4. **Phase 3: services:**
    - Steamworks.NET and the Dashboard Steam provider;
@@ -123,7 +129,7 @@ Rules:
 5. **Phase 6: modes:** TDM, then Capture the Nuke, then bots.
 6. **Phase 5: progression:** Cloud Code grants, Cloud Save, unlocks, leaderboards and Steam achievements.
 7. **Any time:**
-   - port the old menus to UI Toolkit and delete `Assets/Scripts`;
+   - port the old menus to UI Toolkit and delete `Assets/Scripts` (the options overlay `UI/Options` is the first piece; reuse its style);
    - export the `.blend` models to `.fbx`;
    - delete or rebuild the old scenes.
 
@@ -151,4 +157,5 @@ Rules:
 | HUD look | `Presentation/Hud/HudLook*.cs`, `HudLook.shader`; settings `Data/Hud/HudLookSettings.asset`; setup `Editor/Setup/HudLookAssets.cs` |
 | Editor | `Editor/Setup/*` (window, asset factories, validator) |
 | Markers | `Presentation/Hud/WorldMarker*.cs`, `UI/Hud/WorldMarkerView.cs` |
+| Options | `UI/Options/*` (overlay), `Presentation/Bridge/InputBlockSystem.cs`, `Simulation/Input/PlayerInputBlock.cs` |
 | Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio) |

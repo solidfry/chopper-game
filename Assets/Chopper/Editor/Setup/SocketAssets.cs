@@ -53,7 +53,8 @@ namespace Chopper.Editor.Setup
         private static readonly (ushort[] Modules, string Prefab)[] Visuals =
         {
             (new ushort[] { 101, 102, 103 }, "SM_Veh_Heli_Attach_Minigun"),
-            (new ushort[] { 111 }, "SM_Veh_Heli_Attach_Rocket_Pod_02"),
+            // The swarm pod looks like a rocket pod: many small tubes.
+            (new ushort[] { 111, GuidedWeaponAssets.SwarmPodId }, "SM_Veh_Heli_Attach_Rocket_Pod_02"),
             (new ushort[] { GuidedWeaponAssets.HomingMissilesId, GuidedWeaponAssets.GroundSeekerId, GuidedWeaponAssets.ClusterMissilesId },
                 "SM_Veh_Heli_Attach_Missle_01"),
             (new ushort[] { 131 }, "SM_Veh_Attach_Flare_01"),

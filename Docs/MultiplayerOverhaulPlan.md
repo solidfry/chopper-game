@@ -220,7 +220,9 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - `HudLookModel` (plain C#, `HudLookModelTests`): damage → glitch (grows with damage, decays); low hull → flicker; own lock → pulse; missile urgency → noise; death / spawn → drop-out / boot-up; `Disrupt(strength, seconds)` for EMP and hack. Reduce effects: no flicker, glitch/pulse/noise × 0.25.
 - `HudLookSettings` on `GameConfig`: default preset, render scale, Vector and CRT 84 profiles, reactions. Player choice saved in PlayerPrefs (`HudLook.Preset`, `HudLook.ReduceEffects`); no options UI yet.
 - Setup step 1: settings asset + the feature on every URP renderer under Assets. Validate: settings, feature present, shader set, feature on.
-- Not built yet: phosphor persistence, per-element UI materials, options toggle, menus/hangar on the same look.
+- Phosphor persistence (built after): two HUD-size history RTHandles in the feature, ping-pong; pass 1 = max(HUD, last × decay), decay = exp(−dt / PersistenceTime) from C#; the composite adds the trail where the HUD is not drawn. Strength 0 = no history pass.
+- Options overlay (built after): `OptionsMenuView` (Escape / Start) sets preset, reduce effects and volumes; blocks flight input through `PlayerInputBlock`.
+- Not built yet: per-element UI materials, menus/hangar on the same look.
 
 ### Markers, lead, cluster — built (27 Oct, written without the editor — needs a compile + play check)
 - `WorldMarkerSystem` (client, the one ECS reader for markers) fills `WorldMarkerModel` on `PresentationContext.Markers`: every other `Targetable` with `Health` in 2 km, closest 24, edge clamp + arrow angle when off screen or behind (`WorldMarkerModel.Place`), distance in 10 m steps, health bar under 400 m, lock target flag. One `Changed` event per frame.
@@ -228,12 +230,13 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - Lead indicator: selected pylon = rocket → aim point from `Guidance.InterceptTime` (rockets keep the chopper's velocity, so the maths is relative to the chopper). Target = lock target, else the target nearest the nose in a 15° cone within rocket range. The hitscan gun has no lead (instant hit).
 - Cluster missiles: `ClusterConfig` on `GuidedMissileDefinition` → `PylonWeapon` → `GuidedMissile`. Server splits near the target (`SplitDistance`) or on a timer (no proximity fuse), spawns submunitions as `Rocket`s (`RocketSystem` flies and damages them), sends one `ClusterSplitRpc` with a seed; clients rebuild directions with `Cluster.Direction` and publish `RocketLaunched` per submunition. Data: `Weapon_ClusterMissile`, module 116 "Cluster Missiles".
 - Tests: `WorldMarkerModelTests`, `ClusterTests`, intercept tests in `GuidanceTests`.
+- Swarm micro-missiles (built after): salvo data on `GuidedMissileDefinition` (count, interval ≥ 1 tick, fan cone, flare resistance) → `PylonWeapon`; `PylonFireSystem` fires shot 0 on the trigger and the rest from predicted `PylonWeaponState.SalvoRemaining/SalvoTimer` (one spawn per tick, so predicted spawns match). Fan direction from `Cluster.Direction` with a per-shooter seed; `Salvo.IgnoresFlares` spreads flare-proof missiles evenly. Data: `Weapon_SwarmMissiles`, module 117 "Swarm Pod".
 
 ### Build order
 1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
 2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
 3. Air-to-ground variant; ground targets in the training range.
-4. Cluster missiles (**built, not compiled**); swarm micro-missiles.
+4. Cluster missiles; swarm micro-missiles (**both built, not compiled**).
 5. World markers + lead indicator (**built, not compiled**); then the other weapons one behaviour at a time.
 6. Retro HUD look: HUD to RenderTexture + full-screen CRT pass + `HudLookSettings`; then gameplay-driven glitches. **Built (not compiled), see above.**
 

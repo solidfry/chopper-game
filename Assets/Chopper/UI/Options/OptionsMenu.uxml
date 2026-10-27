@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+  <Style src="OptionsMenu.uss" />
+  <!-- Options overlay: Escape / Start opens it (OptionsMenuView). Hidden at start. -->
+  <ui:VisualElement name="options" class="options options--hidden">
+    <ui:VisualElement class="options__panel">
+      <ui:Label text="OPTIONS" class="options__title" />
+
+      <ui:Label text="DISPLAY" class="options__section" />
+      <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
+      <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
+
+      <ui:Label text="AUDIO" class="options__section" />
+      <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
+      <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />
+      <ui:Slider name="volume-effects" label="EFFECTS" low-value="0" high-value="1" class="options__row" />
+      <ui:Slider name="volume-ui" label="INTERFACE" low-value="0" high-value="1" class="options__row" />
+      <ui:Slider name="volume-ambient" label="AMBIENT" low-value="0" high-value="1" class="options__row" />
+
+      <ui:Button name="resume" text="RESUME" class="options__button" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

@@ -7,6 +7,7 @@ using Chopper.Presentation.Hud;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Flight;
 using Chopper.UI.Hud;
+using Chopper.UI.Options;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -131,6 +132,8 @@ namespace Chopper.Editor.Setup
 
             if (Object.FindAnyObjectByType<ChopperHudView>() == null)
                 problems.Add(new SetupProblem("Open scene has no HUD. Press 'Set up open scene'."));
+            if (Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include) == null)
+                problems.Add(new SetupProblem("Open scene has no options overlay (Escape menu). Press '3. Set up open scene'."));
 
             // Gameplay content lives in the subscene; a closed one is opened for the check and closed again.
             if (!GameplaySceneSetup.WithGameplayScene(scene => CheckGameplayScene(scene, problems), save: false))

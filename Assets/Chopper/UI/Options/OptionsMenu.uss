@@ -1,0 +1,64 @@
+/* Options overlay. Colours and font come from the shared theme (ChopperTheme.uss). */
+.options {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+.options--hidden {
+  display: none;
+}
+
+.options__panel {
+  width: 620px;
+  padding: 24px 32px;
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: var(--chopper-radius);
+}
+
+.options__title {
+  font-size: 32px;
+  color: var(--chopper-green);
+  margin-bottom: 12px;
+  -unity-text-align: middle-center;
+}
+
+.options__section {
+  font-size: 14px;
+  color: var(--chopper-amber);
+  margin-top: 14px;
+  margin-bottom: 4px;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.options__row {
+  margin: 4px 0;
+}
+
+.options__row > .unity-label {
+  min-width: 260px;
+  color: var(--chopper-text);
+}
+
+.options__button {
+  margin-top: 20px;
+  height: 40px;
+  font-size: 18px;
+  color: var(--chopper-green);
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green-dim);
+}
+
+.options__button:hover,
+.options__button:focus {
+  background-color: var(--chopper-green-dim);
+  color: var(--chopper-text);
+}

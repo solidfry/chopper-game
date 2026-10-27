@@ -112,6 +112,14 @@ namespace Chopper.Presentation.Camera
             Cursor.visible = false;
         }
 
+        /// <summary>Free: cursor visible and unlocked (a menu is open). Not free: back to this rig's setting.</summary>
+        public void SetCursorFree(bool free)
+        {
+            var locked = !free && lockCursor && isActiveAndEnabled;
+            Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !locked;
+        }
+
         private void OnDisable()
         {
             Cursor.lockState = CursorLockMode.None;

@@ -11,6 +11,7 @@ namespace Chopper.Simulation.Flight
     /// Reads the Flight action map into the local player's <see cref="ChopperInput"/> each frame.
     /// Keyboard/gamepad axes request a fraction of the max turn rate. The mouse works like aiming: moving it
     /// faster turns faster (degrees per pixel), so it is precise for small corrections and fast for big flicks.
+    /// While a menu is open (<see cref="PlayerInputBlock"/>) the input is neutral.
     /// </summary>
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -42,6 +43,14 @@ namespace Chopper.Simulation.Flight
 
         protected override void OnUpdate()
         {
+            if (SystemAPI.TryGetSingleton<PlayerInputBlock>(out var block) && block.Blocked)
+            {
+                _mouseRate = float2.zero;
+                foreach (var input in SystemAPI.Query<RefRW<ChopperInput>>().WithAll<GhostOwnerIsLocal>())
+                    input.ValueRW = default;
+                return;
+            }
+
             var flight = _controls.Flight;
             var thrust = math.clamp(flight.Thrust.ReadValue<float>(), -1f, 1f);
             var yaw = math.clamp(flight.Yaw.ReadValue<float>(), -1f, 1f);

@@ -46,5 +46,17 @@ namespace Chopper.Tests
             Assert.That(Cluster.ShouldSplit(config, splitRemaining: 1f, targetDistance: 100f), Is.False);
             Assert.That(Cluster.ShouldSplit(new ClusterConfig(), splitRemaining: 0f, targetDistance: 0f), Is.False, "not a cluster");
         }
+
+        [Test]
+        public void Salvo_FlareResistanceIsSpreadThroughTheSalvo()
+        {
+            var resistant = new System.Collections.Generic.List<int>();
+            for (var shot = 0; shot < 10; shot++)
+                if (Salvo.IgnoresFlares(shot, 0.3f)) resistant.Add(shot);
+            Assert.That(resistant, Is.EqualTo(new[] { 3, 6, 9 }));
+
+            Assert.That(Salvo.IgnoresFlares(0, 0f), Is.False, "no resistance");
+            Assert.That(Salvo.IgnoresFlares(0, 1f), Is.True, "full resistance");
+        }
     }
 }

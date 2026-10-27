@@ -66,7 +66,7 @@ namespace Chopper.Simulation.Combat
                 missile.ArmRemaining = math.max(0f, missile.ArmRemaining - deltaTime);
 
                 // Flares: a heat seeker loses a target that is dropping them.
-                if (missile.Seeker == SeekerType.Heat && _countermeasures.TryGetComponent(missile.Target, out var flares) &&
+                if (missile.Seeker == SeekerType.Heat && !missile.IgnoresFlares && _countermeasures.TryGetComponent(missile.Target, out var flares) &&
                     flares.DecoyRemaining > 0f)
                     missile.Target = Entity.Null;
 

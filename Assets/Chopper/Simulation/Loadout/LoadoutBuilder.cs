@@ -180,6 +180,10 @@ namespace Chopper.Simulation.Loadout
             ProximityFuse = missile.ProximityFuse,
             ArmTime = missile.ArmTime,
             Cluster = missile.Cluster,
+            SalvoCount = missile.SalvoCount,
+            SalvoInterval = missile.SalvoInterval,
+            SalvoConeCos = missile.SalvoConeCos,
+            FlareResistance = missile.FlareResistance,
             MissilePrefab = missile.MissilePrefab != null && resolveMissilePrefab != null ? resolveMissilePrefab(missile.MissilePrefab) : Entity.Null,
         };
 

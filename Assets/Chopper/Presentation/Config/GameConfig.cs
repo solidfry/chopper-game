@@ -29,6 +29,7 @@ namespace Chopper.Presentation.Config
         [SerializeField, Tooltip("Shared panel settings (theme, scaling) for every UI Toolkit document.")]
         private PanelSettings panelSettings;
         [SerializeField] private VisualTreeAsset hudLayout;
+        [SerializeField, Tooltip("In-game options overlay (Escape).")] private VisualTreeAsset optionsLayout;
         [SerializeField, Tooltip("Retro HUD look: presets, intensities, gameplay reactions. Empty = plain UI HUD.")]
         private HudLookSettings hudLook;
 
@@ -38,6 +39,7 @@ namespace Chopper.Presentation.Config
         public AudioClip MatchMusic => matchMusic;
         public PanelSettings PanelSettings => panelSettings;
         public VisualTreeAsset HudLayout => hudLayout;
+        public VisualTreeAsset OptionsLayout => optionsLayout;
         public HudLookSettings HudLook => hudLook;
 
         public void CollectProblems(List<string> problems)
@@ -47,6 +49,7 @@ namespace Chopper.Presentation.Config
             Require(effects, "combat effects settings", problems);
             Require(panelSettings, "panel settings", problems);
             Require(hudLayout, "HUD layout", problems);
+            Require(optionsLayout, "options layout", problems);
             Require(hudLook, "HUD look settings", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
@@ -57,7 +60,7 @@ namespace Chopper.Presentation.Config
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Initialise(LoadoutCatalog catalog, SoundLibrary soundLibrary, CombatEffectsSettings effectsSettings, AudioClip music,
-            PanelSettings panel, VisualTreeAsset hud, HudLookSettings look)
+            PanelSettings panel, VisualTreeAsset hud, HudLookSettings look, VisualTreeAsset options)
         {
             loadoutCatalog = catalog;
             audio = soundLibrary;
@@ -66,6 +69,7 @@ namespace Chopper.Presentation.Config
             panelSettings = panel;
             hudLayout = hud;
             hudLook = look;
+            optionsLayout = options;
         }
 
         private void Require(Object value, string label, List<string> problems)

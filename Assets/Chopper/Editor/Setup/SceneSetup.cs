@@ -3,6 +3,7 @@ using Chopper.Presentation.Camera;
 using Chopper.Presentation.Config;
 using Chopper.UI.Audio;
 using Chopper.UI.Hud;
+using Chopper.UI.Options;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -11,7 +12,8 @@ using UnityEngine.UIElements;
 namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// Sets up the open scene: one Presentation object (bridge to ECS), the chase camera, and the HUD document wired to it.
+    /// Sets up the open scene: one Presentation object (bridge to ECS), the chase camera, the HUD document and the
+    /// options overlay, wired to it.
     /// Reuses what is already there.
     /// </summary>
     internal static class SceneSetup
@@ -54,6 +56,7 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(document);
             EditorUtility.SetDirty(hud);
             EditorUtility.SetDirty(sounds);
+            EnsureOptions(config, bridge);
             EditorSceneManager.MarkSceneDirty(bridge.gameObject.scene);
             Selection.activeGameObject = bridge.gameObject;
         }
@@ -74,6 +77,43 @@ namespace Chopper.Editor.Setup
                 go.AddComponent<AudioListener>();
             }
             return Undo.AddComponent<ChopperCameraRig>(camera.gameObject);
+        }
+
+        /// <summary>Options overlay: its own document on the shared panel settings (not the HUD's render texture), drawn on top.</summary>
+        private static void EnsureOptions(GameConfig config, PresentationBridge bridge)
+        {
+            var view = Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include);
+            GameObject go;
+            if (view != null)
+            {
+                go = view.gameObject;
+            }
+            else
+            {
+                go = new GameObject("Options");
+                Undo.RegisterCreatedObjectUndo(go, "Add Options");
+            }
+
+            var document = go.GetComponent<UIDocument>();
+            if (document == null) document = Undo.AddComponent<UIDocument>(go);
+            Undo.RecordObject(document, "Configure Options");
+            document.panelSettings = config != null ? config.PanelSettings : null;
+            document.visualTreeAsset = config != null ? config.OptionsLayout : null;
+            document.sortingOrder = 100;
+
+            view = go.GetComponent<OptionsMenuView>();
+            if (view == null) view = Undo.AddComponent<OptionsMenuView>(go);
+            Undo.RecordObject(view, "Configure Options");
+            view.SetBridge(bridge);
+
+            var sounds = go.GetComponent<UISoundBinder>();
+            if (sounds == null) sounds = Undo.AddComponent<UISoundBinder>(go);
+            Undo.RecordObject(sounds, "Configure Options");
+            sounds.SetBridge(bridge);
+
+            EditorUtility.SetDirty(document);
+            EditorUtility.SetDirty(view);
+            EditorUtility.SetDirty(sounds);
         }
 
         private static GameObject CreateHudObject()

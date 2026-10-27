@@ -35,6 +35,10 @@ namespace Chopper.Presentation.Hud
         public float Noise;
         [Range(0f, 0.5f), Tooltip("Base brightness flicker. Off when the player turns on 'reduce effects'.")]
         public float Flicker;
+        [Range(0f, 1f), Tooltip("Phosphor trail: moving HUD parts leave a fading ghost. 0 = off (no extra pass).")]
+        public float Persistence;
+        [Range(0.01f, 1f), Tooltip("Seconds for the trail to fade to about a third.")]
+        public float PersistenceTime;
     }
 
     /// <summary>How strongly the look reacts to gameplay (hits, low hull, locks, missiles). Same for every preset.</summary>
@@ -75,13 +79,13 @@ namespace Chopper.Presentation.Hud
         [SerializeField] private HudLookProfile vector = new()
         {
             Glow = 1f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, Curvature = 0f,
-            Chromatic = 0.5f, Vignette = 0f, Noise = 0.02f, Flicker = 0f,
+            Chromatic = 0.5f, Vignette = 0f, Noise = 0.02f, Flicker = 0f, Persistence = 0.35f, PersistenceTime = 0.08f,
         };
 
         [SerializeField] private HudLookProfile crt84 = new()
         {
             Glow = 1.4f, GlowRadius = 3f, Scanlines = 0.35f, ScanlineCount = 405f, Curvature = 0.06f,
-            Chromatic = 1.5f, Vignette = 0.35f, Noise = 0.06f, Flicker = 0.04f,
+            Chromatic = 1.5f, Vignette = 0.35f, Noise = 0.06f, Flicker = 0.04f, Persistence = 0.5f, PersistenceTime = 0.12f,
         };
 
         [SerializeField] private HudLookReactions reactions = new()

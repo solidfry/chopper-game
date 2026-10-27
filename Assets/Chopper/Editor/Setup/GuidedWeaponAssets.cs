@@ -9,8 +9,8 @@ namespace Chopper.Editor.Setup
 {
     /// <summary>
     /// Guided weapons and flares: the missile ghost prefab, heat-seeker definitions (air-to-air, air-to-ground), the
-    /// cluster missile, the flares ability, and their links to modules (Homing Missiles, new Ground Seeker and Cluster
-    /// Missiles modules, Flares). Creates or links only
+    /// cluster missile, the swarm pod, the flares ability, and their links to modules (Homing Missiles, new Ground Seeker, Cluster
+    /// Missiles and Swarm Pod modules, Flares). Creates or links only
     /// what is missing; never overwrites tuned values.
     /// </summary>
     internal static class GuidedWeaponAssets
@@ -21,6 +21,7 @@ namespace Chopper.Editor.Setup
         public const ushort HomingMissilesId = 112;
         public const ushort GroundSeekerId = 115;
         public const ushort ClusterMissilesId = 116;
+        public const ushort SwarmPodId = 117;
         private const ushort FlaresId = 131;
 
         public static void Ensure(LoadoutCatalog catalog)
@@ -51,6 +52,14 @@ namespace Chopper.Editor.Setup
                     radius: 6f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
+            var swarm = Definition<GuidedMissileDefinition>("Weapon_SwarmMissiles", d =>
+            {
+                // 10 weak, agile seekers fanned out; 3 of them ignore flares, so one flare drop does not stop a salvo.
+                d.Initialise(prefab, TargetClass.Air, needsLock: true, cone: 20f, range: 500f, lockSeconds: 1f, missileSpeed: 140f,
+                    turnDegreesPerSecond: 150f, gain: 3f, fuse: 4f, direct: 8f, splash: 5f, radius: 3f, interval: 6f, life: 4f);
+                d.SetSalvo(count: 10, interval: 0.06f, spreadDegrees: 20f, resistance: 0.3f);
+                d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
+            });
             var flares = Definition<CountermeasureDefinition>("Ability_Flares", _ => { });
 
             Link(catalog, HomingMissilesId, m => m.Weapon == null, m => m.SetWeapon(airToAir));
@@ -59,6 +68,8 @@ namespace Chopper.Editor.Setup
                 "Pylon_GroundSeeker", weight: 16f, unlockLevel: 6, airToGround);
             EnsureModule(catalog, ClusterMissilesId, "Cluster Missiles", "Splits into bomblets over the target. Area denial.",
                 "Pylon_ClusterMissiles", weight: 18f, unlockLevel: 8, cluster);
+            EnsureModule(catalog, SwarmPodId, "Swarm Pod", "Ten micro-missiles per lock. Some ignore flares.",
+                "Pylon_SwarmPod", weight: 15f, unlockLevel: 10, swarm);
             AssetDatabase.SaveAssets();
         }
 

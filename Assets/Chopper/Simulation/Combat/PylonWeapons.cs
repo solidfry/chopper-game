@@ -49,6 +49,14 @@ namespace Chopper.Simulation.Combat
         public Entity MissilePrefab;
         /// <summary>Guided only: splits into submunitions (<see cref="ClusterConfig.Count"/> 0 = no).</summary>
         public ClusterConfig Cluster;
+        /// <summary>Guided only: missiles per trigger pull (swarm). 1 = one missile.</summary>
+        public byte SalvoCount;
+        /// <summary>Seconds between missiles of one salvo (one per tick at most, so predicted spawns match).</summary>
+        public float SalvoInterval;
+        /// <summary>Cosine of the launch spread cone of a salvo.</summary>
+        public float SalvoConeCos;
+        /// <summary>0..1: part of a salvo that flares do not fool (swarms saturate flares).</summary>
+        public float FlareResistance;
     }
 
     /// <summary>Per-pylon cooldown, same order as <see cref="PylonWeapon"/>. Predicted on the owner.</summary>
@@ -56,6 +64,20 @@ namespace Chopper.Simulation.Combat
     public struct PylonWeaponState : IBufferElementData
     {
         [GhostField(Quantization = 1000)] public float CooldownRemaining;
+        /// <summary>Missiles of the current salvo still to fire.</summary>
+        [GhostField] public byte SalvoRemaining;
+        [GhostField(Quantization = 1000)] public float SalvoTimer;
+    }
+
+    /// <summary>Salvo maths shared by the fire system and tests.</summary>
+    public static class Salvo
+    {
+        /// <summary>
+        /// True when missile <paramref name="shot"/> of a salvo ignores flares. Spread evenly through the salvo:
+        /// resistance 0.3 of 10 missiles = shots 3, 6 and 9.
+        /// </summary>
+        public static bool IgnoresFlares(int shot, float resistance) =>
+            math.floor((shot + 1) * resistance) > math.floor(shot * resistance);
     }
 
     /// <summary>Which pylon weapon secondary fire uses. Predicted on the owner; cycled by input.</summary>

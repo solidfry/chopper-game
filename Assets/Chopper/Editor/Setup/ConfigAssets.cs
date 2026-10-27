@@ -15,6 +15,7 @@ namespace Chopper.Editor.Setup
         private const string PanelSettingsPath = "Assets/Chopper/UI/Settings/ChopperPanelSettings.asset";
         private const string ThemePath = "Assets/Chopper/UI/Theme/ChopperRuntimeTheme.tss";
         private const string HudLayoutPath = "Assets/Chopper/UI/Hud/ChopperHud.uxml";
+        private const string OptionsLayoutPath = "Assets/Chopper/UI/Options/OptionsMenu.uxml";
 
         public static GameConfig Load() => AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigPath);
 
@@ -29,6 +30,7 @@ namespace Chopper.Editor.Setup
             var panel = EnsurePanelSettings();
             var look = HudLookAssets.Ensure();
             var hud = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
+            var options = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(OptionsLayoutPath);
             var music = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioAssets.MatchMusicPath);
 
             var config = Load();
@@ -37,7 +39,7 @@ namespace Chopper.Editor.Setup
                 config = ScriptableObject.CreateInstance<GameConfig>();
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(GameConfigPath));
                 AssetDatabase.CreateAsset(config, GameConfigPath);
-                config.Initialise(catalog, library, effects, music, panel, hud, look);
+                config.Initialise(catalog, library, effects, music, panel, hud, look, options);
             }
             else
             {
@@ -49,7 +51,8 @@ namespace Chopper.Editor.Setup
                     config.MatchMusic != null ? config.MatchMusic : music,
                     config.PanelSettings != null ? config.PanelSettings : panel,
                     config.HudLayout != null ? config.HudLayout : hud,
-                    config.HudLook != null ? config.HudLook : look);
+                    config.HudLook != null ? config.HudLook : look,
+                    config.OptionsLayout != null ? config.OptionsLayout : options);
             }
 
             EditorUtility.SetDirty(config);

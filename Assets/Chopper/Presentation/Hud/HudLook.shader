@@ -1,6 +1,7 @@
 // Retro 80s HUD look (plan section 3b). Full-screen pass from HudLookRendererFeature: draws the HUD render texture
 // over the camera colour with phosphor glow, scanlines, barrel distortion, colour split, vignette, noise, flicker and
-// glitch bands. Only the HUD is changed; the game view underneath stays clean.
+// glitch bands, and a phosphor trail (pass 1 keeps a fading history of the HUD). Only the HUD is changed; the game
+// view underneath stays clean.
 // All values are global properties written by HudLook (C#), so the material holds no state.
 Shader "Hidden/Chopper/HudLook"
 {
@@ -12,6 +13,20 @@ Shader "Hidden/Chopper/HudLook"
         Cull Off
         Blend Off
 
+        HLSLINCLUDE
+        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+        TEXTURE2D(_ChopperHudTex);
+        TEXTURE2D(_ChopperHudHistory);
+        float4 _ChopperHudSize;     // width, height, 1/width, 1/height
+        float4 _ChopperHudParams0;  // glow, glow radius (px), scanlines, scanline count
+        float4 _ChopperHudParams1;  // curvature, chromatic (px), vignette, noise
+        float4 _ChopperHudParams2;  // brightness, glitch, glitch seed, unused
+        float4 _ChopperHudParams3;  // trail decay per frame, trail strength, unused, unused
+        ENDHLSL
+
+        // Pass 0: composite the HUD (and its trail) over the camera colour.
         Pass
         {
             Name "HudLook"
@@ -19,15 +34,6 @@ Shader "Hidden/Chopper/HudLook"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
-
-            TEXTURE2D(_ChopperHudTex);
-            float4 _ChopperHudSize;     // width, height, 1/width, 1/height
-            float4 _ChopperHudParams0;  // glow, glow radius (px), scanlines, scanline count
-            float4 _ChopperHudParams1;  // curvature, chromatic (px), vignette, noise
-            float4 _ChopperHudParams2;  // brightness, glitch, glitch seed, unused
 
             float Hash(float2 p)
             {
@@ -98,9 +104,33 @@ Shader "Hidden/Chopper/HudLook"
                 shade *= brightness;
                 float grain = (Hash(uv * _ChopperHudSize.xy + frac(_Time.y) * 91.7) - 0.5) * noise;
 
+                // Phosphor trail: the fading history, only where the HUD is not drawn now (premultiplied, additive).
+                float3 trail = SAMPLE_TEXTURE2D_LOD(_ChopperHudHistory, sampler_LinearClamp, hudUv, 0).rgb
+                    * _ChopperHudParams3.y * (1.0 - saturate(hud.a));
+
                 float3 hudColour = max(0.0, hud.rgb * shade + grain * hud.a);
-                float3 colour = scene * (1.0 - saturate(hud.a)) + hudColour + bloom * brightness;
+                float3 colour = scene * (1.0 - saturate(hud.a)) + hudColour + (bloom + trail * shade) * brightness;
                 return float4(colour, 1.0);
+            }
+            ENDHLSL
+        }
+
+        // Pass 1: history = max(HUD now, last history × decay). Source (_BlitTexture) = last history; both HUD-size.
+        Pass
+        {
+            Name "HudPersistence"
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragPersistence
+
+            float4 FragPersistence(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                float2 uv = input.texcoord;
+                float4 last = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv) * _ChopperHudParams3.x;
+                float4 now = SAMPLE_TEXTURE2D_LOD(_ChopperHudTex, sampler_LinearClamp, uv, 0);
+                return max(now, last);
             }
             ENDHLSL
         }

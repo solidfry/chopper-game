@@ -38,6 +38,12 @@ namespace Chopper.Simulation.Definitions
         [SerializeField] private float splashDamage = 20f;
         [SerializeField] private float splashRadius = 6f;
 
+        [Header("Salvo (swarm)")]
+        [SerializeField, Range(1, 16), Tooltip("Missiles per trigger pull.")] private int salvoCount = 1;
+        [SerializeField, Tooltip("Seconds between missiles of a salvo. At least one tick (1/60 s).")] private float salvoInterval = 0.06f;
+        [SerializeField, Tooltip("Half-angle of the launch fan, degrees.")] private float salvoSpreadDegrees;
+        [SerializeField, Range(0f, 1f), Tooltip("Part of a salvo that flares do not fool.")] private float flareResistance;
+
         [Header("Cluster (0 submunitions = normal missile)")]
         [SerializeField, Range(0, Combat.Cluster.MaxCount), Tooltip("Splits into this many submunitions; no proximity fuse then.")]
         private int submunitions;
@@ -68,6 +74,11 @@ namespace Chopper.Simulation.Definitions
         public float SplashDamage => splashDamage;
         public float SplashRadius => splashRadius;
 
+        public byte SalvoCount => (byte)Mathf.Clamp(salvoCount, 1, 16);
+        public float SalvoInterval => salvoInterval;
+        public float SalvoConeCos => Mathf.Cos(salvoSpreadDegrees * Mathf.Deg2Rad);
+        public float FlareResistance => flareResistance;
+
         public ClusterConfig Cluster => new()
         {
             Count = (byte)Mathf.Clamp(submunitions, 0, Combat.Cluster.MaxCount),
@@ -88,6 +99,10 @@ namespace Chopper.Simulation.Definitions
                 problems.Add($"{name}: missile prefab has no GuidedMissileAuthoring.");
             if (seeker != SeekerType.None && targets == TargetClass.None) problems.Add($"{name}: seeker has no target classes.");
             if (speed <= 0f || lifetime <= 0f || fireInterval <= 0f) problems.Add($"{name}: speed, lifetime and fire interval must be above 0.");
+            if (salvoCount > 1 && salvoInterval < 1f / 60f)
+                problems.Add($"{name}: salvo interval below one tick (1/60 s); missiles of one tick would mismatch their predicted spawns.");
+            if (salvoCount > 1 && fireInterval < salvoCount * salvoInterval)
+                problems.Add($"{name}: fire interval is shorter than the salvo; salvos would overlap.");
             if (submunitions > 0 && (submunitionSpeed <= 0f || submunitionLifetime <= 0f || splitTime <= 0f))
                 problems.Add($"{name}: cluster submunition speed, lifetime and split time must be above 0.");
         }
@@ -112,6 +127,15 @@ namespace Chopper.Simulation.Definitions
             splashRadius = radius;
             fireInterval = interval;
             lifetime = life;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetSalvo(int count, float interval, float spreadDegrees, float resistance)
+        {
+            salvoCount = count;
+            salvoInterval = interval;
+            salvoSpreadDegrees = spreadDegrees;
+            flareResistance = resistance;
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>

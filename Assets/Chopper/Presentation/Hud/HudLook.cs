@@ -20,6 +20,8 @@ namespace Chopper.Presentation.Hud
         public static readonly int Params1 = Shader.PropertyToID("_ChopperHudParams1");
         /// <summary>(brightness, glitch, glitch seed, unused).</summary>
         public static readonly int Params2 = Shader.PropertyToID("_ChopperHudParams2");
+        /// <summary>(trail decay per frame, trail strength, unused, unused). Strength 0 = no history pass.</summary>
+        public static readonly int Params3 = Shader.PropertyToID("_ChopperHudParams3");
     }
 
     /// <summary>
@@ -121,6 +123,9 @@ namespace Chopper.Presentation.Hud
             Shader.SetGlobalVector(HudLookShaderIds.Params1,
                 new Vector4(profile.Curvature, _model.Chromatic, profile.Vignette, _model.Noise));
             Shader.SetGlobalVector(HudLookShaderIds.Params2, new Vector4(_model.Brightness, _model.Glitch, _model.GlitchSeed, 0f));
+            // Frame-rate independent fade: after PersistenceTime seconds the trail is at 1/e.
+            var decay = profile.PersistenceTime > 0f ? Mathf.Exp(-deltaTime / profile.PersistenceTime) : 0f;
+            Shader.SetGlobalVector(HudLookShaderIds.Params3, new Vector4(decay, profile.Persistence, 0f, 0f));
         }
 
         public void Dispose()
@@ -202,6 +207,7 @@ namespace Chopper.Presentation.Hud
         private void Release()
         {
             Shader.SetGlobalFloat(HudLookShaderIds.Enabled, 0f);
+            Shader.SetGlobalVector(HudLookShaderIds.Params3, Vector4.zero);
             if (_document != null && _sourcePanel != null && _document.panelSettings == _texturePanel)
                 _document.panelSettings = _sourcePanel;
             if (_texturePanel != null)
