@@ -4,6 +4,16 @@ using UnityEngine.InputSystem;
 
 namespace Chopper.Presentation.Camera
 {
+    /// <summary>What the camera follows this frame: the local chopper's rendered pose and its motion.</summary>
+    public struct CameraTarget
+    {
+        public Vector3 Position;
+        public Quaternion Rotation;
+        /// <summary>World velocity, m/s.</summary>
+        public Vector3 Velocity;
+        public bool Boosting;
+    }
+
     /// <summary>
     /// The chopper camera. <see cref="LocalChopperCameraSystem"/> calls <see cref="Follow"/> once per frame with the chopper's
     /// rendered pose, so the camera never lags a frame behind it.
@@ -12,6 +22,10 @@ namespace Chopper.Presentation.Camera
     /// speed pull-back) and mounted (cockpit: rigid to the chopper). C / gamepad Y cycles them; the choice is saved.</item>
     /// <item>Switching blends position, rotation, field of view and near clip over the blend time.</item>
     /// <item>Each view can add noise (handheld / engine wobble); hits add shake (<see cref="AddShake"/>).</item>
+    /// <item>Weight: the camera lags with acceleration (the chopper pulls away when it speeds up, closes in when it brakes,
+    /// swings out in turns).</item>
+    /// <item>Boost: a spring drives wider FOV and pull-back with a punch, a shake kick and an engine rumble; post effects
+    /// and speed lines come from <see cref="SpeedEffects"/>.</item>
     /// <item>A respawn or teleport snaps the camera instead of swinging across the map.</item>
     /// </list>
     /// </summary>
@@ -44,6 +58,14 @@ namespace Chopper.Presentation.Camera
 
         private UnityEngine.Camera _camera;
         private CameraSettings _fallback;
+        private SpeedEffects _effects;
+        private Vector3 _lastVelocity;
+        private bool _hasLastVelocity;
+        private Vector3 _acceleration;
+        private Vector3 _lag;
+        private float _boost;
+        private float _boostVelocity;
+        private bool _wasBoosting;
         private ViewState[] _states = Array.Empty<ViewState>();
         private int _view;
         private int _previousView = -1;
@@ -66,6 +88,10 @@ namespace Chopper.Presentation.Camera
             }
         }
 
+        /// <summary>The settings in use (own override, the game config's, or code defaults).</summary>
+        public CameraSettings ActiveSettings => Settings;
+        /// <summary>A boost started this frame (set by <see cref="Follow"/>).</summary>
+        public bool BoostKicked { get; private set; }
         public int ViewIndex => _view;
         public string ViewName => ViewAt(_view)?.Name ?? "";
         public bool IsMounted => ViewAt(_view)?.Kind == CameraViewKind.Mounted;
@@ -76,6 +102,10 @@ namespace Chopper.Presentation.Camera
             if (settings == null && value != null) settings = value;
             _view = Mathf.Clamp(PlayerPrefs.GetInt(ViewKey, 0), 0, Mathf.Max(0, Settings.Views.Count - 1));
             _states = new ViewState[Settings.Views.Count];
+            if (_camera == null) return;
+            // The effects read their shader from the settings: make them again for new settings.
+            _effects?.Dispose();
+            _effects = new SpeedEffects(transform, _camera, Settings);
         }
 
         /// <summary>Switches view with a blend (saved).</summary>
@@ -100,12 +130,16 @@ namespace Chopper.Presentation.Camera
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
         public void AddShake(float trauma) => _trauma = Mathf.Clamp01(_trauma + trauma);
 
-        public void Follow(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
+        public void Follow(in CameraTarget target, float deltaTime)
         {
             var settingsAsset = Settings;
             if (settingsAsset.Views.Count == 0 || _camera == null) return;
             EnsureStates();
-            UpdateSpeed(targetPosition, deltaTime, settingsAsset);
+            var targetPosition = target.Position;
+            var targetRotation = target.Rotation;
+            UpdateSpeed(target, deltaTime, settingsAsset);
+            UpdateLag(target.Velocity, deltaTime, settingsAsset);
+            UpdateBoost(target.Boosting, deltaTime, settingsAsset);
 
             var speed01 = Mathf.Clamp01(_smoothedSpeed / settingsAsset.FullEffectSpeed);
             var pose = Evaluate(_view, targetPosition, targetRotation, deltaTime, speed01);
@@ -129,9 +163,67 @@ namespace Chopper.Presentation.Camera
                 _previousView = -1;
             }
 
+            var blendT = _previousView >= 0 ? Mathf.SmoothStep(0f, 1f, _blend) : 1f;
+            var inertia = Mathf.Lerp(ViewAt(_previousView)?.Inertia ?? 1f, ViewAt(_view).Inertia, blendT);
+            var rumble = Rumble(settingsAsset, inertia, out var jolt);
             _camera.fieldOfView = pose.FieldOfView;
             _camera.nearClipPlane = pose.NearClip;
-            transform.SetPositionAndRotation(pose.Position, pose.Rotation * Shake(deltaTime, settingsAsset));
+            transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt, pose.Rotation * rumble * Shake(deltaTime, settingsAsset));
+            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime);
+        }
+
+        /// <summary>
+        /// Inertia lag: the camera falls behind the chopper's acceleration and catches up on a slow curve. Acceleration
+        /// comes from the physics velocity (steps once per tick), so it is smoothed before use.
+        /// </summary>
+        private void UpdateLag(Vector3 velocity, float deltaTime, CameraSettings settingsAsset)
+        {
+            if (deltaTime <= 0f) return;
+            if (!_hasLastVelocity)
+            {
+                _lastVelocity = velocity;
+                _hasLastVelocity = true;
+            }
+            var acceleration = (velocity - _lastVelocity) / deltaTime;
+            _lastVelocity = velocity;
+            _acceleration = Vector3.Lerp(_acceleration, acceleration, 1f - Mathf.Exp(-10f * deltaTime));
+
+            var target = Vector3.ClampMagnitude(-_acceleration * settingsAsset.AccelerationLag, settingsAsset.MaxLag);
+            _lag = Vector3.Lerp(_lag, target, 1f - Mathf.Exp(-settingsAsset.LagSharpness * deltaTime));
+        }
+
+        /// <summary>Boost look on a spring: it overshoots on the kick (the punch) and settles while the boost lasts.</summary>
+        private void UpdateBoost(bool boosting, float deltaTime, CameraSettings settingsAsset)
+        {
+            BoostKicked = boosting && !_wasBoosting;
+            _wasBoosting = boosting;
+            if (BoostKicked) AddShake(settingsAsset.BoostKickShake);
+
+            var dt = Mathf.Min(deltaTime, 0.05f);
+            var omega = 2f * Mathf.PI * Mathf.Max(settingsAsset.BoostSpringFrequency, 0.1f) / 2f;
+            var target = boosting ? 1f : 0f;
+            _boostVelocity += (omega * omega * (target - _boost) - 2f * settingsAsset.BoostSpringDamping * omega * _boostVelocity) * dt;
+            _boost += _boostVelocity * dt;
+        }
+
+        /// <summary>Engine rumble while boosting: fast small shake and a jolt of the camera (the chopper seems to shudder).</summary>
+        private Quaternion Rumble(CameraSettings settingsAsset, float inertia, out Vector3 jolt)
+        {
+            var amount = Mathf.Clamp01(_boost) * Mathf.Lerp(0.35f, 1f, inertia);
+            jolt = Vector3.zero;
+            if (amount <= 0.001f) return Quaternion.identity;
+
+            var t = Time.time * settingsAsset.BoostRumbleFrequency;
+            var degrees = settingsAsset.BoostRumbleDegrees * amount;
+            var offset = settingsAsset.BoostRumbleOffset * amount;
+            jolt = new Vector3(
+                offset * (Mathf.PerlinNoise(t, 5.1f) * 2f - 1f),
+                offset * (Mathf.PerlinNoise(6.3f, t) * 2f - 1f),
+                0f);
+            return Quaternion.Euler(
+                degrees * (Mathf.PerlinNoise(t, 3.7f) * 2f - 1f),
+                degrees * (Mathf.PerlinNoise(4.2f, t) * 2f - 1f),
+                degrees * 0.6f * (Mathf.PerlinNoise(t + 9.1f, 1.3f) * 2f - 1f));
         }
 
         private Pose Evaluate(int index, Vector3 targetPosition, Quaternion targetRotation, float deltaTime, float speed01)
@@ -139,16 +231,18 @@ namespace Chopper.Presentation.Camera
             var view = ViewAt(index);
             var pose = view.Kind == CameraViewKind.Mounted
                 ? EvaluateMounted(view, targetPosition, targetRotation)
-                : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01);
-            pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01);
+                : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01,
+                    Settings.BoostPullBack * Mathf.Max(_boost, 0f));
+            pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01) + Settings.BoostFieldOfView * _boost;
             pose.NearClip = view.NearClip;
+            pose.Position += _lag * view.Inertia;
             pose.Rotation *= Noise(view, index);
             return pose;
         }
 
         /// <summary>Behind the chopper. Only orientation is smoothed: smoothing position against a moving target jitters.</summary>
         private static Pose EvaluateChase(CameraView view, ref ViewState state, Vector3 targetPosition, Quaternion targetRotation,
-            float deltaTime, float speed01)
+            float deltaTime, float speed01, float boostPullBack)
         {
             var forward = targetRotation * Vector3.forward;
             // Near-vertical noses have no stable heading; keep the last one.
@@ -170,7 +264,7 @@ namespace Chopper.Presentation.Camera
             }
 
             var frame = Quaternion.LookRotation(state.Forward, state.Up);
-            var position = targetPosition + frame * (view.Offset * (1f + view.PullBack * speed01));
+            var position = targetPosition + frame * (view.Offset * (1f + view.PullBack * speed01 + boostPullBack));
             var lookPoint = targetPosition + state.Forward * view.LookAhead;
             return new Pose { Position = position, Rotation = Quaternion.LookRotation(lookPoint - position, state.Up) };
         }
@@ -193,8 +287,9 @@ namespace Chopper.Presentation.Camera
                 view.NoiseAmplitude * 0.5f * (Mathf.PerlinNoise(t + seed, 2.3f) * 2f - 1f));
         }
 
-        private void UpdateSpeed(Vector3 targetPosition, float deltaTime, CameraSettings settingsAsset)
+        private void UpdateSpeed(in CameraTarget target, float deltaTime, CameraSettings settingsAsset)
         {
+            var targetPosition = target.Position;
             if (_hasLastTarget && Vector3.Distance(targetPosition, _lastTargetPosition) > TeleportDistance)
             {
                 // Respawn or teleport: start every view fresh.
@@ -202,13 +297,13 @@ namespace Chopper.Presentation.Camera
                 _smoothedSpeed = 0f;
                 _blend = 1f;
                 _hasLastTarget = false;
+                _hasLastVelocity = false;
+                _lag = Vector3.zero;
+                _acceleration = Vector3.zero;
             }
 
-            if (_hasLastTarget && deltaTime > 0f)
-            {
-                var speed = (targetPosition - _lastTargetPosition).magnitude / deltaTime;
-                _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, speed, 1f - Mathf.Exp(-settingsAsset.SpeedSmoothing * deltaTime));
-            }
+            if (deltaTime > 0f)
+                _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, target.Velocity.magnitude, 1f - Mathf.Exp(-settingsAsset.SpeedSmoothing * deltaTime));
             _lastTargetPosition = targetPosition;
             _hasLastTarget = true;
         }
@@ -256,6 +351,8 @@ namespace Chopper.Presentation.Camera
 
         private void OnDestroy()
         {
+            _effects?.Dispose();
+            _effects = null;
             if (_fallback != null) Destroy(_fallback);
         }
 

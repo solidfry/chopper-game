@@ -16,6 +16,8 @@ namespace Chopper.Simulation.Flight
         public float CollectiveUp = 12f;
         [Tooltip("Lift taken away at full S, m/s² (sink).")]
         public float CollectiveDown = 10f;
+        [Tooltip("How fast the rotor spools to the W/S input (1/s). Lower = heavier, higher = snappier.")]
+        public float CollectiveResponse = 6f;
 
         [Header("Weight and lift")]
         [Tooltip("Gravity multiplier. Above 1 = heavier; drops feel punchier.")]
@@ -50,9 +52,21 @@ namespace Chopper.Simulation.Flight
         [Tooltip("How fast it reaches that bank (1/s).")]
         public float BankResponse = 4f;
 
-        [Header("Dash")]
-        public float DashBoost = 0.6f;
-        public float DashCooldown = 2f;
+        [Header("Boost (held, uses a tank)")]
+        [Tooltip("Extra thrust along the nose while boosting, m/s². It never pushes down, so boosting does not dive.")]
+        public float BoostAcceleration = 24f;
+        [Tooltip("Speed added at once when a boost starts, m/s (the kick).")]
+        public float BoostKick = 9f;
+        [Range(0.1f, 1f), Tooltip("Forward drag multiplier while boosting. Below 1 = a higher top speed.")]
+        public float BoostDragScale = 0.55f;
+        [Tooltip("Seconds of boost from a full tank.")]
+        public float BoostDuration = 3.5f;
+        [Tooltip("Seconds to refill an empty tank. Engine modules scale it.")]
+        public float BoostRechargeTime = 6f;
+        [Tooltip("Seconds after a boost before the tank refills.")]
+        public float BoostRechargeDelay = 0.8f;
+        [Range(0f, 1f), Tooltip("Tank needed to start a boost.")]
+        public float BoostStartEnergy = 0.2f;
 
         public FlightTuning Clone() => (FlightTuning)MemberwiseClone();
     }

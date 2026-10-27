@@ -58,7 +58,7 @@ namespace Chopper.Simulation.Flight
             var yaw = math.clamp(flight.Yaw.ReadValue<float>(), -1f, 1f);
             var pitch = math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f);
             var roll = math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
-            var dash = flight.Dash.WasPressedThisFrame();
+            var boost = flight.Dash.IsPressed();
             var fire = flight.Fire1.IsPressed();
             var fireSecondary = flight.Fire2.IsPressed();
             var countermeasure = flight.Fire3.WasPressedThisFrame();
@@ -85,11 +85,10 @@ namespace Chopper.Simulation.Flight
                     Yaw = math.clamp(yaw + mouseYaw, -1f, 1f),
                     Pitch = math.clamp(pitch + mousePitch, -1f, 1f),
                     Roll = math.clamp(roll + mouseRoll, -1f, 1f),
+                    Boost = boost,
                     Fire = fire,
                     FireSecondary = fireSecondary,
                 };
-                if (dash)
-                    input.ValueRW.Dash.Set();
                 if (countermeasure)
                     input.ValueRW.Countermeasure.Set();
                 if (cyclePylon)

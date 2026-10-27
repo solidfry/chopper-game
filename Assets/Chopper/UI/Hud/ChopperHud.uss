@@ -68,11 +68,13 @@
   padding-left: 24px;
 }
 
+/* Hull readout: beside the low end of the hull arc, clear of the chopper */
 .hud-frame__hull {
   position: absolute;
-  bottom: -64px;
+  bottom: 20px;
   left: 50%;
-  translate: -50% 0;
+  translate: 212px 0;
+  min-width: 120px;
 }
 
 .hud--hidden {
@@ -169,17 +171,19 @@
   align-items: flex-end;
   min-width: 170px;
   margin-bottom: 10px;
-  padding: 4px 10px;
-  background-color: var(--chopper-panel);
-  border-width: var(--chopper-border-width);
-  border-color: var(--chopper-green-dim);
+  padding: 4px 12px 4px 10px;
+  background-color: rgba(2, 12, 8, 0.45);
+  border-width: 0;
+  border-bottom-width: 1px;
+  border-bottom-color: var(--chopper-green-faint);
   border-left-width: 3px;
   border-left-color: var(--chopper-green);
   border-radius: var(--chopper-radius);
 }
 
 .hud-readout__label {
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 2px;
   color: var(--chopper-green-dim);
   margin-right: 8px;
   margin-bottom: 6px;
@@ -285,48 +289,100 @@
   background-color: var(--chopper-red);
 }
 
-/* Dash charge, under the readouts */
-.hud-dash {
-  flex-direction: row;
-  align-items: center;
+/* Boost tank and hull: segmented arcs just outside the flight ring (ArcGauge). Colours are USS custom properties. */
+.hud-arc {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  right: -18px;
+  bottom: -18px;
+  --arc-fill: rgba(57, 255, 136, 0.9);
+  --arc-track: rgba(57, 255, 136, 0.12);
 }
 
-.hud-dash__label {
-  font-size: 14px;
-  color: var(--chopper-amber);
-  width: 54px;
+/* Not enough to start a boost: amber */
+.hud-boost {
+  --arc-fill: var(--chopper-amber);
+  --arc-track: rgba(255, 176, 0, 0.12);
+}
+
+.hud-boost--ready {
+  --arc-fill: var(--chopper-cyan);
+  --arc-track: rgba(64, 230, 255, 0.12);
+}
+
+.hud--boosting .hud-boost {
+  --arc-fill: var(--chopper-magenta);
+  --arc-track: rgba(255, 60, 220, 0.15);
+}
+
+.hud-hull-arc.hud-readout--low {
+  --arc-fill: var(--chopper-red);
+  --arc-track: rgba(255, 59, 59, 0.15);
+}
+
+.hud-arc__label {
+  position: absolute;
+  bottom: 52px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-green-dim);
   padding: 0;
 }
 
-.hud-dash--ready .hud-dash__label {
-  color: var(--chopper-green);
+.hud-arc__label--left {
+  left: -44px;
 }
 
-.hud-dash__bar {
-  width: 120px;
-  margin: 0;
+/* Boost: the flight ring runs hot, the speed readout grows and turns cyan, the tag slams in. */
+.hud-frame__ring {
+  transition-property: border-color, scale;
+  transition-duration: 0.15s;
 }
 
-.hud-dash__bar .unity-progress-bar__background {
-  height: 8px;
-  min-height: 8px;
-  background-color: var(--chopper-green-faint);
-  border-width: var(--chopper-border-width);
-  border-color: var(--chopper-green-dim);
-  border-radius: 0;
+.hud--boosting .hud-frame__ring {
+  border-color: rgba(255, 60, 220, 0.45);
+  scale: 1.04 1.04;
 }
 
-.hud-dash__bar .unity-progress-bar__progress {
-  background-color: var(--chopper-amber);
-  border-radius: 0;
+.hud-boost-tag {
+  font-size: 15px;
+  letter-spacing: 4px;
+  color: var(--chopper-magenta);
+  padding: 0 0 4px 2px;
+  opacity: 0;
+  translate: -24px 0;
+  text-shadow: 0 0 8px rgba(255, 60, 220, 0.8);
+  transition-property: opacity, translate;
+  transition-duration: 0.12s;
+  transition-timing-function: ease-out-back;
 }
 
-.hud-dash--ready .hud-dash__bar .unity-progress-bar__progress {
-  background-color: var(--chopper-green);
+.hud--boosting .hud-boost-tag {
+  opacity: 1;
+  translate: 0 0;
 }
 
-.hud-dash__bar .unity-progress-bar__title-container {
-  display: none;
+.hud-readout--speed {
+  transform-origin: left bottom;
+  transition-property: scale, border-left-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-out-back;
+}
+
+.hud--boosting .hud-readout--speed {
+  scale: 1.18 1.18;
+  border-left-color: var(--chopper-cyan);
+}
+
+.hud-readout--speed .hud-readout__value {
+  transition-property: color;
+  transition-duration: 0.15s;
+}
+
+.hud--boosting .hud-readout--speed .hud-readout__value {
+  color: var(--chopper-cyan);
+  text-shadow: 0 0 10px rgba(64, 230, 255, 0.7);
 }
 
 /* Seeker lock brackets. Size and position are set from code; amber while building, red when locked. */

@@ -19,6 +19,7 @@ namespace Chopper.Simulation.Flight
     /// <item>Yaw without roll input banks the chopper into the turn (coordinated turn), blended in smoothly.</item>
     /// <item>Input sets a turn rate; rotation reaches it fast and stops when input stops.</item>
     /// <item>Drag is higher sideways and vertically than forward; the nose weathervanes into travel at speed.</item>
+    /// <item>The rotor spools to the collective input (weight), and boost (held) pushes along the nose from a tank.</item>
     /// </list>
     /// </summary>
     [BurstCompile]
@@ -101,17 +102,27 @@ namespace Chopper.Simulation.Flight
                 velocity.Linear += (verticalLift + tiltPush) * DeltaTime;
 
                 // Collective (W/S), Battlefield: extra lift along the rotor axis. Level = rise; nose down = rise and go
-                // forward; S sinks.
-                var collective = thrust >= 0f ? thrust * config.CollectiveUp : thrust * config.CollectiveDown;
+                // forward; S sinks. The rotor spools to the input, so lift builds and fades with a little weight.
+                state.Collective += (thrust - state.Collective) * (1f - math.exp(-config.CollectiveResponse * DeltaTime));
+                var spooled = state.Collective;
+                var collective = spooled >= 0f ? spooled * config.CollectiveUp : spooled * config.CollectiveDown;
                 velocity.Linear += up * (collective * DeltaTime);
 
-                // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.
-                var localVelocity = math.mul(toLocal, velocity.Linear);
-                var dragAcceleration = -(config.QuadraticDrag * localVelocity * math.abs(localVelocity) + config.LinearDrag * localVelocity);
+                Boost(input, config, noseAxis, ref velocity, ref state);
+
+                // Drag in the heading frame (yaw only: x = sideways, y = world up, z = flat nose), so sideways and
+                // vertical slides stop faster than forward flight. Not the tilted body frame: there, fast forward
+                // flight nose-down reads as a climb and the vertical drag pulls the chopper down. Boosting thins the
+                // forward drag: a higher top speed while the tank lasts.
+                var quadraticDrag = config.QuadraticDrag;
+                if (state.Boosting) quadraticDrag.z *= config.BoostDragScale;
+                var heading = quaternion.LookRotationSafe(flatNose, worldUp);
+                var localVelocity = math.mul(math.inverse(heading), velocity.Linear);
+                var dragAcceleration = -(quadraticDrag * localVelocity * math.abs(localVelocity) + config.LinearDrag * localVelocity);
                 var dragDelta = dragAcceleration * DeltaTime;
                 // Never let drag reverse the direction of travel within one step.
                 dragDelta = math.select(dragDelta, -localVelocity, math.abs(dragDelta) > math.abs(localVelocity));
-                velocity.Linear += math.mul(rotation, dragDelta);
+                velocity.Linear += math.mul(heading, dragDelta);
 
                 // Requested turn rate in local space (x = pitch, y = yaw, z = roll).
                 var desiredRate = config.MaxTurnRate * new float3(pitch, yaw, -roll);
@@ -171,14 +182,35 @@ namespace Chopper.Simulation.Flight
                 var localRate = math.mul(mass.InertiaOrientation, velocity.Angular);
                 localRate += (desiredRate - localRate) * (1f - math.exp(-config.TurnResponse * DeltaTime));
                 velocity.Angular = math.mul(math.inverse(mass.InertiaOrientation), localRate);
+            }
 
-                // Dash: boosts current velocity, then waits for the cooldown.
-                state.DashCooldownRemaining = math.max(0f, state.DashCooldownRemaining - DeltaTime);
-                if (input.Dash.IsSet && state.DashCooldownRemaining <= 0f)
+            /// <summary>
+            /// Held boost from a tank. Starts with a kick, then pushes along the nose (never down, so it does not dive into
+            /// the ground; nose up climbs). Ends when released or empty; the tank refills after a short wait.
+            /// </summary>
+            private void Boost(in ChopperInput input, in ChopperFlightConfig config, float3 noseAxis, ref PhysicsVelocity velocity,
+                ref ChopperFlightState state)
+            {
+                var canBoost = state.Boosting ? state.BoostUsed < 1f : state.BoostUsed <= 1f - config.BoostStartEnergy;
+                var boosting = input.Boost && canBoost && config.BoostDuration > 0f;
+                var direction = math.normalizesafe(new float3(noseAxis.x, math.max(noseAxis.y, 0f), noseAxis.z), noseAxis);
+
+                if (boosting)
                 {
-                    velocity.Linear += velocity.Linear * config.DashBoost;
-                    state.DashCooldownRemaining = config.DashCooldown;
+                    if (!state.Boosting) velocity.Linear += direction * config.BoostKick;
+                    velocity.Linear += direction * (config.BoostAcceleration * DeltaTime);
+                    state.BoostUsed = math.min(1f, state.BoostUsed + DeltaTime / config.BoostDuration);
+                    state.BoostRechargeWait = config.BoostRechargeDelay;
                 }
+                else if (state.BoostRechargeWait > 0f)
+                {
+                    state.BoostRechargeWait = math.max(0f, state.BoostRechargeWait - DeltaTime);
+                }
+                else if (config.BoostRechargeTime > 0f)
+                {
+                    state.BoostUsed = math.max(0f, state.BoostUsed - DeltaTime / config.BoostRechargeTime);
+                }
+                state.Boosting = boosting;
             }
 
             private float MeasureAltitude(Entity self, float3 position)

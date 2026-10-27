@@ -48,15 +48,36 @@ namespace Chopper.Simulation.Flight
         /// <summary>Levels roll and pitch when the pilot gives no pitch/roll input (0 = off).</summary>
         public float AutoLevel;
 
-        /// <summary>Fraction of current velocity added by a dash.</summary>
-        public float DashBoost;
-        public float DashCooldown;
+        /// <summary>How fast the rotor spools to the collective input (1/s). Lower = heavier, higher = snappier.</summary>
+        public float CollectiveResponse;
+
+        /// <summary>Boost (held): extra thrust along the nose, m/s².</summary>
+        public float BoostAcceleration;
+        /// <summary>Speed added along the nose at once when a boost starts, m/s.</summary>
+        public float BoostKick;
+        /// <summary>Forward drag multiplier while boosting. Below 1 = a higher top speed.</summary>
+        public float BoostDragScale;
+        /// <summary>Seconds of boost from a full tank.</summary>
+        public float BoostDuration;
+        /// <summary>Seconds to refill an empty tank.</summary>
+        public float BoostRechargeTime;
+        /// <summary>Seconds after a boost before the tank refills.</summary>
+        public float BoostRechargeDelay;
+        /// <summary>Tank needed to start a boost (0..1), so tapping on an empty tank does not stutter.</summary>
+        public float BoostStartEnergy;
     }
 
     /// <summary>Predicted flight state. Ghost fields so the server corrects the client on mismatch.</summary>
     public struct ChopperFlightState : IComponentData
     {
-        [GhostField(Quantization = 100)] public float DashCooldownRemaining;
+        /// <summary>Boost tank used: 0 = full (the default), 1 = empty.</summary>
+        [GhostField(Quantization = 1000)] public float BoostUsed;
+        [GhostField(Quantization = 100)] public float BoostRechargeWait;
+        [GhostField] public bool Boosting;
+        /// <summary>Spooled collective, -1..1 (follows the W/S input at <see cref="ChopperFlightConfig.CollectiveResponse"/>).</summary>
+        [GhostField(Quantization = 1000)] public float Collective;
         [GhostField(Quantization = 10)] public float Altitude;
+
+        public float BoostEnergy => 1f - BoostUsed;
     }
 }

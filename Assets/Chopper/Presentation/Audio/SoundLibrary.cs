@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Chopper.Simulation.Config;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.Serialization;
 
 namespace Chopper.Presentation.Audio
 {
@@ -19,7 +20,10 @@ namespace Chopper.Presentation.Audio
         [Header("Chopper")]
         [SerializeField, Tooltip("Loop. Own chopper, mostly 2D (cockpit).")] private SoundCue rotorLocal;
         [SerializeField, Tooltip("Loop. Other choppers, 3D.")] private SoundCue rotorRemote;
-        [SerializeField] private SoundCue dash;
+        [SerializeField, FormerlySerializedAs("dash"), Tooltip("One-shot when a boost starts (the kick).")]
+        private SoundCue boostStart;
+        [SerializeField, Tooltip("Loop while boosting (the engine roar). Volume and pitch follow the boost.")]
+        private SoundCue boostLoop;
 
         [Header("Combat")]
         [SerializeField] private SoundCue gunFire;
@@ -46,7 +50,8 @@ namespace Chopper.Presentation.Audio
         public AudioMixerGroup MusicGroup => musicGroup;
         public SoundCue RotorLocal => rotorLocal;
         public SoundCue RotorRemote => rotorRemote;
-        public SoundCue Dash => dash;
+        public SoundCue BoostStart => boostStart;
+        public SoundCue BoostLoop => boostLoop;
         public SoundCue GunFire => gunFire;
         public SoundCue HitConfirm => hitConfirm;
         public SoundCue KillConfirm => killConfirm;
@@ -67,7 +72,8 @@ namespace Chopper.Presentation.Audio
             if (musicGroup == null) problems.Add($"{name}: no music mixer group.");
             Check(rotorLocal, nameof(rotorLocal), problems);
             Check(rotorRemote, nameof(rotorRemote), problems);
-            Check(dash, nameof(dash), problems);
+            Check(boostStart, nameof(boostStart), problems);
+            Check(boostLoop, nameof(boostLoop), problems);
             Check(gunFire, nameof(gunFire), problems);
             Check(hitConfirm, nameof(hitConfirm), problems);
             Check(killConfirm, nameof(killConfirm), problems);
@@ -90,6 +96,13 @@ namespace Chopper.Presentation.Audio
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseBoost(SoundCue start, SoundCue loop)
+        {
+            boostStart = start;
+            boostLoop = loop;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
         public void InitialiseTargeting(SoundCue lockBuilding, SoundCue locked, SoundCue beingLocked, SoundCue missileInbound, SoundCue flareDrop)
         {
             lockTone = lockBuilding;
@@ -100,14 +113,13 @@ namespace Chopper.Presentation.Audio
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
-        public void Initialise(AudioMixer audioMixer, AudioMixerGroup music, SoundCue localRotor, SoundCue remoteRotor, SoundCue dashCue,
+        public void Initialise(AudioMixer audioMixer, AudioMixerGroup music, SoundCue localRotor, SoundCue remoteRotor,
             SoundCue gun, SoundCue hit, SoundCue kill, SoundCue damage, SoundCue alarm, SoundCue end, SoundCue click, SoundCue navigate)
         {
             mixer = audioMixer;
             musicGroup = music;
             rotorLocal = localRotor;
             rotorRemote = remoteRotor;
-            dash = dashCue;
             gunFire = gun;
             hitConfirm = hit;
             killConfirm = kill;

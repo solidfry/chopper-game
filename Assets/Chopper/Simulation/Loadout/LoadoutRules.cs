@@ -10,19 +10,19 @@ namespace Chopper.Simulation.Loadout
         public float WeightBudget { get; }
         public float LiftMultiplier { get; }
         public float TurnRateMultiplier { get; }
-        public float DashCooldownMultiplier { get; }
+        public float BoostRechargeMultiplier { get; }
 
         /// <summary>0 = empty, 1 = full budget.</summary>
         public float WeightFraction => WeightBudget > 0f ? Weight / WeightBudget : 0f;
 
-        public LoadoutStats(float health, float weight, float weightBudget, float lift, float turnRate, float dashCooldown)
+        public LoadoutStats(float health, float weight, float weightBudget, float lift, float turnRate, float boostRecharge)
         {
             Health = health;
             Weight = weight;
             WeightBudget = weightBudget;
             LiftMultiplier = lift;
             TurnRateMultiplier = turnRate;
-            DashCooldownMultiplier = dashCooldown;
+            BoostRechargeMultiplier = boostRecharge;
         }
     }
 
@@ -77,7 +77,7 @@ namespace Chopper.Simulation.Loadout
             var weight = 0f;
             var lift = 1f;
             var turnRate = 1f;
-            var dashCooldown = 1f;
+            var boostRecharge = 1f;
 
             foreach (var moduleId in selection.Modules)
             {
@@ -87,7 +87,7 @@ namespace Chopper.Simulation.Loadout
                 weight += stats.Weight;
                 lift *= stats.LiftMultiplier;
                 turnRate *= stats.TurnRateMultiplier;
-                dashCooldown *= stats.DashCooldownMultiplier;
+                boostRecharge *= stats.BoostRechargeMultiplier;
             }
 
             // Weight makes every choice cost something: heavier = slower to turn and climb.
@@ -95,7 +95,7 @@ namespace Chopper.Simulation.Loadout
             turnRate *= 1f - FullWeightTurnPenalty * weightFraction;
             lift *= 1f - FullWeightLiftPenalty * weightFraction;
 
-            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, dashCooldown);
+            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, boostRecharge);
         }
     }
 }

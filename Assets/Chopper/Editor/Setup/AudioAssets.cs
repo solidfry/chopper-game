@@ -19,6 +19,8 @@ namespace Chopper.Editor.Setup
 
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
+        private const string DistantExplosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_DistantExplosion_";
+        private const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
 
         public const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
         public const string MatchMusicPath = MatchMusic;
@@ -52,7 +54,6 @@ namespace Chopper.Editor.Setup
                 library.MusicGroup != null ? library.MusicGroup : Group(mixer, "Music"),
                 localRotor: Slot(library.RotorLocal, () => Cue("RotorLocal", Clips("Assets/Sound/inside-of-a-helicopter-54404.ogg"), ambient, 0.5f, blend: 0.2f, voices: 1)),
                 remoteRotor: Slot(library.RotorRemote, () => Cue("RotorRemote", Clips("Assets/Sound/inside-of-a-helicopter-54404.ogg"), effects, 0.9f, blend: 1f, voices: 16)),
-                dashCue: Slot(library.Dash, () => Cue("Dash", Clips(SciFi + "/Impact/shoot_energy.wav"), effects, 0.6f, blend: 0.5f, voices: 2)),
                 // The old game's gun: a close explosion pitched up (it was on the BulletRed prefab). Gritty and kinetic.
                 gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f)),
                 hit: Slot(library.HitConfirm, () => Cue("HitConfirm", Clips("Assets/Sound/UI/Switch/Switch (1).wav", "Assets/Sound/UI/Switch/Switch (2).wav",
@@ -73,6 +74,14 @@ namespace Chopper.Editor.Setup
                 Slot(library.LockWarning, () => Cue("LockWarning", Clips(SciFi + "/Loops/loop_energy.wav"), ui, 0.4f, blend: 0f, voices: 1, pitch: 1.2f)),
                 Slot(library.MissileWarning, () => Cue("MissileWarning", Clips(SciFi + "/Loops/loop_lightning.wav"), ui, 0.55f, blend: 0f, voices: 1)),
                 Slot(library.Flares, () => Cue("Flares", Clips(SciFi + "/Impact/shoot_fireball.wav"), effects, 0.7f, blend: 1f, voices: 4)));
+
+            // Boost: deep, rolling distant explosions (and one sci-fi blast) for the kick; the loudest, bassiest rocket loop,
+            // pitched well down, for the roar. Chosen by low-frequency content; the close explosions crackle (tinny).
+            library.InitialiseBoost(
+                Slot(library.BoostStart, () => Cue("BoostStart", Clips(DistantExplosions + "15.wav", DistantExplosions + "16.wav",
+                    DistantExplosions + "06.wav", SciFiGuns + "/Sci Fi Explosion 06.wav"), effects, 1f, blend: 0.3f, voices: 3, pitch: 0.8f)),
+                Slot(library.BoostLoop, () => Cue("BoostLoop", Clips(SciFi + "/Loops/loop_rocket2.wav"), effects, 0.8f, blend: 0.3f, voices: 8,
+                    pitch: 0.5f)));
 
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);

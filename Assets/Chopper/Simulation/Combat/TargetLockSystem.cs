@@ -120,12 +120,9 @@ namespace Chopper.Simulation.Combat
                     ? math.length(SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear)
                     : 0f;
                 var dashing = false;
-                if (SystemAPI.HasComponent<ChopperFlightState>(entity) && SystemAPI.HasComponent<ChopperFlightConfig>(entity))
-                {
-                    // Just dashed: the cooldown is near its full value.
-                    var cooldown = SystemAPI.GetComponent<ChopperFlightState>(entity).DashCooldownRemaining;
-                    dashing = cooldown > SystemAPI.GetComponent<ChopperFlightConfig>(entity).DashCooldown - 0.5f;
-                }
+                // Boosting engines run hot.
+                if (SystemAPI.HasComponent<ChopperFlightState>(entity))
+                    dashing = SystemAPI.GetComponent<ChopperFlightState>(entity).Boosting;
 
                 candidates.Add(new Candidate
                 {

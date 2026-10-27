@@ -17,6 +17,7 @@ namespace Chopper.Editor.Setup
         private const string HudLayoutPath = "Assets/Chopper/UI/Hud/ChopperHud.uxml";
         private const string OptionsLayoutPath = "Assets/Chopper/UI/Options/OptionsMenu.uxml";
         private const string CameraSettingsPath = "Assets/Chopper/Data/Camera/CameraSettings.asset";
+        private const string SpeedLineShaderPath = "Assets/Chopper/Presentation/Camera/SpeedLine.shader";
 
         public static GameConfig Load() => AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigPath);
 
@@ -67,10 +68,17 @@ namespace Chopper.Editor.Setup
         private static Chopper.Presentation.Camera.CameraSettings EnsureCameraSettings()
         {
             var settings = AssetDatabase.LoadAssetAtPath<Chopper.Presentation.Camera.CameraSettings>(CameraSettingsPath);
-            if (settings != null) return settings;
-            settings = ScriptableObject.CreateInstance<Chopper.Presentation.Camera.CameraSettings>();
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CameraSettingsPath));
-            AssetDatabase.CreateAsset(settings, CameraSettingsPath);
+            if (settings == null)
+            {
+                settings = ScriptableObject.CreateInstance<Chopper.Presentation.Camera.CameraSettings>();
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CameraSettingsPath));
+                AssetDatabase.CreateAsset(settings, CameraSettingsPath);
+            }
+            if (settings.SpeedLineShader == null)
+            {
+                settings.SetSpeedLineShader(AssetDatabase.LoadAssetAtPath<Shader>(SpeedLineShaderPath));
+                EditorUtility.SetDirty(settings);
+            }
             return settings;
         }
 

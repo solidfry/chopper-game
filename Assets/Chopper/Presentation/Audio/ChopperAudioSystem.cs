@@ -12,8 +12,9 @@ using UnityEngine;
 namespace Chopper.Presentation.Audio
 {
     /// <summary>
-    /// Client only. A rotor loop on every chopper (own one mostly 2D, others 3D), pitch rising with speed; the dash
-    /// sound; and an alarm loop while the own chopper is outside the arena.
+    /// Client only. A rotor loop on every chopper (own one mostly 2D, others 3D): pitch rises with speed, and the rotor
+    /// strains (louder, higher) with collective and boost. Boost: a kick when it starts and an engine roar while it lasts,
+    /// on every chopper. An alarm loop while the own chopper is outside the arena.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -23,13 +24,29 @@ namespace Chopper.Presentation.Audio
         private const float FullPitchSpeed = 80f;
         private const float MinRotorPitch = 0.9f;
         private const float MaxRotorPitch = 1.2f;
+        /// <summary>Extra rotor pitch and volume at full collective / while boosting.</summary>
+        private const float CollectivePitch = 0.08f;
+        private const float BoostRotorPitch = 0.12f;
+        private const float BoostRotorVolume = 0.25f;
+        /// <summary>How fast the boost roar fades in and out (1/s).</summary>
+        private const float BoostFadeIn = 14f;
+        private const float BoostFadeOut = 4f;
+        /// <summary>Speed (m/s) at which the boost roar reaches its highest pitch.</summary>
+        private const float BoostFullPitchSpeed = 160f;
 
-        private readonly Dictionary<Entity, SoundLoop> _rotors = new();
+        private sealed class Voices
+        {
+            public SoundLoop Rotor;
+            public SoundLoop Boost;
+            public float BoostLevel;
+            public bool WasBoosting;
+        }
+
+        private readonly Dictionary<Entity, Voices> _choppers = new();
         private readonly HashSet<Entity> _seen = new();
         private readonly List<Entity> _gone = new();
         private IAudioService _audio;
         private SoundLoop _alarm;
-        private float _lastDashCooldown;
 
         protected override void OnCreate()
         {
@@ -58,10 +75,11 @@ namespace Chopper.Presentation.Audio
             var library = context.Sounds;
             var hasBounds = SystemAPI.TryGetSingleton<ArenaBounds>(out var bounds);
             var outOfBounds = false;
+            var deltaTime = SystemAPI.Time.DeltaTime;
 
             _seen.Clear();
-            foreach (var (pose, velocity, entity) in SystemAPI
-                         .Query<RefRO<LocalToWorld>, RefRO<PhysicsVelocity>>()
+            foreach (var (pose, velocity, flight, entity) in SystemAPI
+                         .Query<RefRO<LocalToWorld>, RefRO<PhysicsVelocity>, RefRO<ChopperFlightState>>()
                          .WithAll<ChopperFlightConfig>()
                          .WithEntityAccess())
             {
@@ -69,54 +87,79 @@ namespace Chopper.Presentation.Audio
                 var position = pose.ValueRO.Position;
                 var isLocal = SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
 
-                if (!_rotors.TryGetValue(entity, out var rotor))
+                if (!_choppers.TryGetValue(entity, out var voices))
                 {
-                    rotor = audio.StartLoop(isLocal ? library.RotorLocal : library.RotorRemote, position);
-                    _rotors[entity] = rotor;
+                    voices = new Voices { Rotor = audio.StartLoop(isLocal ? library.RotorLocal : library.RotorRemote, position) };
+                    _choppers[entity] = voices;
                 }
 
-                var speed01 = math.saturate(math.length(velocity.ValueRO.Linear) / FullPitchSpeed);
-                rotor?.Set(position, pitchScale: math.lerp(MinRotorPitch, MaxRotorPitch, speed01));
+                var state = flight.ValueRO;
+                var speed = math.length(velocity.ValueRO.Linear);
+                UpdateBoost(audio, library, voices, state.Boosting, position, speed, deltaTime);
 
-                if (!isLocal) continue;
-                outOfBounds = hasBounds && !bounds.Contains(position);
-                PlayDashIfUsed(audio, library, entity, position);
+                var speed01 = math.saturate(speed / FullPitchSpeed);
+                var strain = math.max(state.Collective, 0f) * CollectivePitch + voices.BoostLevel * BoostRotorPitch;
+                voices.Rotor?.Set(position,
+                    volumeScale: 1f + voices.BoostLevel * BoostRotorVolume,
+                    pitchScale: math.lerp(MinRotorPitch, MaxRotorPitch, speed01) + strain);
+
+                if (isLocal) outOfBounds = hasBounds && !bounds.Contains(position);
             }
 
-            StopMissingRotors(audio);
+            StopMissing(audio);
             UpdateAlarm(audio, library, outOfBounds);
+        }
+
+        /// <summary>Kick on the rising edge; the roar fades in fast and out slowly, pitch rising with speed.</summary>
+        private static void UpdateBoost(IAudioService audio, SoundLibrary library, Voices voices, bool boosting, Vector3 position,
+            float speed, float deltaTime)
+        {
+            if (boosting && !voices.WasBoosting) audio.Play(library.BoostStart, position);
+            voices.WasBoosting = boosting;
+
+            var target = boosting ? 1f : 0f;
+            var rate = boosting ? BoostFadeIn : BoostFadeOut;
+            voices.BoostLevel = math.lerp(voices.BoostLevel, target, 1f - math.exp(-rate * deltaTime));
+
+            if (voices.BoostLevel > 0.01f)
+            {
+                voices.Boost ??= audio.StartLoop(library.BoostLoop, position);
+                voices.Boost?.Set(position, volumeScale: voices.BoostLevel,
+                    pitchScale: 0.85f + 0.4f * math.saturate(speed / BoostFullPitchSpeed));
+            }
+            else if (voices.Boost != null)
+            {
+                audio.StopLoop(voices.Boost);
+                voices.Boost = null;
+            }
         }
 
         private void StopAll()
         {
             if (_audio != null)
             {
-                foreach (var loop in _rotors.Values) _audio.StopLoop(loop);
+                foreach (var voices in _choppers.Values) Stop(_audio, voices);
                 _audio.StopLoop(_alarm);
             }
-            _rotors.Clear();
+            _choppers.Clear();
             _alarm = null;
         }
 
-        private void PlayDashIfUsed(IAudioService audio, SoundLibrary library, Entity entity, Vector3 position)
+        private static void Stop(IAudioService audio, Voices voices)
         {
-            if (!SystemAPI.HasComponent<ChopperFlightState>(entity)) return;
-            var cooldown = SystemAPI.GetComponent<ChopperFlightState>(entity).DashCooldownRemaining;
-            // The cooldown jumps up only when a dash starts.
-            if (cooldown > _lastDashCooldown + 0.1f)
-                audio.Play(library.Dash, position);
-            _lastDashCooldown = cooldown;
+            audio.StopLoop(voices.Rotor);
+            if (voices.Boost != null) audio.StopLoop(voices.Boost);
         }
 
-        private void StopMissingRotors(IAudioService audio)
+        private void StopMissing(IAudioService audio)
         {
             _gone.Clear();
-            foreach (var entity in _rotors.Keys)
+            foreach (var entity in _choppers.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _gone)
             {
-                audio.StopLoop(_rotors[entity]);
-                _rotors.Remove(entity);
+                Stop(audio, _choppers[entity]);
+                _choppers.Remove(entity);
             }
         }
 

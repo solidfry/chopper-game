@@ -12,7 +12,8 @@ namespace Chopper.Simulation.Flight
         public float Yaw;
         public float Pitch;
         public float Roll;
-        public InputEvent Dash;
+        /// <summary>Held: boost (uses the boost tank).</summary>
+        public bool Boost;
         /// <summary>Held: the nose gun fires at its fire rate.</summary>
         public bool Fire;
         /// <summary>Held: pylon rockets fire at their fire rate.</summary>

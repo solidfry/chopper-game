@@ -24,13 +24,15 @@ namespace Chopper.Simulation.Loadout
         public float HealthBonus;
         public float LiftMultiplier;
         public float TurnRateMultiplier;
-        public float DashCooldownMultiplier;
+        /// <summary>Boost tank refill time multiplier (below 1 = refills faster).</summary>
+        [UnityEngine.Serialization.FormerlySerializedAs("DashCooldownMultiplier")]
+        public float BoostRechargeMultiplier;
 
         public static ModuleStats None => new()
         {
             LiftMultiplier = 1f,
             TurnRateMultiplier = 1f,
-            DashCooldownMultiplier = 1f,
+            BoostRechargeMultiplier = 1f,
         };
     }
 

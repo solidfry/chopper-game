@@ -60,7 +60,7 @@ Rules:
 - Use `FindAnyObjectByType`, not `FindFirstObjectByType`.
 - `UpdateAfter(PhysicsSystemGroup)` from another group is ignored: put post-physics systems in `PhysicsSystemGroup` with `OrderLast`.
 - `PhysicsWorldHistorySingleton` needs the `Unity.NetCode.Physics` assembly reference.
-- **Stale Burst code (seen 28 Oct):** after a field is added to a struct that a Burst job reads (e.g. `ChopperFlightConfig`), the old compiled job can keep running with the old layout: forces silently wrong (chopper "has no force"). Fix: stop play, delete `Library/BurstCache` (or close Unity first), recompile. Quick check: turn off Jobs → Burst → Enable Compilation; if the bug goes away, it is the cache.
+- **Stale Burst code (seen 28 Oct, twice):** also after `ChopperInput` changes (input buffer garbled: bools lost, chopper ignores input). after a field is added to a struct that a Burst job reads (e.g. `ChopperFlightConfig`), the old compiled job can keep running with the old layout: forces silently wrong (chopper "has no force"). Fix: stop play, delete `Library/BurstCache` (or close Unity first), recompile. Quick check: turn off Jobs → Burst → Enable Compilation; if the bug goes away, it is the cache.
 
 ## 4b. Newest work (27 Oct, not yet compiled)
 
@@ -88,6 +88,13 @@ Rules:
 - **Prediction smoothing** (own chopper): server corrections fade out over a few ticks instead of a snap (`ChopperSmoothingAction`, Netcode `GhostPredictionSmoothing` on `LocalTransform`). Each correction removes 25% of the position error and 35% of the rotation error; errors over 10 m snap (respawn). Velocity is not smoothed. Tune on `ChopperAuthoring` → "Network smoothing". Missiles are not smoothed. The Simulation assembly now allows unsafe code (needed for the smoothing callback).
 - **Flight feel (28 Oct, tested in play)**: Battlefield collective. W/S lift along the rotor (`CollectiveUp` 12 m/s², `CollectiveDown` 10): level W rises about 10 m/s². Nose down gives speed (`TiltThrust` 1.6, `PitchThrust` 1): 20° tilt ≈ 9 m/s² forward with height held. Bank curves turns. Mouse X rolls by default (Battlefield); "aim style" yaw is in the options. A/D yaw without roll banks into the turn, blended smoothly. Camera follows 85% of the roll on a ~0.25 s delay (`ChopperCameraRig.rollFollow` / `rollSharpness`). Tune per chassis on `Chassis_*.asset` → Flight.
 - **Camera** (`ChopperCameraRig` + `CameraSettings` on `GameConfig`, `Data/Camera/CameraSettings.asset`): our own system, not Cinemachine (owner decision). Views list (chase, cockpit = the old game's cockpit camera); C / gamepad Y cycles them (saved; not while the menu is open). Blends position, rotation, FOV and near clip between views; per-view noise; hit shake; speed FOV and pull-back; snaps on respawn/teleport. Add a view = add a list entry (Chase or Mounted).
+- **Feel pass (28 Oct)**:
+  - Boost replaces dash: hold Shift / gamepad B. A tank (3.5 s full, refills in 5–7.5 s by chassis after 0.8 s; Boost Engine module refills faster). Kick +9 m/s, then 24 m/s² along the nose (never down), forward drag × 0.55. Tested: 120 → 430 km/h in 3.4 s, height held. `ChopperFlightState.Boosting` / `BoostUsed` are ghost fields; boosting also raises seeker heat.
+  - Rotor spools to W/S (`CollectiveResponse` 6/s): a little weight.
+  - Drag now acts in the heading frame (yaw only), not the tilted body: fast nose-down flight no longer sinks.
+  - Camera weight and boost (`CameraSettings`): inertia lag from acceleration; boost spring (FOV +14°, pull-back, punch overshoot), kick shake, engine rumble, HUD glitch on the kick. `SpeedEffects`: runtime post volume (bloom, speed chromatic aberration, boost lens bulge, vignette, exposure flash) and camera-space speed lines (`Hidden/Chopper/SpeedLine`). No motion blur (it smears the chopper).
+  - Audio: boost kick = deep distant explosions, roar = `loop_rocket2` at pitch 0.5; rotor strains with collective and boost.
+  - HUD: segmented `ArcGauge` arcs on the flight ring (boost left, hull right); boosting turns the ring and arc magenta, enlarges the speed readout and shows ">> BOOST".
 - Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
 
 ### Editor steps after pulling

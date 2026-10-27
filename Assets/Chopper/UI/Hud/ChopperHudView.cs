@@ -19,7 +19,9 @@ namespace Chopper.UI.Hud
         private PresentationBridge bridge;
 
         private const string HiddenClass = "hud--hidden";
-        private const string DashReadyClass = "hud-dash--ready";
+        private const string BoostReadyClass = "hud-boost--ready";
+        /// <summary>On the chopper layer while boosting: USS drives the HUD's boost look from it.</summary>
+        private const string BoostingClass = "hud--boosting";
         private const string HealthLowClass = "hud-readout--low";
         private const string AimHiddenClass = "hud-aim--hidden";
         private const string HitClass = "hud-aim--hit";
@@ -52,8 +54,9 @@ namespace Chopper.UI.Hud
         private VisualElement _flares;
         private VisualElement _horizon;
         private VisualElement _banner;
-        private VisualElement _dash;
+        private VisualElement _boost;
         private VisualElement _health;
+        private VisualElement _hullArc;
         private VisualElement _aim;
         private PanelRenderer _renderer;
         private WorldMarkerView _markers;
@@ -96,8 +99,9 @@ namespace Chopper.UI.Hud
         private void BindTree(VisualElement root)
         {
             _chopper = root.Q("chopper");
-            _dash = _chopper.Q("dash");
+            _boost = _chopper.Q("boost");
             _health = _chopper.Q("health");
+            _hullArc = _chopper.Q("hull-arc");
             _aim = _chopper.Q("aim");
             _boundsWarning = _chopper.Q("bounds-warning");
             _damageRing = _chopper.Q("damage-ring");
@@ -117,7 +121,8 @@ namespace Chopper.UI.Hud
             BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));
             BindNumber(_chopper.Q<Label>("speed-value"), nameof(ChopperHudModel.SpeedText));
             BindNumber(_chopper.Q<Label>("altitude-value"), nameof(ChopperHudModel.AltitudeText));
-            Bind(_chopper.Q<ProgressBar>("dash-bar"), "value", nameof(ChopperHudModel.DashCharge));
+            Bind(_chopper.Q<ArcGauge>("boost"), nameof(ArcGauge.value), nameof(ChopperHudModel.BoostEnergy));
+            Bind(_chopper.Q<ArcGauge>("hull-arc"), nameof(ArcGauge.value), nameof(ChopperHudModel.HealthFraction));
 
             var match = root.Q("match");
             _banner = match.Q("banner");
@@ -205,7 +210,8 @@ namespace Chopper.UI.Hud
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
                 RefreshDamageDirection();
             else if (args.propertyName == nameof(ChopperHudModel.HasChopper) ||
-                     args.propertyName == nameof(ChopperHudModel.DashReady) ||
+                     args.propertyName == nameof(ChopperHudModel.BoostReady) ||
+                     args.propertyName == nameof(ChopperHudModel.Boosting) ||
                      args.propertyName == nameof(ChopperHudModel.HealthLow) ||
                      args.propertyName == nameof(ChopperHudModel.OutOfBounds) ||
                      args.propertyName == nameof(ChopperHudModel.DamageIndicatorVisible) ||
@@ -220,8 +226,10 @@ namespace Chopper.UI.Hud
             _chopper.EnableInClassList(HiddenClass, !_model.HasChopper);
             _boundsWarning.EnableInClassList(WarningHiddenClass, !_model.OutOfBounds);
             _damageRing.EnableInClassList(DamageHiddenClass, !_model.DamageIndicatorVisible);
-            _dash.EnableInClassList(DashReadyClass, _model.DashReady);
+            _boost.EnableInClassList(BoostReadyClass, _model.BoostReady);
+            _chopper.EnableInClassList(BoostingClass, _model.Boosting);
             _health.EnableInClassList(HealthLowClass, _model.HealthLow);
+            _hullArc.EnableInClassList(HealthLowClass, _model.HealthLow);
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);

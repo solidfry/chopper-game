@@ -61,8 +61,14 @@ namespace Chopper.Simulation.Loadout
                 LinearDrag = flight.LinearDrag,
                 Weathervane = flight.Weathervane,
                 AutoLevel = flight.AutoLevel,
-                DashBoost = flight.DashBoost,
-                DashCooldown = flight.DashCooldown * stats.DashCooldownMultiplier,
+                CollectiveResponse = flight.CollectiveResponse,
+                BoostAcceleration = flight.BoostAcceleration,
+                BoostKick = flight.BoostKick,
+                BoostDragScale = flight.BoostDragScale,
+                BoostDuration = flight.BoostDuration,
+                BoostRechargeTime = flight.BoostRechargeTime * stats.BoostRechargeMultiplier,
+                BoostRechargeDelay = flight.BoostRechargeDelay,
+                BoostStartEnergy = flight.BoostStartEnergy,
             };
             built.Health = stats.Health;
             built.Crash = new CrashDamageConfig { SafeSpeedLoss = crash.SafeSpeedLoss, DamagePerSpeedLoss = crash.DamagePerSpeedLoss };

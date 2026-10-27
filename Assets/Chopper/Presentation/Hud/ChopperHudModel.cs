@@ -30,8 +30,9 @@ namespace Chopper.Presentation.Hud
         private bool _hasChopper;
         private string _speedText = "0";
         private string _altitudeText = "0";
-        private float _dashCharge = 1f;
-        private bool _dashReady = true;
+        private float _boostEnergy = 1f;
+        private bool _boostReady = true;
+        private bool _boosting;
         private string _healthText = "0";
         private float _healthFraction = 1f;
         private bool _healthLow;
@@ -90,19 +91,27 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _altitudeText, value, nameof(AltitudeText));
         }
 
-        /// <summary>Dash recharge, 0 (just used) to 1 (ready). Steps of 1% so the bar does not rebind every frame.</summary>
+        /// <summary>Boost tank, 0 (empty) to 1 (full). Steps of 1% so the bar does not rebind every frame.</summary>
         [CreateProperty]
-        public float DashCharge
+        public float BoostEnergy
         {
-            get => _dashCharge;
-            private set => Set(ref _dashCharge, value, nameof(DashCharge));
+            get => _boostEnergy;
+            private set => Set(ref _boostEnergy, value, nameof(BoostEnergy));
+        }
+
+        /// <summary>The tank holds enough to start a boost.</summary>
+        [CreateProperty]
+        public bool BoostReady
+        {
+            get => _boostReady;
+            private set => Set(ref _boostReady, value, nameof(BoostReady));
         }
 
         [CreateProperty]
-        public bool DashReady
+        public bool Boosting
         {
-            get => _dashReady;
-            private set => Set(ref _dashReady, value, nameof(DashReady));
+            get => _boosting;
+            private set => Set(ref _boosting, value, nameof(Boosting));
         }
 
         /// <summary>Hit points, whole numbers.</summary>
@@ -273,15 +282,18 @@ namespace Chopper.Presentation.Hud
                 Math.Clamp(-pitchRate * SwayPerDegreePerSecond, -MaxSway, MaxSway));
         }
 
-        public void Update(float speedMetresPerSecond, float altitudeMetres, float dashCooldownRemaining, float dashCooldown)
+        /// <param name="boostEnergy">Boost tank, 0..1.</param>
+        /// <param name="boostStartEnergy">Tank needed to start a boost.</param>
+        public void Update(float speedMetresPerSecond, float altitudeMetres, float boostEnergy, bool boosting, float boostStartEnergy)
         {
             HasChopper = true;
             SpeedText = ((int)MathF.Round(speedMetresPerSecond * MetresPerSecondToKilometresPerHour)).ToString();
             AltitudeText = ((int)MathF.Round(MathF.Max(0f, altitudeMetres))).ToString();
 
-            var charge = dashCooldown > 0f ? 1f - Math.Clamp(dashCooldownRemaining / dashCooldown, 0f, 1f) : 1f;
-            DashCharge = MathF.Round(charge * 100f) / 100f;
-            DashReady = dashCooldownRemaining <= 0f;
+            var energy = Math.Clamp(boostEnergy, 0f, 1f);
+            BoostEnergy = MathF.Round(energy * 100f) / 100f;
+            Boosting = boosting;
+            BoostReady = boosting || energy >= boostStartEnergy;
         }
 
         public void UpdateHealth(float current, float max)

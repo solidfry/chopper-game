@@ -55,7 +55,7 @@ namespace Chopper.Tests
             HealthBonus = health,
             LiftMultiplier = 1f,
             TurnRateMultiplier = turn,
-            DashCooldownMultiplier = 1f,
+            BoostRechargeMultiplier = 1f,
         };
 
         private static readonly Unlocks Everything = new(99, Minigun, Rockets, Turret, Flares, AgileRotor, Engine, HeavyArmour);

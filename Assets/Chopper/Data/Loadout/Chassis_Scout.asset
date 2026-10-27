@@ -23,6 +23,7 @@ MonoBehaviour:
   flight:
     CollectiveUp: 12
     CollectiveDown: 10
+    CollectiveResponse: 6
     GravityScale: 1.5
     TiltCompensation: 1
     MaxCompensatedTiltDegrees: 60
@@ -38,8 +39,13 @@ MonoBehaviour:
     AutoLevel: 0
     BankAngleDegrees: 30
     BankResponse: 4
-    DashBoost: 0.6
-    DashCooldown: 1.6
+    BoostAcceleration: 24
+    BoostKick: 9
+    BoostDragScale: 0.55
+    BoostDuration: 3.5
+    BoostRechargeTime: 5
+    BoostRechargeDelay: 0.8
+    BoostStartEnergy: 0.2
   crash:
     SafeSpeedLoss: 8
     DamagePerSpeedLoss: 4

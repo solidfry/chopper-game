@@ -27,6 +27,7 @@ MonoBehaviour:
     PullBack: 0.3
     NoiseAmplitude: 0.15
     NoiseFrequency: 0.6
+    Inertia: 1
   - Name: Cockpit
     Kind: 1
     Offset: {x: 0, y: -0.51, z: 2.47}
@@ -41,9 +42,36 @@ MonoBehaviour:
     PullBack: 0.3
     NoiseAmplitude: 0.25
     NoiseFrequency: 6
+    Inertia: 0.15
   blendTime: 0.35
   fullEffectSpeed: 80
   speedSmoothing: 3
   maxShakeDegrees: 4
   shakeRecovery: 1.5
   shakeFrequency: 18
+  accelerationLag: 0.06
+  maxLag: 3
+  lagSharpness: 4
+  boostFieldOfView: 14
+  boostPullBack: 0.3
+  boostSpringFrequency: 5
+  boostSpringDamping: 0.45
+  boostKickShake: 0.4
+  boostRumbleDegrees: 0.45
+  boostRumbleOffset: 0.07
+  boostRumbleFrequency: 24
+  boostHudGlitch: 0.3
+  postEffects: 1
+  bloomIntensity: 0.7
+  bloomThreshold: 0.95
+  speedChromatic: 0.12
+  boostChromatic: 0.55
+  boostLensDistortion: -0.25
+  boostVignette: 0.32
+  boostFlash: 0.6
+  speedLineShader: {fileID: 4800000, guid: a648b167aefa7c348b8cc02ca7e0462b, type: 3}
+  speedLineStartSpeed: 35
+  speedLineRate: 40
+  speedLineBoostRate: 150
+  speedLineColor: {r: 0.4, g: 1.4, b: 1.6, a: 0.35}
+  speedLineBoostColor: {r: 1.6, g: 0.4, b: 1.8, a: 0.45}

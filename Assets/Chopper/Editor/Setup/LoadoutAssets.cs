@@ -38,12 +38,12 @@ namespace Chopper.Editor.Setup
 
             var gunshipFlight = CalibratedGunshipFlight();
             var scout = Chassis(1, "Scout", "Light. Flanks, scouts and fast nuke runs.", 70f, 60f, 0, ScoutSlots,
-                Scaled(gunshipFlight, turn: 1.2f, gravity: 1.5f, collective: 1f, dashCooldown: 1.6f));
+                Scaled(gunshipFlight, turn: 1.2f, gravity: 1.5f, collective: 1f, boostRecharge: 5f));
             var gunship = Chassis(DefaultChassis, "Gunship", "Medium. All-round fighter.", 100f, 90f, 0, GunshipSlots, gunshipFlight);
             var assault = Chassis(3, "Assault", "Heavy. Tank and base defence. Has a turret.", 150f, 130f, 4, AssaultSlots,
-                Scaled(gunshipFlight, turn: 0.75f, gravity: 1.8f, collective: 0.9f, dashCooldown: 2.5f));
+                Scaled(gunshipFlight, turn: 0.75f, gravity: 1.8f, collective: 0.9f, boostRecharge: 7.5f));
             var lifter = Chassis(4, "Lifter", "Support. Winch, repair, best nuke carrier.", 110f, 100f, 6, LifterSlots,
-                Scaled(gunshipFlight, turn: 0.85f, gravity: 1.7f, collective: 1.1f, dashCooldown: 2f));
+                Scaled(gunshipFlight, turn: 0.85f, gravity: 1.7f, collective: 1.1f, boostRecharge: 6f));
 
             var minigun = Hitscan("Minigun", rpm: 750f, damage: 8f, range: 600f);
             var autocannon = Hitscan("Autocannon", rpm: 240f, damage: 25f, range: 700f);
@@ -78,7 +78,7 @@ namespace Chopper.Editor.Setup
                 Module(153, "Heavy-Lift Rotor", "More lift, turns slower.", SlotType.Rotor, Stats(weight: 12f, lift: 1.12f, turn: 0.92f), 7),
                 // Engine
                 Module(161, "Standard Engine", "Balanced.", SlotType.Engine, Stats(weight: 12f), 0),
-                Module(162, "Boost Engine", "Shorter dash cooldown.", SlotType.Engine, Stats(weight: 14f, dash: 0.75f), 5),
+                Module(162, "Boost Engine", "Boost tank refills faster.", SlotType.Engine, Stats(weight: 14f, boost: 0.75f), 5),
                 Module(163, "Turbine", "More lift.", SlotType.Engine, Stats(weight: 16f, lift: 1.08f), 11),
                 // Armour
                 Module(171, "Light Armour", "+10 HP.", SlotType.Armour, Stats(weight: 6f, health: 10f), 0),
@@ -125,7 +125,7 @@ namespace Chopper.Editor.Setup
             return tuned;
         }
 
-        private static FlightTuning Scaled(FlightTuning source, float turn, float gravity, float collective, float dashCooldown)
+        private static FlightTuning Scaled(FlightTuning source, float turn, float gravity, float collective, float boostRecharge)
         {
             var flight = source.Clone();
             flight.MaxPitchRate *= turn;
@@ -133,7 +133,7 @@ namespace Chopper.Editor.Setup
             flight.MaxRollRate *= turn;
             flight.GravityScale = gravity;
             flight.CollectiveUp *= collective;
-            flight.DashCooldown = dashCooldown;
+            flight.BoostRechargeTime = boostRecharge;
             return flight;
         }
 
@@ -173,13 +173,13 @@ namespace Chopper.Editor.Setup
             return asset;
         }
 
-        private static ModuleStats Stats(float weight, float health = 0f, float lift = 1f, float turn = 1f, float dash = 1f) => new()
+        private static ModuleStats Stats(float weight, float health = 0f, float lift = 1f, float turn = 1f, float boost = 1f) => new()
         {
             Weight = weight,
             HealthBonus = health,
             LiftMultiplier = lift,
             TurnRateMultiplier = turn,
-            DashCooldownMultiplier = dash,
+            BoostRechargeMultiplier = boost,
         };
     }
 }

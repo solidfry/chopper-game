@@ -140,7 +140,7 @@ namespace Chopper.Editor.Setup
                 Weight = weight,
                 LiftMultiplier = 1f,
                 TurnRateMultiplier = 1f,
-                DashCooldownMultiplier = 1f,
+                BoostRechargeMultiplier = 1f,
             }, unlockLevel);
             module.SetWeapon(weapon);
             AssetDatabase.CreateAsset(module, $"{Folder}/{assetName}.asset");
