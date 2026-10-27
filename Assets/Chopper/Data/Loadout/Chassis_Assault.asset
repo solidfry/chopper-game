@@ -22,17 +22,21 @@ MonoBehaviour:
   prefab: {fileID: 2975681461306699274, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
   flight:
     GravityScale: 1.8
-    CollectiveRange: 0.8678571
-    TiltCompensation: 0.9
+    CollectiveRange: 0.67499995
+    CollectiveVertical: 0.8
+    TiltCompensation: 1
     MaxCompensatedTiltDegrees: 60
+    TiltThrust: 1.6
     MaxPitchRate: 75.00001
     MaxYawRate: 58.333336
     MaxRollRate: 116.66667
     TurnResponse: 12
-    QuadraticDrag: {x: 0.004, y: 0.003, z: 0.0018}
+    QuadraticDrag: {x: 0.004, y: 0.003, z: 0.0016}
     LinearDrag: {x: 0.15, y: 0.15, z: 0.02}
     Weathervane: 0.01
     AutoLevel: 0
+    BankAngleDegrees: 30
+    BankResponse: 4
     DashBoost: 0.6
     DashCooldown: 2.5
   crash:

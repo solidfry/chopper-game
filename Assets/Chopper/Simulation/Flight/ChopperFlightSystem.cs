@@ -14,7 +14,9 @@ namespace Chopper.Simulation.Flight
     /// the predicted fixed step, so this runs on the server and on the owning client (prediction) alike.
     /// <list type="bullet">
     /// <item>Gravity is always on. The rotor lifts along its own up axis: hover lift at zero collective.</item>
-    /// <item>Tilting moves the chopper (and loses height unless the pilot adds collective).</item>
+    /// <item>Tilting moves the chopper; <c>TiltThrust</c> makes a small nose-down give real speed.</item>
+    /// <item>Collective (W/S) is mostly straight up: it changes height, it does not steal speed from tilt.</item>
+    /// <item>Yaw without roll input banks the chopper into the turn (coordinated turn), so turns curve.</item>
     /// <item>Input sets a turn rate; rotation reaches it fast and stops when input stops.</item>
     /// <item>Drag is higher sideways and vertically than forward; the nose weathervanes into travel at speed.</item>
     /// </list>
@@ -75,20 +77,26 @@ namespace Chopper.Simulation.Flight
                 var yaw = math.clamp(input.Yaw, -1f, 1f);
                 var roll = math.clamp(input.Roll, -1f, 1f);
 
-                // Extra weight on top of physics gravity, then lift along the rotor axis.
-                // Zero collective = exactly hover lift when level.
+                // Extra weight on top of physics gravity.
                 var weight = Gravity * config.GravityScale;
                 velocity.Linear -= worldUp * (Gravity * (config.GravityScale - 1f) * DeltaTime);
-                var liftAcceleration = weight * (1f + thrust * config.CollectiveRange);
-                // Tilt compensation: grow lift so its vertical part still holds height, and the extra goes into
-                // horizontal thrust. This is what makes tilting accelerate and flaring brake hard.
+
+                // Hover lift along the rotor axis. Tilt compensation grows it so its vertical part still holds height;
+                // the horizontal part is the push from tilt (scaled by TiltThrust): tilting accelerates, flaring brakes.
+                var hoverLift = weight;
                 var uprightDot = math.dot(up, worldUp);
                 if (uprightDot > 0f)
                 {
                     var compensation = 1f / math.max(uprightDot, config.MaxCompensatedTilt);
-                    liftAcceleration *= math.lerp(1f, compensation, config.TiltCompensation);
+                    hoverLift *= math.lerp(1f, compensation, config.TiltCompensation);
                 }
-                velocity.Linear += up * (liftAcceleration * DeltaTime);
+                var lift = up * hoverLift;
+                var verticalLift = worldUp * math.dot(lift, worldUp);
+                velocity.Linear += (verticalLift + (lift - verticalLift) * config.TiltThrust) * DeltaTime;
+
+                // Collective (W/S): mostly straight up, so it changes height and does not steal speed from tilt.
+                var collectiveDirection = math.normalizesafe(math.lerp(up, worldUp, config.CollectiveVertical), worldUp);
+                velocity.Linear += collectiveDirection * (weight * thrust * config.CollectiveRange * DeltaTime);
 
                 // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.
                 var localVelocity = math.mul(toLocal, velocity.Linear);
@@ -112,6 +120,27 @@ namespace Chopper.Simulation.Flight
                         var localAxis = math.mul(toLocal, tiltAxis / sinTilt);
                         desiredRate.x += localAxis.x * tiltAngle * config.AutoLevel;
                         desiredRate.z += localAxis.z * tiltAngle * config.AutoLevel;
+                    }
+                }
+
+                // Coordinated turn: with no roll input, lean into the yaw (up to MaxBank at full yaw), so the tilted lift
+                // pulls the chopper round the turn. Only the roll axis is driven; pitch stays with the pilot (aim).
+                if (config.MaxBank > 0f && math.abs(roll) < NoInput)
+                {
+                    var forwardAxis = math.mul(rotation, math.forward());
+                    var flatForward = math.normalizesafe(new float3(forwardAxis.x, 0f, forwardAxis.z), math.forward());
+                    var flatRight = math.cross(worldUp, flatForward);
+                    var bank = yaw * config.MaxBank;
+                    var targetUp = worldUp * math.cos(bank) + flatRight * math.sin(bank);
+                    // Compare in the plane across the nose, so pitch does not count as bank.
+                    var upAcross = math.normalizesafe(up - flatForward * math.dot(up, flatForward), worldUp);
+                    var bankAxis = math.cross(upAcross, targetUp);
+                    var sinBank = math.length(bankAxis);
+                    if (sinBank > 1e-4f)
+                    {
+                        var bankError = math.atan2(sinBank, math.dot(upAcross, targetUp));
+                        var localAxis = math.mul(toLocal, bankAxis / sinBank);
+                        desiredRate.z += localAxis.z * bankError * config.BankResponse;
                     }
                 }
 

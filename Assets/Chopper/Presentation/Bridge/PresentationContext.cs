@@ -55,8 +55,10 @@ namespace Chopper.Presentation.Bridge
         /// <summary>Can be null (no chase camera in the scene).</summary>
         public ChopperCameraRig CameraRig { get; }
         public PresentationEvents Events { get; }
-        /// <summary>A menu (options) is open: flight input is blocked (<see cref="InputBlockSystem"/>).</summary>
+        /// <summary>A menu (options) is open: flight input is blocked (<see cref="InputSettingsSystem"/>).</summary>
         public bool MenuOpen { get; set; }
+        /// <summary>Saved control options (mouse steer, sensitivity, invert).</summary>
+        public InputOptions InputOptions { get; } = new();
         public bool IsDisposed { get; private set; }
 
         /// <summary>Call from Start or later: the mixer ignores volume changes during Awake.</summary>

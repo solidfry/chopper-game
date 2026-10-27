@@ -83,8 +83,9 @@ Rules:
 - **World markers and rocket lead** (plan section 3b, "Markers, lead, cluster — built"): a marker on every other chopper (red diamond) and ground target (amber square), closest 24, distance under it, health bar when near, filled when it is your lock target, edge arrow when off screen. A lead circle shows where to aim the selected rocket pod (lock target, else the target nearest the nose).
 - **Cluster missiles** (module 116 "Cluster Missiles", `Weapon_ClusterMissile`): a guided missile that splits into 8 submunitions near the target or after 1.8 s. Submunitions are server rockets; one RPC with a seed lets clients draw them. Any guided missile definition can be a cluster (Cluster section, 0 = off).
 - **Swarm Pod** (module 117, `Weapon_SwarmMissiles`): one trigger pull with a lock fires 10 small seekers, one every 0.06 s, fanned 20°; 3 of 10 ignore flares. Any guided missile can have a salvo (Salvo section on the definition).
-- **Options overlay** (Escape / gamepad Start): HUD look preset, reduce flicker / effects, 5 volume sliders. While open: cursor free, flight input neutral (`PlayerInputBlock` singleton, written by `InputBlockSystem` from `PresentationContext.MenuOpen`). First piece of the UI Toolkit menu port.
+- **Options overlay** (Escape / gamepad Start): HUD look preset, reduce flicker / effects, 5 volume sliders. Controls: mouse left/right = turn (aim style, default) or roll (classic), sensitivity, invert pitch (`InputOptions`, saved). While open: cursor free, flight input neutral (`PlayerInputSettings` singleton, written by `InputSettingsSystem`). First piece of the UI Toolkit menu port.
 - **Prediction smoothing** (own chopper): server corrections fade out over a few ticks instead of a snap (`ChopperSmoothingAction`, Netcode `GhostPredictionSmoothing` on `LocalTransform`). Each correction removes 25% of the position error and 35% of the rotation error; errors over 10 m snap (respawn). Velocity is not smoothed. Tune on `ChopperAuthoring` → "Network smoothing". Missiles are not smoothed. The Simulation assembly now allows unsafe code (needed for the smoothing callback).
+- **Flight feel (28 Oct, tested compile only)**: W/S collective is now mostly straight up (`CollectiveVertical` 0.8), so it changes height and does not steal speed. Forward speed comes from tilt, scaled by `TiltThrust` 1.6 (full tilt compensation). Yaw with no roll input banks the chopper (`BankAngleDegrees` 30), so turns curve. Mouse X turns the nose by default (aim style: aim and flight are one); classic roll is in the options. Tune per chassis on `Chassis_*.asset` → Flight.
 - Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
 
 ### Editor steps after pulling
@@ -159,5 +160,5 @@ Rules:
 | HUD look | `Presentation/Hud/HudLook*.cs`, `HudLook.shader`; settings `Data/Hud/HudLookSettings.asset`; setup `Editor/Setup/HudLookAssets.cs` |
 | Editor | `Editor/Setup/*` (window, asset factories, validator) |
 | Markers | `Presentation/Hud/WorldMarker*.cs`, `UI/Hud/WorldMarkerView.cs` |
-| Options | `UI/Options/*` (overlay), `Presentation/Bridge/InputBlockSystem.cs`, `Simulation/Input/PlayerInputBlock.cs` |
+| Options | `UI/Options/*` (overlay), `Presentation/Bridge/InputSettingsSystem.cs`, `Simulation/Input/PlayerInputSettings.cs` |
 | Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio) |

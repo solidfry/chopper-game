@@ -21,6 +21,14 @@ namespace Chopper.Simulation.Flight
         public float TiltCompensation;
         /// <summary>Cosine of the largest tilt that is still compensated (0.5 = 60 degrees).</summary>
         public float MaxCompensatedTilt;
+        /// <summary>Collective direction: 0 = along the rotor, 1 = straight up (W/S only change height).</summary>
+        public float CollectiveVertical;
+        /// <summary>Multiplies the horizontal part of rotor lift (the push from tilt).</summary>
+        public float TiltThrust;
+        /// <summary>Bank angle at full yaw input when there is no roll input, radians (coordinated turn).</summary>
+        public float MaxBank;
+        /// <summary>How fast the bank is reached (1/s).</summary>
+        public float BankResponse;
 
         /// <summary>Turn rate at full input, local axes (x = pitch, y = yaw, z = roll), radians per second.</summary>
         public float3 MaxTurnRate;

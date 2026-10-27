@@ -5,6 +5,11 @@
     <ui:VisualElement class="options__panel">
       <ui:Label text="OPTIONS" class="options__title" />
 
+      <ui:Label text="CONTROLS" class="options__section" />
+      <ui:DropdownField name="mouse-steer" label="MOUSE LEFT / RIGHT" class="options__row" />
+      <ui:Slider name="mouse-sensitivity" label="MOUSE SENSITIVITY" low-value="0.25" high-value="3" class="options__row" />
+      <ui:Toggle name="invert-pitch" label="INVERT PITCH" class="options__row" />
+
       <ui:Label text="DISPLAY" class="options__section" />
       <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
       <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />

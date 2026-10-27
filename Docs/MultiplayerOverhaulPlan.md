@@ -221,7 +221,7 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - `HudLookSettings` on `GameConfig`: default preset, render scale, Vector and CRT 84 profiles, reactions. Player choice saved in PlayerPrefs (`HudLook.Preset`, `HudLook.ReduceEffects`); no options UI yet.
 - Setup step 1: settings asset + the feature on every URP renderer under Assets. Validate: settings, feature present, shader set, feature on.
 - Phosphor persistence (built after): two HUD-size history RTHandles in the feature, ping-pong; pass 1 = max(HUD, last × decay), decay = exp(−dt / PersistenceTime) from C#; the composite adds the trail where the HUD is not drawn. Strength 0 = no history pass.
-- Options overlay (built after): `OptionsMenuView` (Escape / Start) sets preset, reduce effects and volumes; blocks flight input through `PlayerInputBlock`.
+- Options overlay (built after): `OptionsMenuView` (Escape / Start) sets preset, reduce effects and volumes; blocks flight input and sets mouse steer / sensitivity / invert through `PlayerInputSettings`.
 - Not built yet: per-element UI materials, menus/hangar on the same look.
 
 ### Markers, lead, cluster — built (27 Oct, written without the editor — needs a compile + play check)

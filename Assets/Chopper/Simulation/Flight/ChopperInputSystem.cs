@@ -11,15 +11,15 @@ namespace Chopper.Simulation.Flight
     /// Reads the Flight action map into the local player's <see cref="ChopperInput"/> each frame.
     /// Keyboard/gamepad axes request a fraction of the max turn rate. The mouse works like aiming: moving it
     /// faster turns faster (degrees per pixel), so it is precise for small corrections and fast for big flicks.
-    /// While a menu is open (<see cref="PlayerInputBlock"/>) the input is neutral.
+    /// Options come from <see cref="PlayerInputSettings"/>: mouse X steers yaw (aim style, default) or roll (classic),
+    /// sensitivity, invert pitch. While a menu is open the input is neutral.
     /// </summary>
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class ChopperInputSystem : SystemBase
     {
-        // TODO: move to player settings (Phase 4/5) with an invert option.
+        /// <summary>Mouse turn speed at sensitivity 1. Mouse forward = nose down (flight style); invert flips it.</summary>
         private const float MouseDegreesPerPixel = 0.12f;
-        private const float MouseInvertPitch = 1f;
         // Mouse deltas arrive per frame and are noisy; average them over a few frames.
         private const float MouseSmoothing = 30f;
 
@@ -44,7 +44,8 @@ namespace Chopper.Simulation.Flight
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.TryGetSingleton<PlayerInputBlock>(out var block) && block.Blocked)
+            var settings = SystemAPI.TryGetSingleton<PlayerInputSettings>(out var saved) ? saved : PlayerInputSettings.Default;
+            if (settings.Blocked)
             {
                 _mouseRate = float2.zero;
                 foreach (var input in SystemAPI.Query<RefRW<ChopperInput>>().WithAll<GhostOwnerIsLocal>())
@@ -66,19 +67,22 @@ namespace Chopper.Simulation.Flight
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
             var mouseDelta = (float2)flight.MouseLook.ReadValue<Vector2>();
-            var targetRate = mouseDelta * MouseDegreesPerPixel / dt;
+            var targetRate = mouseDelta * (MouseDegreesPerPixel * math.max(settings.MouseSensitivity, 0.05f)) / dt;
             _mouseRate = math.lerp(_mouseRate, targetRate, 1f - math.exp(-MouseSmoothing * dt));
 
             foreach (var (input, config) in SystemAPI.Query<RefRW<ChopperInput>, RefRO<ChopperFlightConfig>>().WithAll<GhostOwnerIsLocal>())
             {
                 var maxRateDegrees = math.degrees(config.ValueRO.MaxTurnRate);
-                var mousePitch = MouseInvertPitch * _mouseRate.y / maxRateDegrees.x;
-                var mouseRoll = _mouseRate.x / maxRateDegrees.z;
+                var mousePitch = (settings.InvertPitch ? -1f : 1f) * _mouseRate.y / maxRateDegrees.x;
+                // Aim style: mouse X turns the nose; the flight model banks into the turn. Classic: mouse X rolls.
+                var aimStyle = settings.MouseSteer == MouseSteer.Yaw;
+                var mouseYaw = aimStyle ? _mouseRate.x / maxRateDegrees.y : 0f;
+                var mouseRoll = aimStyle ? 0f : _mouseRate.x / maxRateDegrees.z;
 
                 input.ValueRW = new ChopperInput
                 {
                     Thrust = thrust,
-                    Yaw = yaw,
+                    Yaw = math.clamp(yaw + mouseYaw, -1f, 1f),
                     Pitch = math.clamp(pitch + mousePitch, -1f, 1f),
                     Roll = math.clamp(roll + mouseRoll, -1f, 1f),
                     Fire = fire,

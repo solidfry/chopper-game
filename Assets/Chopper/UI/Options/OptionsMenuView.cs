@@ -9,10 +9,11 @@ using UnityEngine.UIElements;
 namespace Chopper.UI.Options
 {
     /// <summary>
-    /// In-game options overlay (<c>OptionsMenu.uxml</c>): HUD look preset, "reduce flicker / effects", and volumes.
+    /// In-game options overlay (<c>OptionsMenu.uxml</c>): controls (mouse steer, sensitivity, invert), HUD look preset,
+    /// "reduce flicker / effects", and volumes.
     /// Escape or gamepad Start opens and closes it. While open, the cursor is free and flight input is blocked
     /// (<see cref="PresentationContext.MenuOpen"/>). Values are saved by the services they belong to
-    /// (<see cref="HudLook"/>, <see cref="IAudioService"/>). The first part of the menu port (old UGUI menus).
+    /// (<see cref="InputOptions"/>, <see cref="HudLook"/>, <see cref="IAudioService"/>). The first part of the menu port (old UGUI menus).
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class OptionsMenuView : MonoBehaviour
@@ -24,12 +25,17 @@ namespace Chopper.UI.Options
 
         private PresentationContext _context;
         private VisualElement _root;
+        private DropdownField _mouseSteer;
+        private Slider _mouseSensitivity;
+        private Toggle _invertPitch;
         private DropdownField _hudLook;
         private Toggle _reduceEffects;
         private Button _resume;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
+        /// <summary>Same order as <see cref="InputOptions.MouseSteerIndex"/>.</summary>
+        private readonly List<string> _steerNames = new() { "TURN (AIM)", "ROLL (CLASSIC)" };
 
         public bool IsOpen { get; private set; }
 
@@ -48,10 +54,17 @@ namespace Chopper.UI.Options
 
             var document = GetComponent<UIDocument>().rootVisualElement;
             _root = document.Q("options");
+            _mouseSteer = _root.Q<DropdownField>("mouse-steer");
+            _mouseSensitivity = _root.Q<Slider>("mouse-sensitivity");
+            _invertPitch = _root.Q<Toggle>("invert-pitch");
             _hudLook = _root.Q<DropdownField>("hud-look");
             _reduceEffects = _root.Q<Toggle>("reduce-effects");
             _resume = _root.Q<Button>("resume");
 
+            _mouseSteer.choices = _steerNames;
+            _mouseSteer.RegisterValueChangedCallback(OnMouseSteerChanged);
+            _mouseSensitivity.RegisterValueChangedCallback(OnSensitivityChanged);
+            _invertPitch.RegisterValueChangedCallback(OnInvertPitchChanged);
             _hudLook.choices = _presetNames;
             _hudLook.RegisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.RegisterValueChangedCallback(OnReduceEffectsChanged);
@@ -70,6 +83,9 @@ namespace Chopper.UI.Options
         private void OnDisable()
         {
             if (_root == null) return;
+            _mouseSteer.UnregisterValueChangedCallback(OnMouseSteerChanged);
+            _mouseSensitivity.UnregisterValueChangedCallback(OnSensitivityChanged);
+            _invertPitch.UnregisterValueChangedCallback(OnInvertPitchChanged);
             _hudLook.UnregisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.UnregisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked -= Close;
@@ -95,6 +111,10 @@ namespace Chopper.UI.Options
             if (!open) return;
 
             // Show the saved values each time it opens.
+            var input = _context.InputOptions;
+            _mouseSteer.SetValueWithoutNotify(_steerNames[Mathf.Clamp(input.MouseSteerIndex, 0, _steerNames.Count - 1)]);
+            _mouseSensitivity.SetValueWithoutNotify(input.MouseSensitivity);
+            _invertPitch.SetValueWithoutNotify(input.InvertPitch);
             _hudLook.SetValueWithoutNotify(_presetNames[Mathf.Clamp((int)_context.HudLook.Preset, 0, _presetNames.Count - 1)]);
             _reduceEffects.SetValueWithoutNotify(_context.HudLook.ReduceEffects);
             foreach (var (slider, channel) in _volumes) slider.SetValueWithoutNotify(_context.Audio.GetVolume(channel));
@@ -109,6 +129,16 @@ namespace Chopper.UI.Options
             slider.RegisterValueChangedCallback(OnVolumeChanged);
             _volumes.Add((slider, channel));
         }
+
+        private void OnMouseSteerChanged(ChangeEvent<string> evt)
+        {
+            var index = _steerNames.IndexOf(evt.newValue);
+            if (index >= 0) _context.InputOptions.MouseSteerIndex = index;
+        }
+
+        private void OnSensitivityChanged(ChangeEvent<float> evt) => _context.InputOptions.MouseSensitivity = evt.newValue;
+
+        private void OnInvertPitchChanged(ChangeEvent<bool> evt) => _context.InputOptions.InvertPitch = evt.newValue;
 
         private void OnHudLookChanged(ChangeEvent<string> evt)
         {
