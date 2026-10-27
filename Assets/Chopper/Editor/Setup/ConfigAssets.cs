@@ -16,6 +16,7 @@ namespace Chopper.Editor.Setup
         private const string ThemePath = "Assets/Chopper/UI/Theme/ChopperRuntimeTheme.tss";
         private const string HudLayoutPath = "Assets/Chopper/UI/Hud/ChopperHud.uxml";
         private const string OptionsLayoutPath = "Assets/Chopper/UI/Options/OptionsMenu.uxml";
+        private const string CameraSettingsPath = "Assets/Chopper/Data/Camera/CameraSettings.asset";
 
         public static GameConfig Load() => AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigPath);
 
@@ -29,6 +30,7 @@ namespace Chopper.Editor.Setup
             var effects = EffectsAssets.Ensure(mixer);
             var panel = EnsurePanelSettings();
             var look = HudLookAssets.Ensure();
+            var cameraSettings = EnsureCameraSettings();
             var hud = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
             var options = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(OptionsLayoutPath);
             var music = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioAssets.MatchMusicPath);
@@ -39,7 +41,7 @@ namespace Chopper.Editor.Setup
                 config = ScriptableObject.CreateInstance<GameConfig>();
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(GameConfigPath));
                 AssetDatabase.CreateAsset(config, GameConfigPath);
-                config.Initialise(catalog, library, effects, music, panel, hud, look, options);
+                config.Initialise(catalog, library, effects, music, panel, hud, look, options, cameraSettings);
             }
             else
             {
@@ -52,12 +54,24 @@ namespace Chopper.Editor.Setup
                     config.PanelSettings != null ? config.PanelSettings : panel,
                     config.HudLayout != null ? config.HudLayout : hud,
                     config.HudLook != null ? config.HudLook : look,
-                    config.OptionsLayout != null ? config.OptionsLayout : options);
+                    config.OptionsLayout != null ? config.OptionsLayout : options,
+                    config.Camera != null ? config.Camera : cameraSettings);
             }
 
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             return config;
+        }
+
+        /// <summary>Camera views and feel. Defaults: the tuned chase view and the old game's cockpit camera.</summary>
+        private static Chopper.Presentation.Camera.CameraSettings EnsureCameraSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<Chopper.Presentation.Camera.CameraSettings>(CameraSettingsPath);
+            if (settings != null) return settings;
+            settings = ScriptableObject.CreateInstance<Chopper.Presentation.Camera.CameraSettings>();
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CameraSettingsPath));
+            AssetDatabase.CreateAsset(settings, CameraSettingsPath);
+            return settings;
         }
 
         private static PanelSettings EnsurePanelSettings()

@@ -1,181 +1,262 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Chopper.Presentation.Camera
 {
     /// <summary>
-    /// Third-person chase camera. <see cref="LocalChopperCameraSystem"/> calls <see cref="Follow"/> once per frame,
-    /// after the chopper's rendered pose is final, so the camera never lags a frame behind the chopper.
-    /// Sense of speed: field of view and distance grow with speed; the camera rolls with the chopper on a short delay.
-    /// Hits taken shake the camera (<see cref="AddShake"/>).
-    /// C (gamepad Y) switches to the cockpit view, like the old game's camera switch: fixed to the chopper at the pilot's
-    /// seat, looking at the gun's aim point, with a light wobble. The choice is saved.
+    /// The chopper camera. <see cref="LocalChopperCameraSystem"/> calls <see cref="Follow"/> once per frame with the chopper's
+    /// rendered pose, so the camera never lags a frame behind it.
+    /// <list type="bullet">
+    /// <item>Views come from <see cref="CameraSettings"/> (on the game config): chase (smoothed heading, roll on a delay,
+    /// speed pull-back) and mounted (cockpit: rigid to the chopper). C / gamepad Y cycles them; the choice is saved.</item>
+    /// <item>Switching blends position, rotation, field of view and near clip over the blend time.</item>
+    /// <item>Each view can add noise (handheld / engine wobble); hits add shake (<see cref="AddShake"/>).</item>
+    /// <item>A respawn or teleport snaps the camera instead of swinging across the map.</item>
+    /// </list>
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
     public sealed class ChopperCameraRig : MonoBehaviour
     {
-        [Header("Framing")]
-        [SerializeField] private Vector3 offset = new(0f, 4.5f, -15f);
-        [SerializeField] private float lookAhead = 25f;
-        [SerializeField, Tooltip("How fast the camera swings round to a new heading. Position stays locked to the chopper.")]
-        private float headingSharpness = 8f;
-        [SerializeField, Range(0f, 1f), Tooltip("How much of the chopper's roll the camera follows. 1 = all of it.")]
-        private float rollFollow = 0.85f;
-        [SerializeField, Tooltip("How fast the camera catches up with the chopper's roll. Lower = more delay (4 = about a quarter second).")]
-        private float rollSharpness = 4f;
+        private const string ViewKey = "Chopper.Camera.View";
+        /// <summary>A jump larger than this in one frame (metres) is a respawn or teleport: snap, do not smooth.</summary>
+        private const float TeleportDistance = 60f;
 
-        [Header("Sense of speed")]
-        [SerializeField] private float baseFieldOfView = 65f;
-        [SerializeField] private float maxFieldOfView = 85f;
-        [SerializeField, Tooltip("Extra distance at top speed, as a fraction of the offset.")]
-        private float maxPullBack = 0.3f;
-        [SerializeField, Tooltip("Speed (m/s) at which the speed effects are at full strength.")]
-        private float fullEffectSpeed = 80f;
-        [SerializeField] private float speedSmoothing = 3f;
-
-        [Header("Shake (hits taken)")]
-        [SerializeField, Tooltip("Largest shake angle in degrees, at full trauma.")]
-        private float maxShakeDegrees = 4f;
-        [SerializeField, Tooltip("Trauma lost per second.")]
-        private float shakeRecovery = 1.5f;
-        [SerializeField] private float shakeFrequency = 18f;
-
-        [Header("Cockpit view (C / gamepad Y)")]
-        [SerializeField, Tooltip("Pilot's eye in chopper space. From the old game's cockpit camera.")]
-        private Vector3 cockpitOffset = new(0f, -0.51f, 2.47f);
-        [SerializeField, Tooltip("Where the pilot looks, chopper space (the old ReticalPosition).")]
-        private Vector3 cockpitLookPoint = new(0f, -1.5f, 79f);
-        [SerializeField] private float cockpitFieldOfView = 70f;
-        [SerializeField, Tooltip("Near clip plane in the cockpit. The canopy frame and dashboard are closer than the default 0.3 m.")]
-        private float cockpitNearClip = 0.05f;
-        [SerializeField, Tooltip("Engine wobble, degrees.")] private float cockpitWobble = 0.25f;
-        [SerializeField] private float cockpitWobbleFrequency = 6f;
-
+        [SerializeField, Tooltip("Optional override. Empty = the game config's camera settings (given by the presentation bridge).")]
+        private CameraSettings settings;
         [SerializeField] private bool lockCursor = true;
 
+        private struct Pose
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public float FieldOfView;
+            public float NearClip;
+        }
+
+        /// <summary>Smoothing state of one chase view.</summary>
+        private struct ViewState
+        {
+            public bool Valid;
+            public Vector3 Forward;
+            public Vector3 Up;
+        }
+
         private UnityEngine.Camera _camera;
-        private bool _hasTarget;
-        private Vector3 _smoothedForward = Vector3.forward;
-        private Vector3 _smoothedUp = Vector3.up;
+        private CameraSettings _fallback;
+        private ViewState[] _states = Array.Empty<ViewState>();
+        private int _view;
+        private int _previousView = -1;
+        private float _blend = 1f;
+        private bool _hasLastTarget;
         private Vector3 _lastTargetPosition;
         private float _smoothedSpeed;
         private float _trauma;
-        private bool _cockpit;
-        private float _chaseNearClip;
         /// <summary>A menu is open (<see cref="SetCursorFree"/>): no view switching.</summary>
         private bool _menuOpen;
 
-        private const string CockpitKey = "Chopper.Camera.Cockpit";
-
-        /// <summary>True while the view is inside the cockpit.</summary>
-        public bool IsCockpit => _cockpit;
-
-        /// <summary>Switches between chase and cockpit view (saved).</summary>
-        public void SetCockpit(bool cockpit)
+        private CameraSettings Settings
         {
-            _cockpit = cockpit;
-            PlayerPrefs.SetInt(CockpitKey, cockpit ? 1 : 0);
-            ApplyNearClip();
-            // The chase camera snaps to the chopper again instead of swinging in from the old view.
-            _hasTarget = false;
+            get
+            {
+                if (settings != null) return settings;
+                // No asset yet (old scene): the defaults in code.
+                if (_fallback == null) _fallback = ScriptableObject.CreateInstance<CameraSettings>();
+                return _fallback;
+            }
         }
+
+        public int ViewIndex => _view;
+        public string ViewName => ViewAt(_view)?.Name ?? "";
+        public bool IsMounted => ViewAt(_view)?.Kind == CameraViewKind.Mounted;
+
+        /// <summary>Called by the presentation context with the game config's settings, unless this rig has its own.</summary>
+        public void UseSettings(CameraSettings value)
+        {
+            if (settings == null && value != null) settings = value;
+            _view = Mathf.Clamp(PlayerPrefs.GetInt(ViewKey, 0), 0, Mathf.Max(0, Settings.Views.Count - 1));
+            _states = new ViewState[Settings.Views.Count];
+        }
+
+        /// <summary>Switches view with a blend (saved).</summary>
+        public void SetView(int index)
+        {
+            var count = Settings.Views.Count;
+            if (count == 0) return;
+            index = (index % count + count) % count;
+            if (index == _view) return;
+
+            _previousView = _view;
+            _view = index;
+            _blend = Settings.BlendTime > 0f ? 0f : 1f;
+            EnsureStates();
+            // The new view starts from the chopper's current heading, not from where it was last used.
+            _states[_view].Valid = false;
+            PlayerPrefs.SetInt(ViewKey, index);
+        }
+
+        public void NextView() => SetView(_view + 1);
 
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
-        public void AddShake(float trauma)
-        {
-            _trauma = Mathf.Clamp01(_trauma + trauma);
-        }
+        public void AddShake(float trauma) => _trauma = Mathf.Clamp01(_trauma + trauma);
 
         public void Follow(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
         {
-            if (_cockpit)
+            var settingsAsset = Settings;
+            if (settingsAsset.Views.Count == 0 || _camera == null) return;
+            EnsureStates();
+            UpdateSpeed(targetPosition, deltaTime, settingsAsset);
+
+            var speed01 = Mathf.Clamp01(_smoothedSpeed / settingsAsset.FullEffectSpeed);
+            var pose = Evaluate(_view, targetPosition, targetRotation, deltaTime, speed01);
+
+            if (_previousView >= 0 && _previousView < _states.Length && _blend < 1f)
             {
-                FollowCockpit(targetPosition, targetRotation, deltaTime);
-                return;
+                _blend = Mathf.Min(1f, _blend + deltaTime / Mathf.Max(settingsAsset.BlendTime, 1e-4f));
+                var from = Evaluate(_previousView, targetPosition, targetRotation, deltaTime, speed01);
+                var t = Mathf.SmoothStep(0f, 1f, _blend);
+                pose = new Pose
+                {
+                    Position = Vector3.Lerp(from.Position, pose.Position, t),
+                    Rotation = Quaternion.Slerp(from.Rotation, pose.Rotation, t),
+                    FieldOfView = Mathf.Lerp(from.FieldOfView, pose.FieldOfView, t),
+                    // The smaller near plane while blending, so neither view cuts the model.
+                    NearClip = Mathf.Min(from.NearClip, pose.NearClip),
+                };
+            }
+            else
+            {
+                _previousView = -1;
             }
 
+            _camera.fieldOfView = pose.FieldOfView;
+            _camera.nearClipPlane = pose.NearClip;
+            transform.SetPositionAndRotation(pose.Position, pose.Rotation * Shake(deltaTime, settingsAsset));
+        }
+
+        private Pose Evaluate(int index, Vector3 targetPosition, Quaternion targetRotation, float deltaTime, float speed01)
+        {
+            var view = ViewAt(index);
+            var pose = view.Kind == CameraViewKind.Mounted
+                ? EvaluateMounted(view, targetPosition, targetRotation)
+                : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01);
+            pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01);
+            pose.NearClip = view.NearClip;
+            pose.Rotation *= Noise(view, index);
+            return pose;
+        }
+
+        /// <summary>Behind the chopper. Only orientation is smoothed: smoothing position against a moving target jitters.</summary>
+        private static Pose EvaluateChase(CameraView view, ref ViewState state, Vector3 targetPosition, Quaternion targetRotation,
+            float deltaTime, float speed01)
+        {
             var forward = targetRotation * Vector3.forward;
             // Near-vertical noses have no stable heading; keep the last one.
-            if (Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f)
-                forward = _smoothedForward;
-            var rolledUp = Vector3.Slerp(Vector3.up, targetRotation * Vector3.up, rollFollow);
+            if (state.Valid && Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f)
+                forward = state.Forward;
+            var rolledUp = Vector3.Slerp(Vector3.up, targetRotation * Vector3.up, view.RollFollow);
 
-            if (!_hasTarget)
+            if (!state.Valid)
             {
-                _hasTarget = true;
-                _smoothedForward = forward;
-                _smoothedUp = rolledUp;
-                _lastTargetPosition = targetPosition;
+                state.Valid = true;
+                state.Forward = forward;
+                state.Up = rolledUp;
             }
             else if (deltaTime > 0f)
             {
-                // Smooth only orientation. Smoothing position against a moving target is what makes chase cams jitter.
-                var t = 1f - Mathf.Exp(-headingSharpness * deltaTime);
-                _smoothedForward = Vector3.Slerp(_smoothedForward, forward, t).normalized;
+                state.Forward = Vector3.Slerp(state.Forward, forward, 1f - Mathf.Exp(-view.HeadingSharpness * deltaTime)).normalized;
                 // Roll follows on its own, slower curve: the horizon tilts with the chopper a moment later.
-                _smoothedUp = Vector3.Slerp(_smoothedUp, rolledUp, 1f - Mathf.Exp(-rollSharpness * deltaTime)).normalized;
-
-                var speed = (targetPosition - _lastTargetPosition).magnitude / deltaTime;
-                _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, speed, 1f - Mathf.Exp(-speedSmoothing * deltaTime));
-                _lastTargetPosition = targetPosition;
+                state.Up = Vector3.Slerp(state.Up, rolledUp, 1f - Mathf.Exp(-view.RollSharpness * deltaTime)).normalized;
             }
 
-            var speed01 = Mathf.Clamp01(_smoothedSpeed / fullEffectSpeed);
-            _camera.fieldOfView = Mathf.Lerp(baseFieldOfView, maxFieldOfView, speed01);
-
-            var frame = Quaternion.LookRotation(_smoothedForward, _smoothedUp);
-            var position = targetPosition + frame * (offset * (1f + maxPullBack * speed01));
-            var lookPoint = targetPosition + _smoothedForward * lookAhead;
-            transform.SetPositionAndRotation(position, Quaternion.LookRotation(lookPoint - position, _smoothedUp) * Shake(deltaTime));
+            var frame = Quaternion.LookRotation(state.Forward, state.Up);
+            var position = targetPosition + frame * (view.Offset * (1f + view.PullBack * speed01));
+            var lookPoint = targetPosition + state.Forward * view.LookAhead;
+            return new Pose { Position = position, Rotation = Quaternion.LookRotation(lookPoint - position, state.Up) };
         }
 
         /// <summary>Rigid to the chopper: the horizon tilts and turns with it, as from the pilot's seat.</summary>
-        private void FollowCockpit(Vector3 targetPosition, Quaternion targetRotation, float deltaTime)
+        private static Pose EvaluateMounted(CameraView view, Vector3 targetPosition, Quaternion targetRotation) => new()
         {
-            _camera.fieldOfView = cockpitFieldOfView;
-            var eye = targetPosition + targetRotation * cockpitOffset;
-            var look = targetRotation * Quaternion.LookRotation(cockpitLookPoint - cockpitOffset, Vector3.up);
-            var t = Time.time * cockpitWobbleFrequency;
-            var wobble = Quaternion.Euler(
-                cockpitWobble * (Mathf.PerlinNoise(t, 0.4f) * 2f - 1f),
-                cockpitWobble * (Mathf.PerlinNoise(0.9f, t) * 2f - 1f),
-                0f);
-            transform.SetPositionAndRotation(eye, look * wobble * Shake(deltaTime));
+            Position = targetPosition + targetRotation * view.Offset,
+            Rotation = targetRotation * Quaternion.LookRotation(view.LookPoint - view.Offset, Vector3.up),
+        };
+
+        private static Quaternion Noise(CameraView view, int index)
+        {
+            if (view.NoiseAmplitude <= 0f) return Quaternion.identity;
+            var t = Time.time * view.NoiseFrequency;
+            var seed = index * 7.31f;
+            return Quaternion.Euler(
+                view.NoiseAmplitude * (Mathf.PerlinNoise(t, 0.4f + seed) * 2f - 1f),
+                view.NoiseAmplitude * (Mathf.PerlinNoise(0.9f + seed, t) * 2f - 1f),
+                view.NoiseAmplitude * 0.5f * (Mathf.PerlinNoise(t + seed, 2.3f) * 2f - 1f));
         }
 
-        private void ApplyNearClip()
+        private void UpdateSpeed(Vector3 targetPosition, float deltaTime, CameraSettings settingsAsset)
         {
-            // Null after a script reload in play mode (Awake does not run again).
-            if (_camera == null) return;
-            _camera.nearClipPlane = _cockpit ? cockpitNearClip : _chaseNearClip;
+            if (_hasLastTarget && Vector3.Distance(targetPosition, _lastTargetPosition) > TeleportDistance)
+            {
+                // Respawn or teleport: start every view fresh.
+                for (var i = 0; i < _states.Length; i++) _states[i].Valid = false;
+                _smoothedSpeed = 0f;
+                _blend = 1f;
+                _hasLastTarget = false;
+            }
+
+            if (_hasLastTarget && deltaTime > 0f)
+            {
+                var speed = (targetPosition - _lastTargetPosition).magnitude / deltaTime;
+                _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, speed, 1f - Mathf.Exp(-settingsAsset.SpeedSmoothing * deltaTime));
+            }
+            _lastTargetPosition = targetPosition;
+            _hasLastTarget = true;
         }
 
-        private void Update()
-        {
-            var keyboard = Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
-            var gamepad = Gamepad.current != null && Gamepad.current.buttonNorth.wasPressedThisFrame;
-            if ((keyboard || gamepad) && !_menuOpen) SetCockpit(!_cockpit);
-        }
-
-        private Quaternion Shake(float deltaTime)
+        private Quaternion Shake(float deltaTime, CameraSettings settingsAsset)
         {
             if (_trauma <= 0f) return Quaternion.identity;
-            _trauma = Mathf.Max(0f, _trauma - shakeRecovery * deltaTime);
+            _trauma = Mathf.Max(0f, _trauma - settingsAsset.ShakeRecovery * deltaTime);
 
-            var amount = _trauma * _trauma * maxShakeDegrees;
-            var t = Time.time * shakeFrequency;
+            var amount = _trauma * _trauma * settingsAsset.MaxShakeDegrees;
+            var t = Time.time * settingsAsset.ShakeFrequency;
             return Quaternion.Euler(
                 amount * (Mathf.PerlinNoise(t, 0.1f) * 2f - 1f),
                 amount * (Mathf.PerlinNoise(0.3f, t) * 2f - 1f),
                 amount * 0.5f * (Mathf.PerlinNoise(t, 0.7f) * 2f - 1f));
         }
 
+        private CameraView ViewAt(int index)
+        {
+            var views = Settings.Views;
+            return index >= 0 && index < views.Count ? views[index] : null;
+        }
+
+        /// <summary>Keeps one state per view, also after the views list was edited in play mode.</summary>
+        private void EnsureStates()
+        {
+            if (_states.Length == Settings.Views.Count) return;
+            Array.Resize(ref _states, Settings.Views.Count);
+            _view = Mathf.Clamp(_view, 0, Mathf.Max(0, _states.Length - 1));
+            if (_previousView >= _states.Length) _previousView = -1;
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
+            var gamepad = Gamepad.current != null && Gamepad.current.buttonNorth.wasPressedThisFrame;
+            if ((keyboard || gamepad) && !_menuOpen) NextView();
+        }
+
         private void Awake()
         {
             _camera = GetComponent<UnityEngine.Camera>();
-            _cockpit = PlayerPrefs.GetInt(CockpitKey, 0) != 0;
-            _chaseNearClip = _camera.nearClipPlane;
-            ApplyNearClip();
+            UseSettings(settings);
+        }
+
+        private void OnDestroy()
+        {
+            if (_fallback != null) Destroy(_fallback);
         }
 
         private void OnEnable()

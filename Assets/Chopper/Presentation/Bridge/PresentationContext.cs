@@ -33,6 +33,7 @@ namespace Chopper.Presentation.Bridge
             moduleRoot.SetParent(root, false);
             ModuleVisuals = new EffectPool(moduleRoot);
             HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
+            if (cameraRig != null && config != null) cameraRig.UseSettings(config.Camera);
 
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
