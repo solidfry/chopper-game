@@ -29,7 +29,8 @@ namespace Chopper.Simulation.Combat
                 flares.CooldownRemaining = math.max(0f, flares.CooldownRemaining - deltaTime);
                 flares.DecoyRemaining = math.max(0f, flares.DecoyRemaining - deltaTime);
 
-                if (!input.ValueRO.Countermeasure.IsSet || flares.CooldownRemaining > 0f) continue;
+                // Cooldown 0 = this loadout has no flares.
+                if (config.ValueRO.Cooldown <= 0f || !input.ValueRO.Countermeasure.IsSet || flares.CooldownRemaining > 0f) continue;
                 flares.CooldownRemaining = config.ValueRO.Cooldown;
                 flares.DecoyRemaining = config.ValueRO.DecoyDuration;
                 flares.FlareCount++;

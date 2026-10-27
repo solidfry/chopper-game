@@ -57,7 +57,8 @@ namespace Chopper.Presentation.Hud
                 }
             }
 
-            var flaresReady = SystemAPI.HasComponent<CountermeasureState>(self) &&
+            var flaresReady = SystemAPI.HasComponent<CountermeasureConfig>(self) &&
+                              SystemAPI.GetComponent<CountermeasureConfig>(self).Cooldown > 0f &&
                               SystemAPI.GetComponent<CountermeasureState>(self).CooldownRemaining <= 0f;
 
             var hasTarget = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target) && camera != null;

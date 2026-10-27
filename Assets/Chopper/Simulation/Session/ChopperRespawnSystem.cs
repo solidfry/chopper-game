@@ -24,7 +24,9 @@ namespace Chopper.Simulation.Session
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var spawner = SystemAPI.GetSingleton<ChopperSpawner>();
+            var spawnerEntity = SystemAPI.GetSingletonEntity<ChopperSpawner>();
+            var spawner = SystemAPI.GetComponent<ChopperSpawner>(spawnerEntity);
+            var chassisPrefabs = SystemAPI.GetBuffer<ChassisPrefab>(spawnerEntity);
             var deltaTime = SystemAPI.Time.DeltaTime;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -52,7 +54,10 @@ namespace Chopper.Simulation.Session
                 timer.ValueRW.Remaining -= deltaTime;
                 if (timer.ValueRO.Remaining > 0f) continue;
 
-                ChopperSpawning.Spawn(ecb, spawner, connection, networkId.ValueRO.Value);
+                var loadout = SystemAPI.HasComponent<RequestedLoadout>(connection)
+                    ? SystemAPI.GetComponent<RequestedLoadout>(connection).Code
+                    : default;
+                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, networkId.ValueRO.Value, loadout);
                 ecb.RemoveComponent<RespawnTimer>(connection);
             }
 

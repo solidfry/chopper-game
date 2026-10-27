@@ -65,6 +65,8 @@ namespace Chopper.Simulation.Combat
                          .WithAll<Simulate>()
                          .WithEntityAccess())
             {
+                // FireInterval 0 = this loadout has no gun.
+                if (config.ValueRO.FireInterval <= 0f) continue;
                 ref var weaponState = ref weapon.ValueRW;
                 weaponState.CooldownRemaining = math.max(0f, weaponState.CooldownRemaining - deltaTime);
                 if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f) continue;

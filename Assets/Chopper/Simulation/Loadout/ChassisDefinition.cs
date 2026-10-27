@@ -23,6 +23,8 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Base flight feel. Modules scale it (lift, turn rate, dash).")]
         private FlightTuning flight = new();
         [SerializeField] private CrashTuning crash = new();
+        [SerializeField, Tooltip("Loadout used when a player has not chosen one, or theirs is not valid. One module per slot.")]
+        private ModuleDefinition[] defaultModules = System.Array.Empty<ModuleDefinition>();
 
         public ushort Id => id;
         public string DisplayName => displayName;
@@ -31,6 +33,14 @@ namespace Chopper.Simulation.Loadout
         public FlightTuning Flight => flight;
         public CrashTuning Crash => crash;
         public IReadOnlyList<SlotType> Slots => slots;
+        public IReadOnlyList<ModuleDefinition> DefaultModules => defaultModules;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetDefaults(GameObject chassisPrefab, ModuleDefinition[] modules)
+        {
+            if (chassisPrefab != null) prefab = chassisPrefab;
+            if (modules != null) defaultModules = modules;
+        }
 
         public void CollectProblems(List<string> problems)
         {
@@ -39,6 +49,9 @@ namespace Chopper.Simulation.Loadout
             if (slots == null || slots.Length == 0) problems.Add($"{name}: no slots.");
             if (baseHealth <= 0f) problems.Add($"{name}: base health must be above 0.");
             if (weightBudget <= 0f) problems.Add($"{name}: weight budget must be above 0.");
+            if (prefab == null) problems.Add($"{name}: no chassis ghost prefab.");
+            if (defaultModules == null || defaultModules.Length != (slots?.Length ?? 0))
+                problems.Add($"{name}: default loadout needs one entry per slot ({slots?.Length ?? 0}).");
         }
 
         public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel);

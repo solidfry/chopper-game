@@ -47,9 +47,10 @@ namespace Chopper.Presentation.Hud
                 model.OutOfBounds = hasBounds && !bounds.Contains(localToWorld.ValueRO.Position);
                 UpdateAttitude(model, localToWorld.ValueRO, velocity.ValueRO, mass.ValueRO);
 
-                // The gun is a module: a loadout without one has no reticle.
-                if (SystemAPI.HasComponent<HitscanWeaponConfig>(entity))
-                    UpdateAim(model, SystemAPI.GetComponent<HitscanWeaponConfig>(entity), localToWorld.ValueRO);
+                // The gun is a module: a loadout without one (range 0) has no reticle.
+                var gun = SystemAPI.HasComponent<HitscanWeaponConfig>(entity) ? SystemAPI.GetComponent<HitscanWeaponConfig>(entity) : default;
+                if (gun.Range > 0f)
+                    UpdateAim(model, gun, localToWorld.ValueRO);
                 else
                     model.UpdateAim(new UnityEngine.Vector3(0f, 0f, -1f));
                 return;

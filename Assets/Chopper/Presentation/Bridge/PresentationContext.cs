@@ -29,6 +29,9 @@ namespace Chopper.Presentation.Bridge
             Events = new PresentationEvents();
             _audio = new AudioService(config != null ? config.Audio : null, root);
             Effects = new CombatEffects(config != null ? config.Effects : null, root);
+            var moduleRoot = new GameObject("Module Visuals").transform;
+            moduleRoot.SetParent(root, false);
+            ModuleVisuals = new EffectPool(moduleRoot);
 
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
@@ -40,6 +43,8 @@ namespace Chopper.Presentation.Bridge
         /// <summary>Can be null: cues are then not played.</summary>
         public SoundLibrary Sounds => Config != null ? Config.Audio : null;
         public CombatEffects Effects { get; }
+        /// <summary>Pool for module prefabs fitted to chassis sockets (guns, pods, rotors...).</summary>
+        public EffectPool ModuleVisuals { get; }
         public ChopperHudModel Hud { get; } = new();
         public MatchHudModel Match { get; } = new();
         /// <summary>Can be null (no chase camera in the scene).</summary>
@@ -58,6 +63,7 @@ namespace Chopper.Presentation.Bridge
         {
             _audio.Tick(unscaledDeltaTime);
             Effects.Tick(deltaTime);
+            ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);
             Match.Tick(deltaTime);
         }
@@ -69,6 +75,7 @@ namespace Chopper.Presentation.Bridge
             foreach (var owned in _owned) owned.Dispose();
             Events.Dispose();
             Effects.Dispose();
+            ModuleVisuals.Dispose();
             _audio.Dispose();
         }
     }
