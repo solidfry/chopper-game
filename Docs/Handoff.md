@@ -82,7 +82,8 @@ Rules:
    - server lock system with heat seekers and HUD lock brackets;
    - guided missile ghosts, flares;
    - air-to-ground missiles, cluster and swarm missiles;
-   - world markers and a lead indicator.
+   - world markers and a lead indicator;
+   - retro 80s HUD look (CRT shader pass over the HUD, glitches driven by gameplay).
    It can run in parallel with step 2: the weapons are modules.
 4. **Phase 3: services:**
    - Steamworks.NET and the Dashboard Steam provider;
@@ -100,6 +101,7 @@ Rules:
 
 - The world is a **gritty, kinetic cyberpunk**: keep the old game's feel wherever possible. Examples: the HUD that moves with the chopper, the pitched explosion gun sound, lasers as a late unlock.
 - The hangar and UI are green cyberpunk, with a 3D wireframe chopper. The camera focuses on each socket.
+- HUD: retro 80s look — CRT / vector-display shader or post-processing over the HUD (plan section 3b).
 - Weapons: heat-seeking missiles (air and ground), cluster missiles and other cool cyberpunk weapons; a dynamic HUD overlay with targeting (plan section 3b).
 - Choppers will become fully modular ("lego" modules on chassis sockets). The current chopper is a placeholder.
 - Replies to the owner: short dot points, in ASD-STE100 Simplified English.

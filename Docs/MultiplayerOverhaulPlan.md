@@ -87,7 +87,7 @@ Current state: 25 scripts use `Singleton<T>` / `SingletonPersistent<T>` / `Singl
 - **Navigation/input:** UI Toolkit focus navigation with Input System UI module; gamepad + keyboard + mouse. Replaces `NavigationManager`, `NavButtonHandler`, `ButtonManager`, `UIKeyPressEvent`, `UIButtonPressEvent`.
 - **Transitions:** USS transitions + `experimental.animation` for screen fades and the glitch effect (replaces `TransitionController` / `TransitionData`).
 - **Audio:** UI sounds from a small `UISoundBinder` that hooks control callbacks to `IAudioService` (replaces `UIAudioClipRequester`).
-- **Glow:** MK Glow post-process does not affect overlay UI Toolkit panels. Get neon glow from USS (layered borders, `text-shadow`, soft gradient images) or render the panel to a RenderTexture inside the camera stack where real bloom is needed (hangar).
+- **Glow / retro look:** see section 3b, "Retro 80s HUD look" (HUD to RenderTexture + CRT full-screen pass). MK Glow is removed; post-processing does not affect overlay UI Toolkit panels. Get neon glow from USS (layered borders, `text-shadow`, soft gradient images) or render the panel to a RenderTexture inside the camera stack where real bloom is needed (hangar).
 - **Shapes asset:** keep only if the hangar 3D scene still needs it; remove from UI.
 - **Order:** new screens (hangar, progression, matchmaking/party) first in UI Toolkit; then menus; HUD last, during Phase 2 when health/ammo come from ECS. Delete each UGUI prefab/script when its UI Toolkit version works.
 - **Input:** keep the generated `PlayerControls` class; read input in one ECS input system that writes the `ICommandData`.
@@ -194,12 +194,23 @@ Each new weapon = a definition asset + a server system per *behaviour* (hitscan,
 - **Kinetic feel:** markers jitter and glitch briefly on hits, an EMP or a hack; the frame sways (as now).
 - **Data path:** simulation → messages (lock, warning, marker) → `PresentationContext` → HUD view models. No HUD code reads ECS directly; markers are driven by one `WorldMarkerSystem` that fills a pooled marker list in the HUD model.
 
+### Retro 80s HUD look (shader / post-processing)
+Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
+
+- **How:** the HUD panel renders into a RenderTexture (`PanelSettings.targetTexture`) instead of straight to screen. A URP full-screen pass (Render Graph `FullScreenPassRendererFeature` with a Shader Graph material) draws that texture over the game with the effect. One extra full-screen pass; the HUD texture can run at a lower resolution for performance.
+- **Effects (all optional, per preset):** phosphor glow/bloom on the HUD only, scanlines, slight barrel distortion, chromatic aberration at the edges, vignette, flicker and noise, phosphor persistence (short ghost trail on moving elements via last-frame blend), colour quantise / limited palette.
+- **Driven by gameplay:** the HUD model feeds the material — glitch bands and colour split on hits, strong distortion on EMP and hack, flicker at low hull, a pulse on a missile lock. Same data path as the rest: messages → `PresentationContext` → HUD model → `HudLook` material properties.
+- **Per-element effects:** Unity 6 Shader Graph UI materials on UI Toolkit elements (glow on lock brackets, animated scan sweep on the ring) where a full-screen pass is too coarse.
+- **Control point:** a `HudLookSettings` asset on `GameConfig` (presets "Clean", "Vector", "CRT 84"; intensities). The player options get a "reduce flicker / effects" toggle (accessibility, photosensitivity). Validate checks the settings, the material and the renderer feature.
+- **Also:** the hangar uses the same look for its UI, so menus, hangar and HUD feel like one device.
+
 ### Build order
 1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
 2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
 3. Air-to-ground variant; ground targets in the training range.
 4. Cluster missiles; swarm micro-missiles.
 5. World markers + lead indicator; then the other weapons one behaviour at a time.
+6. Retro HUD look: HUD to RenderTexture + full-screen CRT pass + `HudLookSettings`; then gameplay-driven glitches.
 
 ## 4. Matchmaking — seamless flow
 
