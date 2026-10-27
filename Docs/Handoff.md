@@ -60,6 +60,7 @@ Rules:
 - Use `FindAnyObjectByType`, not `FindFirstObjectByType`.
 - `UpdateAfter(PhysicsSystemGroup)` from another group is ignored: put post-physics systems in `PhysicsSystemGroup` with `OrderLast`.
 - `PhysicsWorldHistorySingleton` needs the `Unity.NetCode.Physics` assembly reference.
+- **Stale Burst code (seen 28 Oct):** after a field is added to a struct that a Burst job reads (e.g. `ChopperFlightConfig`), the old compiled job can keep running with the old layout: forces silently wrong (chopper "has no force"). Fix: stop play, delete `Library/BurstCache` (or close Unity first), recompile. Quick check: turn off Jobs → Burst → Enable Compilation; if the bug goes away, it is the cache.
 
 ## 4b. Newest work (27 Oct, not yet compiled)
 
