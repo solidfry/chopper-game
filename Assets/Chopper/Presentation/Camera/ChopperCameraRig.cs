@@ -35,6 +35,8 @@ namespace Chopper.Presentation.Camera
         private const string ViewKey = "Chopper.Camera.View";
         /// <summary>A jump larger than this in one frame (metres) is a respawn or teleport: snap, do not smooth.</summary>
         private const float TeleportDistance = 60f;
+        /// <summary>Seconds the boost must be off before a new boost counts as a new kick.</summary>
+        private const float MinBoostGap = 0.3f;
 
         [SerializeField, Tooltip("Optional override. Empty = the game config's camera settings (given by the presentation bridge).")]
         private CameraSettings settings;
@@ -66,6 +68,7 @@ namespace Chopper.Presentation.Camera
         private float _boost;
         private float _boostVelocity;
         private bool _wasBoosting;
+        private float _boostEndTime = float.NegativeInfinity;
         private ViewState[] _states = Array.Empty<ViewState>();
         private int _view;
         private int _previousView = -1;
@@ -195,7 +198,10 @@ namespace Chopper.Presentation.Camera
         /// <summary>Boost look on a spring: it overshoots on the kick (the punch) and settles while the boost lasts.</summary>
         private void UpdateBoost(bool boosting, float deltaTime, CameraSettings settingsAsset)
         {
-            BoostKicked = boosting && !_wasBoosting;
+            // A kick only after the boost was off for a moment: a prediction correction can flip Boosting off and on
+            // for one frame, which must not flash, shake and glitch the screen again.
+            BoostKicked = boosting && !_wasBoosting && Time.time - _boostEndTime > MinBoostGap;
+            if (!boosting && _wasBoosting) _boostEndTime = Time.time;
             _wasBoosting = boosting;
             if (BoostKicked) AddShake(settingsAsset.BoostKickShake);
 

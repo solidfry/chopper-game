@@ -33,6 +33,8 @@ namespace Chopper.Presentation.Audio
         private const float BoostFadeOut = 4f;
         /// <summary>Speed (m/s) at which the boost roar reaches its highest pitch.</summary>
         private const float BoostFullPitchSpeed = 160f;
+        /// <summary>Seconds the boost must be off before a new boost plays the kick again.</summary>
+        private const float MinBoostGap = 0.3f;
 
         private sealed class Voices
         {
@@ -40,6 +42,7 @@ namespace Chopper.Presentation.Audio
             public SoundLoop Boost;
             public float BoostLevel;
             public bool WasBoosting;
+            public float BoostEndTime = float.NegativeInfinity;
         }
 
         private readonly Dictionary<Entity, Voices> _choppers = new();
@@ -114,7 +117,9 @@ namespace Chopper.Presentation.Audio
         private static void UpdateBoost(IAudioService audio, SoundLibrary library, Voices voices, bool boosting, Vector3 position,
             float speed, float deltaTime)
         {
-            if (boosting && !voices.WasBoosting) audio.Play(library.BoostStart, position);
+            // Same rule as the camera kick: a one-frame flip from a prediction correction is not a new boost.
+            if (boosting && !voices.WasBoosting && UnityEngine.Time.time - voices.BoostEndTime > MinBoostGap) audio.Play(library.BoostStart, position);
+            if (!boosting && voices.WasBoosting) voices.BoostEndTime = UnityEngine.Time.time;
             voices.WasBoosting = boosting;
 
             var target = boosting ? 1f : 0f;

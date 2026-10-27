@@ -186,7 +186,8 @@ namespace Chopper.Simulation.Flight
 
             /// <summary>
             /// Held boost from a tank. Starts with a kick, then pushes along the nose (never down, so it does not dive into
-            /// the ground; nose up climbs). Ends when released or empty; the tank refills after a short wait.
+            /// the ground; nose up climbs). Ends when released or empty; the tank refills after a short wait, and only
+            /// once the button is released.
             /// </summary>
             private void Boost(in ChopperInput input, in ChopperFlightConfig config, float3 noseAxis, ref PhysicsVelocity velocity,
                 ref ChopperFlightState state)
@@ -200,6 +201,12 @@ namespace Chopper.Simulation.Flight
                     if (!state.Boosting) velocity.Linear += direction * config.BoostKick;
                     velocity.Linear += direction * (config.BoostAcceleration * DeltaTime);
                     state.BoostUsed = math.min(1f, state.BoostUsed + DeltaTime / config.BoostDuration);
+                    state.BoostRechargeWait = config.BoostRechargeDelay;
+                }
+                else if (input.Boost)
+                {
+                    // Held on an empty (or too low) tank: no refill until released. Else the tank refills to the start
+                    // level under the held button and the boost restarts by itself (a kick every second or two).
                     state.BoostRechargeWait = config.BoostRechargeDelay;
                 }
                 else if (state.BoostRechargeWait > 0f)

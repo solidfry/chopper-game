@@ -44,7 +44,10 @@ namespace Chopper.Presentation.Camera
         public SpeedEffects(Transform cameraTransform, UnityEngine.Camera camera, CameraSettings settings)
         {
             // Post effects need post processing on the camera; the volume is global and above scene volumes.
-            camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+            // Stop NaN: one NaN/Inf pixel from any shader would otherwise spread through bloom and flash the whole screen.
+            var cameraData = camera.GetUniversalAdditionalCameraData();
+            cameraData.renderPostProcessing = true;
+            cameraData.stopNaN = true;
 
             _volumeObject = new GameObject("Speed Effects Volume");
             _volumeObject.transform.SetParent(cameraTransform, false);
