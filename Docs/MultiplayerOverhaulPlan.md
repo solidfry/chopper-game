@@ -153,6 +153,54 @@ Rules:
 - Server checks fire rate, ammo, heat, and that the aim ray starts near the server muzzle position.
 - Rate-limit inputs; drop clients that send too many.
 
+## 3b. Targeting, guided weapons and the dynamic HUD (design, not built yet)
+
+Goal: kinetic cyberpunk dogfights. Locks, missile warnings and countermeasures give fights a rhythm; the HUD reads the world at a glance.
+
+### Targeting system (server-authoritative)
+- **Targetable** component on anything that can be locked: choppers, ground vehicles, turrets, bases, the nuke. Fields: heat signature (rises with speed, dash, damage, carrying the nuke), team, size class (air / ground / structure).
+- **Seeker** comes from the weapon definition: type (heat, radar, laser-painted), lock cone, range, lock time, line of sight required, target classes (air, ground or both).
+- **Lock flow:** the client shows the lock building (predicted, cosmetic); the **server** runs the same lock test (cone, range, line of sight through the physics world, heat) and owns `LockState { Target, Progress, Locked }`. Fire with a lock = guided; fire without = dumb-fire.
+- **Victim warnings:** the server tells the target "being locked" and "missile inbound" (owner-only RPCs → messages), so the HUD and sound can warn.
+- **Countermeasures** (utility modules): flares break heat locks and decoy missiles in flight; chaff breaks radar locks; smoke blocks laser painting and line of sight. Cooldown-based, server-checked.
+
+### Guided weapons
+- **Heat-seeking missiles, air and ground.** One `GuidedMissileDefinition`, tuned per variant:
+  - Air-to-air: fast, high turn rate, proportional navigation (gain ~3–4), proximity fuse.
+  - Air-to-ground: slower, top-attack profile (climb, then dive), impact fuse, more splash.
+  - Seekers can be fooled by flares and by hotter targets in the cone.
+- **Cluster missiles:** fly to a split point (distance, timer or proximity), then release N submunitions in a cone. Area denial, strong against ground targets and groups.
+- **Networking:** guided missiles change course, so unlike today's straight rockets they need **ghosts**. The server simulates them and clients interpolate. The owner shows a predicted missile at once, matched to the server ghost by spawn tick. This revisits the section 3B deviation: straight rockets stay ghost-free; guided ones become ghosts. Submunitions are not ghosts: they come from the cluster's split event, with a server seed for their spread.
+
+### More cyberpunk weapons (candidates; all data-driven definitions)
+| Weapon | Slot | Idea |
+|---|---|---|
+| Swarm micro-missiles | Pylon | 8–12 small heat seekers, weak each; saturate flares |
+| Railgun | Nose (late unlock) | Charge, then a hitscan line through targets; long cooldown, big screen shake |
+| EMP burst | Utility | Area: disables locks, HUD and weapons of nearby enemies for a short time |
+| Chain lightning arc | Nose | Short-range hitscan that jumps to nearby targets |
+| Hack dart | Pylon | Sticks, then scrambles the target's HUD and steering for a few seconds |
+| Seeker drones | Utility | 2 small drones that orbit, then attack your locked target |
+| Smart mines | Pylon | Drop; arm; home short range on air targets that come close |
+| Plasma lance / pulse laser | Nose (late unlock) | Beam; heat build-up; lasers stay a late unlock (owner preference) |
+| Thermal decoy | Utility | Hotter fake target that pulls missiles away |
+
+Each new weapon = a definition asset + a server system per *behaviour* (hitscan, ballistic, guided, cluster, beam, area effect), not per weapon. New weapons should mostly be new data.
+
+### Dynamic HUD overlay
+- **World markers** (screen-space, pooled UI Toolkit elements, positioned from world-to-screen each frame): enemies and friends (team colour, distance, health bar when close), ground targets, nuke, bases, objective arrows at the screen edge when off-screen.
+- **Targeting:** lock brackets that close in as the lock builds; a "LOCK" tone; a lead indicator (where to aim the gun for the target's velocity); a target info panel (name, chassis, distance, health).
+- **Threat warnings:** "LOCK" and "MISSILE" alerts with direction arrows and a distance tick; a countermeasure-ready indicator; a missile-warning tone that speeds up as the missile closes in.
+- **Kinetic feel:** markers jitter and glitch briefly on hits, an EMP or a hack; the frame sways (as now).
+- **Data path:** simulation → messages (lock, warning, marker) → `PresentationContext` → HUD view models. No HUD code reads ECS directly; markers are driven by one `WorldMarkerSystem` that fills a pooled marker list in the HUD model.
+
+### Build order
+1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
+2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
+3. Air-to-ground variant; ground targets in the training range.
+4. Cluster missiles; swarm micro-missiles.
+5. World markers + lead indicator; then the other weapons one behaviour at a time.
+
 ## 4. Matchmaking — seamless flow
 
 Flow: **Launch → Steam auto sign-in → Main menu → Play (one button) → Loadout screen while searching → Match → Results → Play again (stays in party).**
@@ -180,10 +228,10 @@ Flow: **Launch → Steam auto sign-in → Main menu → Play (one button) → Lo
 - **Rotor** — agility vs top speed.
 - **Engine** — thrust, boost/dash charges, heat.
 - **Armour** — HP vs weight.
-- **Nose weapon** — MG, autocannon, laser (hitscan).
-- **Pylons** — rockets, homing missiles, bombs, mines (projectile).
+- **Nose weapon** — MG, autocannon, chain lightning; late unlocks: railgun, pulse laser / plasma lance (see 3b).
+- **Pylons** — rockets, heat-seeking missiles (air-to-air, air-to-ground), cluster missiles, swarm micro-missiles, bombs, smart mines, hack darts (see 3b).
 - **Turret** (Assault only) — auto-aim flak.
-- **Utility** — flares, smoke, repair drone, EMP, shield.
+- **Utility** — flares, chaff, smoke, thermal decoy, repair drone, seeker drones, EMP, shield.
 - **Cosmetic** — paint, decals, rotor trails (no stats).
 
 ### Rules

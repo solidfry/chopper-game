@@ -78,14 +78,20 @@ Rules:
    - the loadout sent on the ghost;
    - each player's own loadout applied at spawn;
    - then the green wireframe hangar.
-3. **Phase 3: services:**
+3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
+   - server lock system with heat seekers and HUD lock brackets;
+   - guided missile ghosts, flares;
+   - air-to-ground missiles, cluster and swarm missiles;
+   - world markers and a lead indicator.
+   It can run in parallel with step 2: the weapons are modules.
+4. **Phase 3: services:**
    - Steamworks.NET and the Dashboard Steam provider;
    - Multiplayer Services sessions with a Cloud Code allocator for Edgegap;
    - a dedicated server build;
    - party and rejoin.
-4. **Phase 6: modes:** TDM, then Capture the Nuke, then bots.
-5. **Phase 5: progression:** Cloud Code grants, Cloud Save, unlocks, leaderboards and Steam achievements.
-6. **Any time:**
+5. **Phase 6: modes:** TDM, then Capture the Nuke, then bots.
+6. **Phase 5: progression:** Cloud Code grants, Cloud Save, unlocks, leaderboards and Steam achievements.
+7. **Any time:**
    - port the old menus to UI Toolkit and delete `Assets/Scripts`;
    - export the `.blend` models to `.fbx`;
    - delete or rebuild the old scenes.
@@ -94,6 +100,7 @@ Rules:
 
 - The world is a **gritty, kinetic cyberpunk**: keep the old game's feel wherever possible. Examples: the HUD that moves with the chopper, the pitched explosion gun sound, lasers as a late unlock.
 - The hangar and UI are green cyberpunk, with a 3D wireframe chopper. The camera focuses on each socket.
+- Weapons: heat-seeking missiles (air and ground), cluster missiles and other cool cyberpunk weapons; a dynamic HUD overlay with targeting (plan section 3b).
 - Choppers will become fully modular ("lego" modules on chassis sockets). The current chopper is a placeholder.
 - Replies to the owner: short dot points, in ASD-STE100 Simplified English.
 
