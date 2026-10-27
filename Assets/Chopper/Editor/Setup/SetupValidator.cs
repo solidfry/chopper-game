@@ -135,6 +135,11 @@ namespace Chopper.Editor.Setup
             if (Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include) == null)
                 problems.Add(new SetupProblem("Open scene has no options overlay (Escape menu). Press '3. Set up open scene'."));
 
+            // A UIDocument next to a PanelRenderer builds the same layout twice: the UI shows double.
+            foreach (var panel in Object.FindObjectsByType<UnityEngine.UIElements.PanelRenderer>(FindObjectsInactive.Include))
+                if (panel.GetComponent<UnityEngine.UIElements.UIDocument>() != null)
+                    problems.Add(new SetupProblem($"{panel.name} has a PanelRenderer and an old UIDocument, so its UI shows twice. Press '3. Set up open scene'.", panel));
+
             // Gameplay content lives in the subscene; a closed one is opened for the check and closed again.
             if (!GameplaySceneSetup.WithGameplayScene(scene => CheckGameplayScene(scene, problems), save: false))
                 problems.Add(new SetupProblem("No gameplay subscene found (a SubScene whose scene has a ChopperSpawner)."));

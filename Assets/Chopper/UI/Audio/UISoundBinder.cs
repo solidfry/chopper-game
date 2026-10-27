@@ -6,17 +6,19 @@ using UnityEngine.UIElements;
 namespace Chopper.UI.Audio
 {
     /// <summary>
-    /// Put next to a <see cref="UIDocument"/>: every button in it plays the UI click sound when pressed, and the
+    /// Put next to a <see cref="PanelRenderer"/>: every button in it plays the UI click sound when pressed, and the
     /// navigate sound when the pointer moves onto it or it gets focus (keyboard / gamepad). Replaces the old
-    /// <c>UIAudioClipRequester</c> and <c>UIAudioManager</c>. One binder covers the whole document.
+    /// <c>UIAudioClipRequester</c> and <c>UIAudioManager</c>. One binder covers the whole panel; it re-registers when the
+    /// panel rebuilds (reload callback).
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
+    [RequireComponent(typeof(PanelRenderer))]
     public sealed class UISoundBinder : MonoBehaviour
     {
         [SerializeField, Tooltip("Scene presentation bridge; it owns the audio service and the sound library.")]
         private PresentationBridge bridge;
 
         private PresentationContext _context;
+        private PanelRenderer _renderer;
         private VisualElement _root;
         private VisualElement _lastHovered;
 
@@ -29,7 +31,15 @@ namespace Chopper.UI.Audio
                 return;
             }
             _context = bridge.Context;
-            _root = GetComponent<UIDocument>().rootVisualElement;
+            _renderer = GetComponent<PanelRenderer>();
+            _renderer.RegisterUIReloadCallback(OnUIReload);
+        }
+
+        private void OnUIReload(PanelRenderer panelRenderer, VisualElement rootElement, int version)
+        {
+            Unregister();
+            _root = rootElement;
+            if (_root == null) return;
             // Trickle down: the root sees the event before the button handles it.
             _root.RegisterCallback<ClickEvent>(OnClick, TrickleDown.TrickleDown);
             _root.RegisterCallback<PointerOverEvent>(OnPointerOver, TrickleDown.TrickleDown);
@@ -38,10 +48,17 @@ namespace Chopper.UI.Audio
 
         private void OnDisable()
         {
+            if (_renderer != null) _renderer.UnregisterUIReloadCallback(OnUIReload);
+            Unregister();
+        }
+
+        private void Unregister()
+        {
             if (_root == null) return;
             _root.UnregisterCallback<ClickEvent>(OnClick, TrickleDown.TrickleDown);
             _root.UnregisterCallback<PointerOverEvent>(OnPointerOver, TrickleDown.TrickleDown);
             _root.UnregisterCallback<FocusInEvent>(OnFocusIn, TrickleDown.TrickleDown);
+            _root = null;
         }
 
         private void OnClick(ClickEvent evt)

@@ -175,9 +175,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 334911606}
-  - component: {fileID: 334911605}
   - component: {fileID: 334911604}
   - component: {fileID: 334911603}
+  - component: {fileID: 334911607}
   m_Layer: 0
   m_Name: Options
   m_TagString: Untagged
@@ -211,29 +211,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Chopper.UI::Chopper.UI.Options.OptionsMenuView
   bridge: {fileID: 135281927}
---- !u!114 &334911605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334911602}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
-  m_PanelSettings: {fileID: 11400000, guid: 62ce3fef04c4d1d49ab0ab261611b485, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: 5e686131250401c4fbe949dfe0b4b573, type: 3}
-  m_SortingOrder: 100
-  m_Position: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
-  m_PivotReferenceSize: 0
-  m_Pivot: 0
-  m_WorldSpaceCollider: {fileID: 0}
 --- !u!4 &334911606
 Transform:
   m_ObjectHideFlags: 0
@@ -249,6 +226,64 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1931382934 &334911607
+PanelRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 334911602}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 100
+  m_MaskInteraction: 0
+  serializedVersion: 1
+  m_PanelSettings: {fileID: 11400000, guid: 62ce3fef04c4d1d49ab0ab261611b485, type: 2}
+  sourceAsset: {fileID: 9197481963319205126, guid: 5e686131250401c4fbe949dfe0b4b573, type: 3}
+  m_ParentUI: {fileID: 0}
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_Position: 0
 --- !u!1 &785214285
 GameObject:
   m_ObjectHideFlags: 0
@@ -258,10 +293,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 785214289}
-  - component: {fileID: 785214288}
+  - component: {fileID: 785214290}
   - component: {fileID: 785214287}
   - component: {fileID: 785214286}
-  - component: {fileID: 785214290}
   m_Layer: 0
   m_Name: HUD
   m_TagString: Untagged
@@ -295,29 +329,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Chopper.UI::Chopper.UI.Hud.ChopperHudView
   bridge: {fileID: 135281927}
---- !u!114 &785214288
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 785214285}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
-  m_PanelSettings: {fileID: 11400000, guid: 62ce3fef04c4d1d49ab0ab261611b485, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: 837cec902cf7ab84bbf191863be4bd88, type: 3}
-  m_SortingOrder: 0
-  m_Position: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
-  m_PivotReferenceSize: 0
-  m_Pivot: 0
-  m_WorldSpaceCollider: {fileID: 0}
 --- !u!4 &785214289
 Transform:
   m_ObjectHideFlags: 0
@@ -425,7 +436,8 @@ MonoBehaviour:
   offset: {x: 0, y: 4.5, z: -15}
   lookAhead: 25
   headingSharpness: 8
-  rollFollow: 0.25
+  rollFollow: 0.85
+  rollSharpness: 4
   baseFieldOfView: 65
   maxFieldOfView: 85
   maxPullBack: 0.3

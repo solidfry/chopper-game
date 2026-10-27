@@ -11,11 +11,11 @@ namespace Chopper.Simulation.Flight
     [Serializable]
     public sealed class FlightTuning
     {
-        [Header("Throttle (W/S): fly where you aim")]
-        [Tooltip("Push along the nose at full W, m/s². Aim up + W climbs, aim down + W dives. Sets top speed with drag.")]
-        public float ForwardThrust = 14f;
-        [Tooltip("Push backwards at full S (brake, then reverse), m/s².")]
-        public float ReverseThrust = 8f;
+        [Header("Collective (W/S): Battlefield")]
+        [Tooltip("Extra rotor lift at full W, m/s², along the rotor axis: level = rise, nose down = rise and go forward.")]
+        public float CollectiveUp = 12f;
+        [Tooltip("Lift taken away at full S, m/s² (sink).")]
+        public float CollectiveDown = 10f;
 
         [Header("Weight and lift")]
         [Tooltip("Gravity multiplier. Above 1 = heavier; drops feel punchier.")]
@@ -24,10 +24,10 @@ namespace Chopper.Simulation.Flight
         public float TiltCompensation = 1f;
         [Range(10f, 80f), Tooltip("Largest tilt (degrees) that is still compensated.")]
         public float MaxCompensatedTiltDegrees = 60f;
-        [Range(0f, 3f), Tooltip("Sideways push from banking: makes turns curve. 0 = none.")]
-        public float TiltThrust = 1.2f;
-        [Range(0f, 1f), Tooltip("Part of the bank push that nose-up/down also gives (0 = pitch only aims, 1 = real helicopter: nose down accelerates).")]
-        public float PitchThrust;
+        [Range(0f, 3f), Tooltip("Multiplies the horizontal push from tilt. Above 1 = a small tilt gives real speed.")]
+        public float TiltThrust = 1.6f;
+        [Range(0f, 1f), Tooltip("Part of the tilt push that pitch gives: 1 = Battlefield (nose down = forward), 0 = pitch only aims.")]
+        public float PitchThrust = 1f;
 
         [Header("Rotation (degrees per second at full input)")]
         public float MaxPitchRate = 90f;

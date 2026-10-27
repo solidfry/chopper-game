@@ -9,9 +9,10 @@ namespace Chopper.UI.Hud
     /// <summary>
     /// Binds the in-flight HUD (<c>ChopperHud.uxml</c>) to the <see cref="ChopperHudModel"/>. Layout and style live in
     /// UXML/USS; this class only sets up bindings and the few class toggles that USS cannot express.
-    /// The view models come from the scene's <see cref="PresentationBridge"/>.
+    /// The view models come from the scene's <see cref="PresentationBridge"/>. The tree comes from the <see cref="PanelRenderer"/>
+    /// through its reload callback, so the view rebinds when the panel is rebuilt (HUD look, UXML hot reload).
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
+    [RequireComponent(typeof(PanelRenderer))]
     public sealed class ChopperHudView : MonoBehaviour
     {
         [SerializeField, Tooltip("Scene presentation bridge; it owns the HUD view models.")]
@@ -54,8 +55,9 @@ namespace Chopper.UI.Hud
         private VisualElement _dash;
         private VisualElement _health;
         private VisualElement _aim;
-        private UIDocument _document;
+        private PanelRenderer _renderer;
         private WorldMarkerView _markers;
+        private bool _subscribed;
 
         private void OnEnable()
         {
@@ -68,11 +70,31 @@ namespace Chopper.UI.Hud
             _model = bridge.Context.Hud;
             _match = bridge.Context.Match;
 
-            // First: the look may move the document into a render texture (new panel) before the tree is read.
-            _document = GetComponent<UIDocument>();
-            bridge.Context.HudLook.Attach(_document);
+            // First: the look may move the panel into a render texture, which rebuilds the tree.
+            _renderer = GetComponent<PanelRenderer>();
+            bridge.Context.HudLook.Attach(_renderer);
+            // Called at once if the tree exists, and again after each rebuild (panel change, UXML hot reload).
+            _renderer.RegisterUIReloadCallback(OnUIReload);
+        }
 
-            var root = _document.rootVisualElement.Q("hud");
+        private void OnDisable()
+        {
+            if (_renderer != null) _renderer.UnregisterUIReloadCallback(OnUIReload);
+            Unbind();
+            if (bridge != null && _renderer != null && !bridge.Context.IsDisposed)
+                bridge.Context.HudLook.Detach(_renderer);
+        }
+
+        private void OnUIReload(PanelRenderer panelRenderer, VisualElement rootElement, int version)
+        {
+            Unbind();
+            var root = rootElement?.Q("hud");
+            if (root == null) return;
+            BindTree(root);
+        }
+
+        private void BindTree(VisualElement root)
+        {
             _chopper = root.Q("chopper");
             _dash = _chopper.Q("dash");
             _health = _chopper.Q("health");
@@ -108,6 +130,7 @@ namespace Chopper.UI.Hud
 
             _model.propertyChanged += OnModelChanged;
             _match.propertyChanged += OnMatchChanged;
+            _subscribed = true;
             RefreshClasses();
             RefreshAim();
             RefreshDamageDirection();
@@ -119,18 +142,19 @@ namespace Chopper.UI.Hud
             RefreshBanner();
         }
 
-        private void OnDisable()
+        /// <summary>Drops the old tree's elements and model events (before a rebuild, or on disable).</summary>
+        private void Unbind()
         {
-            if (bridge != null && _document != null && !bridge.Context.IsDisposed)
-                bridge.Context.HudLook.Detach(_document);
             _markers?.Dispose();
             _markers = null;
-            if (_model != null)
+            if (_subscribed)
+            {
                 _model.propertyChanged -= OnModelChanged;
-            if (_match != null)
                 _match.propertyChanged -= OnMatchChanged;
+                _subscribed = false;
+            }
+            _chopper = null;
         }
-
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetBridge(PresentationBridge value) => bridge = value;
 
@@ -145,6 +169,7 @@ namespace Chopper.UI.Hud
 
         private void OnModelChanged(object sender, BindablePropertyChangedEventArgs args)
         {
+            if (_chopper == null) return;
             if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
@@ -239,6 +264,7 @@ namespace Chopper.UI.Hud
 
         private void OnMatchChanged(object sender, BindablePropertyChangedEventArgs args)
         {
+            if (_chopper == null) return;
             if (args.propertyName == nameof(MatchHudModel.BannerVisible))
                 RefreshBanner();
         }

@@ -36,11 +36,8 @@ namespace Chopper.Editor.Setup
             // Old HUD objects held a component that no longer exists.
             GameObjectUtility.RemoveMonoBehavioursWithMissingScript(hudObject);
 
-            var document = hudObject.GetComponent<UIDocument>();
-            if (document == null) document = Undo.AddComponent<UIDocument>(hudObject);
-            Undo.RecordObject(document, "Configure HUD");
-            document.panelSettings = config != null ? config.PanelSettings : null;
-            document.visualTreeAsset = config != null ? config.HudLayout : null;
+            var panel = EnsurePanelRenderer(hudObject, config != null ? config.PanelSettings : null, config != null ? config.HudLayout : null,
+                sortingOrder: 0);
 
             // No "??" here: in the editor GetComponent returns a fake-null object, not real null.
             hud = hudObject.GetComponent<ChopperHudView>();
@@ -53,7 +50,7 @@ namespace Chopper.Editor.Setup
             Undo.RecordObject(sounds, "Configure HUD");
             sounds.SetBridge(bridge);
 
-            EditorUtility.SetDirty(document);
+            EditorUtility.SetDirty(panel);
             EditorUtility.SetDirty(hud);
             EditorUtility.SetDirty(sounds);
             EnsureOptions(config, bridge);
@@ -79,7 +76,7 @@ namespace Chopper.Editor.Setup
             return Undo.AddComponent<ChopperCameraRig>(camera.gameObject);
         }
 
-        /// <summary>Options overlay: its own document on the shared panel settings (not the HUD's render texture), drawn on top.</summary>
+        /// <summary>Options overlay: its own panel renderer on the shared panel settings (not the HUD's render texture), drawn on top.</summary>
         private static void EnsureOptions(GameConfig config, PresentationBridge bridge)
         {
             var view = Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include);
@@ -94,12 +91,8 @@ namespace Chopper.Editor.Setup
                 Undo.RegisterCreatedObjectUndo(go, "Add Options");
             }
 
-            var document = go.GetComponent<UIDocument>();
-            if (document == null) document = Undo.AddComponent<UIDocument>(go);
-            Undo.RecordObject(document, "Configure Options");
-            document.panelSettings = config != null ? config.PanelSettings : null;
-            document.visualTreeAsset = config != null ? config.OptionsLayout : null;
-            document.sortingOrder = 100;
+            var panel = EnsurePanelRenderer(go, config != null ? config.PanelSettings : null, config != null ? config.OptionsLayout : null,
+                sortingOrder: 100);
 
             view = go.GetComponent<OptionsMenuView>();
             if (view == null) view = Undo.AddComponent<OptionsMenuView>(go);
@@ -111,9 +104,27 @@ namespace Chopper.Editor.Setup
             Undo.RecordObject(sounds, "Configure Options");
             sounds.SetBridge(bridge);
 
-            EditorUtility.SetDirty(document);
+            EditorUtility.SetDirty(panel);
             EditorUtility.SetDirty(view);
             EditorUtility.SetDirty(sounds);
+        }
+
+        /// <summary>
+        /// The object's <see cref="PanelRenderer"/> (Unity 6.6 UI component), set to the layout. A <see cref="UIDocument"/>
+        /// left from before is removed: both would build the same layout, so the UI would show twice.
+        /// </summary>
+        private static PanelRenderer EnsurePanelRenderer(GameObject go, PanelSettings settings, VisualTreeAsset layout, int sortingOrder)
+        {
+            var panel = go.GetComponent<PanelRenderer>();
+            if (panel == null) panel = Undo.AddComponent<PanelRenderer>(go);
+            Undo.RecordObject(panel, "Configure panel renderer");
+            panel.panelSettings = settings;
+            panel.visualTreeAsset = layout;
+            panel.sortingOrder = sortingOrder;
+
+            var oldDocument = go.GetComponent<UIDocument>();
+            if (oldDocument != null) Undo.DestroyObjectImmediate(oldDocument);
+            return panel;
         }
 
         private static GameObject CreateHudObject()

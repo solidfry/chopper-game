@@ -14,8 +14,8 @@ namespace Chopper.Simulation.Flight
     /// the predicted fixed step, so this runs on the server and on the owning client (prediction) alike.
     /// <list type="bullet">
     /// <item>Gravity is always on. The rotor lifts along its own up axis: hover lift at zero collective.</item>
-    /// <item>Throttle (W/S) pushes along the nose: fly where you aim. Lift always holds height.</item>
-    /// <item>Banking pushes sideways (turns curve); pitch only aims unless <c>PitchThrust</c> is above 0.</item>
+    /// <item>Collective (W/S) lifts along the rotor: W rises, S sinks. Hover lift holds height at any tilt.</item>
+    /// <item>Tilt gives speed (<c>TiltThrust</c>): nose down goes forward, bank curves turns.</item>
     /// <item>Yaw without roll input banks the chopper into the turn (coordinated turn), blended in smoothly.</item>
     /// <item>Input sets a turn rate; rotation reaches it fast and stops when input stops.</item>
     /// <item>Drag is higher sideways and vertically than forward; the nose weathervanes into travel at speed.</item>
@@ -91,8 +91,8 @@ namespace Chopper.Simulation.Flight
                 }
                 var lift = up * hoverLift;
                 var verticalLift = worldUp * math.dot(lift, worldUp);
-                // Horizontal part of the lift = the push from tilt. Sideways (bank) it curves turns; along the nose it
-                // only counts by PitchThrust, so pitching to aim does not speed up or brake the chopper.
+                // Horizontal part of the lift = the push from tilt (TiltThrust): nose down accelerates, flaring brakes,
+                // banking curves turns. PitchThrust below 1 makes the nose-axis part weaker (pitch more for aiming).
                 var tiltPush = lift - verticalLift;
                 var noseAxis = math.mul(rotation, math.forward());
                 var flatNose = math.normalizesafe(new float3(noseAxis.x, 0f, noseAxis.z), math.forward());
@@ -100,9 +100,10 @@ namespace Chopper.Simulation.Flight
                 tiltPush = (tiltPush - alongNose + alongNose * config.PitchThrust) * config.TiltThrust;
                 velocity.Linear += (verticalLift + tiltPush) * DeltaTime;
 
-                // Throttle (W/S): push along the nose. Fly where you aim: aim up + W climbs, aim down + W dives.
-                var throttle = thrust >= 0f ? thrust * config.ForwardThrust : thrust * config.ReverseThrust;
-                velocity.Linear += noseAxis * (throttle * DeltaTime);
+                // Collective (W/S), Battlefield: extra lift along the rotor axis. Level = rise; nose down = rise and go
+                // forward; S sinks.
+                var collective = thrust >= 0f ? thrust * config.CollectiveUp : thrust * config.CollectiveDown;
+                velocity.Linear += up * (collective * DeltaTime);
 
                 // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.
                 var localVelocity = math.mul(toLocal, velocity.Linear);

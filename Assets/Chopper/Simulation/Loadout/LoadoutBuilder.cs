@@ -47,8 +47,8 @@ namespace Chopper.Simulation.Loadout
             built.Flight = new ChopperFlightConfig
             {
                 GravityScale = flight.GravityScale,
-                ForwardThrust = flight.ForwardThrust * stats.LiftMultiplier,
-                ReverseThrust = flight.ReverseThrust * stats.LiftMultiplier,
+                CollectiveUp = flight.CollectiveUp * stats.LiftMultiplier,
+                CollectiveDown = flight.CollectiveDown,
                 TiltCompensation = flight.TiltCompensation,
                 MaxCompensatedTilt = math.cos(math.radians(flight.MaxCompensatedTiltDegrees)),
                 TiltThrust = flight.TiltThrust,

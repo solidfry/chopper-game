@@ -15,7 +15,7 @@ namespace Chopper.UI.Options
     /// (<see cref="PresentationContext.MenuOpen"/>). Values are saved by the services they belong to
     /// (<see cref="InputOptions"/>, <see cref="HudLook"/>, <see cref="IAudioService"/>). The first part of the menu port (old UGUI menus).
     /// </summary>
-    [RequireComponent(typeof(UIDocument))]
+    [RequireComponent(typeof(PanelRenderer))]
     public sealed class OptionsMenuView : MonoBehaviour
     {
         private const string HiddenClass = "options--hidden";
@@ -24,6 +24,7 @@ namespace Chopper.UI.Options
         private PresentationBridge bridge;
 
         private PresentationContext _context;
+        private PanelRenderer _renderer;
         private VisualElement _root;
         private DropdownField _mouseSteer;
         private Slider _mouseSensitivity;
@@ -51,9 +52,16 @@ namespace Chopper.UI.Options
                 return;
             }
             _context = bridge.Context;
+            _renderer = GetComponent<PanelRenderer>();
+            // Called at once if the tree exists, and again after each rebuild.
+            _renderer.RegisterUIReloadCallback(OnUIReload);
+        }
 
-            var document = GetComponent<UIDocument>().rootVisualElement;
-            _root = document.Q("options");
+        private void OnUIReload(PanelRenderer panelRenderer, VisualElement rootElement, int version)
+        {
+            Unbind();
+            _root = rootElement?.Q("options");
+            if (_root == null) return;
             _mouseSteer = _root.Q<DropdownField>("mouse-steer");
             _mouseSensitivity = _root.Q<Slider>("mouse-sensitivity");
             _invertPitch = _root.Q<Toggle>("invert-pitch");
@@ -77,10 +85,18 @@ namespace Chopper.UI.Options
             AddVolume("volume-ui", AudioChannel.UI);
             AddVolume("volume-ambient", AudioChannel.Ambient);
 
-            SetOpen(false);
+            SetOpen(IsOpen);
         }
 
         private void OnDisable()
+        {
+            if (_renderer != null) _renderer.UnregisterUIReloadCallback(OnUIReload);
+            Unbind();
+            if (IsOpen && !_context.IsDisposed) _context.MenuOpen = false;
+            IsOpen = false;
+        }
+
+        private void Unbind()
         {
             if (_root == null) return;
             _mouseSteer.UnregisterValueChangedCallback(OnMouseSteerChanged);
@@ -90,14 +106,14 @@ namespace Chopper.UI.Options
             _reduceEffects.UnregisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked -= Close;
             foreach (var (slider, _) in _volumes) slider.UnregisterValueChangedCallback(OnVolumeChanged);
-            if (IsOpen && !_context.IsDisposed) _context.MenuOpen = false;
+            _root = null;
         }
 
         private void Update()
         {
             var escape = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             var start = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
-            if (escape || start) SetOpen(!IsOpen);
+            if ((escape || start) && _root != null) SetOpen(!IsOpen);
         }
 
         private void Close() => SetOpen(false);

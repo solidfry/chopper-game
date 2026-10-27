@@ -25,7 +25,7 @@ namespace Chopper.Presentation.Hud
     }
 
     /// <summary>
-    /// Retro HUD look (plan section 3b). Moves the HUD document's panel into a render texture, feeds gameplay into
+    /// Retro HUD look (plan section 3b). Moves the HUD panel renderer into a render texture, feeds gameplay into
     /// <see cref="HudLookModel"/> (damage, low hull, lock, missile, death/spawn) and writes the result as global shader
     /// properties for <see cref="HudLookRendererFeature"/>. With the Clean preset (or no settings) the HUD stays plain UI.
     /// Owned by the <see cref="Bridge.PresentationContext"/>; the HUD view calls <see cref="Attach"/>.
@@ -42,7 +42,7 @@ namespace Chopper.Presentation.Hud
         private readonly IDisposable _damage;
         private readonly HudLookModel _model = new();
 
-        private UIDocument _document;
+        private PanelRenderer _renderer;
         private PanelSettings _sourcePanel;
         private PanelSettings _texturePanel;
         private RenderTexture _texture;
@@ -90,21 +90,22 @@ namespace Chopper.Presentation.Hud
         /// <summary>For EMP and hack effects (not built yet): hold a glitch for a time.</summary>
         public void Disrupt(float strength, float seconds) => _model.Disrupt(strength, seconds);
 
-        /// <summary>Call from the HUD document's OnEnable, before reading its visual tree.</summary>
-        public void Attach(UIDocument document)
+        /// <summary>Call from the HUD view's OnEnable. Moving the panel into the texture rebuilds the tree; the view rebinds in its reload callback.</summary>
+        public void Attach(PanelRenderer renderer)
         {
-            if (_document == document) return;
-            if (_document != null) Detach(_document);
-            _document = document;
-            _sourcePanel = document.panelSettings;
+            if (_renderer == renderer) return;
+            if (_renderer != null) Detach(_renderer);
+            _renderer = renderer;
+            // Never take our own runtime copy as the source (it would leak into the scene).
+            _sourcePanel = renderer.panelSettings == _texturePanel ? _sourcePanel : renderer.panelSettings;
             Refresh();
         }
 
-        public void Detach(UIDocument document)
+        public void Detach(PanelRenderer renderer)
         {
-            if (_document != document) return;
+            if (_renderer != renderer) return;
             Release();
-            _document = null;
+            _renderer = null;
             _sourcePanel = null;
         }
 
@@ -133,7 +134,7 @@ namespace Chopper.Presentation.Hud
             _hud.propertyChanged -= OnHudChanged;
             _damage.Dispose();
             Release();
-            _document = null;
+            _renderer = null;
         }
 
         private void OnHudChanged(object sender, BindablePropertyChangedEventArgs args)
@@ -152,10 +153,10 @@ namespace Chopper.Presentation.Hud
             }
         }
 
-        /// <summary>Into the texture when a look preset is on and a document is attached; plain UI otherwise.</summary>
+        /// <summary>Into the texture when a look preset is on and a panel renderer is attached; plain UI otherwise.</summary>
         private void Refresh()
         {
-            var wanted = _document != null && _sourcePanel != null && _settings != null && _settings.TryGetProfile(_preset, out _);
+            var wanted = _renderer != null && _sourcePanel != null && _settings != null && _settings.TryGetProfile(_preset, out _);
             if (!wanted)
             {
                 Release();
@@ -184,7 +185,7 @@ namespace Chopper.Presentation.Hud
                 _texturePanel.colorClearValue = Color.clear;
             }
             _texturePanel.targetTexture = _texture;
-            if (_document.panelSettings != _texturePanel) _document.panelSettings = _texturePanel;
+            if (_renderer.panelSettings != _texturePanel) _renderer.panelSettings = _texturePanel;
 
             Shader.SetGlobalTexture(HudLookShaderIds.Texture, _texture);
             Shader.SetGlobalVector(HudLookShaderIds.Size, new Vector4(width, height, 1f / width, 1f / height));
@@ -203,13 +204,13 @@ namespace Chopper.Presentation.Hud
             return _texture.width != width || _texture.height != height;
         }
 
-        /// <summary>Back to plain UI: the document gets its own panel settings again.</summary>
+        /// <summary>Back to plain UI: the renderer gets its own panel settings again.</summary>
         private void Release()
         {
             Shader.SetGlobalFloat(HudLookShaderIds.Enabled, 0f);
             Shader.SetGlobalVector(HudLookShaderIds.Params3, Vector4.zero);
-            if (_document != null && _sourcePanel != null && _document.panelSettings == _texturePanel)
-                _document.panelSettings = _sourcePanel;
+            if (_renderer != null && _sourcePanel != null && _renderer.panelSettings == _texturePanel)
+                _renderer.panelSettings = _sourcePanel;
             if (_texturePanel != null)
             {
                 Object.Destroy(_texturePanel);

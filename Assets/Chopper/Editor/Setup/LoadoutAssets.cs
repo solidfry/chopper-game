@@ -121,8 +121,7 @@ namespace Chopper.Editor.Setup
             tuned.MaxPitchRate *= turn;
             tuned.MaxYawRate *= turn;
             tuned.MaxRollRate *= turn;
-            tuned.ForwardThrust *= lift;
-            tuned.ReverseThrust *= lift;
+            tuned.CollectiveUp *= lift;
             return tuned;
         }
 
@@ -133,8 +132,7 @@ namespace Chopper.Editor.Setup
             flight.MaxYawRate *= turn;
             flight.MaxRollRate *= turn;
             flight.GravityScale = gravity;
-            flight.ForwardThrust *= collective;
-            flight.ReverseThrust *= collective;
+            flight.CollectiveUp *= collective;
             flight.DashCooldown = dashCooldown;
             return flight;
         }

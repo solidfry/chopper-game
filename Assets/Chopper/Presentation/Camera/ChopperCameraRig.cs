@@ -5,7 +5,7 @@ namespace Chopper.Presentation.Camera
     /// <summary>
     /// Third-person chase camera. <see cref="LocalChopperCameraSystem"/> calls <see cref="Follow"/> once per frame,
     /// after the chopper's rendered pose is final, so the camera never lags a frame behind the chopper.
-    /// Sense of speed: field of view and distance grow with speed; the camera rolls a little with the chopper.
+    /// Sense of speed: field of view and distance grow with speed; the camera rolls with the chopper on a short delay.
     /// Hits taken shake the camera (<see cref="AddShake"/>).
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
@@ -16,8 +16,10 @@ namespace Chopper.Presentation.Camera
         [SerializeField] private float lookAhead = 25f;
         [SerializeField, Tooltip("How fast the camera swings round to a new heading. Position stays locked to the chopper.")]
         private float headingSharpness = 8f;
-        [SerializeField, Range(0f, 1f), Tooltip("How much of the chopper's roll the camera follows.")]
-        private float rollFollow = 0.25f;
+        [SerializeField, Range(0f, 1f), Tooltip("How much of the chopper's roll the camera follows. 1 = all of it.")]
+        private float rollFollow = 0.85f;
+        [SerializeField, Tooltip("How fast the camera catches up with the chopper's roll. Lower = more delay (4 = about a quarter second).")]
+        private float rollSharpness = 4f;
 
         [Header("Sense of speed")]
         [SerializeField] private float baseFieldOfView = 65f;
@@ -71,7 +73,8 @@ namespace Chopper.Presentation.Camera
                 // Smooth only orientation. Smoothing position against a moving target is what makes chase cams jitter.
                 var t = 1f - Mathf.Exp(-headingSharpness * deltaTime);
                 _smoothedForward = Vector3.Slerp(_smoothedForward, forward, t).normalized;
-                _smoothedUp = Vector3.Slerp(_smoothedUp, rolledUp, t).normalized;
+                // Roll follows on its own, slower curve: the horizon tilts with the chopper a moment later.
+                _smoothedUp = Vector3.Slerp(_smoothedUp, rolledUp, 1f - Mathf.Exp(-rollSharpness * deltaTime)).normalized;
 
                 var speed = (targetPosition - _lastTargetPosition).magnitude / deltaTime;
                 _smoothedSpeed = Mathf.Lerp(_smoothedSpeed, speed, 1f - Mathf.Exp(-speedSmoothing * deltaTime));
