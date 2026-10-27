@@ -42,13 +42,15 @@ namespace Chopper.Simulation.Combat
             var firstPrediction = SystemAPI.GetSingleton<NetworkTime>().IsFirstTimeFullyPredictingTick;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-            foreach (var (input, weapons, cooldowns, selection, transform, velocity, owner, shooter) in SystemAPI
+            foreach (var (input, weapons, cooldownBuffer, selection, transform, velocity, owner, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, DynamicBuffer<PylonWeapon>, DynamicBuffer<PylonWeaponState>, RefRW<PylonSelection>,
                              RefRO<LocalTransform>, RefRO<PhysicsVelocity>, RefRO<GhostOwner>>()
                          .WithAll<Simulate>()
                          .WithEntityAccess())
             {
                 if (weapons.Length == 0) continue;
+                // A foreach variable cannot be written through its indexer; the copy is the same buffer.
+                var cooldowns = cooldownBuffer;
 
                 var pose = transform.ValueRO;
                 var shooterId = owner.ValueRO.NetworkId;
