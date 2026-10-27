@@ -27,6 +27,7 @@ namespace Chopper.Editor.Setup
             var library = AudioAssets.Ensure(mixer);
             var effects = EffectsAssets.Ensure(mixer);
             var panel = EnsurePanelSettings();
+            var look = HudLookAssets.Ensure();
             var hud = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
             var music = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioAssets.MatchMusicPath);
 
@@ -36,7 +37,7 @@ namespace Chopper.Editor.Setup
                 config = ScriptableObject.CreateInstance<GameConfig>();
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(GameConfigPath));
                 AssetDatabase.CreateAsset(config, GameConfigPath);
-                config.Initialise(catalog, library, effects, music, panel, hud);
+                config.Initialise(catalog, library, effects, music, panel, hud, look);
             }
             else
             {
@@ -47,7 +48,8 @@ namespace Chopper.Editor.Setup
                     config.Effects != null ? config.Effects : effects,
                     config.MatchMusic != null ? config.MatchMusic : music,
                     config.PanelSettings != null ? config.PanelSettings : panel,
-                    config.HudLayout != null ? config.HudLayout : hud);
+                    config.HudLayout != null ? config.HudLayout : hud,
+                    config.HudLook != null ? config.HudLook : look);
             }
 
             EditorUtility.SetDirty(config);

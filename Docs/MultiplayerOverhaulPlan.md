@@ -213,13 +213,22 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - Setup: missile ghost prefab, definitions, links, effect and sound slots; training targets become root pre-spawned ghosts.
 - Tests: `GuidanceTests`.
 
+### Retro HUD look — built (27 Oct, written without the editor — needs a compile + play check)
+- `HudLook` (owned by `PresentationContext`): the HUD view attaches its `UIDocument`; with a look preset on, the document moves to a runtime copy of its panel settings with `targetTexture` = a screen-size render texture (`renderScale`). Clean preset or no settings = plain overlay UI, no pass.
+- `HudLookRendererFeature` (URP, Render Graph): one blit pass after post-processing, last game camera only, skipped while the global `_ChopperHudLook` is 0 (menus, scene view, Clean). Shader `Hidden/Chopper/HudLook` (HLSL, not Shader Graph): glow (8 taps), scanlines, barrel curvature, edge colour split, vignette, noise, flicker, torn glitch bands. HUD only; the game view stays clean. HUD texture treated as premultiplied alpha.
+- All shader values are global properties from C#, so no material asset changes in play mode.
+- `HudLookModel` (plain C#, `HudLookModelTests`): damage → glitch (grows with damage, decays); low hull → flicker; own lock → pulse; missile urgency → noise; death / spawn → drop-out / boot-up; `Disrupt(strength, seconds)` for EMP and hack. Reduce effects: no flicker, glitch/pulse/noise × 0.25.
+- `HudLookSettings` on `GameConfig`: default preset, render scale, Vector and CRT 84 profiles, reactions. Player choice saved in PlayerPrefs (`HudLook.Preset`, `HudLook.ReduceEffects`); no options UI yet.
+- Setup step 1: settings asset + the feature on every URP renderer under Assets. Validate: settings, feature present, shader set, feature on.
+- Not built yet: phosphor persistence, per-element UI materials, options toggle, menus/hangar on the same look.
+
 ### Build order
 1. `Targetable` component and the server lock system (heat seeker), `LockState`, warning RPCs → messages → HUD lock brackets + warnings.
 2. Guided missile ghost (air-to-air), proportional navigation, proximity fuse; flares.
 3. Air-to-ground variant; ground targets in the training range.
 4. Cluster missiles; swarm micro-missiles.
 5. World markers + lead indicator; then the other weapons one behaviour at a time.
-6. Retro HUD look: HUD to RenderTexture + full-screen CRT pass + `HudLookSettings`; then gameplay-driven glitches.
+6. Retro HUD look: HUD to RenderTexture + full-screen CRT pass + `HudLookSettings`; then gameplay-driven glitches. **Built (not compiled), see above.**
 
 ## 4. Matchmaking — seamless flow
 

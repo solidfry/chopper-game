@@ -54,6 +54,7 @@ namespace Chopper.UI.Hud
         private VisualElement _dash;
         private VisualElement _health;
         private VisualElement _aim;
+        private UIDocument _document;
 
         private void OnEnable()
         {
@@ -66,7 +67,11 @@ namespace Chopper.UI.Hud
             _model = bridge.Context.Hud;
             _match = bridge.Context.Match;
 
-            var root = GetComponent<UIDocument>().rootVisualElement.Q("hud");
+            // First: the look may move the document into a render texture (new panel) before the tree is read.
+            _document = GetComponent<UIDocument>();
+            bridge.Context.HudLook.Attach(_document);
+
+            var root = _document.rootVisualElement.Q("hud");
             _chopper = root.Q("chopper");
             _dash = _chopper.Q("dash");
             _health = _chopper.Q("health");
@@ -114,6 +119,8 @@ namespace Chopper.UI.Hud
 
         private void OnDisable()
         {
+            if (bridge != null && _document != null && !bridge.Context.IsDisposed)
+                bridge.Context.HudLook.Detach(_document);
             if (_model != null)
                 _model.propertyChanged -= OnModelChanged;
             if (_match != null)

@@ -3,6 +3,7 @@ using System.Linq;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Config;
+using Chopper.Presentation.Hud;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Flight;
 using Chopper.UI.Hud;
@@ -28,6 +29,7 @@ namespace Chopper.Editor.Setup
             var problems = new List<SetupProblem>();
             var config = ConfigAssets.Load();
             CheckConfig(config, problems);
+            CheckHudLook(problems);
             CheckPrefab(problems);
             CheckScene(problems);
             return problems;
@@ -44,6 +46,21 @@ namespace Chopper.Editor.Setup
             var messages = new List<string>();
             config.CollectProblems(messages);
             problems.AddRange(messages.Select(m => new SetupProblem(m, config)));
+        }
+
+        /// <summary>Every URP renderer needs the HUD look feature with its shader, or the look presets show nothing.</summary>
+        private static void CheckHudLook(List<SetupProblem> problems)
+        {
+            foreach (var renderer in HudLookAssets.Renderers())
+            {
+                var feature = HudLookAssets.FindFeature(renderer);
+                if (feature == null)
+                    problems.Add(new SetupProblem($"URP renderer {renderer.name} has no HUD look feature. Press '1. Create / repair config'.", renderer));
+                else if (feature.Shader == null)
+                    problems.Add(new SetupProblem($"URP renderer {renderer.name}: HUD look feature has no shader ({HudLookRendererFeature.ShaderName}).", renderer));
+                else if (!feature.isActive)
+                    problems.Add(new SetupProblem($"URP renderer {renderer.name}: HUD look feature is turned off.", renderer));
+            }
         }
 
         private static void CheckPrefab(List<SetupProblem> problems)

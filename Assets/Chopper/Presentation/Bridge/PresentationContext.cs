@@ -12,7 +12,7 @@ using UnityEngine;
 namespace Chopper.Presentation.Bridge
 {
     /// <summary>
-    /// Everything presentation needs, in one object: config, audio, effects, HUD view models, camera and the event
+    /// Everything presentation needs, in one object: config, audio, effects, HUD view models and look, camera and the event
     /// channel. Made by the scene's <see cref="PresentationBridge"/>; ECS presentation systems get it through
     /// <see cref="PresentationSystemBase"/>, UI through the bridge. Ticks all of them from one place.
     /// TODO: becomes the match <c>LifetimeScope</c> (VContainer) registrations.
@@ -32,6 +32,7 @@ namespace Chopper.Presentation.Bridge
             var moduleRoot = new GameObject("Module Visuals").transform;
             moduleRoot.SetParent(root, false);
             ModuleVisuals = new EffectPool(moduleRoot);
+            HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
 
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
@@ -47,6 +48,8 @@ namespace Chopper.Presentation.Bridge
         public EffectPool ModuleVisuals { get; }
         public ChopperHudModel Hud { get; } = new();
         public MatchHudModel Match { get; } = new();
+        /// <summary>Retro HUD look: the HUD view attaches its document; gameplay drives glitches.</summary>
+        public HudLook HudLook { get; }
         /// <summary>Can be null (no chase camera in the scene).</summary>
         public ChopperCameraRig CameraRig { get; }
         public PresentationEvents Events { get; }
@@ -66,6 +69,7 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);
             Match.Tick(deltaTime);
+            HudLook.Tick(unscaledDeltaTime);
         }
 
         public void Dispose()
@@ -73,6 +77,7 @@ namespace Chopper.Presentation.Bridge
             if (IsDisposed) return;
             IsDisposed = true;
             foreach (var owned in _owned) owned.Dispose();
+            HudLook.Dispose();
             Events.Dispose();
             Effects.Dispose();
             ModuleVisuals.Dispose();

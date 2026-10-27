@@ -73,15 +73,22 @@ Rules:
   - Setup → *Do all* adds placeholder sockets to `ChopperGhost` (under "Sockets"), fills each chassis (prefab + defaults), links PolygonMilitary art to modules, and configures the spawner.
   - Socket positions are placeholders: nose and pylons from the old weapon slots; the others are guesses. Move them in the prefab (green gizmo cubes).
   - The old `Assets/Prefabs/Weapons` prefabs are not used: they have the old NGO `Weapon` script (missing).
+- **Retro CRT HUD look** (plan section 3b, "Retro HUD look — built"):
+  - The HUD panel renders into a texture; a URP renderer feature (`HudLookRendererFeature`, shader `Hidden/Chopper/HudLook`) draws it over the game with glow, scanlines, curvature, colour split, vignette, noise and flicker. The game view is not changed.
+  - `HudLookSettings` on `GameConfig`: presets Clean (plain UI, no pass), Vector, CRT 84 (default); intensities; gameplay reactions.
+  - Gameplay drives it (`HudLookModel`): glitch on damage, flicker at low hull, pulse on your lock, noise as a missile closes in, drop-out on death and boot-up on spawn. `HudLook.Disrupt` is ready for EMP and hack.
+  - Player options (saved in PlayerPrefs): `HudLook.Preset` and `HudLook.ReduceEffects` (no flicker, weaker glitches). No options screen yet.
+  - Setup step 1 makes the settings and adds the feature to every URP renderer; Validate checks them.
 - Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
 
 ### Editor steps after pulling
 1. Chopper → Setup → **Do all**, then **Validate**. Fix what it lists.
 2. Fix compile errors (nothing from 27 Oct is compiled yet). Send the console list to Claude if needed.
 3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon.
-4. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
-5. Run edit-mode tests (Window → General → Test Runner).
-6. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
+4. HUD look: the HUD should glow, with scanlines and a slight curve. Take a hit: the HUD glitches. Die: it drops out. If the HUD is gone or black: set the preset to Clean on `Data/Hud/HudLookSettings` (default preset) or clear the PlayerPrefs key `Chopper.HudLook.Preset`, and send the console to Claude. Check the HUD edges for dark fringes (alpha mode).
+5. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
+6. Run edit-mode tests (Window → General → Test Runner).
+7. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -101,7 +108,8 @@ Rules:
    - then the green wireframe hangar (it sets `LoadoutChoice`).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
-   - next: retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings` on `GameConfig`, glitches driven by gameplay);
+   - done (not yet compiled): retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings`, gameplay glitches);
+   - next for the look: tune it in play; options toggle for preset / reduce effects; phosphor persistence (last-frame blend); per-element Shader Graph UI materials; same look for menus and hangar;
    - cluster and swarm missiles;
    - world markers and a lead indicator.
    It can run in parallel with step 2: the weapons are modules.
@@ -138,5 +146,6 @@ Rules:
 | Modules (visual) | `Presentation/Visuals/ModuleVisualSystem.cs`, setup in `Editor/Setup/SocketAssets.cs` |
 | Presentation | `Presentation/Bridge/*`, `Events/*`, `Feedback/*`, `Audio/*`, `Effects/*`, `Hud/*`, `Visuals/*` |
 | UI | `UI/Hud/ChopperHud.uxml/.uss`, `ChopperHudView.cs`, theme in `UI/Theme` |
+| HUD look | `Presentation/Hud/HudLook*.cs`, `HudLook.shader`; settings `Data/Hud/HudLookSettings.asset`; setup `Editor/Setup/HudLookAssets.cs` |
 | Editor | `Editor/Setup/*` (window, asset factories, validator) |
-| Tests | `Tests/EditMode/*` (HUD models, health, loadout rules, loadout code, guidance, audio) |
+| Tests | `Tests/EditMode/*` (HUD models, HUD look, health, loadout rules, loadout code, guidance, audio) |
