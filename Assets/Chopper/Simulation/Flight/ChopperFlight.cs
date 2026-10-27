@@ -12,8 +12,10 @@ namespace Chopper.Simulation.Flight
     {
         /// <summary>Gravity multiplier for this chopper. Above 1 = heavier, drops and climbs feel punchier.</summary>
         public float GravityScale;
-        /// <summary>Extra lift from full collective, as a fraction of hover lift (0.6 = 1.6 g up, 0.4 g down).</summary>
-        public float CollectiveRange;
+        /// <summary>Push along the nose at full throttle (W), m/s².</summary>
+        public float ForwardThrust;
+        /// <summary>Push backwards at full reverse (S), m/s².</summary>
+        public float ReverseThrust;
         /// <summary>
         /// How much rotor lift grows with tilt to hold height (0 = real rotor, loses height when tilted;
         /// 1 = Battlefield-style, tilt becomes pure horizontal thrust). Capped at <see cref="MaxCompensatedTilt"/>.
@@ -21,10 +23,10 @@ namespace Chopper.Simulation.Flight
         public float TiltCompensation;
         /// <summary>Cosine of the largest tilt that is still compensated (0.5 = 60 degrees).</summary>
         public float MaxCompensatedTilt;
-        /// <summary>Collective direction: 0 = along the rotor, 1 = straight up (W/S only change height).</summary>
-        public float CollectiveVertical;
-        /// <summary>Multiplies the horizontal part of rotor lift (the push from tilt).</summary>
+        /// <summary>Multiplies the sideways push from banking (turns curve).</summary>
         public float TiltThrust;
+        /// <summary>Part of that push that pitch also gives: 0 = pitch only aims, 1 = nose down accelerates.</summary>
+        public float PitchThrust;
         /// <summary>Bank angle at full yaw input when there is no roll input, radians (coordinated turn).</summary>
         public float MaxBank;
         /// <summary>How fast the bank is reached (1/s).</summary>

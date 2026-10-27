@@ -14,7 +14,7 @@ namespace Chopper.Presentation.Bridge
         private const string SensitivityKey = "Chopper.Input.MouseSensitivity";
         private const string InvertKey = "Chopper.Input.InvertPitch";
 
-        private MouseSteer _mouseSteer = (MouseSteer)PlayerPrefs.GetInt(SteerKey, (int)MouseSteer.Yaw);
+        private MouseSteer _mouseSteer = (MouseSteer)PlayerPrefs.GetInt(SteerKey, (int)MouseSteer.Roll);
         private float _mouseSensitivity = PlayerPrefs.GetFloat(SensitivityKey, 1f);
         private bool _invertPitch = PlayerPrefs.GetInt(InvertKey, 0) != 0;
 

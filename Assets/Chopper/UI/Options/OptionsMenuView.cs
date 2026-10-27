@@ -35,7 +35,7 @@ namespace Chopper.UI.Options
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
         /// <summary>Same order as <see cref="InputOptions.MouseSteerIndex"/>.</summary>
-        private readonly List<string> _steerNames = new() { "TURN (AIM)", "ROLL (CLASSIC)" };
+        private readonly List<string> _steerNames = new() { "TURN (AIM)", "ROLL (BATTLEFIELD)" };
 
         public bool IsOpen { get; private set; }
 

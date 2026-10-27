@@ -14,9 +14,9 @@ namespace Chopper.Simulation.Flight
     /// the predicted fixed step, so this runs on the server and on the owning client (prediction) alike.
     /// <list type="bullet">
     /// <item>Gravity is always on. The rotor lifts along its own up axis: hover lift at zero collective.</item>
-    /// <item>Tilting moves the chopper; <c>TiltThrust</c> makes a small nose-down give real speed.</item>
-    /// <item>Collective (W/S) is mostly straight up: it changes height, it does not steal speed from tilt.</item>
-    /// <item>Yaw without roll input banks the chopper into the turn (coordinated turn), so turns curve.</item>
+    /// <item>Throttle (W/S) pushes along the nose: fly where you aim. Lift always holds height.</item>
+    /// <item>Banking pushes sideways (turns curve); pitch only aims unless <c>PitchThrust</c> is above 0.</item>
+    /// <item>Yaw without roll input banks the chopper into the turn (coordinated turn), blended in smoothly.</item>
     /// <item>Input sets a turn rate; rotation reaches it fast and stops when input stops.</item>
     /// <item>Drag is higher sideways and vertically than forward; the nose weathervanes into travel at speed.</item>
     /// </list>
@@ -81,8 +81,7 @@ namespace Chopper.Simulation.Flight
                 var weight = Gravity * config.GravityScale;
                 velocity.Linear -= worldUp * (Gravity * (config.GravityScale - 1f) * DeltaTime);
 
-                // Hover lift along the rotor axis. Tilt compensation grows it so its vertical part still holds height;
-                // the horizontal part is the push from tilt (scaled by TiltThrust): tilting accelerates, flaring brakes.
+                // Hover lift along the rotor axis. Tilt compensation grows it so its vertical part still holds height.
                 var hoverLift = weight;
                 var uprightDot = math.dot(up, worldUp);
                 if (uprightDot > 0f)
@@ -92,11 +91,18 @@ namespace Chopper.Simulation.Flight
                 }
                 var lift = up * hoverLift;
                 var verticalLift = worldUp * math.dot(lift, worldUp);
-                velocity.Linear += (verticalLift + (lift - verticalLift) * config.TiltThrust) * DeltaTime;
+                // Horizontal part of the lift = the push from tilt. Sideways (bank) it curves turns; along the nose it
+                // only counts by PitchThrust, so pitching to aim does not speed up or brake the chopper.
+                var tiltPush = lift - verticalLift;
+                var noseAxis = math.mul(rotation, math.forward());
+                var flatNose = math.normalizesafe(new float3(noseAxis.x, 0f, noseAxis.z), math.forward());
+                var alongNose = flatNose * math.dot(tiltPush, flatNose);
+                tiltPush = (tiltPush - alongNose + alongNose * config.PitchThrust) * config.TiltThrust;
+                velocity.Linear += (verticalLift + tiltPush) * DeltaTime;
 
-                // Collective (W/S): mostly straight up, so it changes height and does not steal speed from tilt.
-                var collectiveDirection = math.normalizesafe(math.lerp(up, worldUp, config.CollectiveVertical), worldUp);
-                velocity.Linear += collectiveDirection * (weight * thrust * config.CollectiveRange * DeltaTime);
+                // Throttle (W/S): push along the nose. Fly where you aim: aim up + W climbs, aim down + W dives.
+                var throttle = thrust >= 0f ? thrust * config.ForwardThrust : thrust * config.ReverseThrust;
+                velocity.Linear += noseAxis * (throttle * DeltaTime);
 
                 // Drag in the chopper's own frame, so sideways and vertical slides stop faster than forward flight.
                 var localVelocity = math.mul(toLocal, velocity.Linear);
@@ -123,9 +129,11 @@ namespace Chopper.Simulation.Flight
                     }
                 }
 
-                // Coordinated turn: with no roll input, lean into the yaw (up to MaxBank at full yaw), so the tilted lift
-                // pulls the chopper round the turn. Only the roll axis is driven; pitch stays with the pilot (aim).
-                if (config.MaxBank > 0f && math.abs(roll) < NoInput)
+                // Coordinated turn: yawing (A/D) without rolling leans the chopper into the turn (up to MaxBank), so the
+                // tilted lift pulls it round. Blended in smoothly (no on/off switch, which made the mouse erratic), and
+                // off when there is no yaw: then the chopper keeps the bank the pilot set, like Battlefield.
+                var bankAssist = math.saturate(math.abs(yaw) / 0.2f) * math.saturate(1f - math.abs(roll) / 0.3f);
+                if (config.MaxBank > 0f && bankAssist > 0f)
                 {
                     var forwardAxis = math.mul(rotation, math.forward());
                     var flatForward = math.normalizesafe(new float3(forwardAxis.x, 0f, forwardAxis.z), math.forward());
@@ -140,7 +148,7 @@ namespace Chopper.Simulation.Flight
                     {
                         var bankError = math.atan2(sinBank, math.dot(upAcross, targetUp));
                         var localAxis = math.mul(toLocal, bankAxis / sinBank);
-                        desiredRate.z += localAxis.z * bankError * config.BankResponse;
+                        desiredRate.z += localAxis.z * bankError * config.BankResponse * bankAssist;
                     }
                 }
 

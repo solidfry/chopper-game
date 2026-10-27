@@ -5,9 +5,9 @@ namespace Chopper.Simulation.Input
     /// <summary>How the mouse's sideways movement steers.</summary>
     public enum MouseSteer : byte
     {
-        /// <summary>Aim style: mouse X turns the nose (yaw), the chopper banks by itself. Aim and flight are one.</summary>
+        /// <summary>Aim style: mouse X turns the nose (yaw), the chopper banks by itself.</summary>
         Yaw = 0,
-        /// <summary>Classic Battlefield: mouse X rolls; A/D yaw.</summary>
+        /// <summary>Battlefield (default): mouse X rolls; A/D yaw.</summary>
         Roll = 1,
     }
 
@@ -24,6 +24,6 @@ namespace Chopper.Simulation.Input
         public float MouseSensitivity;
         public bool InvertPitch;
 
-        public static PlayerInputSettings Default => new() { MouseSteer = MouseSteer.Yaw, MouseSensitivity = 1f };
+        public static PlayerInputSettings Default => new() { MouseSteer = MouseSteer.Roll, MouseSensitivity = 1f };
     }
 }

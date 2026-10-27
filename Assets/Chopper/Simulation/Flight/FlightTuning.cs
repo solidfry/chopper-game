@@ -11,19 +11,23 @@ namespace Chopper.Simulation.Flight
     [Serializable]
     public sealed class FlightTuning
     {
+        [Header("Throttle (W/S): fly where you aim")]
+        [Tooltip("Push along the nose at full W, m/s². Aim up + W climbs, aim down + W dives. Sets top speed with drag.")]
+        public float ForwardThrust = 14f;
+        [Tooltip("Push backwards at full S (brake, then reverse), m/s².")]
+        public float ReverseThrust = 8f;
+
         [Header("Weight and lift")]
-        [Tooltip("Gravity multiplier. Above 1 = heavier; drops and climbs feel punchier.")]
+        [Tooltip("Gravity multiplier. Above 1 = heavier; drops feel punchier.")]
         public float GravityScale = 1.6f;
-        [Range(0f, 1.5f), Tooltip("Extra lift at full collective (W/S), as a fraction of hover lift.")]
-        public float CollectiveRange = 0.7f;
-        [Range(0f, 1f), Tooltip("Direction of collective lift: 0 = along the rotor (W while tilted also pushes forward), 1 = straight up (W/S only change height; tilt alone gives speed).")]
-        public float CollectiveVertical = 0.8f;
-        [Range(0f, 1f), Tooltip("Lift grows with tilt to hold height. 1 = Battlefield: tilt is pure horizontal thrust.")]
+        [Range(0f, 1f), Tooltip("Lift grows with tilt to hold height. 1 = height holds at any tilt (up to the max).")]
         public float TiltCompensation = 1f;
         [Range(10f, 80f), Tooltip("Largest tilt (degrees) that is still compensated.")]
         public float MaxCompensatedTiltDegrees = 60f;
-        [Range(0.5f, 3f), Tooltip("Multiplies the horizontal push from tilt. Above 1 = a small nose-down gives real speed.")]
-        public float TiltThrust = 1.6f;
+        [Range(0f, 3f), Tooltip("Sideways push from banking: makes turns curve. 0 = none.")]
+        public float TiltThrust = 1.2f;
+        [Range(0f, 1f), Tooltip("Part of the bank push that nose-up/down also gives (0 = pitch only aims, 1 = real helicopter: nose down accelerates).")]
+        public float PitchThrust;
 
         [Header("Rotation (degrees per second at full input)")]
         public float MaxPitchRate = 90f;

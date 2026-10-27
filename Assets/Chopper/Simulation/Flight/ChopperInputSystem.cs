@@ -11,7 +11,7 @@ namespace Chopper.Simulation.Flight
     /// Reads the Flight action map into the local player's <see cref="ChopperInput"/> each frame.
     /// Keyboard/gamepad axes request a fraction of the max turn rate. The mouse works like aiming: moving it
     /// faster turns faster (degrees per pixel), so it is precise for small corrections and fast for big flicks.
-    /// Options come from <see cref="PlayerInputSettings"/>: mouse X steers yaw (aim style, default) or roll (classic),
+    /// Options come from <see cref="PlayerInputSettings"/>: mouse X steers roll (Battlefield, default) or yaw (aim style),
     /// sensitivity, invert pitch. While a menu is open the input is neutral.
     /// </summary>
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
@@ -74,7 +74,7 @@ namespace Chopper.Simulation.Flight
             {
                 var maxRateDegrees = math.degrees(config.ValueRO.MaxTurnRate);
                 var mousePitch = (settings.InvertPitch ? -1f : 1f) * _mouseRate.y / maxRateDegrees.x;
-                // Aim style: mouse X turns the nose; the flight model banks into the turn. Classic: mouse X rolls.
+                // Battlefield: mouse X rolls. Aim style: mouse X turns the nose and the flight model banks into the turn.
                 var aimStyle = settings.MouseSteer == MouseSteer.Yaw;
                 var mouseYaw = aimStyle ? _mouseRate.x / maxRateDegrees.y : 0f;
                 var mouseRoll = aimStyle ? 0f : _mouseRate.x / maxRateDegrees.z;

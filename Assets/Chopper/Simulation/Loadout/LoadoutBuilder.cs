@@ -47,11 +47,12 @@ namespace Chopper.Simulation.Loadout
             built.Flight = new ChopperFlightConfig
             {
                 GravityScale = flight.GravityScale,
-                CollectiveRange = flight.CollectiveRange * stats.LiftMultiplier,
+                ForwardThrust = flight.ForwardThrust * stats.LiftMultiplier,
+                ReverseThrust = flight.ReverseThrust * stats.LiftMultiplier,
                 TiltCompensation = flight.TiltCompensation,
                 MaxCompensatedTilt = math.cos(math.radians(flight.MaxCompensatedTiltDegrees)),
-                CollectiveVertical = flight.CollectiveVertical,
                 TiltThrust = flight.TiltThrust,
+                PitchThrust = flight.PitchThrust,
                 MaxBank = math.radians(flight.BankAngleDegrees),
                 BankResponse = flight.BankResponse,
                 MaxTurnRate = math.radians(new float3(flight.MaxPitchRate, flight.MaxYawRate, flight.MaxRollRate)) * stats.TurnRateMultiplier,
