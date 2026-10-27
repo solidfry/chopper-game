@@ -7,7 +7,8 @@ namespace Chopper.UI.Hud
     /// <summary>
     /// A segmented arc meter drawn with the vector API (boost tank, hull). It fills the element: the arc sits on a circle
     /// as wide as the element. Angles are in degrees, 0 = right, clockwise (screen y down); a negative sweep runs
-    /// anticlockwise. Colours come from USS (<c>--arc-fill</c>, <c>--arc-track</c>), so states are plain USS classes.
+    /// anticlockwise. Colours come from USS (<c>--arc-fill</c>, <c>--arc-track</c>, set from the palette in
+    /// ChopperTheme.uss), so states are plain USS classes.
     /// </summary>
     [UxmlElement]
     public partial class ArcGauge : VisualElement
@@ -16,8 +17,8 @@ namespace Chopper.UI.Hud
         private static readonly CustomStyleProperty<Color> TrackProperty = new("--arc-track");
 
         private float _value = 1f;
-        private Color _fill = new(0.22f, 1f, 0.53f);
-        private Color _track = new(0.22f, 1f, 0.53f, 0.15f);
+        private Color _fill = new(0f, 1f, 0.58f);
+        private Color _track = new(0f, 1f, 0.58f, 0.12f);
 
         /// <summary>0..1.</summary>
         [UxmlAttribute, CreateProperty]

@@ -58,7 +58,8 @@ namespace Chopper.Presentation.Camera
             _lens = Add<LensDistortion>();
             _vignette = Add<Vignette>();
             _colour = Add<ColorAdjustments>();
-            _vignette.color.Override(new Color(0.02f, 0f, 0.06f));
+            // Electric Blue - Dark (style guide palette).
+            _vignette.color.Override(new Color(0.027f, 0f, 0.098f));
             _vignette.smoothness.Override(0.5f);
 
             _volume = _volumeObject.AddComponent<Volume>();

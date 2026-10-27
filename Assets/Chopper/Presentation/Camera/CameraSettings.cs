@@ -126,13 +126,13 @@ namespace Chopper.Presentation.Camera
         [SerializeField, Range(0f, 1f), Tooltip("Vignette while boosting.")] private float boostVignette = 0.32f;
         [SerializeField, Tooltip("Exposure flash when a boost starts (EV).")] private float boostFlash = 0.6f;
 
-        [Header("Speed lines")]
+        [Header("Speed lines (colours: Dream Cyan / Cruise Pink from the style guide, HDR for bloom)")]
         [SerializeField, Tooltip("Hidden/Chopper/SpeedLine. Empty = no speed lines.")] private Shader speedLineShader;
         [SerializeField, Tooltip("Speed (m/s) where the lines start.")] private float speedLineStartSpeed = 35f;
         [SerializeField, Tooltip("Lines per second at full speed / extra at full boost.")] private float speedLineRate = 40f;
         [SerializeField] private float speedLineBoostRate = 150f;
-        [SerializeField, ColorUsage(true, true)] private Color speedLineColor = new(0.4f, 1.4f, 1.6f, 0.35f);
-        [SerializeField, ColorUsage(true, true)] private Color speedLineBoostColor = new(1.6f, 0.4f, 1.8f, 0.45f);
+        [SerializeField, ColorUsage(true, true)] private Color speedLineColor = new(0f, 1.5f, 1.6f, 0.35f);
+        [SerializeField, ColorUsage(true, true)] private Color speedLineBoostColor = new(1.8f, 0.47f, 0.97f, 0.45f);
 
         public IReadOnlyList<CameraView> Views => views;
         public float BlendTime => blendTime;

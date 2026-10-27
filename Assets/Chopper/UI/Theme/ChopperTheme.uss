@@ -1,19 +1,44 @@
-/* Shared green cyberpunk theme: colours, fonts and the terminal look of the standard controls.
+/* Shared cyberpunk theme: colours, fonts and the terminal look of the standard controls.
    Screens add their own layout USS.
+   Palette: the style guide in Figma (GuildMaster file, "Section 1"). Six accents, each with a dark pair for fills.
+   Cards in the guide: dark fill + 1px accent border + accent text. Roles: Console Green = UI and friendly,
+   Dream Cyan = team A and info, Lightning Yellow = team B, score and caution, Screamer Red = danger and damage,
+   Cruise Pink = boost and highlights, Electric Blue = brand accent. Use these tokens; do not add new colours.
    Fonts are the old game's (Assets/Fonts): Ethnocentric ExtraLight for text (the old HUD and timer),
    Ethnocentric Bold for titles and alerts (class chopper-title, as the old popups and intro).
    Controls are restyled here (not per screen) because a dropdown's list opens at the panel root,
    outside the screen that owns it. */
 :root {
-  --chopper-green: #39ff88;
-  --chopper-green-dim: rgba(57, 255, 136, 0.35);
-  --chopper-green-faint: rgba(57, 255, 136, 0.12);
-  --chopper-amber: #ffb000;
-  --chopper-cyan: #40e6ff;
-  --chopper-magenta: #ff3cdc;
-  --chopper-red: #ff3b3b;
-  --chopper-panel: rgba(4, 16, 10, 0.72);
-  --chopper-terminal: rgba(1, 8, 4, 0.94);
+  --palette-console-green: #00ff94;
+  --palette-console-green-dark: #081b0a;
+  --palette-dream-cyan: #00f0ff;
+  --palette-dream-cyan-dark: #1c2829;
+  --palette-lightning-yellow: #ffdf6b;
+  --palette-lightning-yellow-dark: #292721;
+  --palette-screamer-red: #ff4246;
+  --palette-screamer-red-dark: #2a1a1a;
+  --palette-cruise-pink: #ff4289;
+  --palette-cruise-pink-dark: #251a24;
+  --palette-electric-blue: #4200ff;
+  --palette-electric-blue-dark: #070019;
+
+  /* Roles. The -dim/-faint values are the accent at 35% / 12% (USS cannot add alpha to a variable). */
+  --chopper-green: var(--palette-console-green);
+  --chopper-green-dim: rgba(0, 255, 148, 0.35);
+  --chopper-green-faint: rgba(0, 255, 148, 0.12);
+  --chopper-green-dark: var(--palette-console-green-dark);
+  --chopper-cyan: var(--palette-dream-cyan);
+  --chopper-cyan-dark: var(--palette-dream-cyan-dark);
+  --chopper-yellow: var(--palette-lightning-yellow);
+  --chopper-yellow-dark: var(--palette-lightning-yellow-dark);
+  --chopper-red: var(--palette-screamer-red);
+  --chopper-red-dark: var(--palette-screamer-red-dark);
+  --chopper-pink: var(--palette-cruise-pink);
+  --chopper-pink-dark: var(--palette-cruise-pink-dark);
+  --chopper-blue: var(--palette-electric-blue);
+  --chopper-blue-dark: var(--palette-electric-blue-dark);
+  --chopper-panel: rgba(8, 27, 10, 0.72);
+  --chopper-terminal: rgba(8, 27, 10, 0.94);
   --chopper-text: #d8ffe9;
 
   --chopper-border-width: 1px;

@@ -116,7 +116,7 @@
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
   border-radius: var(--chopper-radius);
-  text-shadow: 0 0 6px rgba(57, 255, 136, 0.35);
+  text-shadow: 0 0 6px rgba(0, 255, 148, 0.35);
 }
 
 .hud-match__feed {
@@ -135,7 +135,7 @@
   font-size: 72px;
   color: var(--chopper-green);
   -unity-text-align: middle-center;
-  text-shadow: 0 0 12px rgba(57, 255, 136, 0.5);
+  text-shadow: 0 0 12px rgba(0, 255, 148, 0.5);
 }
 
 .hud-match__banner--hidden {
@@ -162,22 +162,20 @@
   background-color: var(--chopper-panel);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-red);
-  text-shadow: 0 0 8px rgba(255, 64, 64, 0.4);
+  text-shadow: 0 0 8px rgba(255, 66, 70, 0.4);
 }
 
 /* Readout panels (speed, altitude, hull) */
+/* Readouts: style guide card (dark fill, 1px accent border, accent value) */
 .hud-readout {
   flex-direction: row;
   align-items: flex-end;
   min-width: 170px;
   margin-bottom: 10px;
   padding: 4px 12px 4px 10px;
-  background-color: rgba(2, 12, 8, 0.45);
-  border-width: 0;
-  border-bottom-width: 1px;
-  border-bottom-color: var(--chopper-green-faint);
-  border-left-width: 3px;
-  border-left-color: var(--chopper-green);
+  background-color: rgba(8, 27, 10, 0.6);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
   border-radius: var(--chopper-radius);
 }
 
@@ -198,7 +196,7 @@
   padding: 0;
   margin: 0;
   /* Neon glow without post-processing */
-  text-shadow: 0 0 6px rgba(57, 255, 136, 0.35);
+  text-shadow: 0 0 6px rgba(0, 255, 148, 0.35);
 }
 
 .hud-readout__unit {
@@ -211,12 +209,13 @@
 
 /* Health turns red when low */
 .hud-readout--low {
-  border-left-color: var(--chopper-red);
+  border-color: var(--chopper-red);
+  background-color: rgba(42, 26, 26, 0.7);
 }
 
 .hud-readout--low .hud-readout__value {
   color: var(--chopper-red);
-  text-shadow: 0 0 6px rgba(255, 64, 64, 0.35);
+  text-shadow: 0 0 6px rgba(255, 66, 70, 0.35);
 }
 
 /* Gun reticle. Left/top are set from code (where the gun points); translate centres it on that point. */
@@ -296,29 +295,29 @@
   top: -18px;
   right: -18px;
   bottom: -18px;
-  --arc-fill: rgba(57, 255, 136, 0.9);
-  --arc-track: rgba(57, 255, 136, 0.12);
+  --arc-fill: rgba(0, 255, 148, 0.9);
+  --arc-track: rgba(0, 255, 148, 0.12);
 }
 
-/* Not enough to start a boost: amber */
+/* Not enough to start a boost: yellow (caution) */
 .hud-boost {
-  --arc-fill: var(--chopper-amber);
-  --arc-track: rgba(255, 176, 0, 0.12);
+  --arc-fill: var(--chopper-yellow);
+  --arc-track: rgba(255, 223, 107, 0.12);
 }
 
 .hud-boost--ready {
   --arc-fill: var(--chopper-cyan);
-  --arc-track: rgba(64, 230, 255, 0.12);
+  --arc-track: rgba(0, 240, 255, 0.12);
 }
 
 .hud--boosting .hud-boost {
-  --arc-fill: var(--chopper-magenta);
-  --arc-track: rgba(255, 60, 220, 0.15);
+  --arc-fill: var(--chopper-pink);
+  --arc-track: rgba(255, 66, 137, 0.15);
 }
 
 .hud-hull-arc.hud-readout--low {
   --arc-fill: var(--chopper-red);
-  --arc-track: rgba(255, 59, 59, 0.15);
+  --arc-track: rgba(255, 66, 70, 0.15);
 }
 
 .hud-arc__label {
@@ -334,25 +333,25 @@
   left: -44px;
 }
 
-/* Boost: the flight ring runs hot, the speed readout grows and turns cyan, the tag slams in. */
+/* Boost (pink): the flight ring runs hot, the speed readout grows and turns pink, the tag slams in. */
 .hud-frame__ring {
   transition-property: border-color, scale;
   transition-duration: 0.15s;
 }
 
 .hud--boosting .hud-frame__ring {
-  border-color: rgba(255, 60, 220, 0.45);
+  border-color: rgba(255, 66, 137, 0.45);
   scale: 1.04 1.04;
 }
 
 .hud-boost-tag {
   font-size: 15px;
   letter-spacing: 4px;
-  color: var(--chopper-magenta);
+  color: var(--chopper-pink);
   padding: 0 0 4px 2px;
   opacity: 0;
   translate: -24px 0;
-  text-shadow: 0 0 8px rgba(255, 60, 220, 0.8);
+  text-shadow: 0 0 8px rgba(255, 66, 137, 0.8);
   transition-property: opacity, translate;
   transition-duration: 0.12s;
   transition-timing-function: ease-out-back;
@@ -365,14 +364,15 @@
 
 .hud-readout--speed {
   transform-origin: left bottom;
-  transition-property: scale, border-left-color;
+  transition-property: scale, border-color, background-color;
   transition-duration: 0.15s;
   transition-timing-function: ease-out-back;
 }
 
 .hud--boosting .hud-readout--speed {
   scale: 1.18 1.18;
-  border-left-color: var(--chopper-cyan);
+  border-color: var(--chopper-pink);
+  background-color: rgba(37, 26, 36, 0.7);
 }
 
 .hud-readout--speed .hud-readout__value {
@@ -381,16 +381,16 @@
 }
 
 .hud--boosting .hud-readout--speed .hud-readout__value {
-  color: var(--chopper-cyan);
-  text-shadow: 0 0 10px rgba(64, 230, 255, 0.7);
+  color: var(--chopper-pink);
+  text-shadow: 0 0 10px rgba(255, 66, 137, 0.7);
 }
 
-/* Seeker lock brackets. Size and position are set from code; amber while building, red when locked. */
+/* Seeker lock brackets. Size and position are set from code; yellow while building, red when locked. */
 .hud-lock {
   position: absolute;
   translate: -50% -50%;
   border-width: 2px;
-  border-color: var(--chopper-amber);
+  border-color: var(--chopper-yellow);
   align-items: center;
   justify-content: flex-end;
 }
@@ -408,7 +408,7 @@
   position: absolute;
   bottom: -26px;
   font-size: 14px;
-  color: var(--chopper-amber);
+  color: var(--chopper-yellow);
   padding: 0;
   opacity: 0;
 }
@@ -439,13 +439,13 @@
 .hud-threat--missile {
   color: var(--chopper-red);
   border-color: var(--chopper-red);
-  text-shadow: 0 0 10px rgba(255, 64, 64, 0.6);
+  text-shadow: 0 0 10px rgba(255, 66, 70, 0.6);
 }
 
 .hud-threat--lock {
   font-size: 22px;
-  color: var(--chopper-amber);
-  border-color: var(--chopper-amber);
+  color: var(--chopper-yellow);
+  border-color: var(--chopper-yellow);
 }
 
 .hud-threat--hidden {
@@ -473,7 +473,7 @@
 }
 
 .hud-pylon--needs-lock {
-  color: var(--chopper-amber);
+  color: var(--chopper-yellow);
 }
 
 .hud-flares {
@@ -508,7 +508,7 @@
 
 .hud-marker--ground .hud-marker__icon {
   rotate: 0deg;
-  border-color: var(--chopper-amber);
+  border-color: var(--chopper-yellow);
 }
 
 .hud-marker--locked .hud-marker__icon {
@@ -566,7 +566,7 @@
 }
 
 .hud-marker--ground .hud-marker__arrow {
-  border-bottom-color: var(--chopper-amber);
+  border-bottom-color: var(--chopper-yellow);
 }
 
 /* Rocket lead indicator */
