@@ -28,6 +28,13 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue damageTaken;
         [SerializeField, Tooltip("Loop while outside the arena.")] private SoundCue outOfBoundsAlarm;
 
+        [Header("Targeting")]
+        [SerializeField, Tooltip("Loop while a lock builds; pitch rises with progress.")] private SoundCue lockTone;
+        [SerializeField, Tooltip("Loop while locked.")] private SoundCue lockedTone;
+        [SerializeField, Tooltip("Loop while an enemy is locking or has locked you.")] private SoundCue lockWarning;
+        [SerializeField, Tooltip("Loop while a missile chases you; it speeds up as it closes in.")] private SoundCue missileWarning;
+        [SerializeField] private SoundCue flares;
+
         [Header("Match")]
         [SerializeField] private SoundCue matchEnd;
 
@@ -46,6 +53,11 @@ namespace Chopper.Presentation.Audio
         public SoundCue DamageTaken => damageTaken;
         public SoundCue OutOfBoundsAlarm => outOfBoundsAlarm;
         public SoundCue MatchEnd => matchEnd;
+        public SoundCue LockTone => lockTone;
+        public SoundCue LockedTone => lockedTone;
+        public SoundCue LockWarning => lockWarning;
+        public SoundCue MissileWarning => missileWarning;
+        public SoundCue Flares => flares;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
 
@@ -62,6 +74,11 @@ namespace Chopper.Presentation.Audio
             Check(damageTaken, nameof(damageTaken), problems);
             Check(outOfBoundsAlarm, nameof(outOfBoundsAlarm), problems);
             Check(matchEnd, nameof(matchEnd), problems);
+            Check(lockTone, nameof(lockTone), problems);
+            Check(lockedTone, nameof(lockedTone), problems);
+            Check(lockWarning, nameof(lockWarning), problems);
+            Check(missileWarning, nameof(missileWarning), problems);
+            Check(flares, nameof(flares), problems);
             Check(uiClick, nameof(uiClick), problems);
             Check(uiNavigate, nameof(uiNavigate), problems);
         }
@@ -70,6 +87,16 @@ namespace Chopper.Presentation.Audio
         {
             if (cue == null) problems.Add($"{name}: no cue for {slot} (that sound will not play).");
             else cue.CollectProblems(problems);
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseTargeting(SoundCue lockBuilding, SoundCue locked, SoundCue beingLocked, SoundCue missileInbound, SoundCue flareDrop)
+        {
+            lockTone = lockBuilding;
+            lockedTone = locked;
+            lockWarning = beingLocked;
+            missileWarning = missileInbound;
+            flares = flareDrop;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

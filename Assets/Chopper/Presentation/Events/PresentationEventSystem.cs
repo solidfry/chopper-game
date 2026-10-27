@@ -24,6 +24,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _matchStates;
         private EntityQuery _remoteRockets;
         private EntityQuery _localRockets;
+        private EntityQuery _missileDetonations;
         private int _localNetworkId;
 
         protected override void OnCreate()
@@ -37,6 +38,7 @@ namespace Chopper.Presentation.Events
             _matchStates = Rpc<MatchStateRpc>();
             _remoteRockets = Rpc<RocketLaunchRpc>();
             _localRockets = GetEntityQuery(ComponentType.ReadOnly<LocalRocketLaunch>());
+            _missileDetonations = Rpc<MissileDetonatedRpc>();
         }
 
         protected override void OnUpdate()
@@ -52,6 +54,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_matchStates);
             EntityManager.DestroyEntity(_remoteRockets);
             EntityManager.DestroyEntity(_localRockets);
+            EntityManager.DestroyEntity(_missileDetonations);
         }
 
         private void Publish(PresentationEvents events)
@@ -77,6 +80,9 @@ namespace Chopper.Presentation.Events
                 events.Publish(new HitConfirmed(rpc.ValueRO.Damage, rpc.ValueRO.Killed));
             foreach (var rpc in SystemAPI.Query<RefRO<DamageTakenRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new DamageTaken(rpc.ValueRO.Amount, rpc.ValueRO.HasSource, rpc.ValueRO.SourcePosition));
+
+            foreach (var rpc in SystemAPI.Query<RefRO<MissileDetonatedRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                events.Publish(new MissileDetonated(rpc.ValueRO.Position));
 
             foreach (var launch in SystemAPI.Query<RefRO<LocalRocketLaunch>>())
                 events.Publish(new RocketLaunched(launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, localId));

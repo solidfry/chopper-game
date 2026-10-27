@@ -22,6 +22,8 @@ namespace Chopper.Presentation.Hud
         public const float MaxSway = 24f;
         /// <summary>Pixels of sway per degree per second of turn rate.</summary>
         private const float SwayPerDegreePerSecond = 0.2f;
+        /// <summary>Missiles further than this give the slowest warning.</summary>
+        public const float MissileWarningRange = 800f;
         /// <summary>How fast the frame follows the target sway (1/s). Lower = more lag, more weight.</summary>
         private const float SwayResponse = 6f;
 
@@ -47,6 +49,20 @@ namespace Chopper.Presentation.Hud
         private Vector2 _sway;
         private Vector2 _swayTarget;
         private Vector2 _swaySmoothed;
+        private bool _lockVisible;
+        private Vector2 _lockViewport = new(0.5f, 0.5f);
+        private float _lockProgress;
+        private bool _locked;
+        private string _pylonText = "";
+        private bool _pylonNeedsLock;
+        private bool _flaresReady;
+        private bool _threatLocking;
+        private bool _threatLocked;
+        private bool _missileInbound;
+        private float _missileDirectionDegrees;
+        private float _missileUrgency;
+        private bool _warningBlink;
+        private float _blinkTime;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -168,6 +184,67 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _damageDirectionDegrees, value, nameof(DamageDirectionDegrees));
         }
 
+        /// <summary>True while the selected seeker is locking or has locked a target on screen.</summary>
+        [CreateProperty] public bool LockVisible { get => _lockVisible; private set => Set(ref _lockVisible, value, nameof(LockVisible)); }
+
+        /// <summary>Where the lock target is on screen, viewport space (like <see cref="AimViewport"/>).</summary>
+        [CreateProperty] public Vector2 LockViewport { get => _lockViewport; private set => Set(ref _lockViewport, value, nameof(LockViewport)); }
+
+        /// <summary>0 = lock just started, 1 = locked. Steps of 5%.</summary>
+        [CreateProperty] public float LockProgress { get => _lockProgress; private set => Set(ref _lockProgress, value, nameof(LockProgress)); }
+
+        [CreateProperty] public bool Locked { get => _locked; private set => Set(ref _locked, value, nameof(Locked)); }
+
+        /// <summary>Selected pylon weapon, e.g. "ROCKET POD"; empty with no pylon weapons.</summary>
+        [CreateProperty] public string PylonText { get => _pylonText; private set => Set(ref _pylonText, value, nameof(PylonText)); }
+
+        /// <summary>The selected pylon weapon cannot fire without a lock.</summary>
+        [CreateProperty] public bool PylonNeedsLock { get => _pylonNeedsLock; private set => Set(ref _pylonNeedsLock, value, nameof(PylonNeedsLock)); }
+
+        [CreateProperty] public bool FlaresReady { get => _flaresReady; private set => Set(ref _flaresReady, value, nameof(FlaresReady)); }
+
+        /// <summary>An enemy seeker is building a lock on you.</summary>
+        [CreateProperty] public bool ThreatLocking { get => _threatLocking; private set => Set(ref _threatLocking, value, nameof(ThreatLocking)); }
+
+        /// <summary>An enemy has a lock on you.</summary>
+        [CreateProperty] public bool ThreatLocked { get => _threatLocked; private set => Set(ref _threatLocked, value, nameof(ThreatLocked)); }
+
+        [CreateProperty] public bool MissileInbound { get => _missileInbound; private set => Set(ref _missileInbound, value, nameof(MissileInbound)); }
+
+        /// <summary>Where the closest missile comes from, seen from the camera (0 = ahead, 90 = right).</summary>
+        [CreateProperty] public float MissileDirectionDegrees { get => _missileDirectionDegrees; private set => Set(ref _missileDirectionDegrees, value, nameof(MissileDirectionDegrees)); }
+
+        /// <summary>0 = far (or none), 1 = about to hit. Steps of 5%. Drives the warning blink and tone speed.</summary>
+        [CreateProperty] public float MissileUrgency { get => _missileUrgency; private set => Set(ref _missileUrgency, value, nameof(MissileUrgency)); }
+
+        /// <summary>Blinks the threat warnings; faster as a missile closes in.</summary>
+        [CreateProperty] public bool WarningBlink { get => _warningBlink; private set => Set(ref _warningBlink, value, nameof(WarningBlink)); }
+
+        /// <param name="lockViewport">Lock target in viewport space; z below 0 = behind the camera (lock hidden).</param>
+        public void UpdateTargeting(bool hasLockTarget, Vector3 lockViewport, float progress, bool locked, string pylonName, bool needsLock,
+            bool flaresReady)
+        {
+            LockVisible = hasLockTarget && lockViewport.z > 0f;
+            if (LockVisible)
+                LockViewport = new Vector2(MathF.Round(lockViewport.x * 1000f) / 1000f, MathF.Round(lockViewport.y * 1000f) / 1000f);
+            LockProgress = hasLockTarget ? MathF.Round(Math.Clamp(progress, 0f, 1f) * 20f) / 20f : 0f;
+            Locked = hasLockTarget && locked;
+            PylonText = pylonName ?? "";
+            PylonNeedsLock = needsLock;
+            FlaresReady = flaresReady;
+        }
+
+        /// <param name="missileDistance">Distance to the closest missile chasing you; ignored when none.</param>
+        public void UpdateThreats(bool locking, bool lockedOn, bool missileInbound, float missileDirectionDegrees, float missileDistance)
+        {
+            ThreatLocking = locking;
+            ThreatLocked = lockedOn;
+            MissileInbound = missileInbound;
+            if (missileInbound) MissileDirectionDegrees = MathF.Round(missileDirectionDegrees);
+            var urgency = missileInbound ? 1f - Math.Clamp(missileDistance / MissileWarningRange, 0f, 1f) : 0f;
+            MissileUrgency = MathF.Round(urgency * 20f) / 20f;
+        }
+
         /// <summary>Chopper bank angle: positive = rolled left. The horizon line turns by this much (steps of 0.5°).</summary>
         [CreateProperty]
         public float RollDegrees
@@ -251,8 +328,27 @@ namespace Chopper.Presentation.Hud
             KillMarkerVisible = _killMarkerTime > 0f;
             DamageIndicatorVisible = _damageIndicatorTime > 0f;
 
+            TickWarningBlink(deltaTime);
+
             _swaySmoothed = Vector2.Lerp(_swaySmoothed, _swayTarget, 1f - MathF.Exp(-SwayResponse * deltaTime));
             Sway = new Vector2(MathF.Round(_swaySmoothed.x * 2f) / 2f, MathF.Round(_swaySmoothed.y * 2f) / 2f);
+        }
+
+        /// <summary>Missile: blink faster as it closes in (0.35 s to 0.08 s). Lock warning only: steady slow blink.</summary>
+        private void TickWarningBlink(float deltaTime)
+        {
+            if (!MissileInbound && !ThreatLocked && !ThreatLocking)
+            {
+                WarningBlink = false;
+                _blinkTime = 0f;
+                return;
+            }
+
+            var interval = MissileInbound ? 0.35f + (0.08f - 0.35f) * MissileUrgency : 0.3f;
+            _blinkTime += deltaTime;
+            if (_blinkTime < interval) return;
+            _blinkTime = 0f;
+            WarningBlink = !WarningBlink;
         }
 
         public void ClearChopper()
@@ -261,6 +357,8 @@ namespace Chopper.Presentation.Hud
             AimVisible = false;
             OutOfBounds = false;
             _swayTarget = Vector2.zero;
+            UpdateTargeting(false, Vector3.back, 0f, false, "", false, false);
+            UpdateThreats(false, false, false, 0f, 0f);
         }
 
         private void Set<T>(ref T field, T value, string propertyName)

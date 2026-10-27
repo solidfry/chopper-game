@@ -32,6 +32,7 @@ namespace Chopper.Presentation.Bridge
 
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
+            _owned.Add(new TargetingFeedback(this));
         }
 
         public GameConfig Config { get; }

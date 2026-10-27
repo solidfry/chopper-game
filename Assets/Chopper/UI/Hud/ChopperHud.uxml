@@ -17,12 +17,24 @@
       <ui:VisualElement name="bounds-warning" class="hud-warning hud-warning--hidden" picking-mode="Ignore">
         <ui:Label text="RETURN TO COMBAT AREA" class="hud-warning__text" />
       </ui:VisualElement>
+      <!-- Threats against you: blinking, upper middle -->
+      <ui:VisualElement name="threats" class="hud-threats" picking-mode="Ignore">
+        <ui:Label name="missile-warning" text="MISSILE" class="hud-threat hud-threat--missile hud-threat--hidden" />
+        <ui:Label name="lock-warning" text="LOCK WARNING" class="hud-threat hud-threat--lock hud-threat--hidden" />
+      </ui:VisualElement>
       <ui:VisualElement name="damage-layer" class="hud-layer hud-damage-layer" picking-mode="Ignore">
         <ui:VisualElement name="damage-ring" class="hud-damage hud-damage--hidden" picking-mode="Ignore">
           <ui:VisualElement class="hud-damage__arc" picking-mode="Ignore" />
         </ui:VisualElement>
+        <ui:VisualElement name="missile-ring" class="hud-damage hud-damage--missile hud-damage--hidden" picking-mode="Ignore">
+          <ui:VisualElement class="hud-damage__arc" picking-mode="Ignore" />
+        </ui:VisualElement>
       </ui:VisualElement>
       <ui:VisualElement name="aim-layer" class="hud-layer" picking-mode="Ignore">
+        <!-- Seeker lock: brackets close in on the target as the lock builds -->
+        <ui:VisualElement name="lock" class="hud-lock hud-lock--hidden" picking-mode="Ignore">
+          <ui:Label name="lock-label" text="LOCK" class="hud-lock__label" />
+        </ui:VisualElement>
         <ui:VisualElement name="aim" class="hud-aim" picking-mode="Ignore">
           <ui:VisualElement class="hud-aim__dot" picking-mode="Ignore" />
           <ui:VisualElement name="hit-marker" class="hud-aim__hit" picking-mode="Ignore" />
@@ -31,9 +43,13 @@
       <!-- Flight frame: centred on the view like the old HUD; it sways with turns (see ChopperHudView). -->
       <ui:VisualElement name="frame-layer" class="hud-layer hud-frame-layer" picking-mode="Ignore">
         <ui:VisualElement name="frame" class="hud-frame" picking-mode="Ignore">
-          <ui:VisualElement name="dash" class="hud-frame__side hud-frame__side--left hud-dash" picking-mode="Ignore">
-            <ui:Label text="DASH" class="hud-dash__label" />
-            <ui:ProgressBar name="dash-bar" low-value="0" high-value="1" value="1" class="hud-dash__bar" />
+          <ui:VisualElement name="left" class="hud-frame__side hud-frame__side--left" picking-mode="Ignore">
+            <ui:VisualElement name="dash" class="hud-dash" picking-mode="Ignore">
+              <ui:Label text="DASH" class="hud-dash__label" />
+              <ui:ProgressBar name="dash-bar" low-value="0" high-value="1" value="1" class="hud-dash__bar" />
+            </ui:VisualElement>
+            <ui:Label name="pylon" text="" class="hud-pylon" />
+            <ui:Label name="flares" text="FLARES" class="hud-flares" />
           </ui:VisualElement>
           <ui:VisualElement name="ring" class="hud-frame__ring" picking-mode="Ignore">
             <ui:VisualElement name="horizon" class="hud-frame__horizon" picking-mode="Ignore">

@@ -26,6 +26,15 @@ namespace Chopper.UI.Hud
         private const string WarningHiddenClass = "hud-warning--hidden";
         private const string BannerHiddenClass = "hud-match__banner--hidden";
         private const string DamageHiddenClass = "hud-damage--hidden";
+        private const string LockHiddenClass = "hud-lock--hidden";
+        private const string LockedClass = "hud-lock--locked";
+        private const string ThreatHiddenClass = "hud-threat--hidden";
+        private const string ThreatsDimClass = "hud-threats--dim";
+        private const string PylonNeedsLockClass = "hud-pylon--needs-lock";
+        private const string FlaresReadyClass = "hud-flares--ready";
+        /// <summary>Lock bracket size in pixels: wide when the lock starts, tight when locked.</summary>
+        private const float LockStartSize = 140f;
+        private const float LockEndSize = 56f;
 
         private ChopperHudModel _model;
         private MatchHudModel _match;
@@ -33,6 +42,13 @@ namespace Chopper.UI.Hud
         private VisualElement _boundsWarning;
         private VisualElement _damageRing;
         private VisualElement _frame;
+        private VisualElement _lock;
+        private VisualElement _threats;
+        private Label _missileWarning;
+        private Label _lockWarning;
+        private VisualElement _missileRing;
+        private VisualElement _pylon;
+        private VisualElement _flares;
         private VisualElement _horizon;
         private VisualElement _banner;
         private VisualElement _dash;
@@ -58,6 +74,14 @@ namespace Chopper.UI.Hud
             _boundsWarning = _chopper.Q("bounds-warning");
             _damageRing = _chopper.Q("damage-ring");
             _frame = _chopper.Q("frame");
+            _lock = _chopper.Q("lock");
+            _threats = _chopper.Q("threats");
+            _missileWarning = _chopper.Q<Label>("missile-warning");
+            _lockWarning = _chopper.Q<Label>("lock-warning");
+            _missileRing = _chopper.Q("missile-ring");
+            _pylon = _chopper.Q("pylon");
+            _flares = _chopper.Q("flares");
+            Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
             _horizon = _chopper.Q("horizon");
 
             _chopper.dataSource = _model;
@@ -82,6 +106,9 @@ namespace Chopper.UI.Hud
             RefreshDamageDirection();
             RefreshSway();
             RefreshHorizon();
+            RefreshLock();
+            RefreshThreats();
+            RefreshWeapons();
             RefreshBanner();
         }
 
@@ -111,6 +138,20 @@ namespace Chopper.UI.Hud
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
                 RefreshSway();
+            else if (args.propertyName == nameof(ChopperHudModel.LockViewport) ||
+                     args.propertyName == nameof(ChopperHudModel.LockProgress) ||
+                     args.propertyName == nameof(ChopperHudModel.LockVisible) ||
+                     args.propertyName == nameof(ChopperHudModel.Locked))
+                RefreshLock();
+            else if (args.propertyName == nameof(ChopperHudModel.MissileInbound) ||
+                     args.propertyName == nameof(ChopperHudModel.MissileDirectionDegrees) ||
+                     args.propertyName == nameof(ChopperHudModel.ThreatLocking) ||
+                     args.propertyName == nameof(ChopperHudModel.ThreatLocked) ||
+                     args.propertyName == nameof(ChopperHudModel.WarningBlink))
+                RefreshThreats();
+            else if (args.propertyName == nameof(ChopperHudModel.PylonNeedsLock) ||
+                     args.propertyName == nameof(ChopperHudModel.FlaresReady))
+                RefreshWeapons();
             else if (args.propertyName == nameof(ChopperHudModel.RollDegrees))
                 RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
@@ -136,6 +177,39 @@ namespace Chopper.UI.Hud
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
+        }
+
+        private void RefreshLock()
+        {
+            RefreshWeapons();
+            _lock.EnableInClassList(LockHiddenClass, !_model.LockVisible);
+            _lock.EnableInClassList(LockedClass, _model.Locked);
+            if (!_model.LockVisible) return;
+
+            var viewport = _model.LockViewport;
+            _lock.style.left = Length.Percent(viewport.x * 100f);
+            _lock.style.top = Length.Percent((1f - viewport.y) * 100f);
+            var size = Mathf.Lerp(LockStartSize, LockEndSize, _model.LockProgress);
+            _lock.style.width = size;
+            _lock.style.height = size;
+        }
+
+        private void RefreshThreats()
+        {
+            var lockThreat = !_model.MissileInbound && (_model.ThreatLocking || _model.ThreatLocked);
+            _missileWarning.EnableInClassList(ThreatHiddenClass, !_model.MissileInbound);
+            _lockWarning.EnableInClassList(ThreatHiddenClass, !lockThreat);
+            _lockWarning.text = _model.ThreatLocked ? "LOCKED ON" : "LOCK WARNING";
+            _threats.EnableInClassList(ThreatsDimClass, _model.WarningBlink);
+
+            _missileRing.EnableInClassList(DamageHiddenClass, !_model.MissileInbound);
+            _missileRing.style.rotate = new Rotate(Angle.Degrees(_model.MissileDirectionDegrees));
+        }
+
+        private void RefreshWeapons()
+        {
+            _pylon.EnableInClassList(PylonNeedsLockClass, _model.PylonNeedsLock && !_model.Locked);
+            _flares.EnableInClassList(FlaresReadyClass, _model.FlaresReady);
         }
 
         private void RefreshSway()

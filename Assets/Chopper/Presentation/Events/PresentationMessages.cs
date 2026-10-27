@@ -77,4 +77,11 @@ namespace Chopper.Presentation.Events
             ShooterNetworkId = shooter;
         }
     }
+
+    /// <summary>A guided missile exploded here (the server removed its ghost).</summary>
+    public readonly struct MissileDetonated
+    {
+        public readonly Vector3 Position;
+        public MissileDetonated(Vector3 position) => Position = position;
+    }
 }
