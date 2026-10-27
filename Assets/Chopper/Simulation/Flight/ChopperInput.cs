@@ -17,5 +17,9 @@ namespace Chopper.Simulation.Flight
         public bool Fire;
         /// <summary>Held: pylon rockets fire at their fire rate.</summary>
         public bool FireSecondary;
+        /// <summary>Select the next pylon weapon.</summary>
+        public InputEvent CyclePylon;
+        /// <summary>Drop flares.</summary>
+        public InputEvent Countermeasure;
     }
 }

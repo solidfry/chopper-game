@@ -19,6 +19,7 @@ namespace Chopper.Simulation.Combat
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(HitscanFireSystem))]
+    [UpdateAfter(typeof(RocketSystem))]
     public partial struct ApplyDamageSystem : ISystem
     {
         private ComponentLookup<ConnectionOwner> _connectionLookup;

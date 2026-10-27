@@ -63,6 +63,7 @@ namespace Chopper.Simulation.Loadout
                 if (!seen.Add(definition.Id)) problems.Add($"{name}: module id {definition.Id} is used twice.");
                 definition.CollectProblems(problems);
                 if (definition.Weapon != null) definition.Weapon.CollectProblems(problems);
+                if (definition.Ability != null) definition.Ability.CollectProblems(problems);
             }
         }
 

@@ -15,7 +15,7 @@ namespace Chopper.Simulation.Combat
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
-    [UpdateAfter(typeof(RocketFireSystem))]
+    [UpdateAfter(typeof(PylonFireSystem))]
     [UpdateBefore(typeof(ApplyDamageSystem))]
     public partial struct RocketSystem : ISystem
     {
@@ -41,11 +41,11 @@ namespace Chopper.Simulation.Combat
                 ref var rocket = ref rocketRef.ValueRW;
                 var end = rocket.Position + rocket.Velocity * deltaTime;
 
-                if (TryHit(world, rocket.Shooter, rocket.Position, end, out var hit))
+                if (Explosions.TryRaycast(world, rocket.Shooter, rocket.Position, end, out var hit))
                 {
                     if (_damageLookup.TryGetBuffer(hit.Entity, out var direct))
                         direct.Add(new DamageEvent { Amount = rocket.DirectDamage, Source = rocket.Shooter });
-                    Splash(world, rocket, hit.Position, hit.Entity);
+                    Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity);
                     ecb.DestroyEntity(entity);
                     continue;
                 }
@@ -56,48 +56,6 @@ namespace Chopper.Simulation.Combat
                     ecb.DestroyEntity(entity);
             }
             ecb.Playback(state.EntityManager);
-        }
-
-        private void Splash(in CollisionWorld world, in Rocket rocket, float3 centre, Entity directTarget)
-        {
-            if (rocket.SplashRadius <= 0f || rocket.SplashDamage <= 0f) return;
-
-            var hits = new NativeList<DistanceHit>(16, Allocator.Temp);
-            var damaged = new NativeHashSet<Entity>(16, Allocator.Temp);
-            if (world.OverlapSphere(centre, rocket.SplashRadius, ref hits, CollisionFilter.Default))
-            {
-                foreach (var hit in hits)
-                {
-                    var target = hit.Entity;
-                    if (target == rocket.Shooter || target == directTarget || !damaged.Add(target)) continue;
-                    if (!_damageLookup.TryGetBuffer(target, out var damage)) continue;
-
-                    var falloff = 1f - math.saturate(hit.Distance / rocket.SplashRadius);
-                    damage.Add(new DamageEvent { Amount = rocket.SplashDamage * falloff, Source = rocket.Shooter });
-                }
-            }
-            hits.Dispose();
-            damaged.Dispose();
-        }
-
-        private static bool TryHit(in CollisionWorld world, Entity shooter, float3 start, float3 end, out RaycastHit closest)
-        {
-            var ray = new RaycastInput { Start = start, End = end, Filter = CollisionFilter.Default };
-            var hits = new NativeList<RaycastHit>(8, Allocator.Temp);
-            closest = default;
-            var found = false;
-
-            if (world.CastRay(ray, ref hits))
-            {
-                foreach (var hit in hits)
-                {
-                    if (hit.Entity == shooter || (found && hit.Fraction >= closest.Fraction)) continue;
-                    closest = hit;
-                    found = true;
-                }
-            }
-            hits.Dispose();
-            return found;
         }
     }
 }

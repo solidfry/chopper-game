@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Chopper.Simulation.Flight
 {
@@ -21,7 +22,10 @@ namespace Chopper.Simulation.Flight
         // Mouse deltas arrive per frame and are noisy; average them over a few frames.
         private const float MouseSmoothing = 30f;
 
+        private const double CycleRepeatSeconds = 0.2;
+
         private PlayerControls _controls;
+        private double _nextCycleTime;
         private float2 _mouseRate;
 
         protected override void OnCreate()
@@ -46,6 +50,8 @@ namespace Chopper.Simulation.Flight
             var dash = flight.Dash.WasPressedThisFrame();
             var fire = flight.Fire1.IsPressed();
             var fireSecondary = flight.Fire2.IsPressed();
+            var countermeasure = flight.Fire3.WasPressedThisFrame();
+            var cyclePylon = CyclePylonPressed();
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
@@ -70,7 +76,30 @@ namespace Chopper.Simulation.Flight
                 };
                 if (dash)
                     input.ValueRW.Dash.Set();
+                if (countermeasure)
+                    input.ValueRW.Countermeasure.Set();
+                if (cyclePylon)
+                    input.ValueRW.CyclePylon.Set();
             }
+        }
+
+        /// <summary>
+        /// Mouse wheel, Tab or gamepad D-pad right. Read from the devices for now.
+        /// TODO: add a CyclePylon action to PlayerControls.inputactions (needs the editor to regenerate the class).
+        /// </summary>
+        private bool CyclePylonPressed()
+        {
+            var now = World.Time.ElapsedTime;
+            if (now < _nextCycleTime) return false;
+
+            var wheel = Mouse.current != null && math.abs(Mouse.current.scroll.ReadValue().y) > 0.01f;
+            var tab = Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame;
+            var dpad = Gamepad.current != null && Gamepad.current.dpad.right.wasPressedThisFrame;
+            if (!wheel && !tab && !dpad) return false;
+
+            // One wheel notch can last a few frames: ignore repeats for a moment.
+            _nextCycleTime = now + CycleRepeatSeconds;
+            return true;
         }
     }
 }

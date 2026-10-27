@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Definitions;
 using Chopper.Simulation.Loadout;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -73,6 +74,7 @@ namespace Chopper.Simulation.Flight
                     if (module == null) continue;
                     DependsOn(module);
                     if (module.Weapon != null) DependsOn(module.Weapon);
+                    if (module.Ability != null) DependsOn(module.Ability);
                 }
 
                 var stats = ComputeStats(authoring, chassis, modules);
@@ -132,17 +134,38 @@ namespace Chopper.Simulation.Flight
                 return LoadoutRules.Compute(catalog.TryGetChassis(chassis.Id, out var spec) ? spec : chassis.ToSpec(), selection, catalog);
             }
 
-            /// <summary>First nose module with a hitscan weapon is the gun; first pylon with rockets is the launcher.</summary>
+            /// <summary>
+            /// First nose module with a hitscan weapon is the gun. Every pylon module with a rocket or missile becomes a
+            /// pylon weapon (cycled in play). The first utility module with flares gives the countermeasure.
+            /// </summary>
             private void BakeWeapons(Entity entity, ModuleDefinition[] modules)
             {
                 HitscanWeaponDefinition gun = null;
-                RocketWeaponDefinition rockets = null;
+                CountermeasureDefinition flares = null;
+                // Built in a list first: a structural change (the next AddBuffer) may invalidate a baker buffer.
+                var pylons = new List<PylonWeapon>();
                 foreach (var module in modules)
                 {
                     if (module == null) continue;
                     if (gun == null && module.Weapon is HitscanWeaponDefinition hitscan) gun = hitscan;
-                    if (rockets == null && module.Weapon is RocketWeaponDefinition rocket) rockets = rocket;
+                    if (flares == null && module.Ability is CountermeasureDefinition countermeasure) flares = countermeasure;
+
+                    // Odd pylons are on the other side: mirror the launch point.
+                    var mirror = pylons.Count % 2 == 1;
+                    if (module.Weapon is RocketWeaponDefinition rocket)
+                        pylons.Add(RocketPylon(module, rocket, mirror));
+                    else if (module.Weapon is GuidedMissileDefinition missile)
+                        pylons.Add(MissilePylon(module, missile, mirror));
                 }
+
+                var pylonBuffer = AddBuffer<PylonWeapon>(entity);
+                foreach (var pylon in pylons) pylonBuffer.Add(pylon);
+                var cooldowns = AddBuffer<PylonWeaponState>(entity);
+                for (var i = 0; i < pylons.Count; i++) cooldowns.Add(default);
+                AddComponent<PylonSelection>(entity);
+                AddComponent<TargetLock>(entity);
+                AddComponent<ThreatState>(entity);
+                AddComponent(entity, new Targetable { Class = TargetClass.Air, BaseHeat = 1f });
 
                 if (gun != null)
                 {
@@ -156,20 +179,63 @@ namespace Chopper.Simulation.Flight
                     AddComponent<HitscanWeaponState>(entity);
                 }
 
-                if (rockets != null)
+                if (flares != null)
                 {
-                    AddComponent(entity, new RocketLauncherConfig
-                    {
-                        FireInterval = rockets.FireInterval,
-                        Speed = rockets.Speed,
-                        Lifetime = rockets.Lifetime,
-                        DirectDamage = rockets.DirectDamage,
-                        SplashDamage = rockets.SplashDamage,
-                        SplashRadius = rockets.SplashRadius,
-                        MuzzleOffset = rockets.MuzzleOffset,
-                    });
-                    AddComponent<RocketLauncherState>(entity);
+                    AddComponent(entity, new CountermeasureConfig { Cooldown = flares.Cooldown, DecoyDuration = flares.DecoyDuration });
+                    AddComponent<CountermeasureState>(entity);
                 }
+            }
+
+            private static float3 Muzzle(WeaponDefinition weapon, bool mirror)
+            {
+                float3 offset = weapon.MuzzleOffset;
+                if (mirror) offset.x = -offset.x;
+                return offset;
+            }
+
+            private static PylonWeapon RocketPylon(ModuleDefinition module, RocketWeaponDefinition rocket, bool mirror) => new()
+            {
+                Behaviour = PylonBehaviour.Rocket,
+                Name = ShortName(module),
+                FireInterval = rocket.FireInterval,
+                Speed = rocket.Speed,
+                Lifetime = rocket.Lifetime,
+                DirectDamage = rocket.DirectDamage,
+                SplashDamage = rocket.SplashDamage,
+                SplashRadius = rocket.SplashRadius,
+                MuzzleOffset = Muzzle(rocket, mirror),
+            };
+
+            private PylonWeapon MissilePylon(ModuleDefinition module, GuidedMissileDefinition missile, bool mirror) => new()
+            {
+                Behaviour = PylonBehaviour.Guided,
+                Name = ShortName(module),
+                FireInterval = missile.FireInterval,
+                Speed = missile.Speed,
+                Lifetime = missile.Lifetime,
+                DirectDamage = missile.DirectDamage,
+                SplashDamage = missile.SplashDamage,
+                SplashRadius = missile.SplashRadius,
+                MuzzleOffset = Muzzle(missile, mirror),
+                Seeker = missile.Seeker,
+                Targets = missile.Targets,
+                LockConeCos = missile.LockConeCos,
+                LockRange = missile.LockRange,
+                LockTime = missile.LockTime,
+                RequiresLock = missile.RequiresLock,
+                TurnRate = missile.TurnRateRadians,
+                NavigationGain = missile.NavigationGain,
+                ProximityFuse = missile.ProximityFuse,
+                ArmTime = missile.ArmTime,
+                MissilePrefab = missile.MissilePrefab != null ? GetEntity(missile.MissilePrefab, TransformUsageFlags.Dynamic) : Entity.Null,
+            };
+
+            /// <summary>HUD name: the module name, upper case, cut to fit.</summary>
+            private static FixedString32Bytes ShortName(ModuleDefinition module)
+            {
+                var name = string.IsNullOrEmpty(module.DisplayName) ? module.name : module.DisplayName;
+                name = name.ToUpperInvariant();
+                return name.Length > 28 ? name.Substring(0, 28) : name;
             }
         }
     }

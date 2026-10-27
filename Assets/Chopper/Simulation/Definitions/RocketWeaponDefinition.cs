@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Chopper.Simulation.Definitions
 {
-    /// <summary>Tuning for unguided pylon rockets. Baked to <see cref="Combat.RocketLauncherConfig"/>.</summary>
+    /// <summary>Tuning for unguided pylon rockets. Baked to a <see cref="Combat.PylonWeapon"/> (behaviour Rocket).</summary>
     [CreateAssetMenu(menuName = "Chopper/Weapons/Rocket Weapon", fileName = "RocketWeapon")]
     public sealed class RocketWeaponDefinition : WeaponDefinition
     {

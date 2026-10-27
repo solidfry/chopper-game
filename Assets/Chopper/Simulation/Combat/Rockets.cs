@@ -5,30 +5,6 @@ using Unity.NetCode;
 namespace Chopper.Simulation.Combat
 {
     /// <summary>
-    /// Pylon rockets: unguided, straight flight, direct hit plus splash. Baked from <see cref="Flight.ChopperAuthoring"/>;
-    /// later this comes from the pylon module.
-    /// </summary>
-    public struct RocketLauncherConfig : IComponentData
-    {
-        public float FireInterval;
-        /// <summary>m/s, added to the chopper's own velocity.</summary>
-        public float Speed;
-        public float Lifetime;
-        public float DirectDamage;
-        /// <summary>Damage at the centre of the blast; falls to 0 at <see cref="SplashRadius"/>.</summary>
-        public float SplashDamage;
-        public float SplashRadius;
-        /// <summary>Pylon position in chopper space.</summary>
-        public float3 MuzzleOffset;
-    }
-
-    /// <summary>Predicted on the owner so the fire rhythm matches the server.</summary>
-    public struct RocketLauncherState : IComponentData
-    {
-        [GhostField(Quantization = 1000)] public float CooldownRemaining;
-    }
-
-    /// <summary>
     /// Server only: a rocket in flight. Not a ghost: flight is a straight line, so clients draw it from the launch
     /// alone (<see cref="RocketLaunchRpc"/>). No target rewind: others can dodge what they see.
     /// </summary>

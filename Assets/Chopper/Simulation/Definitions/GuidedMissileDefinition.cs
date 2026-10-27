@@ -1,0 +1,90 @@
+using System.Collections.Generic;
+using Chopper.Simulation.Combat;
+using UnityEngine;
+
+namespace Chopper.Simulation.Definitions
+{
+    /// <summary>
+    /// Tuning for a guided pylon missile (heat seeker, air-to-air or air-to-ground). Baked to a
+    /// <see cref="PylonWeapon"/> with behaviour Guided. The missile itself is a ghost prefab with
+    /// <see cref="Combat.GuidedMissileAuthoring"/> (made by Chopper → Setup).
+    /// </summary>
+    [CreateAssetMenu(menuName = "Chopper/Weapons/Guided Missile", fileName = "GuidedMissile")]
+    public sealed class GuidedMissileDefinition : WeaponDefinition
+    {
+        [Header("Launch")]
+        [SerializeField, Tooltip("Seconds between missiles.")] private float fireInterval = 2.5f;
+        [SerializeField] private float speed = 160f;
+        [SerializeField] private float lifetime = 6f;
+        [SerializeField, Tooltip("Seconds before it steers, so it clears the launcher.")] private float armTime = 0.15f;
+        [SerializeField, Tooltip("Missile ghost prefab (GhostAuthoringComponent + GuidedMissileAuthoring).")]
+        private GameObject missilePrefab;
+
+        [Header("Seeker")]
+        [SerializeField] private SeekerType seeker = SeekerType.Heat;
+        [SerializeField] private TargetClass targets = TargetClass.Air;
+        [SerializeField, Tooltip("Half-angle of the lock cone, degrees.")] private float lockConeDegrees = 15f;
+        [SerializeField] private float lockRange = 600f;
+        [SerializeField, Tooltip("Seconds on target to lock.")] private float lockTime = 1.2f;
+        [SerializeField, Tooltip("On: cannot fire without a lock (no dumb-fire).")] private bool requiresLock = true;
+
+        [Header("Flight")]
+        [SerializeField, Tooltip("Degrees per second.")] private float turnRate = 120f;
+        [SerializeField, Tooltip("Lead on a moving target: 0 = pure pursuit, 3 = full lead.")] private float navigationGain = 3f;
+        [SerializeField, Tooltip("Explodes this close to the target, metres.")] private float proximityFuse = 6f;
+
+        [Header("Damage")]
+        [SerializeField] private float directDamage = 45f;
+        [SerializeField] private float splashDamage = 20f;
+        [SerializeField] private float splashRadius = 6f;
+
+        public float FireInterval => fireInterval;
+        public float Speed => speed;
+        public float Lifetime => lifetime;
+        public float ArmTime => armTime;
+        public GameObject MissilePrefab => missilePrefab;
+        public SeekerType Seeker => seeker;
+        public TargetClass Targets => targets;
+        public float LockConeCos => Mathf.Cos(lockConeDegrees * Mathf.Deg2Rad);
+        public float LockRange => lockRange;
+        public float LockTime => lockTime;
+        public bool RequiresLock => requiresLock;
+        public float TurnRateRadians => turnRate * Mathf.Deg2Rad;
+        public float NavigationGain => navigationGain;
+        public float ProximityFuse => proximityFuse;
+        public float DirectDamage => directDamage;
+        public float SplashDamage => splashDamage;
+        public float SplashRadius => splashRadius;
+
+        public override void CollectProblems(List<string> problems)
+        {
+            if (missilePrefab == null) problems.Add($"{name}: no missile ghost prefab.");
+            else if (missilePrefab.GetComponent<GuidedMissileAuthoring>() == null)
+                problems.Add($"{name}: missile prefab has no GuidedMissileAuthoring.");
+            if (seeker != SeekerType.None && targets == TargetClass.None) problems.Add($"{name}: seeker has no target classes.");
+            if (speed <= 0f || lifetime <= 0f || fireInterval <= 0f) problems.Add($"{name}: speed, lifetime and fire interval must be above 0.");
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void Initialise(GameObject prefab, TargetClass targetClasses, bool needsLock, float cone, float range, float lockSeconds,
+            float missileSpeed, float turnDegreesPerSecond, float gain, float fuse, float direct, float splash, float radius, float interval,
+            float life)
+        {
+            missilePrefab = prefab;
+            targets = targetClasses;
+            requiresLock = needsLock;
+            lockConeDegrees = cone;
+            lockRange = range;
+            lockTime = lockSeconds;
+            speed = missileSpeed;
+            turnRate = turnDegreesPerSecond;
+            navigationGain = gain;
+            proximityFuse = fuse;
+            directDamage = direct;
+            splashDamage = splash;
+            splashRadius = radius;
+            fireInterval = interval;
+            lifetime = life;
+        }
+    }
+}

@@ -23,8 +23,10 @@ namespace Chopper.Simulation.Loadout
         private ChassisDefinition[] allowedChassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField, Tooltip("Mesh shown on the chassis socket (hangar and in game).")]
         private GameObject visual;
-        [SerializeField, Tooltip("Nose: a hitscan weapon. Pylon: a rocket weapon. Empty for non-weapon modules.")]
+        [SerializeField, Tooltip("Nose: a hitscan weapon. Pylon: a rocket or guided missile. Empty for non-weapon modules.")]
         private WeaponDefinition weapon;
+        [SerializeField, Tooltip("Utility behaviour (flares, later EMP, shield...). Empty for most modules.")]
+        private ModuleAbilityDefinition ability;
 
         public ushort Id => id;
         public string DisplayName => displayName;
@@ -32,6 +34,7 @@ namespace Chopper.Simulation.Loadout
         public SlotType Slot => slot;
         public GameObject Visual => visual;
         public WeaponDefinition Weapon => weapon;
+        public ModuleAbilityDefinition Ability => ability;
         public ModuleStats Stats => stats;
 
         public void CollectProblems(List<string> problems)
@@ -41,12 +44,15 @@ namespace Chopper.Simulation.Loadout
             if (stats.Weight < 0f) problems.Add($"{name}: weight must not be below 0.");
             if (weapon is HitscanWeaponDefinition && slot != SlotType.Nose)
                 problems.Add($"{name}: a hitscan weapon must be in the Nose slot.");
-            if (weapon is RocketWeaponDefinition && slot != SlotType.Pylon)
-                problems.Add($"{name}: a rocket weapon must be in a Pylon slot.");
+            if ((weapon is RocketWeaponDefinition || weapon is GuidedMissileDefinition) && slot != SlotType.Pylon)
+                problems.Add($"{name}: rockets and missiles must be in a Pylon slot.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetWeapon(WeaponDefinition definition) => weapon = definition;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetAbility(ModuleAbilityDefinition definition) => ability = definition;
 
         public ModuleSpec ToSpec()
         {

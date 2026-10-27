@@ -12,7 +12,7 @@ namespace Chopper.Simulation.Combat
 
     /// <summary>
     /// Put on a target in the gameplay subscene (it needs a collider). Lets one player test hits and kills.
-    /// The target is not a ghost, so only the server tracks its health; the shooter sees the hit markers.
+    /// Chopper → Setup also makes it a pre-spawned ghost, so clients see its health and seekers can show a lock on it.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class TrainingTargetAuthoring : MonoBehaviour
@@ -29,6 +29,8 @@ namespace Chopper.Simulation.Combat
                 AddComponent(entity, new Health { Current = authoring.maxHealth, Max = authoring.maxHealth });
                 AddBuffer<DamageEvent>(entity);
                 AddComponent(entity, new TrainingTarget { ResetDelay = authoring.resetDelay });
+                // Ground class: air-to-ground seekers can lock it. Warmer than the ground so it stands out.
+                AddComponent(entity, new Targetable { Class = TargetClass.Ground, BaseHeat = 0.6f });
             }
         }
     }
