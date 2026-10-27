@@ -77,8 +77,8 @@ Shader "Hidden/Chopper/HudLook"
                 float torn = step(1.0 - glitch * 0.5, Hash(float2(band, seed)));
                 hudUv.x += torn * (Hash(float2(band, seed + 17.0)) - 0.5) * glitch * 0.12;
 
-                // Colour split: grows towards the edges, and with the glitch.
-                float2 split = centred * _ChopperHudSize.zw * chromatic * (0.35 + edge);
+                // Colour split: only towards the edges (the centre stays sharp to read), and with the glitch.
+                float2 split = centred * _ChopperHudSize.zw * chromatic * edge;
                 float4 middle = SampleHud(hudUv);
                 float4 red = SampleHud(hudUv + split);
                 float4 blue = SampleHud(hudUv - split);
@@ -104,9 +104,10 @@ Shader "Hidden/Chopper/HudLook"
                 shade *= brightness;
                 float grain = (Hash(uv * _ChopperHudSize.xy + frac(_Time.y) * 91.7) - 0.5) * noise;
 
-                // Phosphor trail: the fading history, only where the HUD is not drawn now (premultiplied, additive).
-                float3 trail = SAMPLE_TEXTURE2D_LOD(_ChopperHudHistory, sampler_LinearClamp, hudUv, 0).rgb
-                    * _ChopperHudParams3.y * (1.0 - saturate(hud.a));
+                // Phosphor trail: only what the HUD drew before and does not draw now (moving parts). Static parts
+                // give nothing, so text stays sharp. History holds max(now, old x decay), so history - now = the ghost.
+                float3 history = SAMPLE_TEXTURE2D_LOD(_ChopperHudHistory, sampler_LinearClamp, hudUv, 0).rgb;
+                float3 trail = max(0.0, history - middle.rgb) * _ChopperHudParams3.y * (1.0 - saturate(hud.a));
 
                 float3 hudColour = max(0.0, hud.rgb * shade + grain * hud.a);
                 float3 colour = scene * (1.0 - saturate(hud.a)) + hudColour + (bloom + trail * shade) * brightness;

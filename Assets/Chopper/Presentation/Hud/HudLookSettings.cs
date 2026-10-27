@@ -78,14 +78,14 @@ namespace Chopper.Presentation.Hud
 
         [SerializeField] private HudLookProfile vector = new()
         {
-            Glow = 1f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, Curvature = 0f,
-            Chromatic = 0.5f, Vignette = 0f, Noise = 0.02f, Flicker = 0f, Persistence = 0.35f, PersistenceTime = 0.08f,
+            Glow = 0.7f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, Curvature = 0f,
+            Chromatic = 0.5f, Vignette = 0f, Noise = 0.015f, Flicker = 0f, Persistence = 0.15f, PersistenceTime = 0.05f,
         };
 
         [SerializeField] private HudLookProfile crt84 = new()
         {
-            Glow = 1.4f, GlowRadius = 3f, Scanlines = 0.35f, ScanlineCount = 405f, Curvature = 0.06f,
-            Chromatic = 1.5f, Vignette = 0.35f, Noise = 0.06f, Flicker = 0.04f, Persistence = 0.5f, PersistenceTime = 0.12f,
+            Glow = 0.8f, GlowRadius = 2f, Scanlines = 0.15f, ScanlineCount = 540f, Curvature = 0.03f,
+            Chromatic = 1f, Vignette = 0.2f, Noise = 0.03f, Flicker = 0.02f, Persistence = 0.25f, PersistenceTime = 0.06f,
         };
 
         [SerializeField] private HudLookReactions reactions = new()

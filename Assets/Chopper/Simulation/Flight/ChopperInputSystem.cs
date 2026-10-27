@@ -38,6 +38,7 @@ namespace Chopper.Simulation.Flight
 
         protected override void OnDestroy()
         {
+            _controls.Flight.Disable();
             _controls.Dispose();
         }
 
