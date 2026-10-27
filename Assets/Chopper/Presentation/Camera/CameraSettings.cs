@@ -123,8 +123,6 @@ namespace Chopper.Presentation.Camera
         [SerializeField, Range(0f, 1f), Tooltip("Chromatic aberration at full speed / extra at full boost.")]
         private float speedChromatic = 0.12f;
         [SerializeField, Range(0f, 1f)] private float boostChromatic = 0.55f;
-        [SerializeField, Range(-1f, 0f), Tooltip("Lens distortion at full boost (negative = the view bulges out).")]
-        private float boostLensDistortion = -0.25f;
         [SerializeField, Range(0f, 1f), Tooltip("Vignette while boosting.")] private float boostVignette = 0.32f;
         [SerializeField, Tooltip("Exposure flash when a boost starts (EV).")] private float boostFlash = 0.6f;
 
@@ -161,7 +159,6 @@ namespace Chopper.Presentation.Camera
         public float BloomClamp => bloomClamp;
         public float SpeedChromatic => speedChromatic;
         public float BoostChromatic => boostChromatic;
-        public float BoostLensDistortion => boostLensDistortion;
         public float BoostVignette => boostVignette;
         public float BoostFlash => boostFlash;
         public Shader SpeedLineShader => speedLineShader;

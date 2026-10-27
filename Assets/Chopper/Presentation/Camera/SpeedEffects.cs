@@ -9,8 +9,9 @@ namespace Chopper.Presentation.Camera
     /// The sense of speed around the chopper camera, owned by <see cref="ChopperCameraRig"/>:
     /// <list type="bullet">
     /// <item>A global post-processing volume made at runtime: bloom always; chromatic aberration grows with speed; boost adds
-    /// lens bulge, vignette, saturation and an exposure flash at the kick. No motion blur: camera-only blur smears the
-    /// chopper, which moves with the camera.</item>
+    /// vignette, saturation and an exposure flash at the kick. No motion blur: camera-only blur smears the chopper,
+    /// which moves with the camera. No lens distortion: switching it on and off (the boost spring crosses zero after a
+    /// boost) rendered single frames as one flat colour (the pulse and flash bug, 28 Oct).</item>
     /// <item>Speed lines: streaks in camera space that rush past on a ring around the view centre (so they never cover the
     /// chopper or the reticle). More, faster and hotter while boosting.</item>
     /// </list>
@@ -33,7 +34,6 @@ namespace Chopper.Presentation.Camera
         private readonly Volume _volume;
         private readonly Bloom _bloom;
         private readonly ChromaticAberration _chromatic;
-        private readonly LensDistortion _lens;
         private readonly Vignette _vignette;
         private readonly ColorAdjustments _colour;
 
@@ -56,7 +56,6 @@ namespace Chopper.Presentation.Camera
             _profile.name = "Speed Effects (runtime)";
             _bloom = Add<Bloom>();
             _chromatic = Add<ChromaticAberration>();
-            _lens = Add<LensDistortion>();
             _vignette = Add<Vignette>();
             _colour = Add<ColorAdjustments>();
             // Electric Blue - Dark (style guide palette).
@@ -95,8 +94,6 @@ namespace Chopper.Presentation.Camera
             // whites out the whole frame. Stop NaN does not catch it: the pixel is not NaN.
             _bloom.clamp.Override(settings.BloomClamp);
             _chromatic.intensity.Override(Mathf.Clamp01(settings.SpeedChromatic * speed01 + settings.BoostChromatic * boost));
-            _lens.intensity.Override(Mathf.Clamp(settings.BoostLensDistortion * boost, -1f, 1f));
-            _lens.scale.Override(1f - 0.06f * boost01);
             _vignette.intensity.Override(Mathf.Clamp01(settings.BoostVignette * boost));
             _colour.postExposure.Override(settings.BoostFlash * _flash);
             _colour.saturation.Override(12f * boost01);
