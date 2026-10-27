@@ -12,6 +12,7 @@ Read this first, then `Docs/MultiplayerOverhaulPlan.md` (full plan + progress lo
 | Code | `Assets/Chopper` (assemblies in `Assets/Chopper/README.md`). Old game code: `Assets/Scripts` (menus, not ported yet) and `Assets/Scripts/_LegacyNGO~` (not compiled, reference only). |
 | Play scene | **`Assets/Scenes/TrainingRange.unity`**. Its subscene `TrainingRange_Gameplay` holds the gameplay content. Other scenes start only a local world (no server, no chopper). |
 | Setup | **Chopper → Setup** window: *Do all*, then *Validate*. Fix what it lists. |
+| Working with Claude | Cloud sessions cannot run Unity (the network blocks Unity downloads), so code is written without compiling. To compile and test with Claude, run Claude Code on your PC with MCP for Unity (`com.coplaydev.unity-mcp`, port 6400), or run the Unity CLI there. |
 
 ## 2. What works (tested by the user in the editor)
 
@@ -60,11 +61,27 @@ Rules:
 - `UpdateAfter(PhysicsSystemGroup)` from another group is ignored: put post-physics systems in `PhysicsSystemGroup` with `OrderLast`.
 - `PhysicsWorldHistorySingleton` needs the `Unity.NetCode.Physics` assembly reference.
 
-## 4b. Newest work (not yet compiled)
+## 4b. Newest work (27 Oct, not yet compiled)
 
 - Targeting, heat-seeking missiles (missile ghosts with predicted spawn), flares, pylon weapon cycling, lock and threat HUD, tones. See plan section 3b, "Built".
 - After pulling: Chopper → Setup → **Do all** (makes the missile prefab, weapon assets, effect/sound slots, re-bakes the default loadout, makes targets pre-spawned ghosts), then Validate.
 - Controls: RMB / E / LB fire the selected pylon; wheel / Tab / D-pad right switch pylon; Space / triggers drop flares.
+- **Modular sockets runtime** (plan section 5, "Modular build", list "Built"):
+  - Loadout goes on the ghost as module ids; client and server both apply it (`LoadoutApplySystem`, `LoadoutBuilder`).
+  - Each player's choice (`LoadoutChoice`, set later by the hangar) goes with the go-in-game request; the server validates it.
+  - Module art follows the sockets (`ModuleVisualSystem`, pooled).
+  - Setup → *Do all* adds placeholder sockets to `ChopperGhost` (under "Sockets"), fills each chassis (prefab + defaults), links PolygonMilitary art to modules, and configures the spawner.
+  - Socket positions are placeholders: nose and pylons from the old weapon slots; the others are guesses. Move them in the prefab (green gizmo cubes).
+  - The old `Assets/Prefabs/Weapons` prefabs are not used: they have the old NGO `Weapon` script (missing).
+- Decisions taken (owner): Battlefield-like missile ghosts; auto lock, some missiles cannot dumb-fire; cycle the selected pylon; one ghost per chassis; pooled GameObject module visuals; sockets before the CRT HUD.
+
+### Editor steps after pulling
+1. Chopper → Setup → **Do all**, then **Validate**. Fix what it lists.
+2. Fix compile errors (nothing from 27 Oct is compiled yet). Send the console list to Claude if needed.
+3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon.
+4. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
+5. Run edit-mode tests (Window → General → Test Runner).
+6. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -78,17 +95,15 @@ Rules:
 ## 6. Next steps (recommended order)
 
 1. **Finish Phase 2 (needs Unity):** the 4-player network test, the tick-batching fix, and the edit-mode tests.
-2. **Phase 4: modular build.** Design in plan section 5, "Modular build: lego sockets":
-   - sockets on the chassis;
-   - module prefabs;
-   - the loadout sent on the ghost;
-   - each player's own loadout applied at spawn;
-   - then the green wireframe hangar.
+2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
+   - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
+   - next: tune socket positions in Unity; own model and sockets per chassis; rotor spin on rotor modules;
+   - then the green wireframe hangar (it sets `LoadoutChoice`).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
-   - next: cluster and swarm missiles;
-   - world markers and a lead indicator;
-   - retro 80s HUD look (CRT shader pass over the HUD, glitches driven by gameplay).
+   - next: retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings` on `GameConfig`, glitches driven by gameplay);
+   - cluster and swarm missiles;
+   - world markers and a lead indicator.
    It can run in parallel with step 2: the weapons are modules.
 4. **Phase 3: services:**
    - Steamworks.NET and the Dashboard Steam provider;
@@ -119,8 +134,9 @@ Rules:
 | Flight | `Simulation/Flight/ChopperFlightSystem.cs`, `FlightTuning.cs`, `ChopperAuthoring.cs` |
 | Combat | `Simulation/Combat/*` (`HitscanFireSystem`, `RocketSystem`, `ApplyDamageSystem`, `EnvironmentDamageSystem`) |
 | Match | `Simulation/Match/MatchScoreSystem.cs` |
-| Loadout | `Simulation/Loadout/*`, `Simulation/Definitions/*`, data in `Assets/Chopper/Data/Loadout` |
+| Loadout | `Simulation/Loadout/*` (`LoadoutCode`, `LoadoutBuilder`, `LoadoutApplySystem`, `SocketAuthoring`), `Simulation/Definitions/*`, data in `Assets/Chopper/Data/Loadout` |
+| Modules (visual) | `Presentation/Visuals/ModuleVisualSystem.cs`, setup in `Editor/Setup/SocketAssets.cs` |
 | Presentation | `Presentation/Bridge/*`, `Events/*`, `Feedback/*`, `Audio/*`, `Effects/*`, `Hud/*`, `Visuals/*` |
 | UI | `UI/Hud/ChopperHud.uxml/.uss`, `ChopperHudView.cs`, theme in `UI/Theme` |
 | Editor | `Editor/Setup/*` (window, asset factories, validator) |
-| Tests | `Tests/EditMode/*` (HUD models, health, loadout rules, audio) |
+| Tests | `Tests/EditMode/*` (HUD models, health, loadout rules, loadout code, guidance, audio) |

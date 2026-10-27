@@ -52,6 +52,9 @@ namespace Chopper.Simulation.Loadout
         public void SetWeapon(WeaponDefinition definition) => weapon = definition;
 
         /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetVisual(GameObject prefab) => visual = prefab;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
         public void SetAbility(ModuleAbilityDefinition definition) => ability = definition;
 
         public ModuleSpec ToSpec()

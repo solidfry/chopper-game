@@ -102,9 +102,17 @@ namespace Chopper.Presentation.Visuals
                 if (!TryFindSocket(sockets, slotType, ordinal, out var socket)) continue;
 
                 var visual = pool.Spawn(module.Visual, Vector3.zero, Quaternion.identity);
+                DisableColliders(visual);
                 fitted.Parts.Add((visual, socket.LocalPosition, socket.LocalRotation));
             }
             return fitted;
+        }
+
+        /// <summary>Art prefabs often carry GameObject colliders; the simulation has its own, so these only cost time.</summary>
+        private static void DisableColliders(GameObject visual)
+        {
+            if (visual == null) return;
+            foreach (var collider in visual.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
         }
 
         private static bool TryFindSocket(DynamicBuffer<ChassisSocket> sockets, SlotType slot, int index, out ChassisSocket found)

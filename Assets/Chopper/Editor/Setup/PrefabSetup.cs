@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// Gives the chopper ghost prefab its default loadout, the ghost settings lag compensation needs, and the old
-    /// chopper's look (<see cref="LegacyChopperVisuals"/>).
+    /// Gives the chopper ghost prefab its default loadout, the ghost settings lag compensation needs, the old
+    /// chopper's look (<see cref="LegacyChopperVisuals"/>) and placeholder module sockets (<see cref="SocketAssets"/>).
     /// </summary>
     internal static class PrefabSetup
     {
@@ -40,7 +40,10 @@ namespace Chopper.Editor.Setup
                 }
 
                 LegacyChopperVisuals.Apply(root);
-                PrefabUtility.SaveAsPrefabAsset(root, ChopperPrefabPath);
+                SocketAssets.EnsureSockets(root);
+                var saved = PrefabUtility.SaveAsPrefabAsset(root, ChopperPrefabPath);
+                // One ghost for every chassis until each has its own model.
+                if (config != null) SocketAssets.EnsureChassis(config.LoadoutCatalog, saved);
             }
             finally
             {

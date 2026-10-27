@@ -261,7 +261,7 @@ Flow: **Launch → Steam auto sign-in → Main menu → Play (one button) → Lo
 - Stats applied as ECS components (`ChopperStats`, `WeaponSlot` buffer). Visuals attach module meshes to chassis sockets.
 - Up to 5 saved loadouts per player; swap at respawn.
 
-### Modular build: "lego" sockets (design, not built yet)
+### Modular build: "lego" sockets (runtime built 27 Oct, not compiled yet)
 Goal: every chopper is a chassis plus modules that snap onto socket locations. The current ghost (Cobra model, copied old materials, rotor spin on the root) is a placeholder until this exists.
 
 What exists already: chassis slot lists, module slot types, `ModuleDefinition.Visual` (unused), `LoadoutRules` (validate + stats), weapons baked from modules, Setup/Validate window.
@@ -274,7 +274,20 @@ Plan:
 5. **Hangar.** The wireframe hangar uses the same sockets and module prefabs, so the hangar shows exactly what flies.
 6. **Setup and Validate.** Checks: every chassis has a socket for each slot; every module has a visual; socket and slot types match; focus pose set.
 
-Open questions: one ghost prefab per chassis vs one generic ghost; module visuals as entities (baked prefabs) or companion GameObjects; damage states per module.
+Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled GameObjects; sockets before the CRT HUD. Open: damage states per module.
+
+**Built (27 Oct, written without the editor — needs a compile + play check)**
+- `LoadoutCode` (chassis id + 8 × `ushort` in two `ulong`s) and the `ChopperLoadout` ghost component; `AppliedLoadout` (local).
+- `SocketAuthoring` → `ChassisSocket` buffer on the ghost. Sockets are the attach points and the muzzle points.
+- `LoadoutBuilder` (one place that turns chassis + modules + sockets into flight, health, crash, gun, pylons, flares); used by the baker and at runtime.
+- `LoadoutApplySystem` (client + server): applies `ChopperLoadout` when it changes. Server validates and falls back to the chassis default.
+- Per-player loadout: `LoadoutChoice` (client) → `GoInGameRequest` → `RequestedLoadout` (server connection) → spawn and respawn pick the chassis prefab (`ChassisPrefab` buffer on the spawner).
+- Every ghost has every weapon component; zero config = no weapon (gun, flares, reticle skip it).
+- `ModuleVisualSystem`: pooled module visuals follow their sockets (colliders off).
+- Setup: placeholder sockets on `ChopperGhost` (nose and pylons from the old weapon slots, the rest guessed), each chassis gets the ghost and a default loadout, module art from PolygonMilitary (`SM_Veh_Heli_Attach_Minigun`, `Rocket_Pod_02`, `Missle_01`, `Flare_01`, `Winch_01`), spawner gets catalog + missile prefab. Validate checks sockets per slot, weapon/utility visuals and the spawner.
+- Not used: old `Assets/Prefabs/Weapons/*` — they carry the old NGO `Weapon` script (missing).
+- Tests: `LoadoutCodeTests`.
+- Next: the hangar sets `LoadoutChoice`; own model + sockets per chassis; rotor spin moves to rotor modules; module damage states.
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.

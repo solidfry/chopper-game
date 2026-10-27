@@ -71,16 +71,22 @@ namespace Chopper.Simulation.Session
                     MissilePrefab = authoring.missilePrefab != null ? GetEntity(authoring.missilePrefab, TransformUsageFlags.Dynamic) : Entity.Null,
                 });
 
-                var prefabs = AddBuffer<ChassisPrefab>(entity);
-                if (authoring.catalog == null) return;
-                DependsOn(authoring.catalog);
-                AddComponent(entity, new LoadoutCatalogRef { Catalog = authoring.catalog });
-                foreach (var chassis in authoring.catalog.Chassis)
+                // Collect first, add the buffer last: a later AddComponent would make the buffer handle invalid.
+                var prefabs = new System.Collections.Generic.List<ChassisPrefab>();
+                if (authoring.catalog != null)
                 {
-                    if (chassis == null || chassis.Prefab == null) continue;
-                    DependsOn(chassis);
-                    prefabs.Add(new ChassisPrefab { ChassisId = chassis.Id, Prefab = GetEntity(chassis.Prefab, TransformUsageFlags.Dynamic) });
+                    DependsOn(authoring.catalog);
+                    AddComponent(entity, new LoadoutCatalogRef { Catalog = authoring.catalog });
+                    foreach (var chassis in authoring.catalog.Chassis)
+                    {
+                        if (chassis == null || chassis.Prefab == null) continue;
+                        DependsOn(chassis);
+                        prefabs.Add(new ChassisPrefab { ChassisId = chassis.Id, Prefab = GetEntity(chassis.Prefab, TransformUsageFlags.Dynamic) });
+                    }
                 }
+
+                var buffer = AddBuffer<ChassisPrefab>(entity);
+                foreach (var prefab in prefabs) buffer.Add(prefab);
             }
         }
     }

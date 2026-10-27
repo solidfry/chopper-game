@@ -67,6 +67,30 @@ namespace Chopper.Editor.Setup
             var track = ghost != null ? new SerializedObject(ghost).FindProperty("TrackInterpolationDelay") : null;
             if (track != null && !track.boolValue)
                 problems.Add(new SetupProblem("Chopper ghost: Track Interpolation Delay is off, so lag compensation cannot rewind.", prefab));
+
+            CheckModularBuild(ConfigAssets.Load(), problems);
+        }
+
+        /// <summary>Every chassis slot needs a socket on its prefab; weapon and utility modules should have a visual.</summary>
+        private static void CheckModularBuild(GameConfig config, List<SetupProblem> problems)
+        {
+            var catalog = config != null ? config.LoadoutCatalog : null;
+            if (catalog == null) return;
+
+            foreach (var chassis in catalog.Chassis.Where(c => c != null && c.Prefab != null))
+            {
+                var missing = SocketAssets.MissingSockets(chassis).ToArray();
+                if (missing.Length > 0)
+                    problems.Add(new SetupProblem(
+                        $"{chassis.DisplayName}: prefab {chassis.Prefab.name} has no socket for {string.Join(", ", missing)}. Press '2. Set up chopper prefab'.",
+                        chassis.Prefab));
+            }
+
+            var unseen = catalog.Modules.Where(m => m != null && m.Visual == null && (m.Weapon != null || m.Ability != null)).ToArray();
+            if (unseen.Length > 0)
+                problems.Add(new SetupProblem(
+                    $"{unseen.Length} weapon/utility module(s) have no visual, so they do not show on the chopper: " +
+                    string.Join(", ", unseen.Select(m => m.DisplayName)) + ".", unseen[0]));
         }
 
         private static void CheckScene(List<SetupProblem> problems)
@@ -112,6 +136,9 @@ namespace Chopper.Editor.Setup
 
             if (FindInScene(scene, nameof(ArenaBoundsAuthoring)) == null)
                 problems.Add(new SetupProblem("No arena bounds in the gameplay subscene. Press '4. Set up gameplay subscene'."));
+            var spawner = FindInScene(scene, nameof(Chopper.Simulation.Session.ChopperSpawnerAuthoring)) as Chopper.Simulation.Session.ChopperSpawnerAuthoring;
+            if (spawner != null && (spawner.Catalog == null || spawner.MissilePrefab == null))
+                problems.Add(new SetupProblem("Chopper spawner has no loadout catalog or missile prefab. Press '4. Set up gameplay subscene'.", spawner));
             if (FindInScene(scene, nameof(TrainingTargetAuthoring)) == null)
                 problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));
         }

@@ -11,7 +11,8 @@ namespace Chopper.Editor.Setup
 {
     /// <summary>
     /// Sets up the gameplay subscene (the loaded scene that holds the <see cref="ChopperSpawnerAuthoring"/>):
-    /// NetCodePhysicsConfig with lag compensation, arena bounds sized to the level, and training targets.
+    /// NetCodePhysicsConfig with lag compensation, arena bounds sized to the level, training targets, and the spawner's
+    /// loadout catalog and missile prefab.
     /// A closed subscene is opened for the step and closed again (<see cref="WithGameplayScene"/>). Reuses what is already there.
     /// </summary>
     internal static class GameplaySceneSetup
@@ -91,6 +92,7 @@ namespace Chopper.Editor.Setup
             EnsureLagCompensation(scene, settings);
             EnsureArenaBounds(scene, settings);
             var targets = EnsureTrainingTargets(scene);
+            EnsureSpawner(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log($"Setup: gameplay subscene '{scene.name}' ready ({targets} training target(s) added).");
@@ -152,6 +154,20 @@ namespace Chopper.Editor.Setup
             var serialized = new SerializedObject(bounds);
             serialized.FindProperty("size").vector3Value = size;
             serialized.ApplyModifiedProperties();
+        }
+
+        /// <summary>The spawner needs the loadout catalog (per-player loadouts, chassis prefabs) and the missile ghost.</summary>
+        private static void EnsureSpawner(Scene scene)
+        {
+            var config = ConfigAssets.Load();
+            var missile = AssetDatabase.LoadAssetAtPath<GameObject>(GuidedWeaponAssets.MissilePrefabPath);
+            foreach (var spawner in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)))
+            {
+                if (spawner.Catalog != null && spawner.MissilePrefab != null) continue;
+                Undo.RecordObject(spawner, "Configure chopper spawner");
+                spawner.Configure(config != null ? config.LoadoutCatalog : null, missile);
+                EditorUtility.SetDirty(spawner);
+            }
         }
 
         /// <summary>
