@@ -80,6 +80,13 @@ Owner direction (28 Oct): "most technology isn't basic shapes with hard square e
 
 Cost at the current values: about 15k-26k triangles per chassis, 37k for the Lifter (with surface detail).
 
+## Parts on the hull sides
+
+Plates, repair patches, vents, strips, windows, door frames and ladder rungs are laid flat on the real hull: after the
+main hull is built, `Builder.snapshot_surface()` keeps it, and `Builder.on_surface(side, y, z, size, ...)` casts a ray
+from outside, puts the part on the hit point and turns it to the surface slope. Random parts (plates, patches) skip
+spots that are already covered, so they never cut into each other; the door and ladder areas are kept free.
+
 ## Surface detail (Geometry Nodes)
 
 Every chassis runs through the **PF Surface Detail** node group after the bevel (`partforge/detail.py`); the result is

@@ -8,6 +8,7 @@ import math
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 
 # Form (art direction, style key "form"): how soft the shapes are. Set by configure() before a build.
@@ -65,6 +66,8 @@ class Builder:
     def __init__(self):
         self.bm = bmesh.new()
         self.swatch = self.bm.faces.layers.int.new("swatch")
+        self._surface = None
+        self._covered = []
 
     # -- low level -------------------------------------------------------------------------------------------------
     def _verts(self, points):
@@ -74,6 +77,40 @@ class Builder:
         face = self.bm.faces.new(verts)
         face[self.swatch] = swatch
         return face
+
+    # -- surface placement ----------------------------------------------------------------------------------------
+    def snapshot_surface(self):
+        """Remembers the hull built so far; on_surface() lays parts flat on it. Call right after the main hull."""
+        self.bm.normal_update()
+        self._surface = BVHTree.FromBMesh(self.bm)
+        self._covered = []
+
+    def on_surface(self, side, y, z, size, swatch, avoid=False, lift=0.0, embed=0.006, register=True):
+        """A thin part (size = thickness, height, length) laid flat on the hull's right (side 1) or left (-1) side at
+        height y, forward position z: a ray from outside finds the surface and its slope, and the part follows it.
+        avoid: skip it when it overlaps an earlier registered part. lift: extra distance off the surface (a second
+        layer, ladder rungs). Returns True when placed."""
+        if self._surface is None:
+            raise RuntimeError("snapshot_surface() first")
+        point, normal, _index, _distance = self._surface.ray_cast(Vector((side * 50.0, y, z)), Vector((-side, 0.0, 0.0)))
+        if point is None:
+            return False
+        rect = (side, y - size[1] / 2, y + size[1] / 2, z - size[2] / 2, z + size[2] / 2)
+        if avoid and any(other[0] == side and rect[1] < other[2] + 0.02 and other[1] < rect[2] + 0.02
+                         and rect[3] < other[4] + 0.02 and other[3] < rect[4] + 0.02 for other in self._covered):
+            return False
+        if register:
+            self._covered.append(rect)
+        n = normal.normalized()
+        if n.x * side < 0:
+            n = -n
+        forward = Vector((0.0, 0.0, 1.0))
+        forward = (forward - n * forward.dot(n)).normalized()
+        up = forward.cross(n)
+        rotation = Matrix((n, up, forward)).transposed()  # columns: thickness along the normal, then up, forward
+        centre = point + n * (size[0] / 2 - embed + lift)
+        self.box(tuple(centre), size, swatch, rotation=rotation)
+        return True
 
     # -- primitives ------------------------------------------------------------------------------------------------
     def loft(self, sections, swatch, cap_front=None, cap_back=None):

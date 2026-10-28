@@ -149,6 +149,7 @@ def _utility_body(b, spec, style, ring, tail, W, H, F):
         ring(-1.0, 0.96 * W, 0.95 * H, 0.25, y=0.02 * H, top=0.85),
         ring(-2.0, 0.60 * W, 0.60 * H, 0.30, y=0.15 * H),
     ] + tail, C("hull"), cap_front=C("hull_dark"), cap_back=C("hull_dark"))
+    b.snapshot_surface()
 
     _canopy(b, style, W, H, F)
     b.box((0, (-0.24 if style["nose"] == "chisel" else -0.02) * H, F + 0.01), (0.12 * W, 0.04, 0.04),
@@ -194,8 +195,10 @@ def _attack_body(b, spec, style, ring, tail, W, H, F):
             ring(-0.6, pod, 0.48 * H, 0.22, y=-0.12 * H, x=x),
             ring(-1.4, pod * 0.7, 0.30 * H, 0.3, y=-0.08 * H, x=x),
         ], C("hull"), cap_front=C("hull_dark"), cap_back=C("hull_dark"))
+    b.snapshot_surface()
+    for side in (1, -1):
         for i in range(3):
-            b.box((side * (W / 2 - 0.01), -0.02 * H - i * 0.08, -0.9), (0.04, 0.035, 0.5), C("hull_dark"))
+            b.on_surface(side, -0.02 * H - i * 0.08, -0.9, (0.04, 0.035, 0.5), C("hull_dark"))
 
     _tandem_cockpit(b, style, cw, H, F)
 
@@ -291,6 +294,8 @@ def _assault_body(b, spec, style, ring, tail, W, H, F):
         if style["wear"] > 0:
             b.box((x + side * 0.05, 0.3 * H, -2.5), (0.15 * W, 0.03, 0.6), C("soot"))
 
+    b.snapshot_surface()
+
     # Stepped cockpit blocks (gunner low in front, pilot higher behind).
     shell = C("hull_dark") if visor else C("glass")
     b.block((0, 0.42 * H, F - 1.8), (0.66 * cw, 0.28 * H, 1.1), shell, taper=0.7, taper_depth=0.8)
@@ -341,6 +346,7 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
     b.loft(sections, C("hull"), cap_front=C("hull_dark"), cap_back=C("hull_dark"))
     for z, swatch in ((F - 2.0, "hull_dark"), (-0.5, "hull_dark"), (-2.4, "hazard")):
         b.loft([ring(z + 0.08, W * 1.03, H * 1.03, 0.26), ring(z - 0.08, W * 1.03, H * 1.03, 0.26)], C(swatch))
+    b.snapshot_surface()
 
     # Cockpit: faceted glazing with frames (or an armoured visor with slits), chin sensor, probe, floodlights.
     b.loft([chamfer_ring(F + 0.02, 0.50 * W, 0.18 * H, 0.45, y=0.06 * H, top_scale=0.7),
@@ -366,12 +372,16 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
     while z > -2.3:
         for side in (1, -1):
             lit = rng.random() < 0.3
-            b.box((side * (W / 2 + 0.01), 0.14 * H, z), (0.03, 0.12 * H, 0.32), C("sodium" if lit else "glass"))
+            b.on_surface(side, 0.14 * H, z, (0.03, 0.12 * H, 0.32), C("sodium" if lit else "glass"))
         z -= 0.85
-    b.box((W / 2 + 0.012, -0.05 * H, F - 2.0), (0.02, 0.6 * H, 0.04), C("hull_dark"))
-    b.box((W / 2 + 0.012, -0.05 * H, F - 2.95), (0.02, 0.6 * H, 0.04), C("hull_dark"))
+    # Door: two frame lines and a sill; the door area is kept free of plates and patches.
+    b.on_surface(1, -0.05 * H, F - 2.0, (0.02, 0.6 * H, 0.04), C("hull_dark"))
+    b.on_surface(1, -0.05 * H, F - 2.95, (0.02, 0.6 * H, 0.04), C("hull_dark"))
+    b.on_surface(1, -0.35 * H, F - 2.475, (0.02, 0.04, 0.95), C("hull_dark"))
+    b._covered.append((1, -0.37 * H, 0.27 * H, F - 3.0, F - 1.95))
     for i in range(5):
-        b.box((-(W / 2 + 0.05), -0.35 * H + i * 0.13 * H, F - 2.3), (0.04, 0.03, 0.4), C("gunmetal"))
+        b.on_surface(-1, -0.35 * H + i * 0.13 * H, F - 2.3, (0.04, 0.03, 0.4), C("gunmetal"), lift=0.03)
+    b._covered.append((-1, -0.37 * H, 0.2 * H, F - 2.52, F - 2.08))
 
     # Sponsons with a front hub, warning strip and chevron.
     for side in (1, -1):
@@ -706,26 +716,29 @@ def _tail(b, style, W, H, tail_z, open_rotor=False, tail_rotor=True):
 
 def _details(b, rng, spec, style, W, H, F, tail_z):
     """Seeded details, mirrored left/right so they read as designed."""
-    # Side vents.
+    # Everything on the sides is laid flat on the hull (projected, follows its slope) and kept from overlapping.
+    # Side vents (a slat stack, mirrored).
     for side in (1, -1):
         for i in range(4):
-            b.box((side * (W / 2 + 0.01), 0.05 * H + i * 0.09, -0.4), (0.05, 0.04, 0.6), C("hull_dark"))
-    # Armour plates (two layers in heavy styles).
-    plates = round(spec.get("armour", 0.5) * 6)
-    for n in range(plates):
-        y = rng.uniform(-0.3, 0.15) * H
-        z = rng.uniform(-1.6, F - 2.2)
-        size = (0.05, rng.uniform(0.25, 0.45), rng.uniform(0.6, 1.1))
-        swatch = "hull_light" if style["wear"] <= 0 or n % 3 else "concrete"
-        for side in (1, -1):
-            b.box((side * (W / 2 + 0.02), y, z), size, C(swatch))
-            if style["armour_layers"] > 1:
-                b.box((side * (W / 2 + 0.07), y + 0.03, z - 0.05), (0.05, size[1] * 0.7, size[2] * 0.75), C("hull"))
+            b.on_surface(side, 0.05 * H + i * 0.09, -0.4, (0.04, 0.04, 0.6), C("hull_dark"))
     if style["neon_strips"]:
         strip_back, strip_front = -1.8, F - 1.8
         for side in (1, -1):
-            b.box((side * (W / 2 + 0.025), -0.2 * H, (strip_back + strip_front) / 2),
-                  (0.02, 0.04, strip_front - strip_back), C("neon_green"))
+            b.on_surface(side, -0.2 * H, (strip_back + strip_front) / 2, (0.02, 0.04, strip_front - strip_back),
+                         C("neon_green"))
+    # Armour plates (mirrored; a second, smaller layer in heavy styles). Skipped where something already is.
+    plates = round(spec.get("armour", 0.5) * 6)
+    for n in range(plates * 2):  # more tries than plates: some spots are taken
+        if n >= plates and rng.random() < 0.5:
+            continue
+        y = rng.uniform(-0.3, 0.15) * H
+        z = rng.uniform(-1.6, F - 2.2)
+        size = (0.04, rng.uniform(0.25, 0.45), rng.uniform(0.6, 1.1))
+        swatch = "hull_light" if style["wear"] <= 0 or n % 3 else "concrete"
+        for side in (1, -1):
+            if b.on_surface(side, y, z, size, C(swatch), avoid=True) and style["armour_layers"] > 1:
+                b.on_surface(side, y + 0.03, z - 0.05, (0.04, size[1] * 0.7, size[2] * 0.75), C("hull"), lift=0.035,
+                             register=False)
     else:
         # Belly beacon and small position lights instead of strips.
         b.box((0, -H / 2 - 0.07, -0.9), (0.12, 0.06, 0.12), C(style["lights"]["right"]))
@@ -822,8 +835,8 @@ def _wear(b, rng, style, W, H, F):
         side = rng.choice((1, -1))
         y = rng.uniform(-0.25, 0.25) * H
         z = rng.uniform(-1.5, F - 2.2)
-        b.box((side * (W / 2 + 0.035), y, z), (0.03, rng.uniform(0.2, 0.4), rng.uniform(0.3, 0.7)),
-              C(rng.choice(("primer", "primer", "rust", "concrete"))))
+        b.on_surface(side, y, z, (0.025, rng.uniform(0.2, 0.4), rng.uniform(0.3, 0.7)),
+                     C(rng.choice(("primer", "primer", "rust", "concrete"))), avoid=True)
     # Scuffed bare metal on the nose and wing leading edges.
     b.box((0, -0.24 * H if style["nose"] == "chisel" else -0.12 * H, F - 0.03), (0.5 * W, 0.03, 0.05), C("bare"))
 
