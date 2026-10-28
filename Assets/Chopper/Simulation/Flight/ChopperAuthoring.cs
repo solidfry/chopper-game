@@ -96,6 +96,7 @@ namespace Chopper.Simulation.Flight
 
                 AddComponent(entity, ChopperLoadout.From(built.Code));
                 AddComponent(entity, new AppliedLoadout { Code = built.Code });
+                AddComponent<ChopperSkin>(entity);
                 var socketBuffer = AddBuffer<ChassisSocket>(entity);
                 foreach (var socket in sockets) socketBuffer.Add(socket);
             }

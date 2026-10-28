@@ -10,11 +10,14 @@ namespace Chopper.Simulation.Session
     public struct LoadoutChoice : IComponentData
     {
         public LoadoutCode Code;
+        /// <summary>Paint skin (cosmetic, <see cref="ChopperSkin"/>); 0 = the kit's own look.</summary>
+        public ushort SkinId;
     }
 
     /// <summary>Server, on a connection entity: the loadout the player asked for; used at every (re)spawn.</summary>
     public struct RequestedLoadout : IComponentData
     {
         public LoadoutCode Code;
+        public ushort SkinId;
     }
 }

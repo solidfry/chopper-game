@@ -150,6 +150,17 @@ Skins now: Factory (the style's own paint), Woodland, Desert, Arctic Digital, Ur
 Night City (neon hex), Outrun (synthwave), Interceptor (white corporate livery), Night Stalker (matte black, red).
 `previews/<kit>/skins_sheet.jpg` shows them all on the Gunship.
 
+### Two ways to show a skin (A/B)
+
+- **Baked:** export paints every skin into its own colour and metallic/smoothness maps (above). Simple (URP Lit), but
+  every skin is about 5 MB of files per kit, and a new part or skin means a new export.
+- **Runtime (skin shader):** `Assets/Chopper/Art/Shaders/ChopperSkin.hlsl` paints the skin on the GPU from the same
+  maths. Per texture set it needs only skin-free maps: the first skin's maps as the base, plus `SkinMask` (paint,
+  panels, warning paint, armour tone) and `SkinWear` (dirt, soot, blotches, wear threshold). A skin is one row of a
+  small table texture, so a new skin is data only (edit it in Unity's `SkinLibrary`), and one material serves every
+  skin (each chopper sets its row). `partforge/runtime.py` is the shader's numpy twin: export checks it against the
+  baked skins (mean colour difference about 0.005) and renders `previews/<kit>/skins_runtime_sheet.jpg`.
+
 New skin: copy an entry in `SKINS` (new `id`, never reused: player data saves it), or list skins in a style
 (`"skins": ["factory", "woodland", {...}]`). Ideas: faction liveries (team colour as the main colour), hazard
 chevrons (rescue, riot), rust bucket (no paint, all primer), chrome show skin, damage states (more wear, scorch).

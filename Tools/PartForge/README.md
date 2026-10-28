@@ -62,6 +62,7 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 | `Models/<Module>.fbx` | Guns, pods, racks, utilities, turret, winch, rotors, engines. Origin = attach point, points +Z. |
 | `Textures/<kit>_<Set>_Normal.png`, `_Occlusion.png`, `_Emission.png` | Per texture set (each chassis, and `Modules` for all modules): normal map, occlusion, lights. |
 | `Textures/<kit>_<Set>_<skin>_Colour.png`, `_MetalSmooth.png` (`_Emission.png`) | Per set and skin: paint, metallic (R) / smoothness (A), and own glow lines for glowing skins. |
+| `Textures/<kit>_<Set>_SkinMask.png`, `_SkinWear.png` | Per set, for the runtime skin shader (`Assets/Chopper/Art/Shaders`): paint areas and tone; dirt, soot, blotches, wear threshold. |
 | `<kit>.manifest.json` | Parts (file, slot, module ids, triangles, texture set, sockets in Unity space), texture sets, skins (id, name, maps per set). |
 
 ## Conventions
@@ -76,5 +77,6 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 ## Previews
 
 `previews/<kit>/chassis_lineup.jpg`, `<chassis>_closeup.jpg`, `<chassis>_views.jpg` (front left, rear right, side,
-top), `modules_sheet.jpg`, `skins_sheet.jpg` (every skin on the Gunship). Cycles, in a grey review studio (soft key,
+top), `modules_sheet.jpg`, `skins_sheet.jpg` (every skin on the Gunship, baked) and `skins_runtime_sheet.jpg` (the same
+with the runtime skin shader's maths; its maps go to `Tools/PartForge/cache`, not in git). Cycles, in a grey review studio (soft key,
 fill, rim, a floor with a 1 m grid that fades into the horizon); preview loadouts in `kits.py`.

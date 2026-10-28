@@ -14,7 +14,8 @@ namespace Chopper.Presentation.Visuals
     /// Client only. Fits every chopper's modules onto its chassis sockets ("lego" build): for each slot of its
     /// <see cref="ChopperLoadout"/>, the module's visual prefab (pooled GameObject) follows the socket each frame.
     /// The loadout comes over the network as module ids; the art is local, so it costs no bandwidth.
-    /// Module prefabs can carry their own effects (rotor spin scripts, lights, particles).
+    /// Module prefabs can carry their own effects (rotor spin scripts, lights, particles). Their renderers get the
+    /// chopper's skin row (<see cref="ChopperSkin"/>, <see cref="SkinLibrary"/>) for the runtime skin shader.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -23,6 +24,7 @@ namespace Chopper.Presentation.Visuals
         private sealed class Fitted
         {
             public LoadoutCode Code;
+            public int SkinRow;
             public readonly List<(GameObject Visual, float3 Position, quaternion Rotation)> Parts = new();
         }
 
@@ -34,6 +36,7 @@ namespace Chopper.Presentation.Visuals
         private LoadoutCatalog _indexed;
         /// <summary>The context whose pool holds the current visuals (a new context means a new pool).</summary>
         private PresentationContext _context;
+        private MaterialPropertyBlock _block;
 
         protected override void OnCreate()
         {
@@ -54,16 +57,20 @@ namespace Chopper.Presentation.Visuals
             if (catalog == null) return;
             Index(catalog);
             var pool = context.ModuleVisuals;
+            var skins = context.Config.Skins;
 
             _seen.Clear();
             foreach (var (loadout, pose, entity) in SystemAPI.Query<RefRO<ChopperLoadout>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
                 _seen.Add(entity);
                 var code = loadout.ValueRO.Code;
-                if (!_fitted.TryGetValue(entity, out var fitted) || !fitted.Code.Equals(code))
+                var skinRow = skins != null && SystemAPI.HasComponent<ChopperSkin>(entity)
+                    ? skins.IndexOf(SystemAPI.GetComponent<ChopperSkin>(entity).SkinId)
+                    : 0;
+                if (!_fitted.TryGetValue(entity, out var fitted) || !fitted.Code.Equals(code) || fitted.SkinRow != skinRow)
                 {
                     if (fitted != null) Release(pool, fitted);
-                    fitted = Fit(pool, entity, code);
+                    fitted = Fit(pool, entity, code, skinRow);
                     _fitted[entity] = fitted;
                 }
 
@@ -85,9 +92,9 @@ namespace Chopper.Presentation.Visuals
             }
         }
 
-        private Fitted Fit(EffectPool pool, Entity entity, in LoadoutCode code)
+        private Fitted Fit(EffectPool pool, Entity entity, in LoadoutCode code, int skinRow)
         {
-            var fitted = new Fitted { Code = code };
+            var fitted = new Fitted { Code = code, SkinRow = skinRow };
             if (!_chassis.TryGetValue(code.ChassisId, out var chassis) || !SystemAPI.HasBuffer<ChassisSocket>(entity)) return fitted;
             var sockets = SystemAPI.GetBuffer<ChassisSocket>(entity);
 
@@ -103,9 +110,23 @@ namespace Chopper.Presentation.Visuals
 
                 var visual = pool.Spawn(module.Visual, Vector3.zero, Quaternion.identity);
                 DisableColliders(visual);
+                SetSkin(visual, skinRow);
                 fitted.Parts.Add((visual, socket.LocalPosition, socket.LocalRotation));
             }
             return fitted;
+        }
+
+        /// <summary>The runtime skin shader's row on every renderer of a module visual (other shaders ignore it).</summary>
+        private void SetSkin(GameObject visual, int row)
+        {
+            if (visual == null) return;
+            _block ??= new MaterialPropertyBlock();
+            foreach (var target in visual.GetComponentsInChildren<Renderer>(true))
+            {
+                target.GetPropertyBlock(_block);
+                _block.SetFloat(SkinLibrary.SkinIndexProperty, row);
+                target.SetPropertyBlock(_block);
+            }
         }
 
         /// <summary>Art prefabs often carry GameObject colliders; the simulation has its own, so these only cost time.</summary>

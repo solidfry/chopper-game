@@ -54,10 +54,11 @@ namespace Chopper.Simulation.Session
                 timer.ValueRW.Remaining -= deltaTime;
                 if (timer.ValueRO.Remaining > 0f) continue;
 
-                var loadout = SystemAPI.HasComponent<RequestedLoadout>(connection)
-                    ? SystemAPI.GetComponent<RequestedLoadout>(connection).Code
+                var requested = SystemAPI.HasComponent<RequestedLoadout>(connection)
+                    ? SystemAPI.GetComponent<RequestedLoadout>(connection)
                     : default;
-                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, networkId.ValueRO.Value, loadout);
+                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, networkId.ValueRO.Value, requested.Code,
+                    requested.SkinId);
                 ecb.RemoveComponent<RespawnTimer>(connection);
             }
 

@@ -13,7 +13,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import kits, palette, parts, skins, styles, texture
+from . import kits, palette, parts, runtime, skins, styles, texture
 from .geo import to_blender
 
 EXPORT_COLLECTION = "PartForge: export parts"
@@ -23,6 +23,7 @@ STAGE_COLLECTION = "PartForge: stage"
 MODULE_COLUMNS = 6
 MODULE_GRID_Y = 30.0
 CHASSIS_SPACING = 14.0
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")  # not in git
 
 
 class State:
@@ -32,6 +33,7 @@ class State:
         self.kit, self.style, self.specs = kit, style, specs
         self.built, self.images, self.shown, self.tiles = built, images, shown, tiles
         self.texture_folder, self.skins, self.sets = None, [], []  # set by export()
+        self.runtime_folder = None  # the runtime skin shader's result per skin (previews), set by export()
 
 
 def chassis_specs(style):
@@ -158,8 +160,10 @@ def export(state, out_dir):
     sets = texture.texture_sets(state)
     texture.bake(sets, state.style, names)
     skin_list = skins.every(state.style)
-    set_entries, skin_entries = texture.write(state.kit, sets, state.style, skin_list, texture_dir)
+    runtime_dir = os.path.join(CACHE_DIR, state.kit, "runtime")
+    set_entries, skin_entries = texture.write(state.kit, sets, state.style, skin_list, texture_dir, runtime_dir)
     state.texture_folder, state.skins, state.sets = texture_dir, skin_list, sets
+    state.runtime_folder = runtime_dir
     set_of = {}
     for texture_set in sets:
         material = texture.preview_material(state.kit, texture_set.name, texture_dir, skin_list[0]["key"])
@@ -177,6 +181,8 @@ def export(state, out_dir):
         "uv": "UV0 = baked texture set (unique unwrap); UV1 = palette swatch (cell centre of a 5 x 5 grid).",
         "textureSets": set_entries,
         "skins": skin_entries,
+        "runtime": {"tableWidth": runtime.TABLE_WIDTH, "styleWear": runtime.style_wear(state.style),
+                    "patterns": list(runtime.PATTERNS), "coverTable": list(runtime.COVER_TABLE)},
         "parts": [],
     }
 
@@ -206,10 +212,12 @@ def export(state, out_dir):
     return manifest
 
 
-def show_skin(state, key):
-    """Puts one skin on every texture set (Blender materials; after export)."""
+def show_skin(state, key, use_runtime=False):
+    """Puts one skin on every texture set (Blender materials; after export): the baked skin, or (use_runtime) the
+    runtime skin shader's result."""
+    folder = state.runtime_folder if use_runtime else state.texture_folder
     for texture_set in state.sets:
-        texture.preview_material(state.kit, texture_set.name, state.texture_folder, key)
+        texture.preview_material(state.kit, texture_set.name, folder, key)
 
 
 def _export_fbx(obj, path):
@@ -427,8 +435,9 @@ def _review_sheet(scene, camera, aim, holder, path):
 SKIN_SHEET_CHASSIS = "Gunship"
 
 
-def _skin_sheet(state, scene, camera, aim, path):
-    """Every skin on one chassis (close-up, half size), two columns, the skin name in the corner of each tile."""
+def _skin_sheet(state, scene, camera, aim, path, use_runtime=False):
+    """Every skin on one chassis (close-up, half size), two columns, the skin name in the corner of each tile; baked
+    skins, or (use_runtime) the runtime skin shader's result."""
     import numpy as np
 
     names = [spec["name"] for spec in state.specs]
@@ -446,8 +455,8 @@ def _skin_sheet(state, scene, camera, aim, path):
     tiles = []
     try:
         for skin in state.skins:
-            show_skin(state, skin["key"])
-            label.data.body = skin["name"].upper()
+            show_skin(state, skin["key"], use_runtime)
+            label.data.body = skin["name"].upper() + ("  (RUNTIME)" if use_runtime else "")
             tile = os.path.join(os.path.dirname(path), ".skin.jpg")
             _render(scene, tile)
             image = bpy.data.images.load(tile)
@@ -532,6 +541,7 @@ def render_previews(state, preview_dir, samples=32):
 
     if state.skins:
         _skin_sheet(state, scene, camera, aim, os.path.join(preview_dir, "skins_sheet.jpg"))
+        _skin_sheet(state, scene, camera, aim, os.path.join(preview_dir, "skins_runtime_sheet.jpg"), use_runtime=True)
 
     _set_render_visible(shown, False)
     _set_render_visible(tiles, True)

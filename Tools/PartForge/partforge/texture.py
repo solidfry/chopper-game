@@ -13,6 +13,10 @@ Textures: real UVs, baked surface data, and one texture set per chassis (plus on
 Files (<kit>/Textures): <Kit>_<Set>_Normal.png, _Occlusion.png, and per skin <Kit>_<Set>_<skin>_Colour.png,
 _MetalSmooth.png (R metallic, A smoothness: URP's layout) and _Emission.png (only skins with glow lines have their own;
 the others share <Kit>_<Set>_Emission.png, the lights).
+
+Runtime skins (runtime.py, the skin shader): <Kit>_<Set>_SkinMask.png and _SkinWear.png per set, skin-independent; the
+first skin's maps are the shader's base maps. The export also runs the shader's numpy copy on every skin (runtime
+previews, and a check against the baked skins).
 """
 import math
 import os
@@ -23,7 +27,7 @@ import zlib
 import bpy
 import numpy as np
 
-from . import palette, skins
+from . import palette, runtime, skins
 
 # density: normal-map pixels per metre; skin_scale: size of the skin maps (colour, metal/smoothness, emission) and
 # the occlusion map against the normal map (0.5 = half: a quarter of the file size, the paint is soft-edged anyway).
@@ -44,6 +48,7 @@ class TextureSet:
         self.surface = None    # dict for skins.compose
         self.normal = None     # (size, size, 4) floats 0..1
         self.occlusion = None  # (size, size) 0..1
+        self.height_range = (0.0, 1.0)  # model-space y of the lowest and highest texel (synthwave and livery bands)
 
 
 def settings(style):
@@ -302,6 +307,7 @@ def _decode(texture_set, maps, names):
     masks = flat["masks"][valid]
     low, high = position[:, 1].min(), position[:, 1].max()
     texture_set.valid = valid
+    texture_set.height_range = (float(low), float(high))
     texture_set.surface = dict(position=position, normal=normal, swatch=swatch, ao=masks[:, 0],
                                edge=np.clip(masks[:, 1], 0, 1), cavity=masks[:, 2],
                                height=(position[:, 1] - low) / max(high - low, 1e-3),
@@ -400,31 +406,54 @@ def write_png(path, pixels, channels):
 def file_names(kit, set_name, skin_key=None):
     stem = f"{kit}_{set_name}"
     if skin_key is None:
-        return {"normal": f"{stem}_Normal.png", "occlusion": f"{stem}_Occlusion.png", "emission": f"{stem}_Emission.png"}
+        return {"normal": f"{stem}_Normal.png", "occlusion": f"{stem}_Occlusion.png", "emission": f"{stem}_Emission.png",
+                "skinMask": f"{stem}_SkinMask.png", "skinWear": f"{stem}_SkinWear.png"}
     return {"colour": f"{stem}_{skin_key}_Colour.png", "metalSmooth": f"{stem}_{skin_key}_MetalSmooth.png",
             "emission": f"{stem}_{skin_key}_Emission.png"}
 
 
-def write(kit, sets, style, skin_list, folder):
-    """Composes every skin on every set and writes the maps (one skin at a time: the arrays are large). Returns the
-    manifest's "textureSets" and "skins" entries (paths relative to the kit folder)."""
+def _quantise(pixels):
+    return np.round(np.clip(pixels, 0, 1) * 255.0) / 255.0
+
+
+def write(kit, sets, style, skin_list, folder, runtime_folder=None):
+    """Composes every skin on every set and writes the maps (one skin at a time: the arrays are large), the runtime
+    skin maps, and (runtime_folder) the runtime shader's result per skin for previews, with the same file names.
+    Returns the manifest's "textureSets" and "skins" entries (paths relative to the kit folder)."""
     os.makedirs(folder, exist_ok=True)
     for old in os.listdir(folder):
         # Old maps of this kit (renamed sets, removed skins, the old palette maps) go.
         if old.startswith(f"{kit}_") and (old.endswith(".png") or old.endswith(".png.meta")):
             os.remove(os.path.join(folder, old))
+    if runtime_folder:
+        os.makedirs(runtime_folder, exist_ok=True)
     rel = os.path.basename(folder)
+    names = [name for name, *_ in palette.SWATCHES]
+    rows = palette_rows(style)
+    wear_of_style = runtime.style_wear(style)
     set_entries = []
-    skin_entries = [dict(id=skin["id"], key=skin["key"], name=skin["name"], description=skin.get("description", ""),
-                         sets=[]) for skin in skin_list]
+    skin_entries = []
+    for skin in skin_list:
+        resolved = runtime.params(skin, rows, names, wear_of_style)
+        skin_entries.append(dict(id=skin["id"], key=skin["key"], name=skin["name"], description=skin.get("description", ""),
+                                 sets=[], runtime=resolved,
+                                 tableFlat=[float(v) for v in runtime.encode(resolved).round(5).ravel()]))
     for texture_set in sets:
         shared = file_names(kit, texture_set.name)
         write_png(os.path.join(folder, shared["normal"]), texture_set.normal, 3)
         write_png(os.path.join(folder, shared["occlusion"]), np.repeat(texture_set.occlusion[:, :, None], 4, axis=2), 1)
+        mask, wear = runtime.maps(texture_set.surface, names, wear_of_style)
+        size, valid = texture_set.data_size, texture_set.valid
+        write_png(os.path.join(folder, shared["skinMask"]), _image_array(size, valid, mask), 4)
+        write_png(os.path.join(folder, shared["skinWear"]), _image_array(size, valid, wear), 4)
         set_entries.append(dict(name=texture_set.name, size=texture_set.size, material=f"{kit}_{texture_set.name}",
                                 normal=f"{rel}/{shared['normal']}", occlusion=f"{rel}/{shared['occlusion']}",
-                                emission=f"{rel}/{shared['emission']}"))
+                                emission=f"{rel}/{shared['emission']}", skinMask=f"{rel}/{shared['skinMask']}",
+                                skinWear=f"{rel}/{shared['skinWear']}", heightRange=list(texture_set.height_range),
+                                baseSkin=skin_list[0]["key"]))
         lights = None
+        base = None
+        differences = []
         started = time.time()
         for skin, entry in zip(skin_list, skin_entries):
             colour, metal_smooth, emission = _compose(texture_set, style, skin)
@@ -435,6 +464,7 @@ def write(kit, sets, style, skin_list, folder):
                 # The first skin's emission (the lights only, for skins without glow) is the shared one.
                 lights = emission
                 write_png(os.path.join(folder, shared["emission"]), lights, 3)
+                base = _runtime_base(texture_set, colour, metal_smooth, emission, mask, wear)
             if np.allclose(emission, lights, atol=1 / 255):
                 glow_file = shared["emission"]
             else:
@@ -442,8 +472,53 @@ def write(kit, sets, style, skin_list, folder):
                 glow_file = files["emission"]
             entry["sets"].append(dict(set=texture_set.name, colour=f"{rel}/{files['colour']}",
                                       metalSmooth=f"{rel}/{files['metalSmooth']}", emission=f"{rel}/{glow_file}"))
-        print(f"PartForge: painted {len(skin_list)} skins on {texture_set.name} in {time.time() - started:.0f} s")
+            if runtime_folder:
+                row = np.array(entry["tableFlat"], dtype=np.float32).reshape(runtime.TABLE_WIDTH, 4)
+                differences.append(_write_runtime(texture_set, base, row,
+                                                  colour, runtime_folder, files, shared, kit))
+        print(f"PartForge: painted {len(skin_list)} skins on {texture_set.name} in {time.time() - started:.0f} s"
+              + (f"; runtime shader vs baked: mean colour difference {np.mean(differences):.3f}" if differences else ""))
+    if runtime_folder:
+        for texture_set in sets:
+            shared = file_names(kit, texture_set.name)
+            for key in ("normal", "occlusion"):
+                _copy(os.path.join(folder, shared[key]), os.path.join(runtime_folder, shared[key]))
     return set_entries, skin_entries
+
+
+def _copy(source, target):
+    with open(source, "rb") as reader, open(target, "wb") as writer:
+        writer.write(reader.read())
+
+
+def _runtime_base(texture_set, colour, metal_smooth, emission, mask, wear):
+    """What the shader samples, over the valid texels, as 8-bit maps give it: the base maps (first skin), masks."""
+    valid = texture_set.valid
+    flat = lambda pixels: _quantise(pixels.reshape(-1, 4)[valid])  # noqa: E731
+    surface = texture_set.surface
+    occlusion = _quantise(texture_set.occlusion.reshape(-1)[valid])
+    metal = flat(metal_smooth)
+    return dict(colour=skins.srgb_to_linear(flat(colour)[:, :3]), metallic=metal[:, 0], smoothness=metal[:, 3],
+                emission=skins.srgb_to_linear(flat(emission)[:, :3]), mask=_quantise(mask), wear=_quantise(wear),
+                occlusion=occlusion, position=surface["position"], normal=surface["normal"],
+                height=surface["height"])
+
+
+def _write_runtime(texture_set, base, row, baked_colour, folder, files, shared, kit):
+    """Runs the shader's numpy copy for one skin; writes its colour, metal/smoothness and emission maps (baked file
+    names, in the runtime preview folder). Returns the mean colour difference against the baked skin (0..1)."""
+    colour, metallic, smoothness, emission = runtime.shade(row, base)
+    size, valid = texture_set.data_size, texture_set.valid
+    zero = np.zeros_like(metallic)
+    srgb = skins.linear_to_srgb(colour)
+    write_png(os.path.join(folder, files["colour"]), _image_array(size, valid, srgb), 3)
+    write_png(os.path.join(folder, files["metalSmooth"]),
+              _image_array(size, valid, np.stack([metallic, zero, zero, smoothness], axis=1)), 4)
+    glow = _image_array(size, valid, skins.linear_to_srgb(emission))
+    write_png(os.path.join(folder, files["emission"]), glow, 3)
+    if not os.path.exists(os.path.join(folder, shared["emission"])):
+        write_png(os.path.join(folder, shared["emission"]), glow, 3)
+    return float(np.abs(baked_colour.reshape(-1, 4)[valid, :3] - srgb).mean())
 
 
 # -- Blender materials (previews, viewport) --------------------------------------------------------------------------

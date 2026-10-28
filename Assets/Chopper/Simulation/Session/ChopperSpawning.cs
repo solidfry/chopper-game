@@ -12,10 +12,10 @@ namespace Chopper.Simulation.Session
         /// <summary>
         /// Spawns the chassis ghost for <paramref name="requested"/> (or the default prefab) and sets its loadout. The
         /// server's <see cref="LoadoutApplySystem"/> then validates and applies it; an invalid loadout falls back to
-        /// the chassis default.
+        /// the chassis default. <paramref name="skinId"/> is cosmetic (<see cref="ChopperSkin"/>).
         /// </summary>
         public static void Spawn(EntityCommandBuffer ecb, in ChopperSpawner spawner, DynamicBuffer<ChassisPrefab> chassisPrefabs,
-            Entity connection, int networkId, in LoadoutCode requested)
+            Entity connection, int networkId, in LoadoutCode requested, ushort skinId)
         {
             var right = math.mul(spawner.Rotation, math.right());
             var position = spawner.Position + right * (spawner.Spacing * (networkId - 1));
@@ -32,6 +32,7 @@ namespace Chopper.Simulation.Session
             ecb.SetComponent(chopper, new GhostOwner { NetworkId = networkId });
             ecb.AddComponent(chopper, new ConnectionOwner { Value = connection });
             if (!requested.IsEmpty) ecb.SetComponent(chopper, ChopperLoadout.From(requested));
+            ecb.SetComponent(chopper, new ChopperSkin { SkinId = skinId });
             // Despawn the chopper when the connection goes away.
             ecb.AppendToBuffer(connection, new LinkedEntityGroup { Value = chopper });
         }

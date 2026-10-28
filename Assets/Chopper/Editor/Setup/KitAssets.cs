@@ -13,8 +13,9 @@ namespace Chopper.Editor.Setup
     /// Part kits made by the PartForge generator (<c>Tools/PartForge</c>, Blender): each kit folder under
     /// <see cref="KitsFolder"/> has a <c>*.manifest.json</c>, FBX models and baked texture sets (one per chassis, one
     /// shared by the modules), each painted in every skin. This step sets the texture import settings, makes one URP Lit
-    /// material per texture set and skin, remaps every model to its set's default-skin material, and fills the kit's
-    /// <see cref="SkinLibrary"/> (the default kit's library goes into the game config).
+    /// material per texture set and skin (baked skins), one skin-shader material per texture set (runtime skins, when the
+    /// <see cref="RuntimeShader"/> graph exists), remaps every model to its set's default-skin material, fills the kit's
+    /// <see cref="SkinLibrary"/> and rebuilds its skin table (the default kit's library goes into the game config).
     /// Creates only what is missing (materials are left alone once made). Linking kit models to chassis and modules is a
     /// later step (plan section 5).
     /// </summary>
@@ -23,6 +24,8 @@ namespace Chopper.Editor.Setup
         public const string KitsFolder = "Assets/Chopper/Art/Kits";
         /// <summary>The kit whose skins the game uses (PartForge's default style, "dystopia").</summary>
         public const string DefaultKit = "Kit02";
+        /// <summary>The runtime skin shader graph (Art/Shaders/ChopperSkin.shadergraph, see Art/Shaders/README.md).</summary>
+        public const string RuntimeShader = "Shader Graphs/ChopperSkin";
 
         [Serializable]
         private sealed class Manifest
@@ -42,6 +45,10 @@ namespace Chopper.Editor.Setup
             public string normal;
             public string occlusion;
             public string emission;
+            public string skinMask;
+            public string skinWear;
+            public float[] heightRange;
+            public string baseSkin;
         }
 
         [Serializable]
@@ -52,6 +59,7 @@ namespace Chopper.Editor.Setup
             public string name;
             public string description;
             public SkinSetInfo[] sets;
+            public SkinParams runtime;
         }
 
         [Serializable]
@@ -194,6 +202,7 @@ namespace Chopper.Editor.Setup
             }
 
             var library = EnsureLibrary(folder, manifest, materials);
+            if (library != null) EnsureRuntime(folder, manifest, library);
             if (manifest.kit == DefaultKit && library != null)
             {
                 var config = ConfigAssets.Load();
@@ -220,6 +229,7 @@ namespace Chopper.Editor.Setup
                 Key = skin.key,
                 DisplayName = skin.name,
                 Description = skin.description,
+                Look = skin.runtime != null ? skin.runtime.ToLook() : new SkinLook(),
                 Materials = manifest.textureSets
                     .Where(set => materials.ContainsKey((set.name, skin.key)))
                     .Select(set => new SkinLibrary.SetMaterial { Set = set.name, Material = materials[(set.name, skin.key)] })
@@ -228,6 +238,71 @@ namespace Chopper.Editor.Setup
             library.Initialise(manifest.kit, entries);
             EditorUtility.SetDirty(library);
             return library;
+        }
+
+        /// <summary>Runtime skins: the skin table (a sub-asset of the library, rebuilt from the looks every time) and one
+        /// skin-shader material per texture set (made once; needs the shader graph).</summary>
+        private static void EnsureRuntime(string folder, Manifest manifest, SkinLibrary library)
+        {
+            var looks = library.Looks();
+            var height = Mathf.Max(looks.Length, 1);
+            var table = library.Table;
+            if (table == null)
+            {
+                table = new Texture2D(SkinTable.Width, height, TextureFormat.RGBAHalf, false, true) { name = $"{manifest.kit}_SkinTable" };
+                AssetDatabase.AddObjectToAsset(table, library);
+            }
+            else if (table.height != height || table.width != SkinTable.Width)
+            {
+                table.Reinitialize(SkinTable.Width, height, TextureFormat.RGBAHalf, false);
+            }
+            table.filterMode = FilterMode.Point;
+            table.wrapMode = TextureWrapMode.Clamp;
+            table.SetPixels(SkinTable.Pixels(looks));
+            table.Apply(false, false);
+            EditorUtility.SetDirty(table);
+
+            var shader = Shader.Find(RuntimeShader);
+            if (shader == null)
+            {
+                Debug.LogWarning($"Setup: no '{RuntimeShader}' shader yet, so no runtime skin materials for kit {manifest.kit}. " +
+                                 "Make the shader graph (Assets/Chopper/Art/Shaders/README.md), then press '5. Import part kits' again.");
+                library.SetRuntime(library.RuntimeMaterials.ToArray(), table);
+                return;
+            }
+
+            var runtimeMaterials = new List<SkinLibrary.SetMaterial>();
+            foreach (var set in manifest.textureSets)
+            {
+                var path = $"{folder}/Materials/{manifest.kit}_{set.name}_Runtime.mat";
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null)
+                {
+                    var baseSkin = manifest.skins.FirstOrDefault(s => s.key == set.baseSkin) ?? manifest.skins[0];
+                    var files = baseSkin.sets?.FirstOrDefault(s => s.set == set.name);
+                    if (files == null || string.IsNullOrEmpty(set.skinMask)) continue;
+                    material = new Material(shader) { name = Path.GetFileNameWithoutExtension(path) };
+                    material.SetTexture("_BaseColourMap", Texture($"{folder}/{files.colour}", Map.Colour, set.size));
+                    material.SetTexture("_BaseMetalSmooth", Texture($"{folder}/{files.metalSmooth}", Map.Data, set.size));
+                    material.SetTexture("_BaseEmission", Texture($"{folder}/{set.emission}", Map.Colour, set.size));
+                    material.SetTexture("_NormalMap", Texture($"{folder}/{set.normal}", Map.Normal, set.size));
+                    material.SetTexture("_OcclusionMap", Texture($"{folder}/{set.occlusion}", Map.Data, set.size));
+                    material.SetTexture("_SkinMask", Texture($"{folder}/{set.skinMask}", Map.Data, set.size));
+                    material.SetTexture("_SkinWear", Texture($"{folder}/{set.skinWear}", Map.Data, set.size));
+                    material.SetFloat("_EmissionStrength", 3f);
+                    if (set.heightRange is { Length: >= 2 })
+                        material.SetVector("_HeightRange", new Vector4(set.heightRange[0], set.heightRange[1], 0f, 0f));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    AssetDatabase.CreateAsset(material, path);
+                }
+                // The table is rebuilt in place, but a new library has a new table: always point at the current one.
+                material.SetTexture("_SkinTable", table);
+                material.SetFloat(SkinLibrary.SkinIndexProperty, 0f);
+                EditorUtility.SetDirty(material);
+                runtimeMaterials.Add(new SkinLibrary.SetMaterial { Set = set.name, Material = material });
+            }
+            library.SetRuntime(runtimeMaterials.ToArray(), table);
+            EditorUtility.SetDirty(library);
         }
 
         /// <summary>Baked maps: trilinear with mipmaps, clamped (UV islands), sRGB only for colour; normal maps as normal maps.</summary>
