@@ -21,6 +21,7 @@ DEFAULT_FORM = dict(
     edge_profile=0.5,    # bevel profile: 0.5 = round, higher = fuller
     box_rounding=0.0,    # boxes: long edges rounded with this share of the smaller cross size (0 = square boxes)
     box_min=0.1,         # boxes thinner than this (m) stay square (slats, vents, bars: cheap)
+    sharp_angle=35.0,    # soft forms: edges sharper than this shade hard (rounded corners step 30° or less)
 )
 FORM = dict(DEFAULT_FORM)
 
@@ -328,7 +329,9 @@ class Builder:
         bpy.data.objects.remove(raw)
         bpy.data.meshes.remove(mesh)
 
-        if not soft:
+        if soft:
+            baked = _weighted_normals(baked, FORM["sharp_angle"], collection)
+        else:
             # Hard look (form defaults): smooth panels, crisp 45° chamfers.
             baked.shade_smooth()
             baked.set_sharp_from_angle(angle=math.radians(35))
@@ -336,6 +339,28 @@ class Builder:
         obj = bpy.data.objects.new(name, baked)
         collection.objects.link(obj)
         return obj
+
+
+def _weighted_normals(mesh, sharp_angle, collection):
+    """Game-ready shading for the final mesh (Blender's old "auto smooth" + weighted normals): edges sharper than
+    sharp_angle shade hard, and every face's normal leans to the largest face round it, so flat panels shade flat
+    (no melted look at insets and hard edges) while rounded corners and curves stay smooth."""
+    name = mesh.name
+    if "custom_normal" in mesh.attributes:
+        mesh.attributes.remove(mesh.attributes["custom_normal"])
+    mesh.set_sharp_from_angle(angle=math.radians(sharp_angle))
+    holder = bpy.data.objects.new(name + "_normals", mesh)
+    collection.objects.link(holder)
+    weighted = holder.modifiers.new("Weighted Normal", "WEIGHTED_NORMAL")
+    weighted.keep_sharp = True
+    weighted.mode = "FACE_AREA"
+    weighted.weight = 50
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    result = bpy.data.meshes.new_from_object(holder.evaluated_get(depsgraph))
+    bpy.data.objects.remove(holder)
+    bpy.data.meshes.remove(mesh)
+    result.name = name
+    return result
 
 
 def _rounded_rect(hw, hh, rx, ry, n):

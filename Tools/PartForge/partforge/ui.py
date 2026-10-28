@@ -159,6 +159,8 @@ class PartForgeSettings(PropertyGroup):
     form_edge_profile: FloatProperty(name="Edge profile", min=0.2, max=1.0, update=_changed)
     form_box_rounding: FloatProperty(name="Box rounding", min=0.0, max=0.5, update=_changed,
                                      description="Boxes get rounded edges and corners (share of their smallest side)")
+    form_sharp_angle: FloatProperty(name="Sharp edges from", min=10.0, max=80.0, update=_changed,
+                                    description="Edges sharper than this angle (°) shade hard; flat faces shade flat")
     form_box_min: FloatProperty(name="Round boxes from", min=0.0, max=0.5, step=1, precision=2, update=_changed,
                                 description="Boxes thinner than this (m) stay square: slats, vents, bars")
     # Surface detail (Geometry Nodes "PF Surface Detail", chassis only)

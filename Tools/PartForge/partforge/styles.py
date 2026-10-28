@@ -67,7 +67,7 @@ STYLES = {
         detail=dict(panels=0.6, min_area=0.1, inset=0.8, depth=0.025, recolour=0.55, bolt_size=0.038,
                     greebles=0.45, greeble_size=0.14),
         form=dict(corner_segments=3, loft_smooth=1, curve_detail=1.4, edge_radius=0.045, edge_segments=1,
-                  edge_profile=0.55, box_rounding=0.3, box_min=0.1),
+                  edge_profile=0.55, box_rounding=0.3, box_min=0.1, sharp_angle=35.0),
     ),
 }
 

@@ -76,6 +76,7 @@ Owner direction (28 Oct): "most technology isn't basic shapes with hard square e
 | `loft_smooth` | Extra spline-interpolated sections between the authored ones: curved silhouettes instead of kinks. |
 | `curve_detail` | More segments on cylinders, ducts and balls. |
 | `edge_radius`, `edge_segments`, `edge_profile` | Bevel on the remaining hard edges. 1 segment + hardened normals = a soft-shaded rounded edge at no extra cost; 2-4 = real fillets (many more triangles). |
+| `sharp_angle` | Shading: edges sharper than this (35°) shade hard, and weighted normals keep every flat face flat (insets and hard edges stay crisp, no "melted" look); rounded corners (30° steps) stay smooth. Blender's old "auto smooth" plus a Weighted Normal pass, baked into the export. |
 | `box_rounding`, `box_min` | Boxes thicker than `box_min` get every edge and corner rounded (moulded parts, not bricks); thin slats, vents and bars stay square to save triangles. |
 
 Cost at the current values: about 15k-26k triangles per chassis, 37k for the Lifter (with surface detail).
