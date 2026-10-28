@@ -1,7 +1,12 @@
 """
 Art direction: one style = one look for the whole kit. Builders read only these values, so a new look is a new entry
-here (see ART_DIRECTION.md for what each value does). Same style + same chassis seed = same model.
+here, or a JSON file in Tools/PartForge/styles/ (the Blender panel's "Save style" writes one; it may also carry its own
+chassis shapes). See ART_DIRECTION.md for what each value does. Same style + same chassis seed = same model.
 """
+import json
+import os
+
+STYLE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "styles")
 
 STYLES = {
     # Kit01: the first look. Clean military shapes, neon strips, bubble canopy.
@@ -55,7 +60,38 @@ STYLES = {
 }
 
 
+BUILT_IN = tuple(STYLES)
+
+
+def _user_styles():
+    styles = {}
+    if os.path.isdir(STYLE_DIR):
+        for file_name in sorted(os.listdir(STYLE_DIR)):
+            if file_name.endswith(".json"):
+                with open(os.path.join(STYLE_DIR, file_name)) as handle:
+                    styles[file_name[:-5]] = json.load(handle)
+    return styles
+
+
+def names():
+    return list(BUILT_IN) + [name for name in _user_styles() if name not in BUILT_IN]
+
+
 def get(name):
-    if name not in STYLES:
-        raise SystemExit(f"Unknown style '{name}'. Styles: {', '.join(STYLES)}")
-    return dict(STYLES[name], name=name)
+    """A copy of the style (built-in or saved JSON). A saved style may hold "chassis": its own chassis specs."""
+    every = dict(STYLES, **_user_styles())
+    if name not in every:
+        raise SystemExit(f"Unknown style '{name}'. Styles: {', '.join(every)}")
+    return json.loads(json.dumps(dict(every[name], name=name)))
+
+
+def save(name, style, chassis=None):
+    """Writes Tools/PartForge/styles/<name>.json. Returns the path."""
+    os.makedirs(STYLE_DIR, exist_ok=True)
+    data = {key: value for key, value in style.items() if key != "name"}
+    if chassis is not None:
+        data["chassis"] = chassis
+    path = os.path.join(STYLE_DIR, f"{name}.json")
+    with open(path, "w") as handle:
+        json.dump(data, handle, indent=2)
+    return path

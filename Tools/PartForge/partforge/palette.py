@@ -57,29 +57,37 @@ def _hex(value):
     return tuple(int(value[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
 
 
-def _write_png(path, pixel_fn, linear):
+def _fill(image, pixel_fn):
     size = GRID * CELL
-    image = bpy.data.images.new(os.path.basename(path), size, size, alpha=True)
-    # Byte images: `pixels` are the stored 8-bit values (sRGB-encoded for colour maps), so no conversion here.
-    image.colorspace_settings.name = "Non-Color" if linear else "sRGB"
     pixels = []
     for y in range(size):
         row = (size - 1 - y) // CELL  # image rows go up from the bottom
         for x in range(size):
             col = x // CELL
             pixels.extend(pixel_fn(row * GRID + col))
+    # Byte images: `pixels` are the stored 8-bit values (sRGB-encoded for colour maps), so no conversion here.
     image.pixels = pixels
-    image.filepath_raw = path
-    image.file_format = "PNG"
-    image.save()
+    image.update()
+
+
+def _image(name, non_color):
+    size = GRID * CELL
+    image = bpy.data.images.get(name)
+    if image is None or tuple(image.size) != (size, size):
+        if image is not None:
+            bpy.data.images.remove(image)
+        image = bpy.data.images.new(name, size, size, alpha=True)
+    image.colorspace_settings.name = "Non-Color" if non_color else "sRGB"
     return image
 
 
-def write_maps(folder, kit_name, overrides=None):
-    """Writes <kit>_Colour.png, <kit>_Emission.png, <kit>_MetalSmooth.png. Returns the three image paths.
+MAP_SUFFIXES = ("Colour", "Emission", "MetalSmooth")
+
+
+def make_images(kit_name, overrides=None):
+    """The three palette maps as Blender images in memory (made or refreshed). Saved only on export (save_images).
 
     overrides: {swatch name: (colour hex, emission hex or None[, metallic, smoothness])} from the style."""
-    os.makedirs(folder, exist_ok=True)
     overrides = overrides or {}
 
     def entry(i):
@@ -100,30 +108,47 @@ def write_maps(folder, kit_name, overrides=None):
         _colour, _glow, metallic, smoothness = entry(i)
         return (metallic, 0.0, 0.0, smoothness)
 
-    paths = [os.path.join(folder, f"{kit_name}_{suffix}.png") for suffix in ("Colour", "Emission", "MetalSmooth")]
-    _write_png(paths[0], colour, linear=False)
-    _write_png(paths[1], emission, linear=False)
-    _write_png(paths[2], metal_smooth, linear=True)
+    images = []
+    for suffix, fn, non_color in zip(MAP_SUFFIXES, (colour, emission, metal_smooth), (False, False, True)):
+        image = _image(f"{kit_name}_{suffix}.png", non_color)
+        _fill(image, fn)
+        images.append(image)
+    return images
+
+
+def save_images(images, folder):
+    """Writes the maps as PNG files into folder. Returns the paths."""
+    os.makedirs(folder, exist_ok=True)
+    paths = []
+    for image in images:
+        path = os.path.join(folder, image.name)
+        if image.packed_file is not None:
+            image.unpack(method="REMOVE")
+        image.filepath_raw = path
+        image.file_format = "PNG"
+        image.save()
+        paths.append(path)
     return paths
 
 
-def make_material(kit_name, paths):
+def make_material(kit_name, images):
     """Blender material that matches the Unity one (for previews; the FBX only carries the material name)."""
-    material = bpy.data.materials.new(f"{kit_name}_Kit")
+    name = f"{kit_name}_Kit"
+    old = bpy.data.materials.get(name)
+    if old is not None:
+        bpy.data.materials.remove(old)
+    material = bpy.data.materials.new(name)
     material.use_nodes = True
     nodes, links = material.node_tree.nodes, material.node_tree.links
     bsdf = nodes.get("Principled BSDF")
 
-    def texture(path, non_color):
+    def texture(image):
         node = nodes.new("ShaderNodeTexImage")
-        node.image = bpy.data.images.load(path, check_existing=True)
-        node.image.colorspace_settings.name = "Non-Color" if non_color else "sRGB"
+        node.image = image
         node.interpolation = "Closest"
         return node
 
-    colour = texture(paths[0], False)
-    emission = texture(paths[1], False)
-    metal = texture(paths[2], True)
+    colour, emission, metal = (texture(image) for image in images)
     links.new(colour.outputs["Color"], bsdf.inputs["Base Color"])
     links.new(emission.outputs["Color"], bsdf.inputs["Emission Color"])
     bsdf.inputs["Emission Strength"].default_value = 4.0
@@ -135,6 +160,8 @@ def make_material(kit_name, paths):
     invert.inputs[0].default_value = 1.0
     links.new(metal.outputs["Alpha"], invert.inputs[1])
     links.new(invert.outputs["Value"], bsdf.inputs["Roughness"])
+    # Solid view colour, so the parts are not white in Solid mode.
+    material.diffuse_color = (*_hex(SWATCHES[INDEX["hull"]][1]), 1.0)
     return material
 
 

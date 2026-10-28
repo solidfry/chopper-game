@@ -156,7 +156,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 - Weapons: heat-seeking missiles (air and ground), cluster missiles and other cool cyberpunk weapons; a dynamic HUD overlay with targeting (plan section 3b).
 - Choppers will become fully modular ("lego" modules on chassis sockets). The current chopper is a placeholder.
   - Target modularity (owner reference): https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f
-  - Parts are generated procedurally in Blender (`Tools/PartForge`, see its README), not Asset Forge (its blocks look too childish). Kit01 is in `Assets/Chopper/Art/Kits/Kit01`. Plan section 5, "Part kits and authoring pipeline".
+  - Parts are generated procedurally in Blender (`Tools/PartForge`, see its README), not Asset Forge (its blocks look too childish). Kits in `Assets/Chopper/Art/Kits`. To tweak: open `Tools/PartForge/blend/Kit02.blend` in Blender 5.x, allow scripts, N → PartForge. Plan section 5, "Part kits and authoring pipeline".
 - Replies to the owner: short dot points, in ASD-STE100 Simplified English.
 
 ## 8. Key files
