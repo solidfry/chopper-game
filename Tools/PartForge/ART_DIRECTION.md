@@ -24,13 +24,23 @@ Gritty dystopia, near future. Machines that a broken state keeps flying.
 
 Body type is the core shape family; the style is applied on top of it.
 
-- **attack** (Gunship, Assault): chunky attack-helicopter shape language (the feel of an Apache, not its design).
-  Narrow, tall, flat-sided slab core with low chamfers; stepped tandem cockpit (gunner low in front, pilot higher
-  behind) with flat panes or armoured visors; cheek pods along the lower sides; engines in nacelles at the shoulders
-  with exhaust deflectors angled out; avionics hump behind the mast; boxy nose sensor turret with lenses; chin gun
-  socket under it; wheels (main + tail); open four-blade tail rotor; taller, thinner boom.
-- **utility** (Scout, Lifter, default): one rounded hull from nose to boom, canopy on top, engines on the roof, skids,
-  ducted tail rotor.
+- **attack** (Gunship; Assault with options): chunky attack-helicopter shape language (the feel of an Apache, not
+  its design). Narrow, tall, flat-sided slab core; stepped tandem cockpit (flat panes or armoured visors); cheek pods;
+  engine nacelles at the shoulders with exhaust deflectors; avionics hump; wheels; open tail rotor.
+  Options: `snout` = `sensor` (boxy nose sensor, two lenses) or `grille` (beastly snout with a Space Marine-style
+  grille: slats, jaw plates, brow ridge, red lenses); `taper` < 1 narrows every section towards its top.
+  The **Assault** uses `snout: grille`, `taper: 0.85`.
+- **heavy** (Lifter): heavy lifter (CH-53 / "Titan lifter" base) with greebles and cyberpunk details: long boxy cargo
+  hull with armour bands, blunt glazed cockpit (or visor), chin sensor and probe, floodlights, lit cabin windows,
+  sponsons with dual wheels, big engine pods (glowing intake cores, dot-grid vents, chevrons), top cage, pipes,
+  antenna array, dish, belly lift frame with hooks. `rotor_layout`: `single` (tail boom, open tail rotor), `tandem`
+  (front and rear towers), `coaxial` (two stacked rotors + pusher prop) or `quad` (four ducted fans on outrigger arms).
+  About 3 m wide: noticeably bigger than the others.
+- **assault** (option, not used by default): everything built from blocks that taper to the top, grille snout.
+- **utility** (Scout): one rounded hull from nose to boom, canopy on top, engines on the roof, skids, ducted tail rotor.
+
+Extra rotor hubs (tandem, coaxial, quad) are sockets `SOCKET_Rotor_1..3`; quad hubs carry a socket scale (0.34) so the
+rotor module fits the duct. The game must show the rotor module on every rotor socket at the socket's scale.
 
 ## Knobs
 

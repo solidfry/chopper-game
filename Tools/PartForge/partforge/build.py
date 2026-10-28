@@ -70,13 +70,14 @@ def generate(style, kit=None):
         palette.apply_uvs(obj)
         obj.data.materials.append(material)
         # Socket names repeat across parts, so they carry the part name here; export() strips it.
-        for slot, index, position in part.sockets:
+        for slot, index, position, scale in part.sockets:
             empty = bpy.data.objects.new(f"{part.name}:SOCKET_{slot}_{index}", None)
             empty.empty_display_type = "ARROWS"
             empty.empty_display_size = 0.4
             export_collection.objects.link(empty)
             empty.parent = obj
             empty.location = to_blender(position)
+            empty.scale = (scale, scale, scale)
         built[part.name] = (part, obj)
 
     _ensure_stage(scene)
@@ -112,15 +113,18 @@ def _showcase(scene, built, specs):
         holder.rotation_euler = (0, 0, math.radians(-35))
         shown.append(holder)
         loadout = kits.PREVIEW_LOADOUTS.get(spec["name"], {})
-        for slot, index, position in part.sockets:
+        for slot, index, position, scale in part.sockets:
             names = loadout.get(slot, [])
-            if index >= len(names) or names[index] not in built:
+            # Twin rotors: the one rotor module shows on every rotor hub.
+            name = names[min(index, len(names) - 1)] if slot == "Rotor" and names else (names[index] if index < len(names) else None)
+            if name not in built:
                 continue
-            _module, module_source = built[names[index]]
+            _module, module_source = built[name]
             attached = bpy.data.objects.new(f"{holder.name}_{slot}{index}", module_source.data)
             choppers_collection.objects.link(attached)
             attached.parent = holder
             attached.location = to_blender(position)
+            attached.scale = (scale, scale, scale)
 
     modules = [obj for part, obj in built.values() if part.kind == "module"]
     for i, source in enumerate(modules):
@@ -169,8 +173,9 @@ def export(state, out_dir):
             manifest["parts"].append({
                 "name": part.name, "file": f"Models/{file_name}", "kind": part.kind, "slot": part.slot,
                 "moduleIds": part.module_ids, "triangles": _triangles(obj),
-                "sockets": [{"name": f"SOCKET_{slot}_{index}", "slot": slot, "index": index, "position": list(position)}
-                            for slot, index, position in part.sockets],
+                "sockets": [{"name": f"SOCKET_{slot}_{index}", "slot": slot, "index": index, "position": list(position),
+                             "scale": scale}
+                            for slot, index, position, scale in part.sockets],
             })
     finally:
         export_collection.hide_viewport = True
@@ -189,7 +194,7 @@ def _export_fbx(obj, path):
     bpy.ops.export_scene.fbx(
         filepath=path, use_selection=True, object_types={"MESH", "EMPTY"},
         axis_forward="-Z", axis_up="Y", bake_space_transform=True, apply_scale_options="FBX_SCALE_ALL",
-        mesh_smooth_type="FACE", add_leaf_bones=False, bake_anim=False, path_mode="STRIP", use_mesh_modifiers=True)
+        mesh_smooth_type="EDGE", add_leaf_bones=False, bake_anim=False, path_mode="STRIP", use_mesh_modifiers=True)
 
 
 def _triangles(obj):
@@ -285,12 +290,12 @@ def render_previews(state, preview_dir, samples=32):
     _aim_lineup(camera, aim)
     _render(scene, os.path.join(preview_dir, "chassis_lineup.jpg"))
 
-    # Close-ups of the attack chassis (the 2nd and 3rd: Gunship, Assault by default).
-    for index, file_name in ((1, "gunship_closeup.jpg"), (2, "assault_closeup.jpg")):
-        if index >= len(shown):
-            continue
-        aim.location = shown[index].location + Vector((0, 0, 0.6))
-        camera.location = shown[index].location + Vector((-11, -7, 1.8))
+    # A close-up of every chassis.
+    for index, spec in enumerate(state.specs):
+        file_name = f"{spec['name'].lower()}_closeup.jpg"
+        size = max(1.0, spec["width"] / 2.0)
+        aim.location = shown[index].location + Vector((0, 0, 0.6 * size))
+        camera.location = shown[index].location + Vector((-11, -7, 1.8)) * size
         camera.data.lens = 42
         for other in shown:
             _set_render_visible([other], other is shown[index])

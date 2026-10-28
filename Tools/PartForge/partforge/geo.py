@@ -67,6 +67,40 @@ class Builder:
         for name, verts in sides.items():
             self._face(verts, (swatches or {}).get(name, swatch))
 
+    def block(self, centre, size, swatch, taper=0.85, taper_depth=0.95, rotation=None, top=None, front=None, back=None):
+        """Box whose top face is smaller than its base (taper across x, taper_depth along z): the blocky,
+        slightly pyramidal element of the assault body. Optional swatches for the top, front and back faces."""
+        cx, cy, cz = centre
+        hx, hy, hz = size[0] / 2, size[1] / 2, size[2] / 2
+        tx, tz = hx * taper, hz * taper_depth
+        corners = [(-hx, -hy, -hz), (hx, -hy, -hz), (tx, hy, -tz), (-tx, hy, -tz),
+                   (-hx, -hy, hz), (hx, -hy, hz), (tx, hy, tz), (-tx, hy, tz)]
+        if rotation is not None:
+            corners = [tuple(rotation @ Vector(c)) for c in corners]
+        v = self._verts([(cx + x, cy + y, cz + z) for x, y, z in corners])
+        self._face([v[0], v[3], v[2], v[1]], swatch if back is None else back)
+        self._face([v[4], v[5], v[6], v[7]], swatch if front is None else front)
+        self._face([v[0], v[1], v[5], v[4]], swatch)
+        self._face([v[3], v[7], v[6], v[2]], swatch if top is None else top)
+        self._face([v[0], v[4], v[7], v[3]], swatch)
+        self._face([v[1], v[2], v[6], v[5]], swatch)
+
+    def duct(self, centre, outer, inner, height, swatch, segments=24, inner_swatch=None):
+        """Upright ring (a ducted-fan shroud): annulus of radii outer/inner, `height` tall, centred on `centre`."""
+        cx, cy, cz = centre
+        rings = []
+        for y in (cy - height / 2, cy + height / 2):
+            for radius in (outer, inner):
+                rings.append([self.bm.verts.new(Vector((cx + radius * math.cos(t), y, cz + radius * math.sin(t))))
+                              for t in (2 * math.pi * i / segments for i in range(segments))])
+        bottom_out, bottom_in, top_out, top_in = rings
+        for i in range(segments):
+            j = (i + 1) % segments
+            self._face([bottom_out[i], bottom_out[j], top_out[j], top_out[i]], swatch)
+            self._face([bottom_in[i], top_in[i], top_in[j], bottom_in[j]], swatch if inner_swatch is None else inner_swatch)
+            self._face([top_out[i], top_out[j], top_in[j], top_in[i]], swatch)
+            self._face([bottom_out[i], bottom_in[i], bottom_in[j], bottom_out[j]], swatch)
+
     def cylinder(self, start, end, radius, swatch, segments=12, end_radius=None, cap_start=None, cap_end=None,
                  phase=0.0):
         """Cylinder or cone from `start` to `end` (Unity points)."""
@@ -124,6 +158,11 @@ class Builder:
         baked.name = name
         bpy.data.objects.remove(raw)
         bpy.data.meshes.remove(mesh)
+
+        # Smooth shading with sharp edges above 35 degrees: panels read as clean armour (no crumpled facets from
+        # slightly twisted quads), while chamfers, plates and box edges stay hard.
+        baked.shade_smooth()
+        baked.set_sharp_from_angle(angle=math.radians(35))
 
         obj = bpy.data.objects.new(name, baked)
         collection.objects.link(obj)

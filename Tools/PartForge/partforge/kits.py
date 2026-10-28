@@ -1,5 +1,7 @@
 """
-Chassis specs: the numbers that shape each family. "body": utility (default) or attack (chunky tandem-cockpit hull). Change a value or the seed and run the generator again.
+Chassis specs: the numbers that shape each family. "body": utility (default), attack (chunky tandem-cockpit hull; "snout": sensor or grille, "taper" < 1 narrows the
+tops), assault (blocky tapered blocks, grille snout) or heavy
+(heavy lifter; "rotor_layout": single, tandem, coaxial or quad). Change a value or the seed and run the generator again.
 Slot lists match the game's ChassisDefinition slot order (Editor/Setup/LoadoutAssets.cs), so sockets get the same
 types and indices.
 """
@@ -11,10 +13,11 @@ CHASSIS = [
     dict(name="Gunship", seed=21, body="attack", width=1.8, height=1.75, front=3.6, boom=4.4, wings=True, wing_span=1.4, engines=2,
          sensor=False, armour=0.5, skids=True,
          slots=["Nose", "Pylon", "Pylon", "Utility", "Rotor", "Engine", "Armour"]),
-    dict(name="Assault", seed=31, body="attack", width=2.3, height=2.05, front=3.9, boom=4.6, wings=True, wing_span=1.6, engines=2,
+    dict(name="Assault", seed=31, body="attack", snout="grille", taper=0.85, width=2.3, height=2.05, front=3.9, boom=4.6, wings=True, wing_span=1.6, engines=2,
          sensor=True, armour=1.0, skids=True,
          slots=["Nose", "Pylon", "Pylon", "Turret", "Utility", "Rotor", "Engine", "Armour"]),
-    dict(name="Lifter", seed=41, width=2.1, height=2.3, front=4.2, boom=5.2, wings=False, engines=2,
+    dict(name="Lifter", seed=41, body="heavy", rotor_layout="tandem", width=3.0, height=3.1, front=4.6, boom=4.4,
+         wings=False, engines=2,
          sensor=False, armour=0.4, skids=True,
          slots=["Nose", "Pylon", "Utility", "Utility", "Winch", "Rotor", "Engine", "Armour"]),
 ]

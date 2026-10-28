@@ -125,7 +125,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
    - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
    - done: PartForge Kit01 (neon) and Kit02 (dystopia, the owner's direction; default), 4 chassis + 23 modules each; art direction in `Tools/PartForge/ART_DIRECTION.md`; Setup step 5 imports the kits;
-   - next: check Kit01 in Unity; "Build chassis from kit" Setup step and module visual links; rotor spin on rotor modules;
+   - next: check Kit01 in Unity; "Build chassis from kit" Setup step and module visual links; rotor spin on rotor modules; rotor module on every rotor socket at the socket scale (Lifter: tandem / coaxial / quad); Lifter colliders;
    - then the green wireframe hangar (it sets `LoadoutChoice`).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
