@@ -3,6 +3,7 @@ using Chopper.Presentation.Audio;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Effects;
 using Chopper.Presentation.Hud;
+using Chopper.Presentation.Visuals;
 using Chopper.Simulation.Config;
 using Chopper.Simulation.Loadout;
 using UnityEngine;
@@ -19,6 +20,8 @@ namespace Chopper.Presentation.Config
     {
         [Header("Content")]
         [SerializeField] private LoadoutCatalog loadoutCatalog;
+        [SerializeField, Tooltip("Paint skins of the chopper kit (PartForge). Setup step 5 links it.")]
+        private SkinLibrary skins;
 
         [Header("Presentation")]
         [SerializeField] private SoundLibrary audio;
@@ -37,6 +40,7 @@ namespace Chopper.Presentation.Config
         private HudLookSettings hudLook;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
+        public SkinLibrary Skins => skins;
         public SoundLibrary Audio => audio;
         public CombatEffectsSettings Effects => effects;
         public CameraSettings Camera => camera;
@@ -56,12 +60,14 @@ namespace Chopper.Presentation.Config
             Require(hudLayout, "HUD layout", problems);
             Require(optionsLayout, "options layout", problems);
             Require(hudLook, "HUD look settings", problems);
+            Require(skins, "skin library (press '5. Import part kits')", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
             if (effects != null) effects.CollectProblems(problems);
             if (camera != null) camera.CollectProblems(problems);
             if (hudLook != null) hudLook.CollectProblems(problems);
+            if (skins != null) skins.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -78,6 +84,9 @@ namespace Chopper.Presentation.Config
             optionsLayout = options;
             camera = cameraSettings;
         }
+
+        /// <summary>Editor only: used by the kit import step.</summary>
+        public void SetSkins(SkinLibrary library) => skins = library;
 
         private void Require(Object value, string label, List<string> problems)
         {

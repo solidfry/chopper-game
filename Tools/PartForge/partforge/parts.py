@@ -90,22 +90,23 @@ def chassis(spec, style):
         # Tandem and quad layouts need no tail rotor; coaxial pushes with a prop instead.
         _tail(b, style, W, H, tail_z, open_rotor=attack or assault or heavy,
               tail_rotor=layout != "coaxial")
-    _details(b, rng, spec, style, W, H, F, tail_z)
+    has_boom = layout in ("single", "coaxial")
+    _details(b, rng, spec, style, W, H, F, tail_z, boom_rings=tail if has_boom and not heavy else None)
     if style["cage"] > 0 and not heavy:  # the heavy body is its own armour
         if attack or assault:
             _attack_cage(b, W, H)
         else:
             _cage(b, style, spec, W, H, boom)
     if style["conduits"] > 0:
-        side_x = (0.33 * W + 0.04) if attack or assault else (W / 2 + 0.07)
-        _conduits(b, W, H, F, tail_z, side_x=side_x,
-                  y_low=0.10 * H if attack or assault else (0.30 * H if heavy else 0.26 * H))
+        # Pipe and cable heights: attack bodies run them between the cheek pods and the nacelles.
+        ys = (0.145 * H, 0.175 * H) if attack or assault else ((0.30 * H, 0.37 * H) if heavy else (0.26 * H, 0.33 * H))
+        _conduits(b, W, H, F, tail_z, ys, cable_to_tail=has_boom)
     if style["asymmetry"] > 0:
         _retrofits(b, rng, style, W, H, F)
     if style["wear"] > 0:
         _wear(b, rng, style, W, H, F)
 
-    sockets = _sockets(spec, W, H, F, rotors, pylon_points, body)
+    sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body))
     return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"])
 
 
@@ -210,20 +211,18 @@ def _attack_body(b, spec, style, ring, tail, W, H, F):
     else:
         _sensor_turret(b, style, cw, H, F)
 
-    # Engine nacelles at the shoulders, with exhaust deflectors angled out.
+    # Engine nacelles at the shoulders (their inner side sunk into the core), with exhaust deflectors angled out.
     y = 0.36 * H
     nacelle_w = 0.26 * W
     for side in (1, -1):
-        x = side * (cw / 2 + nacelle_w * 0.35)
+        x = side * _nacelle_x(b, W, H)
         b.loft([
             ring(0.4, nacelle_w * 0.75, 0.26 * H, 0.35, y=y, x=x),
             ring(0.1, nacelle_w, 0.34 * H, 0.3, y=y, x=x),
             ring(-1.4, nacelle_w * 0.95, 0.32 * H, 0.3, y=y, x=x),
             ring(-1.8, nacelle_w * 0.8, 0.26 * H, 0.3, y=y, x=x),
         ], C("hull"), cap_front=C("rubber"), cap_back=C("exhaust"))
-        b.box((x + side * 0.1, y, -2.05), (nacelle_w * 0.7, 0.24 * H, 0.45), C("gunmetal"), rotation=rot_y(side * 25))
-        if style["wear"] > 0:
-            b.box((x + side * 0.05, y - 0.05, -2.5), (nacelle_w * 0.5, 0.03, 0.6), C("soot"))
+        b.box((x + side * 0.08, y, -1.95), (nacelle_w * 0.7, 0.24 * H, 0.45), C("gunmetal"), rotation=rot_y(side * 25))
 
     # Avionics hump behind the mast, mast and fairing.
     top = 0.05 * H + 0.5 * H
@@ -290,9 +289,7 @@ def _assault_body(b, spec, style, ring, tail, W, H, F):
         x = side * (cw / 2 + 0.12 * W)
         b.block((x, 0.36 * H, -0.75), (0.28 * W, 0.38 * H, 2.3), C("hull"), taper=0.78, front=C("rubber"), back=C("exhaust"))
         b.block((x, 0.36 * H + 0.21 * H, -0.75), (0.2 * W, 0.05, 1.9), C("hull_light"), taper=0.9)
-        b.box((x + side * 0.1, 0.36 * H, -2.05), (0.2 * W, 0.26 * H, 0.4), C("gunmetal"), rotation=rot_y(side * 25))
-        if style["wear"] > 0:
-            b.box((x + side * 0.05, 0.3 * H, -2.5), (0.15 * W, 0.03, 0.6), C("soot"))
+        b.box((x + side * 0.08, 0.36 * H, -1.95), (0.2 * W, 0.26 * H, 0.4), C("gunmetal"), rotation=rot_y(side * 25))
 
     b.snapshot_surface()
 
@@ -357,15 +354,17 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
         b.box((x, 0.18 * H, F - 0.3), (0.05, 0.3 * H, 0.05), C("hull_dark"), rotation=rot_x(-40))
     b.box((0, 0.27 * H, F - 0.7), (0.84 * W, 0.05, 0.05), C("hull_dark"))
     if visor:
-        for y, z, width in ((0.12 * H, F - 0.15, 0.4 * W), (0.3 * H, F - 0.75, 0.55 * W)):
-            b.box((0, y, z), (width, 0.05, 0.07), C("glass"), rotation=rot_x(40))
+        # View slits flush on the front slope (a ray from the front finds it).
+        for y, width in ((0.10 * H, 0.4 * W), (0.30 * H, 0.55 * W)):
+            b.lay((0, y, F + 5.0), (0, 0, -1), (0.04, width, 0.07), C("glass"), forward=(0, 1, 0), everything=True)
     b.ico((0.22 * W, -0.36 * H, F - 0.45), 0.28, C("gunmetal"), subdivisions=1)
     b.box((0.22 * W, -0.36 * H, F - 0.17), (0.14, 0.1, 0.04), C(lights["sensor"]))
     b.cylinder((0.36 * W, -0.08 * H, F - 0.4), (0.36 * W, -0.08 * H, F + 1.4), 0.05, C("gunmetal"), segments=6)
     b.cylinder((0.36 * W, -0.08 * H, F + 1.4), (0.36 * W, -0.08 * H, F + 1.6), 0.08, C("hazard"), segments=8,
                end_radius=0.03)
     for i in range(4):
-        b.box(((i - 1.5) * 0.12 * W, -0.38 * H, F - 0.05), (0.1, 0.06, 0.05), C(lights["nose"]))
+        b.lay(((i - 1.5) * 0.12 * W, -0.33 * H, F + 5.0), (0, 0, -1), (0.05, 0.1, 0.06), C(lights["nose"]),
+              forward=(0, 1, 0), everything=True)
 
     # Cabin windows (a few lit), door outline, ladder.
     z = F - 2.5
@@ -381,6 +380,9 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
     b._covered.append((1, -0.37 * H, 0.27 * H, F - 3.0, F - 1.95))
     for i in range(5):
         b.on_surface(-1, -0.35 * H + i * 0.13 * H, F - 2.3, (0.04, 0.03, 0.4), C("gunmetal"), lift=0.03)
+    for z in (F - 2.1, F - 2.5):  # rails that hold the rungs off the hull
+        for i in range(4):
+            b.on_surface(-1, -0.285 * H + i * 0.13 * H, z, (0.07, 0.15 * H, 0.03), C("gunmetal"), register=False)
     b._covered.append((-1, -0.37 * H, 0.2 * H, F - 2.52, F - 2.08))
 
     # Sponsons with a front hub, warning strip and chevron.
@@ -398,10 +400,12 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
             b.box((x + side * 0.385, y + 0.05 * H + k * 0.04, -2.0 - k * 0.0), (0.02, 0.05, 0.3), C("hazard"),
                   rotation=rot_x(k * 35))
 
-    # Engine pods on the upper sides: glowing intake ring, dot-grid vents, chevrons, exhaust.
-    ey = top + 0.32
+    # Engine pods on the upper sides (seated on the shoulder: the inner half of the pod floor sinks into the hull):
+    # glowing intake ring, dot-grid vents, chevrons, exhaust.
+    pod_x = W / 2 - 0.15
+    ey = min(b.hull_y(pod_x - 0.42, z, default=top) for z in (1.2, 0.0, -1.2)) + 0.475 - 0.08
     for side in (1, -1):
-        x = side * (W / 2 - 0.05)
+        x = side * pod_x
         b.loft([chamfer_ring(1.6, 0.90, 0.80, 0.50, y=ey, x=x), chamfer_ring(1.2, 1.05, 0.95, 0.45, y=ey, x=x),
                 chamfer_ring(-1.2, 1.05, 0.95, 0.45, y=ey, x=x), chamfer_ring(-1.8, 0.80, 0.70, 0.50, y=ey, x=x)],
                C("hull"), cap_front=C("rubber"), cap_back=C("hull_dark"))
@@ -418,8 +422,6 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
         for k in (1, -1):
             b.box((x + side * 0.535, ey + 0.05 + k * 0.06, 1.0), (0.02, 0.06, 0.32), C("hazard"), rotation=rot_x(k * 35))
         b.box((x - side * 0.3, top + 0.08, 0), (0.5, 0.3, 2.2), C("hull_dark"))
-        if style["wear"] > 0:
-            b.box((x, top + 0.02, -2.6), (0.6, 0.03, 0.8), C("soot"))
         # Pipes from the engines towards the tail.
         b.cylinder((side * 0.3 * W, top + 0.12, -1.8), (side * 0.12 * W, 0.40 * H, -3.6), 0.05, C("gunmetal"), segments=6)
 
@@ -442,7 +444,7 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
                end_radius=0.08)
 
     # Belly lift frame with four hanging cables and hooks.
-    fy = -top - 0.1
+    fy = -top - 0.03
     for dx, dz, sx, sz in ((0, 0.2, 1.4, 0.08), (0, -1.4, 1.4, 0.08), (0.7, -0.6, 0.08, 1.6), (-0.7, -0.6, 0.08, 1.6)):
         b.box((dx, fy, dz), (sx, 0.08, sz), C("gunmetal"))
     for dx, dz in ((0.66, 0.16), (-0.66, 0.16), (0.66, -1.36), (-0.66, -1.36)):
@@ -459,8 +461,9 @@ def _heavy_rotors(b, style, W, H, F, tail_z, layout):
         b.block((0, top + 0.3, front_z), (0.5 * W, 0.9, 1.6), C("hull"), taper=0.65, taper_depth=0.8)
         b.cylinder((0, top + 0.6, front_z), (0, top + 1.2, front_z), 0.18, C("steel"), segments=10)
         b.block((0, top + 0.75, rear_z), (0.6 * W, 1.9, 2.2), C("hull"), taper=0.55, taper_depth=0.65)
-        for i in range(4):
-            b.box((0, top + 0.9 + i * 0.18, rear_z - 0.68 + i * 0.07), (0.32 * W, 0.04, 0.03), C("hull_dark"))
+        for i in range(4):  # vents on the tower's back slope
+            b.lay((0, top + 0.9 + i * 0.18, rear_z - 5.0), (0, 0, 1), (0.03, 0.32 * W, 0.04), C("hull_dark"),
+                  forward=(0, 1, 0), everything=True)
         b.cylinder((0, top + 1.5, rear_z), (0, top + 2.1, rear_z), 0.18, C("steel"), segments=10)
         b.box((0, top + 0.12, (front_z + rear_z) / 2), (0.28 * W, 0.24, front_z - rear_z), C("hull_dark"))
         return [((0, top + 1.2, front_z), 1.0), ((0, top + 2.1, rear_z), 1.0)]
@@ -552,8 +555,8 @@ def _tandem_cockpit(b, style, cw, H, F):
         for z, y, width in ((F - 1.0, 0.36 * H, 0.42 * cw), (F - 2.2, 0.66 * H, 0.46 * cw)):
             b.box((0, y, z), (width, 0.05, 0.07), C("glass"), rotation=rot_x(30))
         for side in (1, -1):
-            b.box((side * 0.37 * cw, 0.38 * H, F - 1.5), (0.06, 0.06, 0.6), C("glass"))
-            b.box((side * 0.37 * cw, 0.58 * H, F - 2.6), (0.06, 0.06, 0.8), C("glass"))
+            for y, z, length in ((0.38 * H, F - 1.5, 0.6), (0.58 * H, F - 2.6, 0.8)):
+                b.lay((side * 50.0, y, z), (-side, 0, 0), (0.03, 0.06, length), C("glass"), everything=True)
 
 
 def _wheels(b, style, W, H, F, tail_z):
@@ -572,10 +575,18 @@ def _wheels(b, style, W, H, F, tail_z):
     b.cylinder((-0.07, ground + 0.18, z - 0.2), (0.07, ground + 0.18, z - 0.2), 0.18, C("rubber"), segments=10)
 
 
+def _nacelle_x(b, W, H):
+    """|x| of an attack-body engine nacelle centre: its inner 20 % sinks into the core side (found on the hull at the
+    nacelle height, the narrowest point along it)."""
+    nacelle_w = 0.26 * W
+    core = min(b.hull_x(1, 0.36 * H, z, default=0.31 * W) for z in (0.2, -0.6, -1.4))
+    return core + nacelle_w * 0.3
+
+
 def _attack_cage(b, W, H):
     """Slat armour on the outer side of each engine nacelle."""
     y = 0.36 * H
-    x_out = 0.31 * W + 0.26 * W * 0.35 + 0.26 * W / 2 + 0.12
+    x_out = _nacelle_x(b, W, H) + 0.26 * W / 2 + 0.12
     for side in (1, -1):
         _slat_cage(b, side * x_out, side, y - 0.17 * H, 0.2, -1.6, 0.22 * H, 0.34 * H, standoff=0.12)
 
@@ -608,7 +619,7 @@ def _canopy(b, style, W, H, F):
     for side in (1, -1):
         b.box((side * 0.31 * W, 0.40 * H, (F - 1.6 + 0.9) / 2), (0.06, 0.06, 0.8), C("glass"))
     # Brow plate over the slits.
-    b.box((0, back_top[1] + 0.03, back_top[0] + 0.05), (0.62 * W, 0.05, 0.3), C("hull"), rotation=rot_x(slope * 0.5))
+    b.box((0, back_top[1] - 0.01, back_top[0] + 0.05), (0.62 * W, 0.05, 0.3), C("hull"), rotation=rot_x(slope * 0.5))
 
 
 def _engines(b, spec, style, W, H):
@@ -628,9 +639,8 @@ def _engines(b, spec, style, W, H):
         for i in range(3):
             b.box((x, y - 0.06 * H + i * 0.06 * H, 0.52), (width * 0.6, 0.02, 0.03), C("gunmetal"))
         if style["wear"] > 0:
-            # Exhaust shroud and soot on the deck behind it.
-            b.box((x, y + 0.02, -2.05), (width * 0.85, 0.30 * H, 0.25), C("gunmetal"))
-            b.box((x, 0.40 * H, -2.45), (width * 0.7, 0.03, 0.7), C("soot"))
+            # Exhaust shroud (the soot behind it is painted by the texture bake).
+            b.box((x, y + 0.02, -1.95), (width * 0.85, 0.30 * H, 0.25), C("gunmetal"))
 
 
 def _swept_wing(b, side, root_x, tip_x, y, z, root_chord, tip_chord, sweep, thickness, swatch, droop=0.0):
@@ -657,7 +667,16 @@ def _end_plate(b, x, y, z, chord, height, thickness, swatch, cant=0.0):
 def _slat_cage(b, x, side, y0, z_front, z_back, h_front, h_back, spacing=0.26, lean=0.12, radius=0.02,
                standoff=0.14):
     """Slat armour on one side: round bars that lean back, lower towards the front (height h_front .. h_back above
-    y0, top rail sloping down to the front), on stand-offs back to the hull (inwards by `standoff`)."""
+    y0, top rail sloping down to the front), on stand-offs back to whatever is behind them (found by ray; `standoff`
+    when nothing is near)."""
+    # Stand-off ends first, before the bars exist (the rays must not hit the cage itself).
+    ends = []
+    for z, h in ((z_front, h_front), (z_back, h_back)):
+        y = y0 + h * 0.45
+        inner = b.hull_x(side, y, z, everything=True)
+        if inner is None or not 0.0 < abs(x) - inner < 0.6:
+            inner = abs(x) - standoff
+        ends.append((side * (inner - 0.02), y, z))
     count = max(2, int(round((z_front - z_back) / spacing)) + 1)
     tops = []
     for i in range(count):
@@ -669,9 +688,8 @@ def _slat_cage(b, x, side, y0, z_front, z_back, h_front, h_back, spacing=0.26, l
         tops.append(top)
     b.cylinder((x, y0, z_front + 0.04), (x, y0, z_back - 0.04), radius, C("gunmetal"), segments=5)
     b.cylinder(tops[0], tops[-1], radius, C("gunmetal"), segments=5)
-    for z, h in ((z_front, h_front), (z_back, h_back)):
-        y = y0 + h * 0.45
-        b.cylinder((x - side * standoff, y, z), (x, y, z - lean * 0.45), radius, C("gunmetal"), segments=5)
+    for end in ends:
+        b.cylinder(end, (x, end[1], end[2] - lean * 0.45), radius, C("gunmetal"), segments=5)
 
 
 def _wings_or_stubs(b, spec, style, W, H):
@@ -683,14 +701,18 @@ def _wings_or_stubs(b, spec, style, W, H):
     if spec.get("wings", False):
         span = spec["wing_span"]
         thickness = 0.12 if style["facet"] <= 1.0 else 0.18
-        root_x, tip_x, sweep, droop = W / 2 - 0.1, W / 2 + span, 0.3, 0.06
+        # The root sinks into the hull side (found by ray at the wing height).
+        root_x = b.hull_x(1, wing_y, wing_z, default=W / 2) - 0.1
+        tip_x, sweep, droop = W / 2 + span, 0.3, 0.06
         for side in (1, -1):
             # Swept, tapered wing; a swept end plate (low at the front, raked leading edge) leaning out at the tip.
             centre_z = _swept_wing(b, side, root_x, tip_x, wing_y, wing_z, 1.15, 0.7, sweep, thickness, C("hull"),
                                    droop=droop)
             tip_y, tip_z = wing_y - droop, centre_z(tip_x)
             _end_plate(b, side * (tip_x + 0.02), tip_y - 0.04, tip_z, 0.8, 0.4, 0.06, C("hazard"), cant=side * 0.12)
-            b.box((side * (tip_x + 0.06), tip_y + 0.04, tip_z + 0.3), (0.04, 0.05, 0.08),
+            # Nav light on the plate's raked leading edge (half way up it; the plate leans out with the cant).
+            light_y = tip_y - 0.04 - 0.125 * 0.4 / 2
+            b.box((side * (tip_x + 0.02 + 0.12 * 0.175 + 0.01), light_y, tip_z + 0.675 * 0.4), (0.06, 0.06, 0.07),
                   C(lights["right"] if side > 0 else lights["left"]))
             # Pylon hardpoint under the outer wing, following the sweep.
             x = W / 2 + span * 0.7
@@ -703,7 +725,8 @@ def _wings_or_stubs(b, spec, style, W, H):
     else:
         for i in range(pylons):
             side = 1 if i % 2 == 0 else -1
-            _swept_wing(b, side, W / 2 - 0.03, W / 2 + 0.47, -0.15 * H, wing_z + 0.06, 0.62, 0.42, 0.12, 0.12,
+            root = b.hull_x(side, -0.15 * H, wing_z + 0.06, default=W / 2) - 0.06
+            _swept_wing(b, side, root, W / 2 + 0.47, -0.15 * H, wing_z + 0.06, 0.62, 0.42, 0.12, 0.12,
                         C("hull_dark"))
             b.box((side * (W / 2 + 0.38), -0.15 * H - 0.1, wing_z), (0.1, 0.1, 0.5), C("gunmetal"))
             points.append((side * (W / 2 + 0.38), -0.15 * H - 0.15, wing_z))
@@ -722,7 +745,7 @@ def _skids(b, style, F, W, H):
             b.cylinder((side * 0.32 * W, -H / 2 + 0.15, z), (x, y, z), 0.05, C("gunmetal"), segments=6)
         if heavy:
             # Boarding step plate.
-            b.box((x - side * 0.12, y + 0.12, 0.2), (0.3, 0.03, 0.4), C("bare"))
+            b.box((x - side * 0.08, y + radius + 0.005, 0.2), (0.3, 0.03, 0.4), C("bare"))
     if heavy:
         b.cylinder((0.55 * W, y, -1.6), (-0.55 * W, y, -1.6), 0.05, C("gunmetal"), segments=6)
 
@@ -759,8 +782,9 @@ def _tail(b, style, W, H, tail_z, open_rotor=False, tail_rotor=True):
     b.cylinder((-0.16, shroud_y, shroud_z), (0.16, shroud_y, shroud_z), 0.1, C("steel"), segments=8)
 
 
-def _details(b, rng, spec, style, W, H, F, tail_z):
-    """Seeded details, mirrored left/right so they read as designed."""
+def _details(b, rng, spec, style, W, H, F, tail_z, boom_rings=None):
+    """Seeded details, mirrored left/right so they read as designed. boom_rings: the tail boom sections (warning
+    bands and antennas go on the boom; None = no boom)."""
     # Everything on the sides is laid flat on the hull (projected, follows its slope) and kept from overlapping.
     # Side vents (a slat stack, mirrored).
     for side in (1, -1):
@@ -784,32 +808,51 @@ def _details(b, rng, spec, style, W, H, F, tail_z):
             if b.on_surface(side, y, z, size, C(swatch), avoid=True) and style["armour_layers"] > 1:
                 b.on_surface(side, y + 0.03, z - 0.05, (0.04, size[1] * 0.7, size[2] * 0.75), C("hull"), lift=0.035,
                              register=False)
-    else:
-        # Belly beacon and small position lights instead of strips.
-        b.box((0, -H / 2 - 0.07, -0.9), (0.12, 0.06, 0.12), C(style["lights"]["right"]))
-    # Belly plate.
-    b.box((0, -H / 2 - 0.02, -0.3), (0.6 * W, 0.06, 2.4), C("hull_dark"))
-    # Antennas on the boom (and a small dish in cluttered styles).
-    low, high = style["antennas"]
+    # Belly plate laid on the underside, the beacon on the plate.
+    b.lay((0, -50.0, -0.3), (0, 1, 0), (0.06, 0.45 * W, 2.4), C("hull_dark"))
+    b.lay((0, -50.0, -0.9), (0, 1, 0), (0.06, 0.12, 0.12), C(style["lights"]["right"]), everything=True)
+    # Antennas on the boom top (and a small dish in cluttered styles).
+    low, high = style["antennas"] if boom_rings is not None else (0, 0)
     for i in range(rng.randint(low, high)):
         z = rng.uniform(tail_z + 1.0, -2.8)
         height = rng.uniform(0.4, 0.8)
         x = rng.uniform(-0.08, 0.08) * (1 if style["asymmetry"] > 0 else 0)
-        y = 0.26 * H + 0.12
+        y = b.hull_y(x, z, default=0.26 * H + 0.12) - 0.02
         b.cylinder((x, y, z), (x, y + height, z - 0.15), 0.015, C("steel"), segments=5)
     if high >= 4:
         dish_z = tail_z + 1.6
-        b.cylinder((0, 0.40 * H, dish_z), (0, 0.40 * H + 0.12, dish_z), 0.05, C("gunmetal"), segments=6)
-        b.cylinder((0, 0.40 * H + 0.12, dish_z), (0, 0.40 * H + 0.2, dish_z + 0.05), 0.2, C("hull_light"),
+        y = b.hull_y(0, dish_z, default=0.40 * H) - 0.02
+        b.cylinder((0, y, dish_z), (0, y + 0.14, dish_z), 0.05, C("gunmetal"), segments=6)
+        b.cylinder((0, y + 0.14, dish_z), (0, y + 0.22, dish_z + 0.05), 0.2, C("hull_light"),
                    segments=10, end_radius=0.06)
     # Sensor ball under the nose.
     if spec.get("sensor", False):
         b.ico((0, -0.32 * H, F - 0.75), 0.22, C("gunmetal"), subdivisions=1)
         b.box((0, -0.32 * H, F - 0.54), (0.12, 0.08, 0.04), C(style["lights"]["sensor"]))
-    # Warning bands on the boom.
-    for z in (-3.0, -3.3):
+    # Warning bands round the boom.
+    for z in (-3.0, -3.3) if boom_rings is not None else ():
         if z > tail_z + 1.2:
-            b.box((0, 0.22 * H, z), (0.27 * W + 0.02, 0.30 * H + 0.02, 0.08), C("hazard"))
+            _band(b, boom_rings, z, C("hazard"))
+
+
+def _band(b, rings, z, swatch, grow=0.025, width=0.08):
+    """A band round a loft (e.g. the boom) at forward position z: its section there, grown by `grow`, `width` long."""
+    zs = [ring[0][2] for ring in rings]
+    for k in range(len(rings) - 1):
+        if zs[k + 1] <= z <= zs[k]:
+            t = (zs[k] - z) / (zs[k] - zs[k + 1])
+            section = [tuple(a[n] + (c[n] - a[n]) * t for n in range(2)) for a, c in zip(rings[k], rings[k + 1])]
+            break
+    else:
+        return
+    cx = sum(p[0] for p in section) / len(section)
+    cy = sum(p[1] for p in section) / len(section)
+    grown = []
+    for x, y in section:
+        dx, dy = x - cx, y - cy
+        length = math.hypot(dx, dy) or 1.0
+        grown.append((cx + dx * (1 + grow / length), cy + dy * (1 + grow / length)))
+    b.loft([[(x, y, z + width / 2) for x, y in grown], [(x, y, z - width / 2) for x, y in grown]], swatch)
 
 
 def _cage(b, style, spec, W, H, boom):
@@ -826,41 +869,59 @@ def _cage(b, style, spec, W, H, boom):
                    spacing=0.28, standoff=0.12)
 
 
-def _conduits(b, W, H, F, tail_z, side_x, y_low):
-    """External pipes and a cable bundle: retrofitted, function over form."""
+def _conduits(b, W, H, F, tail_z, ys, cable_to_tail=True):
+    """External pipes and a cable bundle along each side at heights ys (pipe, cable): retrofitted, function over form.
+    Each line runs just off the hull (found by ray); brackets and clamps reach back to it."""
+    zs = [F - 2.0 + (-1.5 - (F - 2.0)) * t / 4 for t in range(5)]
     for side in (1, -1):
-        x = side * side_x
-        for y, radius, swatch in ((y_low, 0.035, "gunmetal"), (y_low + 0.07 * H, 0.025, "rubber")):
-            b.cylinder((x, y, F - 2.0), (x, y, -1.5), radius, C(swatch), segments=6)
-            for z in (F - 2.0, -1.5):
-                b.cylinder((x, y, z), (x - side * 0.12, y, z), radius, C(swatch), segments=6)
+        outer = 0.0
+        for y, radius, swatch in ((ys[0], 0.035, "gunmetal"), (ys[1], 0.025, "rubber")):
+            hull = [b.hull_x(side, y, z, default=W / 2) for z in zs]
+            x = side * (max(hull) + radius + 0.015)
+            outer = max(outer, abs(x) + radius)
+            b.cylinder((x, y, zs[0]), (x, y, zs[-1]), radius, C(swatch), segments=6)
+            for z, h in ((zs[0], hull[0]), (zs[-1], hull[-1])):
+                b.cylinder((x, y, z), (side * (h - 0.02), y, z), radius, C(swatch), segments=6)
+        # Clamps from the hull to round both lines.
+        y = (ys[0] + ys[1]) / 2
         z = F - 2.2
         while z > -1.5:
-            b.box((x, y_low + 0.035 * H, z), (0.1, 0.16, 0.06), C("hull_dark"))
+            inner = b.hull_x(side, y, z, default=W / 2) - 0.02
+            b.box((side * (inner + outer + 0.02) / 2, y, z), (outer + 0.02 - inner, ys[1] - ys[0] + 0.1, 0.06),
+                  C("hull_dark"))
             z -= 0.7
-    b.cylinder((0.09, 0.40 * H, -2.4), (0.06, 0.38 * H, tail_z + 1.1), 0.03, C("rubber"), segments=6)
+    if cable_to_tail:
+        b.cylinder((0.09, 0.40 * H, -2.4), (0.06, 0.38 * H, tail_z + 1.1), 0.03, C("rubber"), segments=6)
 
 
 def _retrofits(b, rng, style, W, H, F):
-    """One-sided add-ons, picked by the seed: the machine was fixed and extended in the field."""
+    """One-sided add-ons, picked by the seed: the machine was fixed and extended in the field. Each one is fixed to
+    the hull found by ray at its spot."""
     options = ["searchlight", "reel", "ammo", "sensor_mast"]
     rng.shuffle(options)
     for name in options[:2 + round(style["asymmetry"])]:
         if name == "searchlight":
-            b.box((W / 2 + 0.2, -0.18 * H, F - 1.9), (0.4, 0.08, 0.1), C("gunmetal"))
-            b.cylinder((W / 2 + 0.42, -0.24 * H, F - 2.1), (W / 2 + 0.42, -0.24 * H, F - 1.75), 0.15, C("gunmetal"),
+            y, z = -0.18 * H, F - 1.9
+            hx = b.hull_x(1, y, z, default=W / 2, everything=True)
+            b.box((hx + 0.18, y, z), (0.4, 0.08, 0.1), C("gunmetal"))
+            b.cylinder((hx + 0.4, y - 0.06, z - 0.2), (hx + 0.4, y - 0.06, z + 0.15), 0.15, C("gunmetal"),
                        segments=10, cap_end=C(style["lights"]["left"]))
         elif name == "reel":
-            b.box((-(W / 2 + 0.18), 0.02 * H, -1.1), (0.3, 0.34, 0.5), C("hull_dark"))
-            b.cylinder((-(W / 2 + 0.36), 0.02 * H, -1.3), (-(W / 2 + 0.36), 0.02 * H, -0.9), 0.14, C("rust"), segments=10)
+            y = 0.02 * H
+            hx = max(b.hull_x(-1, y, z, default=W / 2, everything=True) for z in (-1.3, -1.1, -0.9))
+            b.box((-(hx + 0.13), y, -1.1), (0.3, 0.34, 0.5), C("hull_dark"))
+            b.cylinder((-(hx + 0.31), y, -1.3), (-(hx + 0.31), y, -0.9), 0.14, C("rust"), segments=10)
         elif name == "ammo":
             for i in range(2):
-                b.box((-(W / 2 + 0.16), -0.3 * H, 0.2 - i * 0.42), (0.26, 0.3, 0.38), C("primer"))
+                y, z = -0.3 * H, 0.2 - i * 0.42
+                hx = b.hull_x(-1, y, z, default=W / 2, everything=True)
+                b.box((-(hx + 0.11), y, z), (0.26, 0.3, 0.38), C("primer"))
         elif name == "sensor_mast":
-            x = 0.3 * W
-            b.cylinder((x, 0.62 * H + 0.16 * H, 0.35), (x, 0.62 * H + 0.75, 0.35), 0.03, C("steel"), segments=5)
-            b.box((x, 0.62 * H + 0.8, 0.35), (0.22, 0.12, 0.16), C("hull_light"))
-            b.box((x, 0.62 * H + 0.8, 0.44), (0.1, 0.05, 0.02), C(style["lights"]["sensor"]))
+            x, z = 0.3 * W, 0.35
+            base = b.hull_y(x, z, default=0.62 * H, everything=True) - 0.02
+            b.cylinder((x, base, z), (x, base + 0.6, z), 0.03, C("steel"), segments=5)
+            b.box((x, base + 0.65, z), (0.22, 0.12, 0.16), C("hull_light"))
+            b.box((x, base + 0.65, z + 0.09), (0.1, 0.05, 0.02), C(style["lights"]["sensor"]))
 
 
 def _wear(b, rng, style, W, H, F):
@@ -873,6 +934,31 @@ def _wear(b, rng, style, W, H, F):
                      C(rng.choice(("primer", "primer", "rust", "concrete"))), avoid=True)
     # Scuffed bare metal on the nose and wing leading edges.
     b.box((0, -0.24 * H if style["nose"] == "chisel" else -0.12 * H, F - 0.03), (0.5 * W, 0.03, 0.05), C("bare"))
+
+
+HANGING_SLOTS = ("Nose", "Pylon", "Turret", "Utility", "Winch")
+
+
+def _seat_sockets(b, sockets):
+    """Moves each socket onto the model: a hanging module's attach point goes to the underside right above it (a ray
+    from below finds it, up to 0.3 m down or 0.6 m up); an engine stack that floats goes down onto the deck. Rotor
+    hubs are already on the mast tops."""
+    seated = []
+    for slot, index, position, scale in sockets:
+        x, y, z = position
+        if slot in HANGING_SLOTS:
+            point, _normal = b.hit((x, y - 0.3, z), (0, 1, 0), everything=True, distance=0.9)
+            if point is not None:
+                y = point.y + 0.01
+        elif slot == "Engine":
+            # Only when it floats: not near any surface and nothing right above it (not inside a part).
+            _co, _n, _i, gap = b._tree(True).find_nearest((x, y, z))
+            above, _normal = b.hit((x, y, z), (0, 1, 0), everything=True, distance=0.3)
+            point, _normal = b.hit((x, y, z), (0, -1, 0), everything=True, distance=1.0)
+            if gap is not None and gap > 0.06 and above is None and point is not None:
+                y = point.y + 0.06
+        seated.append((slot, index, (round(x, 4), round(y, 4), round(z, 4)), scale))
+    return seated
 
 
 def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
@@ -910,7 +996,7 @@ def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
         positions.update({
             "Nose": [(0, -0.40 * H, F - 0.75)],
             "Turret": [(0, -H / 2 - 0.05, -0.2)],
-            "Utility": [(W / 2 - 0.05, -0.05 * H, -1.35), (-(W / 2 - 0.05), -0.05 * H, -1.35)],
+            "Utility": [(0.405 * W - 0.03, -0.2 * H, -1.2), (-(0.405 * W - 0.03), -0.2 * H, -1.2)],
             "Engine": [(0, 0.55 * H + 0.08 * H, -1.85)],
         })
     sockets, counts = [], {}
@@ -933,8 +1019,9 @@ def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
 # ---------------------------------------------------------------------------------------------------------------------
 
 def _mount(b, length=0.5):
-    """Short hardpoint block under the socket that every hanging module shares."""
-    b.box((0, -0.08, 0), (0.12, 0.16, length), C("gunmetal"))
+    """Short hardpoint block under the socket that every hanging module shares (0 to 0.2 m down: the module body
+    starts at -0.18 or higher, so it always cuts into the mount)."""
+    b.box((0, -0.1, 0), (0.12, 0.2, length), C("gunmetal"))
 
 
 def rotor(name, ids, blades, length, chord, tip):
@@ -1007,7 +1094,7 @@ def rocket_pod():
 def swarm_pod():
     b = Builder()
     _mount(b, 0.7)
-    y = -0.5
+    y = -0.38
     b.box((0, y, 0), (0.5, 0.42, 1.3), C("hull"), swatches={"front": C("rubber")})
     for row in range(3):
         for col in range(4):
@@ -1038,6 +1125,8 @@ def missile_rack(name, ids, count, length, radius, band="warhead"):
     xs = [0.0] if count == 1 else [-(radius + 0.04), radius + 0.04]
     for x in xs:
         _missile(b, (x, -0.3 - radius, 0.1), length, radius, band)
+        for z in (-0.25, 0.45):  # hanger lugs from the rail to the missile
+            b.box((x * 0.5, -0.27, z), (abs(x) + 0.05, 0.08, 0.1), C("gunmetal"))
     return Part(name, "module", b, slot="Pylon", module_ids=ids)
 
 
@@ -1045,7 +1134,7 @@ def bomb_rack():
     b = Builder()
     _mount(b, 0.6)
     for x in (-0.16, 0.16):
-        y = -0.42
+        y = -0.36
         b.cylinder((x, y, -0.55), (x, y, 0.35), 0.14, C("hull_dark"), segments=10)
         b.cylinder((x, y, 0.35), (x, y, 0.6), 0.14, C("hull_dark"), segments=10, end_radius=0.05)
         b.cylinder((x, y, 0.2), (x, y, 0.28), 0.142, C("hazard"), segments=10)
@@ -1074,13 +1163,15 @@ def repair_drone():
     b = Builder()
     b.box((0, -0.06, 0), (0.5, 0.12, 0.5), C("hull_dark"))
     # A small quad drone parked on its dock.
-    b.box((0, -0.2, 0), (0.18, 0.08, 0.18), C("hull_light"))
+    b.box((0, -0.15, 0), (0.18, 0.08, 0.18), C("hull_light"))
     for k in range(4):
         turn = rot_y(45 + 90 * k)
-        arm = turn @ Vector((0.17, -0.2, 0))
+        arm = turn @ Vector((0.17, -0.15, 0))
         b.box(tuple(arm), (0.2, 0.03, 0.03), C("gunmetal"), rotation=turn)
-        b.cylinder((arm.x * 1.5, -0.17, arm.z * 1.5), (arm.x * 1.5, -0.16, arm.z * 1.5), 0.08, C("carbon"), segments=8)
-    b.box((0, -0.25, 0.09), (0.06, 0.03, 0.02), C("neon_green"))
+        tip = (arm.x * 1.5, -0.15, arm.z * 1.5)
+        b.cylinder((tip[0], -0.165, tip[2]), (tip[0], -0.125, tip[2]), 0.025, C("gunmetal"), segments=6)  # motor
+        b.cylinder((tip[0], -0.13, tip[2]), (tip[0], -0.12, tip[2]), 0.08, C("carbon"), segments=8)
+    b.box((0, -0.19, 0.09), (0.06, 0.03, 0.02), C("neon_green"))
     return Part("Utility_RepairDrone", "module", b, slot="Utility", module_ids=[133])
 
 
@@ -1089,6 +1180,7 @@ def emitter(name, ids, glow):
     b = Builder()
     b.box((0, -0.08, 0), (0.3, 0.16, 0.3), C("hull_dark"))
     b.cylinder((0, -0.16, 0), (0, -0.3, 0), 0.22, C("gunmetal"), segments=12, end_radius=0.3)
+    b.cylinder((0, -0.29, 0), (0, -0.47, 0), 0.1, C("gunmetal"), segments=10)
     for y in (-0.34, -0.42):
         b.cylinder((0, y, 0), (0, y - 0.03, 0), 0.24, C(glow), segments=12)
     b.ico((0, -0.5, 0), 0.08, C(glow), subdivisions=1)
@@ -1119,6 +1211,8 @@ def engine(name, ids, nozzles, glow, radius):
     """Exhaust stack that sits on the chassis' engine socket (the deck at the back of the engines)."""
     b = Builder()
     xs = [0.0] if nozzles == 1 else [(-0.28 + 0.56 * i / (nozzles - 1)) for i in range(nozzles)]
+    if nozzles > 1:
+        b.box((0, -0.02, 0.1), (xs[-1] - xs[0] + radius, radius * 1.2, 0.24), C("hull_dark"))
     for x in xs:
         b.cylinder((x, 0, 0.2), (x, 0, -0.45), radius, C("gunmetal"), segments=10, end_radius=radius * 0.8,
                    cap_end=C(glow))

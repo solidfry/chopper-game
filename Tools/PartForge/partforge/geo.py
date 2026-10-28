@@ -68,6 +68,7 @@ class Builder:
         self.swatch = self.bm.faces.layers.int.new("swatch")
         self._surface = None
         self._covered = []
+        self._everything = None
 
     # -- low level -------------------------------------------------------------------------------------------------
     def _verts(self, points):
@@ -85,32 +86,69 @@ class Builder:
         self._surface = BVHTree.FromBMesh(self.bm)
         self._covered = []
 
+    def _tree(self, everything):
+        """The hull snapshot, or (everything=True) a tree of every face built so far (rebuilt when faces were added)."""
+        if not everything:
+            if self._surface is None:
+                raise RuntimeError("snapshot_surface() first")
+            return self._surface
+        count = len(self.bm.faces)
+        if self._everything is None or self._everything[0] != count:
+            self._everything = (count, BVHTree.FromBMesh(self.bm))
+        return self._everything[1]
+
+    def hit(self, origin, direction, everything=False, distance=100.0):
+        """First point where a ray meets the hull (or everything): (point, normal pointing back at the ray) or
+        (None, None)."""
+        direction = Vector(direction).normalized()
+        point, normal, _index, _distance = self._tree(everything).ray_cast(Vector(origin), direction, distance)
+        if point is None:
+            return None, None
+        normal = normal.normalized()
+        if normal.dot(direction) > 0:
+            normal = -normal
+        return point, normal
+
+    def hull_x(self, side, y, z, default=None, everything=False):
+        """|x| of the outer surface on the right (side 1) or left (-1) at height y, forward position z."""
+        point, _normal = self.hit((side * 50.0, y, z), (-side, 0.0, 0.0), everything)
+        return abs(point.x) if point is not None else default
+
+    def hull_y(self, x, z, top=True, default=None, everything=False):
+        """y of the top (or bottom) surface at (x, z)."""
+        point, _normal = self.hit((x, 50.0 if top else -50.0, z), (0.0, -1.0 if top else 1.0, 0.0), everything)
+        return point.y if point is not None else default
+
+    def lay(self, origin, direction, size, swatch, forward=(0.0, 0.0, 1.0), lift=0.0, embed=0.006, everything=False):
+        """A thin part laid flat where a ray from `origin` along `direction` meets the surface, turned to its slope.
+        size = (thickness along the surface normal, width across, length along `forward` projected on the surface).
+        Use forward (0, 1, 0) on front and back faces. Returns the hit point, or None (nothing placed)."""
+        point, n = self.hit(origin, direction, everything)
+        if point is None:
+            return None
+        hint = Vector(forward)
+        along = hint - n * hint.dot(n)
+        if along.length < 1e-4:
+            along = Vector((0.0, 1.0, 0.0)) - n * n.y
+        along.normalize()
+        across = along.cross(n)
+        rotation = Matrix((n, across, along)).transposed()  # columns: thickness along the normal, width, length
+        self.box(tuple(point + n * (size[0] / 2 - embed + lift)), size, swatch, rotation=rotation)
+        return point
+
     def on_surface(self, side, y, z, size, swatch, avoid=False, lift=0.0, embed=0.006, register=True):
         """A thin part (size = thickness, height, length) laid flat on the hull's right (side 1) or left (-1) side at
         height y, forward position z: a ray from outside finds the surface and its slope, and the part follows it.
         avoid: skip it when it overlaps an earlier registered part. lift: extra distance off the surface (a second
         layer, ladder rungs). Returns True when placed."""
-        if self._surface is None:
-            raise RuntimeError("snapshot_surface() first")
-        point, normal, _index, _distance = self._surface.ray_cast(Vector((side * 50.0, y, z)), Vector((-side, 0.0, 0.0)))
-        if point is None:
-            return False
         rect = (side, y - size[1] / 2, y + size[1] / 2, z - size[2] / 2, z + size[2] / 2)
         if avoid and any(other[0] == side and rect[1] < other[2] + 0.02 and other[1] < rect[2] + 0.02
                          and rect[3] < other[4] + 0.02 and other[3] < rect[4] + 0.02 for other in self._covered):
             return False
-        if register:
+        placed = self.lay((side * 50.0, y, z), (-side, 0.0, 0.0), size, swatch, lift=lift, embed=embed)
+        if placed is not None and register:
             self._covered.append(rect)
-        n = normal.normalized()
-        if n.x * side < 0:
-            n = -n
-        forward = Vector((0.0, 0.0, 1.0))
-        forward = (forward - n * forward.dot(n)).normalized()
-        up = forward.cross(n)
-        rotation = Matrix((n, up, forward)).transposed()  # columns: thickness along the normal, then up, forward
-        centre = point + n * (size[0] / 2 - embed + lift)
-        self.box(tuple(centre), size, swatch, rotation=rotation)
-        return True
+        return placed is not None
 
     # -- primitives ------------------------------------------------------------------------------------------------
     def loft(self, sections, swatch, cap_front=None, cap_back=None):

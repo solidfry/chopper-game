@@ -11,7 +11,7 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Operator, Panel, PropertyGroup
 
-from . import build, detail, geo, palette, styles
+from . import build, detail, geo, palette, skins, styles
 
 TOOL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))       # Tools/PartForge
 REPO_DIR = os.path.normpath(os.path.join(TOOL_DIR, "..", ".."))
@@ -20,7 +20,9 @@ GLOWS = [(name, name.replace("_", " ").title(), "") for name in
 PAINT = ("hull", "hull_dark", "hull_light")
 
 _style_items = []   # Blender needs the dynamic enum list kept alive
+_skin_items = []
 _rebuild_pending = False
+_exported = None    # build.State of the last export in this session (its parts carry the baked textures)
 
 
 # -- auto rebuild ---------------------------------------------------------------------------------------------------
@@ -52,6 +54,24 @@ def _styles(self, context):
     _style_items.clear()
     _style_items.extend((name, name, "") for name in styles.names())
     return _style_items
+
+
+def _skins(self, context):
+    _skin_items.clear()
+    _skin_items.extend((skin["key"], skin["name"], skin.get("description", "")) for skin in skins.SKINS)
+    return _skin_items
+
+
+def _exported_state():
+    """The last export's state while its parts still exist (a rebuild replaces them)."""
+    if _exported is None:
+        return None
+    try:
+        for _part, obj in _exported.built.values():
+            _ = obj.name
+    except ReferenceError:
+        return None
+    return _exported
 
 
 class PartForgeChassis(PropertyGroup):
@@ -94,6 +114,7 @@ class PartForgeSettings(PropertyGroup):
     auto_rebuild: BoolProperty(name="Auto rebuild", default=False,
                                description="Rebuild a moment after each change (a few seconds per rebuild)")
     samples: IntProperty(name="Samples", default=32, min=4, max=512)
+    skin: EnumProperty(name="Skin", items=_skins, description="Skin to show (after an export: it bakes the textures)")
 
     # Shape language
     facet: FloatProperty(name="Facet", min=0.5, max=2.5, update=_changed, description="Chamfer on every section")
@@ -125,6 +146,7 @@ class PartForgeSettings(PropertyGroup):
     paint_metallic: FloatProperty(name="Paint metallic", min=0.0, max=1.0, update=_changed)
     paint_smoothness: FloatProperty(name="Paint smoothness", min=0.0, max=1.0, update=_changed)
     other_palette: StringProperty(options={"HIDDEN"})  # the loaded style's other swatch overrides (JSON)
+    other_keys: StringProperty(options={"HIDDEN"})  # the loaded style's skins, textures and bump values (JSON)
     # Form: how soft the shapes are (geo.DEFAULT_FORM)
     form_corner_segments: IntProperty(name="Corner rounding", min=1, max=6, update=_changed,
                                       description="Arc segments per section corner: 1 = straight cut, 3+ = round")
@@ -199,6 +221,7 @@ def load_style(settings, style, name, kit=None):
                 settings.paint_metallic = entry[2] if len(entry) > 2 else metal
                 settings.paint_smoothness = entry[3] if len(entry) > 3 else smooth
         settings.other_palette = json.dumps(overrides)
+        settings.other_keys = json.dumps({key: style[key] for key in ("skins", "textures", "bump") if key in style})
 
         form = dict(geo.DEFAULT_FORM, **(style.get("form") or {}))
         for key in geo.DEFAULT_FORM:
@@ -251,6 +274,7 @@ def style_from(settings):
         detail={key: getattr(settings, f"detail_{key}") for key in detail.DETAIL_KEYS} if settings.detail_on else {},
         form={key: getattr(settings, f"form_{key}") for key in geo.DEFAULT_FORM},
     )
+    style.update(json.loads(settings.other_keys or "{}"))
     style["chassis"] = [dict(
         name=item.name, body=item.body, seed=item.seed, width=item.width, height=item.height, front=item.front,
         boom=item.boom, wings=item.wings, wing_span=item.wing_span, engines=item.engines, rotor_layout=item.rotor_layout, snout=item.snout, taper=item.taper,
@@ -293,12 +317,16 @@ class PARTFORGE_OT_rebuild(Operator):
 class PARTFORGE_OT_export(Operator):
     bl_idname = "partforge.export"
     bl_label = "Export kit to Unity"
-    bl_description = "Rebuild, then write FBX models, palette textures and the manifest to Assets/Chopper/Art/Kits/<kit>"
+    bl_description = ("Rebuild, bake the texture sets in every skin (a few minutes), then write FBX models, textures "
+                      "and the manifest to Assets/Chopper/Art/Kits/<kit>. The file then shows the baked textures")
 
     def execute(self, context):
+        global _exported
         settings = context.scene.partforge
         out_dir = os.path.join(REPO_DIR, "Assets", "Chopper", "Art", "Kits", settings.kit)
-        manifest = build.export(rebuild(settings), out_dir)
+        state = rebuild(settings)
+        manifest = build.export(state, out_dir)
+        _exported = state
         self.report({"INFO"}, f"Exported {len(manifest['parts'])} parts to {out_dir}. In Unity: Chopper > Setup > 5.")
         return {"FINISHED"}
 
@@ -306,13 +334,33 @@ class PARTFORGE_OT_export(Operator):
 class PARTFORGE_OT_render(Operator):
     bl_idname = "partforge.render"
     bl_label = "Render previews"
-    bl_description = "Rebuild, then render the line-up, close-ups and module sheet (Blender is busy for about a minute)"
+    bl_description = ("Render the line-up, close-ups, four-view sheets and module sheet (Blender is busy for some "
+                      "minutes). Right after an export: with the baked textures and a skin sheet; else rebuilds first "
+                      "and shows the palette look")
 
     def execute(self, context):
         settings = context.scene.partforge
         preview_dir = os.path.join(TOOL_DIR, "previews", settings.kit)
-        build.render_previews(rebuild(settings), preview_dir, settings.samples)
+        build.render_previews(_exported_state() or rebuild(settings), preview_dir, settings.samples)
         self.report({"INFO"}, f"Previews in {preview_dir}")
+        return {"FINISHED"}
+
+
+class PARTFORGE_OT_show_skin(Operator):
+    bl_idname = "partforge.show_skin"
+    bl_label = "Show skin"
+    bl_description = "Put the chosen skin on every part (after an export in this session)"
+
+    def execute(self, context):
+        state = _exported_state()
+        if state is None:
+            self.report({"ERROR"}, "Export first (it bakes the textures); a rebuild drops them.")
+            return {"CANCELLED"}
+        key = context.scene.partforge.skin
+        if key not in [skin["key"] for skin in state.skins]:
+            self.report({"ERROR"}, f"This kit's style does not export the skin '{key}' (style key \"skins\").")
+            return {"CANCELLED"}
+        build.show_skin(state, key)
         return {"FINISHED"}
 
 
@@ -501,6 +549,9 @@ class PARTFORGE_PT_output(_Base, Panel):
         layout = self.layout
         layout.operator("partforge.export", icon="EXPORT")
         row = layout.row(align=True)
+        row.prop(settings, "skin", text="")
+        row.operator("partforge.show_skin", icon="MATERIAL")
+        row = layout.row(align=True)
         row.operator("partforge.render", icon="RENDER_STILL")
         row.prop(settings, "samples", text="")
         row = layout.row(align=True)
@@ -510,7 +561,8 @@ class PARTFORGE_PT_output(_Base, Panel):
 
 CLASSES = (
     PartForgeChassis, PartForgeSettings,
-    PARTFORGE_OT_load_style, PARTFORGE_OT_rebuild, PARTFORGE_OT_export, PARTFORGE_OT_render, PARTFORGE_OT_save_style,
+    PARTFORGE_OT_load_style, PARTFORGE_OT_rebuild, PARTFORGE_OT_export, PARTFORGE_OT_render, PARTFORGE_OT_show_skin,
+    PARTFORGE_OT_save_style,
     PARTFORGE_OT_reseed, PARTFORGE_OT_reset_detail,
     PARTFORGE_PT_main, PARTFORGE_PT_shape, PARTFORGE_PT_addons, PARTFORGE_PT_wear, PARTFORGE_PT_paint,
     PARTFORGE_PT_form, PARTFORGE_PT_detail, PARTFORGE_PT_chassis, PARTFORGE_PT_output,

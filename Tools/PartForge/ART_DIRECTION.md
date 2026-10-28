@@ -98,6 +98,61 @@ Parts that stick out from the hull are swept and tapered towards the front, not 
 - Slat armour and railings: `_slat_cage` (round bars that lean back, lower towards the front, top rail sloping down to
   the front); the Lifter's top railing also gets narrower towards the front.
 
+## Alignment check
+
+`generate.py --audit` (no export, under a second) checks every part: each primitive is a mesh island; islands that
+touch or cut into each other are joined, and any group not joined to the main hull is listed as **floating** (in the
+air, or hidden inside the hull). Sockets further than 0.12 m from the hull are listed too. Keep it at 0 problems.
+
+Builders place add-ons with rays, not fixed numbers: `Builder.hull_x` / `hull_y` (where the hull surface is),
+`Builder.lay` (a thin part laid flat on a surface from any direction: front slits, belly plates, vents on a slope) and
+`on_surface` (side parts). Wing and stub roots, nacelles, engine pods, pipes, clamps, cage stand-offs, retrofits,
+antennas and boom bands all find the hull this way, so they stay attached when a shape number changes. Sockets are
+seated too: hanging modules hang from the underside above their socket, engine stacks sit on the deck.
+
+## Materials (texture sets)
+
+Export bakes real textures; the palette stays as the swatch ids and the quick look in the panel.
+
+- **UVs:** UV0 = a unique unwrap per chassis (all modules share one atlas); UV1 = the palette cell.
+- **Baked once per set:** normal map (fine cast grain and hammered dents; glass and lights stay smooth), occlusion,
+  and the surface data the skins use: position and normal in model space, swatch id, edge mask, cavity mask.
+- **Per skin:** colour, metallic/smoothness, emission (only skins with glow lines have their own emission map).
+- **Wear and grime** come from the bake, on every skin: bare metal on the edges and in chips near them, dirt in the
+  crevices, rain streaks, soot plumes behind each exhaust (found from the exhaust faces), a little occlusion.
+- Style key `textures`: `density` (normal-map pixels per metre, 110), `max_size` (2048), `module_size` (1024),
+  `skin_scale` (0.5: skin maps at half size; small files, the paint is soft-edged anyway), `samples` (16).
+- Unity: one URP Lit material per set and skin (base, metallic/smoothness, normal, occlusion, emission).
+
+## Skins
+
+`partforge/skins.py`. A skin is data: a pattern and its colours, a paint finish (metallic, smoothness), optional glow
+lines, how much wear and grime show, and whether replacement panels and warning paint take the skin's colours. Only
+painted armour takes the skin; glass, lights, bare metal, rubber and weapons keep the kit's look, and the wear and
+grime of the bake sit on top, so every skin is the same worn machine.
+
+Patterns are worked out in 3D (model space, metres), not on the UVs: no seams, and the same skin lines up across
+parts and chassis.
+
+| Pattern | Look |
+|---|---|
+| `solid` | One colour (dark and light armour panels keep their contrast). |
+| `camo` | Layered blobs, one noise per colour; `cover` = share per colour (holds on every model). |
+| `digital` | The same, snapped to square pixels on each face. |
+| `splinter` | Angular shards (stretched Voronoi cells). |
+| `tiger` | Warped stripes across the hull. |
+| `hex` | Hex armour cells with dark seams; with `glow`, some cell outlines glow (cyberpunk). |
+| `synthwave` | Deep purple, a striped sunset band along the sides, a glowing grid. |
+| `livery` | Twin top stripes, a side band and a dark belly (corporate, police, racing). |
+
+Skins now: Factory (the style's own paint), Woodland, Desert, Arctic Digital, Urban Splinter, Jungle Tiger,
+Night City (neon hex), Outrun (synthwave), Interceptor (white corporate livery), Night Stalker (matte black, red).
+`previews/<kit>/skins_sheet.jpg` shows them all on the Gunship.
+
+New skin: copy an entry in `SKINS` (new `id`, never reused: player data saves it), or list skins in a style
+(`"skins": ["factory", "woodland", {...}]`). Ideas: faction liveries (team colour as the main colour), hazard
+chevrons (rescue, riot), rust bucket (no paint, all primer), chrome show skin, damage states (more wear, scorch).
+
 ## Surface detail (Geometry Nodes)
 
 Every chassis runs through the **PF Surface Detail** node group after the bevel (`partforge/detail.py`); the result is
@@ -120,6 +175,7 @@ about +5k to +10k triangles per chassis at the dystopia values; lower `panels`, 
 
 - **Faction styles:** a "corporate security" style (clean white panels, cyan lights, bubble canopy) against a "militia"
   style (more asymmetry, mixed primer panels, scrap plates). Same chassis, different style = different team look.
-- **Decals as swatches:** stencil numbers and faction marks would need a small decal texture next to the palette.
+- **Decals:** stencil numbers and faction marks: a decal pass in the skin composer (the baked position map says
+  where the nose and the boom are).
 - **Damage states:** a style with `wear` 1 and missing plates could be the "heavily damaged" model swap.
 - **Silhouette check:** render the line-up with all materials black; each chassis must still read by outline alone.

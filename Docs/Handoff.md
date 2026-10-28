@@ -103,10 +103,11 @@ Rules:
 3. Open `TrainingRange.unity`, play. Check: chopper spawns, minigun / rocket pod / missile / flare art sits on the chopper, locks and missiles work, flares break locks, wheel switches pylon. Markers sit on the training targets; the lead circle shows with the rocket pod selected. Fit "Cluster Missiles" (change the default loadout or the chassis defaults) and fire it at a target: 8 bomblets.
 4. HUD look: the HUD should glow, with scanlines and a slight curve. The phosphor trail is off on a `HudLookSettings` asset made before this change: set Persistence (0.5) and Persistence Time (0.12) on the CRT 84 profile, or delete the asset and run Do all. Take a hit: the HUD glitches. Die: it drops out. If the HUD is gone or black: set the preset to Clean on `Data/Hud/HudLookSettings` (default preset) or clear the PlayerPrefs key `Chopper.HudLook.Preset`, and send the console to Claude. Check the HUD edges for dark fringes (alpha mode).
 5. Press Escape: the options overlay opens, the cursor shows, the chopper stops taking input. Change HUD look and volumes; press Escape again. Fit "Swarm Pod", lock a target, fire: 10 missiles fan out.
-6. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
-7. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
-8. Run edit-mode tests (Window → General → Test Runner).
-9. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
+6. Kits (28 Oct, textures and skins): Setup step 5 again. It makes `Art/Kits/<kit>/Materials/<kit>_<Set>_<skin>.mat` and `<kit>_Skins.asset`, and links Kit02's skins into the game config. Drag a `Chassis_Gunship` model into a scene, try a few skin materials on it, check the normal map (no inverted bumps) and the edge wear. If an old `<kit>_Kit.mat` exists, delete it (no longer used).
+7. Move sockets in `ChopperGhost` → Sockets if the art sits in the wrong place, then run *Do all* again (it does not move sockets).
+8. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
+9. Run edit-mode tests (Window → General → Test Runner).
+10. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -125,7 +126,9 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
    - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
    - done: PartForge Kit01 (neon) and Kit02 (dystopia, the owner's direction; default), 4 chassis + 23 modules each; art direction in `Tools/PartForge/ART_DIRECTION.md`; Setup step 5 imports the kits;
-   - next: check Kit01 in Unity; "Build chassis from kit" Setup step and module visual links; rotor spin on rotor modules; rotor module on every rotor socket at the socket scale (Lifter: tandem / coaxial / quad); Lifter colliders;
+   - done (28 Oct, not yet in Unity): PartForge alignment check (`generate.py --audit`, 0 problems), review studio lighting and four-view sheets, baked texture sets (UVs, normal, occlusion, wear and grime) and 10 skins (`partforge/skins.py`; Unity: one URP Lit material per set and skin, `SkinLibrary` per kit, linked in `GameConfig`);
+   - next for skins: a skin id in the loadout (`LoadoutCode` + `ChopperLoadout` ghost field; server checks unlocks), a client presentation system that swaps the chassis and module materials from `SkinLibrary` (Entities Graphics: register the skin materials, set `MaterialMeshInfo`), skin choice in the hangar;
+   - next: check Kit02 in Unity (step 5, then look at a model with each skin material); "Build chassis from kit" Setup step and module visual links; rotor spin on rotor modules; rotor module on every rotor socket at the socket scale (Lifter: tandem / coaxial / quad); Lifter colliders;
    - then the green wireframe hangar (it sets `LoadoutChoice`).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;

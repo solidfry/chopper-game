@@ -132,7 +132,7 @@ def save_images(images, folder):
 
 
 def make_material(kit_name, images):
-    """Blender material that matches the Unity one (for previews; the FBX only carries the material name)."""
+    """The palette material: the quick look in the panel before export (export bakes the real texture sets)."""
     name = f"{kit_name}_Kit"
     old = bpy.data.materials.get(name)
     if old is not None:
@@ -142,10 +142,14 @@ def make_material(kit_name, images):
     nodes, links = material.node_tree.nodes, material.node_tree.links
     bsdf = nodes.get("Principled BSDF")
 
+    uv = nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "Palette"
+
     def texture(image):
         node = nodes.new("ShaderNodeTexImage")
         node.image = image
         node.interpolation = "Closest"
+        links.new(uv.outputs["UV"], node.inputs["Vector"])
         return node
 
     colour, emission, metal = (texture(image) for image in images)
@@ -166,8 +170,10 @@ def make_material(kit_name, images):
 
 
 def apply_uvs(obj):
-    """Every face's UVs go to the centre of its swatch (read from the 'swatch' face attribute, kept through the bevel)."""
+    """UV layers: "UVMap" first (UV0, unwrapped by texture.py on export) and "Palette" (UV1): every face's palette UVs
+    go to the centre of its swatch (read from the 'swatch' face attribute, kept through the bevel)."""
     mesh = obj.data
+    mesh.uv_layers.new(name="UVMap")
     layer = mesh.uv_layers.new(name="Palette")
     attribute = mesh.attributes.get("swatch")
     for poly in mesh.polygons:

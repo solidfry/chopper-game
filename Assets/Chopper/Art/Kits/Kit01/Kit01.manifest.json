@@ -4,12 +4,203 @@
   "style": "neon",
   "units": "metres",
   "axes": "Unity space: +X right, +Y up, +Z forward. Socket rotation is identity (modules point +Z).",
-  "material": {
-    "name": "Kit01_Kit",
-    "colour": "Kit01_Colour.png",
-    "emission": "Kit01_Emission.png",
-    "metalSmooth": "Kit01_MetalSmooth.png"
-  },
+  "uv": "UV0 = baked texture set (unique unwrap); UV1 = palette swatch (cell centre of a 5 x 5 grid).",
+  "textureSets": [
+    {
+      "name": "Scout",
+      "size": 1024,
+      "material": "Kit01_Scout",
+      "normal": "Textures/Kit01_Scout_Normal.png",
+      "occlusion": "Textures/Kit01_Scout_Occlusion.png",
+      "emission": "Textures/Kit01_Scout_Emission.png"
+    },
+    {
+      "name": "Gunship",
+      "size": 2048,
+      "material": "Kit01_Gunship",
+      "normal": "Textures/Kit01_Gunship_Normal.png",
+      "occlusion": "Textures/Kit01_Gunship_Occlusion.png",
+      "emission": "Textures/Kit01_Gunship_Emission.png"
+    },
+    {
+      "name": "Assault",
+      "size": 2048,
+      "material": "Kit01_Assault",
+      "normal": "Textures/Kit01_Assault_Normal.png",
+      "occlusion": "Textures/Kit01_Assault_Occlusion.png",
+      "emission": "Textures/Kit01_Assault_Emission.png"
+    },
+    {
+      "name": "Lifter",
+      "size": 2048,
+      "material": "Kit01_Lifter",
+      "normal": "Textures/Kit01_Lifter_Normal.png",
+      "occlusion": "Textures/Kit01_Lifter_Occlusion.png",
+      "emission": "Textures/Kit01_Lifter_Emission.png"
+    },
+    {
+      "name": "Modules",
+      "size": 1024,
+      "material": "Kit01_Modules",
+      "normal": "Textures/Kit01_Modules_Normal.png",
+      "occlusion": "Textures/Kit01_Modules_Occlusion.png",
+      "emission": "Textures/Kit01_Modules_Emission.png"
+    }
+  ],
+  "skins": [
+    {
+      "id": 1,
+      "key": "factory",
+      "name": "Factory",
+      "description": "The style's own paint: worn two-tone armour.",
+      "sets": [
+        {
+          "set": "Scout",
+          "colour": "Textures/Kit01_Scout_factory_Colour.png",
+          "metalSmooth": "Textures/Kit01_Scout_factory_MetalSmooth.png",
+          "emission": "Textures/Kit01_Scout_Emission.png"
+        },
+        {
+          "set": "Gunship",
+          "colour": "Textures/Kit01_Gunship_factory_Colour.png",
+          "metalSmooth": "Textures/Kit01_Gunship_factory_MetalSmooth.png",
+          "emission": "Textures/Kit01_Gunship_Emission.png"
+        },
+        {
+          "set": "Assault",
+          "colour": "Textures/Kit01_Assault_factory_Colour.png",
+          "metalSmooth": "Textures/Kit01_Assault_factory_MetalSmooth.png",
+          "emission": "Textures/Kit01_Assault_Emission.png"
+        },
+        {
+          "set": "Lifter",
+          "colour": "Textures/Kit01_Lifter_factory_Colour.png",
+          "metalSmooth": "Textures/Kit01_Lifter_factory_MetalSmooth.png",
+          "emission": "Textures/Kit01_Lifter_Emission.png"
+        },
+        {
+          "set": "Modules",
+          "colour": "Textures/Kit01_Modules_factory_Colour.png",
+          "metalSmooth": "Textures/Kit01_Modules_factory_MetalSmooth.png",
+          "emission": "Textures/Kit01_Modules_Emission.png"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "key": "neon_hex",
+      "name": "Night City",
+      "description": "Black hex armour cells, neon pink and cyan seams.",
+      "sets": [
+        {
+          "set": "Scout",
+          "colour": "Textures/Kit01_Scout_neon_hex_Colour.png",
+          "metalSmooth": "Textures/Kit01_Scout_neon_hex_MetalSmooth.png",
+          "emission": "Textures/Kit01_Scout_neon_hex_Emission.png"
+        },
+        {
+          "set": "Gunship",
+          "colour": "Textures/Kit01_Gunship_neon_hex_Colour.png",
+          "metalSmooth": "Textures/Kit01_Gunship_neon_hex_MetalSmooth.png",
+          "emission": "Textures/Kit01_Gunship_neon_hex_Emission.png"
+        },
+        {
+          "set": "Assault",
+          "colour": "Textures/Kit01_Assault_neon_hex_Colour.png",
+          "metalSmooth": "Textures/Kit01_Assault_neon_hex_MetalSmooth.png",
+          "emission": "Textures/Kit01_Assault_neon_hex_Emission.png"
+        },
+        {
+          "set": "Lifter",
+          "colour": "Textures/Kit01_Lifter_neon_hex_Colour.png",
+          "metalSmooth": "Textures/Kit01_Lifter_neon_hex_MetalSmooth.png",
+          "emission": "Textures/Kit01_Lifter_neon_hex_Emission.png"
+        },
+        {
+          "set": "Modules",
+          "colour": "Textures/Kit01_Modules_neon_hex_Colour.png",
+          "metalSmooth": "Textures/Kit01_Modules_neon_hex_MetalSmooth.png",
+          "emission": "Textures/Kit01_Modules_neon_hex_Emission.png"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "key": "synthwave",
+      "name": "Outrun",
+      "description": "Deep purple, a striped sunset band, a glowing grid.",
+      "sets": [
+        {
+          "set": "Scout",
+          "colour": "Textures/Kit01_Scout_synthwave_Colour.png",
+          "metalSmooth": "Textures/Kit01_Scout_synthwave_MetalSmooth.png",
+          "emission": "Textures/Kit01_Scout_synthwave_Emission.png"
+        },
+        {
+          "set": "Gunship",
+          "colour": "Textures/Kit01_Gunship_synthwave_Colour.png",
+          "metalSmooth": "Textures/Kit01_Gunship_synthwave_MetalSmooth.png",
+          "emission": "Textures/Kit01_Gunship_synthwave_Emission.png"
+        },
+        {
+          "set": "Assault",
+          "colour": "Textures/Kit01_Assault_synthwave_Colour.png",
+          "metalSmooth": "Textures/Kit01_Assault_synthwave_MetalSmooth.png",
+          "emission": "Textures/Kit01_Assault_synthwave_Emission.png"
+        },
+        {
+          "set": "Lifter",
+          "colour": "Textures/Kit01_Lifter_synthwave_Colour.png",
+          "metalSmooth": "Textures/Kit01_Lifter_synthwave_MetalSmooth.png",
+          "emission": "Textures/Kit01_Lifter_synthwave_Emission.png"
+        },
+        {
+          "set": "Modules",
+          "colour": "Textures/Kit01_Modules_synthwave_Colour.png",
+          "metalSmooth": "Textures/Kit01_Modules_synthwave_MetalSmooth.png",
+          "emission": "Textures/Kit01_Modules_synthwave_Emission.png"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "key": "interceptor",
+      "name": "Interceptor",
+      "description": "Gloss white corporate livery, red and black stripes.",
+      "sets": [
+        {
+          "set": "Scout",
+          "colour": "Textures/Kit01_Scout_interceptor_Colour.png",
+          "metalSmooth": "Textures/Kit01_Scout_interceptor_MetalSmooth.png",
+          "emission": "Textures/Kit01_Scout_Emission.png"
+        },
+        {
+          "set": "Gunship",
+          "colour": "Textures/Kit01_Gunship_interceptor_Colour.png",
+          "metalSmooth": "Textures/Kit01_Gunship_interceptor_MetalSmooth.png",
+          "emission": "Textures/Kit01_Gunship_Emission.png"
+        },
+        {
+          "set": "Assault",
+          "colour": "Textures/Kit01_Assault_interceptor_Colour.png",
+          "metalSmooth": "Textures/Kit01_Assault_interceptor_MetalSmooth.png",
+          "emission": "Textures/Kit01_Assault_Emission.png"
+        },
+        {
+          "set": "Lifter",
+          "colour": "Textures/Kit01_Lifter_interceptor_Colour.png",
+          "metalSmooth": "Textures/Kit01_Lifter_interceptor_MetalSmooth.png",
+          "emission": "Textures/Kit01_Lifter_Emission.png"
+        },
+        {
+          "set": "Modules",
+          "colour": "Textures/Kit01_Modules_interceptor_Colour.png",
+          "metalSmooth": "Textures/Kit01_Modules_interceptor_MetalSmooth.png",
+          "emission": "Textures/Kit01_Modules_Emission.png"
+        }
+      ]
+    }
+  ],
   "parts": [
     {
       "name": "Chassis_Scout",
@@ -17,7 +208,8 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 7374,
+      "triangles": 7650,
+      "textureSet": "Scout",
       "sockets": [
         {
           "name": "SOCKET_Nose_0",
@@ -25,7 +217,7 @@
           "index": 0,
           "position": [
             0,
-            -0.435,
+            -0.5987,
             2.1
           ],
           "scale": 1.0
@@ -36,7 +228,7 @@
           "index": 0,
           "position": [
             1.055,
-            -0.3675,
+            -0.3575,
             -0.2
           ],
           "scale": 1.0
@@ -47,7 +239,7 @@
           "index": 0,
           "position": [
             0.405,
-            0.116,
+            -0.077,
             -2.0
           ],
           "scale": 1.0
@@ -93,7 +285,8 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 12154,
+      "triangles": 12394,
+      "textureSet": "Gunship",
       "sockets": [
         {
           "name": "SOCKET_Nose_0",
@@ -101,7 +294,7 @@
           "index": 0,
           "position": [
             0,
-            -0.7,
+            -0.7498,
             2.85
           ],
           "scale": 1.0
@@ -112,8 +305,8 @@
           "index": 0,
           "position": [
             1.88,
-            -0.2795,
-            -0.416
+            -0.2695,
+            -0.4176
           ],
           "scale": 1.0
         },
@@ -123,8 +316,8 @@
           "index": 1,
           "position": [
             -1.88,
-            -0.2795,
-            -0.416
+            -0.2695,
+            -0.4176
           ],
           "scale": 1.0
         },
@@ -133,9 +326,9 @@
           "slot": "Utility",
           "index": 0,
           "position": [
-            0.85,
-            -0.0875,
-            -1.35
+            0.699,
+            -0.4698,
+            -1.2
           ],
           "scale": 1.0
         },
@@ -180,7 +373,8 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 13594,
+      "triangles": 13798,
+      "textureSet": "Assault",
       "sockets": [
         {
           "name": "SOCKET_Nose_0",
@@ -188,7 +382,7 @@
           "index": 0,
           "position": [
             0,
-            -0.82,
+            -0.88,
             3.15
           ],
           "scale": 1.0
@@ -199,8 +393,8 @@
           "index": 0,
           "position": [
             2.27,
-            -0.2945,
-            -0.4153
+            -0.2845,
+            -0.4178
           ],
           "scale": 1.0
         },
@@ -210,8 +404,8 @@
           "index": 1,
           "position": [
             -2.27,
-            -0.2945,
-            -0.4153
+            -0.2845,
+            -0.4178
           ],
           "scale": 1.0
         },
@@ -221,7 +415,7 @@
           "index": 0,
           "position": [
             0,
-            -1.075,
+            -0.9678,
             -0.2
           ],
           "scale": 1.0
@@ -231,9 +425,9 @@
           "slot": "Utility",
           "index": 0,
           "position": [
-            1.1,
-            -0.1025,
-            -1.35
+            0.9015,
+            -0.5559,
+            -1.2
           ],
           "scale": 1.0
         },
@@ -278,7 +472,8 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 20512,
+      "triangles": 21152,
+      "textureSet": "Lifter",
       "sockets": [
         {
           "name": "SOCKET_Nose_0",
@@ -286,7 +481,7 @@
           "index": 0,
           "position": [
             0,
-            -1.24,
+            -1.4298,
             4.0
           ],
           "scale": 1.0
@@ -297,7 +492,7 @@
           "index": 0,
           "position": [
             2.32,
-            -1.08,
+            -1.07,
             -0.3
           ],
           "scale": 1.0
@@ -308,7 +503,7 @@
           "index": 0,
           "position": [
             1.82,
-            -1.518,
+            -1.4832,
             -1.9
           ],
           "scale": 1.0
@@ -319,7 +514,7 @@
           "index": 1,
           "position": [
             -1.82,
-            -1.518,
+            -1.4832,
             -1.9
           ],
           "scale": 1.0
@@ -330,7 +525,7 @@
           "index": 0,
           "position": [
             0,
-            -1.67,
+            -1.6061,
             -0.6
           ],
           "scale": 1.0
@@ -352,7 +547,7 @@
           "index": 0,
           "position": [
             0,
-            2.0,
+            1.85,
             -1.9
           ],
           "scale": 1.0
@@ -390,6 +585,7 @@
         101
       ],
       "triangles": 1016,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -401,6 +597,7 @@
         102
       ],
       "triangles": 984,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -412,6 +609,7 @@
         103
       ],
       "triangles": 1072,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -423,6 +621,7 @@
         111
       ],
       "triangles": 1112,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -433,7 +632,8 @@
       "moduleIds": [
         112
       ],
-      "triangles": 1134,
+      "triangles": 1310,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -444,7 +644,8 @@
       "moduleIds": [
         115
       ],
-      "triangles": 683,
+      "triangles": 771,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -455,7 +656,8 @@
       "moduleIds": [
         116
       ],
-      "triangles": 683,
+      "triangles": 771,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -467,6 +669,7 @@
         117
       ],
       "triangles": 1136,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -478,6 +681,7 @@
         113
       ],
       "triangles": 1134,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -489,6 +693,7 @@
         114
       ],
       "triangles": 364,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -500,6 +705,7 @@
         121
       ],
       "triangles": 632,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -511,6 +717,7 @@
         131
       ],
       "triangles": 584,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -522,6 +729,7 @@
         132
       ],
       "triangles": 496,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -532,7 +740,8 @@
       "moduleIds": [
         133
       ],
-      "triangles": 820,
+      "triangles": 1092,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -543,7 +752,8 @@
       "moduleIds": [
         134
       ],
-      "triangles": 688,
+      "triangles": 804,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -554,7 +764,8 @@
       "moduleIds": [
         135
       ],
-      "triangles": 688,
+      "triangles": 804,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -566,6 +777,7 @@
         141
       ],
       "triangles": 432,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -577,6 +789,7 @@
         151
       ],
       "triangles": 1360,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -588,6 +801,7 @@
         152
       ],
       "triangles": 1636,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -599,6 +813,7 @@
         153
       ],
       "triangles": 1084,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -609,7 +824,8 @@
       "moduleIds": [
         161
       ],
-      "triangles": 464,
+      "triangles": 652,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -620,7 +836,8 @@
       "moduleIds": [
         162
       ],
-      "triangles": 464,
+      "triangles": 652,
+      "textureSet": "Modules",
       "sockets": []
     },
     {
@@ -632,6 +849,7 @@
         163
       ],
       "triangles": 232,
+      "textureSet": "Modules",
       "sockets": []
     }
   ]

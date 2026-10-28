@@ -3,6 +3,7 @@ PartForge entry point.
 
 Command line (full run: build, export to Unity, previews, .blend):
     python generate.py [--style NAME] [--kit NAME] [--out DIR] [--previews DIR] [--no-render] [--no-blend] [--samples N]
+    python generate.py --audit [--style NAME]       alignment check only (floating parts, sockets off the hull)
     blender --background --python generate.py -- [same options]
 
 Blender window (the PartForge panel, N > PartForge; build in place, export and render from the panel):
@@ -44,10 +45,19 @@ def main():
     parser.add_argument("--no-render", action="store_true")
     parser.add_argument("--no-blend", action="store_true")
     parser.add_argument("--samples", type=int, default=32)
+    parser.add_argument("--audit", action="store_true", help="Check alignment only (no export); exit 1 on problems.")
     args = parser.parse_args(argv)
 
     style = styles.get(args.style)
     kit = args.kit or style["kit"]
+
+    if args.audit:
+        from partforge import audit, build as builder, parts
+        parts.use_style(style)
+        items = [parts.chassis(spec, style) for spec in builder.chassis_specs(style)] + parts.all_modules()
+        problems = audit.run(items)
+        print(f"{problems} problems")
+        sys.exit(1 if problems else 0)
 
     if IN_WINDOW:
         ui.register()

@@ -20,8 +20,9 @@ Or start from the command line with the panel open: `blender --python Tools/Part
 | **Rebuild** / **Auto rebuild** | Builds every part again in this file (under a second). Auto: after each slider change. |
 | Shape, Add-ons, Wear and lights, Paint | Every style value (see `ART_DIRECTION.md`). |
 | Chassis | Pick a chassis: body type, size, nose and boom length, wings, engines, armour, seed (**New seed** = new chance details). |
-| **Export kit to Unity** | FBX, palette PNGs and manifest to `Assets/Chopper/Art/Kits/<kit>`. Then Unity: Chopper → Setup → 5. |
-| **Render previews** | Line-up, close-ups and module sheet to `previews/<kit>` (Blender is busy for about a minute). |
+| **Export kit to Unity** | Bakes the texture sets in every skin, then FBX, textures and manifest to `Assets/Chopper/Art/Kits/<kit>` (several minutes). Then Unity: Chopper → Setup → 5. After it the file shows the baked textures. |
+| Skin + **Show skin** | After an export: puts that skin on every part (viewport in Material Preview or Rendered). |
+| **Render previews** | Line-up, close-ups, four-view sheets, module sheet, and (after an export) the skin sheet, to `previews/<kit>`. |
 | **Save style** | Writes `styles/<name>.json` (all values + chassis shapes). It shows in the Style menu and works on the command line: `--style <name>`. |
 
 Your own objects in the file are safe: a rebuild replaces only the `PartForge:` collections. Hand edits to generated
@@ -39,9 +40,16 @@ or a normal Blender install:
 
     blender --background --python Tools/PartForge/generate.py -- [options]
 
+Alignment check only (under a second): `generate.py --audit [--style NAME]` lists floating parts and sockets off the
+hull (see `ART_DIRECTION.md`, "Alignment check").
+
 Options: `--style dystopia|neon` (art direction, see `ART_DIRECTION.md`), `--kit NAME` (default: the style's kit),
 `--out DIR` (default `Assets/Chopper/Art/Kits/<kit>`), `--previews DIR` (default `Tools/PartForge/previews/<kit>`),
-`--no-render`, `--samples 32`. A full run with previews takes about 1–2 min on CPU.
+`--no-render`, `--samples 32`. On 4 CPU cores: export (bake + 10 skins) about 2.5 min, previews about 12 min more.
+
+Texture files: Kit02 (10 skins) is about 60 MB, Kit01 (4 skins) about 25 MB, and every export rewrites them. If git
+history gets too big, move `Assets/Chopper/Art/Kits/**/*.png` (and `*.fbx`) to Git LFS, or export fewer skins (style
+key `skins`).
 
 A command-line run also saves `blend/<kit>.blend` (`--no-blend` to skip).
 Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): texture settings, the kit material, material remap.
@@ -52,8 +60,9 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 |---|---|
 | `Models/Chassis_<Family>.fbx` | Scout, Lifter (utility body); Gunship, Assault (attack body). Origin = centre of mass. Child empties `SOCKET_<Slot>_<Index>` = attach points (same slot order and indices as the game's chassis definitions; Pylon 0 on the right). |
 | `Models/<Module>.fbx` | Guns, pods, racks, utilities, turret, winch, rotors, engines. Origin = attach point, points +Z. |
-| `Textures/<kit>_Colour/Emission/MetalSmooth.png` | 5×5 palette. Each face samples one swatch: one material per kit; a skin = new maps. |
-| `<kit>.manifest.json` | Parts, files, slot, module ids, triangle counts, sockets in Unity space. |
+| `Textures/<kit>_<Set>_Normal.png`, `_Occlusion.png`, `_Emission.png` | Per texture set (each chassis, and `Modules` for all modules): normal map, occlusion, lights. |
+| `Textures/<kit>_<Set>_<skin>_Colour.png`, `_MetalSmooth.png` (`_Emission.png`) | Per set and skin: paint, metallic (R) / smoothness (A), and own glow lines for glowing skins. |
+| `<kit>.manifest.json` | Parts (file, slot, module ids, triangles, texture set, sockets in Unity space), texture sets, skins (id, name, maps per set). |
 
 ## Conventions
 
@@ -66,4 +75,6 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 
 ## Previews
 
-`previews/<kit>/chassis_lineup.jpg`, `gunship_closeup.jpg`, `modules_sheet.jpg` (Cycles, preview loadouts in `kits.py`).
+`previews/<kit>/chassis_lineup.jpg`, `<chassis>_closeup.jpg`, `<chassis>_views.jpg` (front left, rear right, side,
+top), `modules_sheet.jpg`, `skins_sheet.jpg` (every skin on the Gunship). Cycles, in a grey review studio (soft key,
+fill, rim, a floor with a 1 m grid that fades into the horizon); preview loadouts in `kits.py`.

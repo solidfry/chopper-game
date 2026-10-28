@@ -34,6 +34,8 @@ STYLES = {
         # Form: rounded section corners, curved silhouettes, filleted edges (see geo.DEFAULT_FORM).
         form=dict(corner_segments=4, loft_smooth=1, curve_detail=1.5, edge_radius=0.05, edge_segments=1,
                   edge_profile=0.5, box_rounding=0.35, box_min=0.1),
+        # Skins (skins.py) painted on export: the clean neon look gets the bright ones.
+        skins=["factory", "neon_hex", "synthwave", "interceptor"],
     ),
     # Kit02: gritty dystopia / near future. Brutal, angular, retrofitted, worn; light is a tool, not decoration.
     "dystopia": dict(
