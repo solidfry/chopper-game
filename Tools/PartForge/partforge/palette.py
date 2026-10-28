@@ -1,13 +1,14 @@
 """
-One material per kit: every face samples one swatch of a small palette texture (4 x 4 cells). Three maps, same layout:
+One material per kit: every face samples one swatch of a small palette texture (5 x 5 cells). Three maps, same layout:
 colour (sRGB), emission (sRGB, black = no glow) and URP metallic/smoothness (R = metallic, A = smoothness).
-A skin is another set of the same three maps. Colours follow the game's style guide (UI/Theme/ChopperTheme.uss).
+A skin is another set of the same three maps. Colours follow the game's style guide (UI/Theme/ChopperTheme.uss);
+a style (styles.py) can override any swatch colour. Swatch names and cells never change, so builders stay the same.
 """
 import os
 
 import bpy
 
-GRID = 4
+GRID = 5
 CELL = 8  # pixels per swatch (point filtered in Unity)
 
 # name: (colour hex, emission hex or None, metallic, smoothness)
@@ -28,6 +29,15 @@ SWATCHES = [
     ("missile", "#c9ccc8", None, 0.3, 0.5),          # 13 missile bodies
     ("carbon", "#18191b", None, 0.2, 0.3),           # 14 rotor blades
     ("marker", "#ff00ff", None, 0.0, 0.0),           # 15 never on exported meshes (debug)
+    ("primer", "#6e4636", None, 0.1, 0.25),          # 16 red-oxide replacement panels
+    ("rust", "#4f3324", None, 0.3, 0.15),            # 17 rust, old metal
+    ("soot", "#141312", None, 0.0, 0.1),             # 18 burnt metal behind exhausts
+    ("hazard_faded", "#b39443", None, 0.1, 0.3),     # 19 sun-bleached warning paint
+    ("sodium", "#ffae42", "#ffae42", 0.0, 0.5),      # 20 sodium-lamp amber (glow)
+    ("warning", "#ff2e2e", "#ff2e2e", 0.0, 0.5),     # 21 red warning light (glow)
+    ("concrete", "#6f706a", None, 0.0, 0.2),         # 22 matte cladding
+    ("bare", "#9a9890", None, 0.85, 0.35),           # 23 scuffed bare metal edges
+    ("spare", "#000000", None, 0.0, 0.0),            # 24 free cell
 ]
 INDEX = {name: i for i, (name, *_rest) in enumerate(SWATCHES)}
 
@@ -65,21 +75,29 @@ def _write_png(path, pixel_fn, linear):
     return image
 
 
-def write_maps(folder, kit_name):
-    """Writes <kit>_Colour.png, <kit>_Emission.png, <kit>_MetalSmooth.png. Returns the three image paths."""
+def write_maps(folder, kit_name, overrides=None):
+    """Writes <kit>_Colour.png, <kit>_Emission.png, <kit>_MetalSmooth.png. Returns the three image paths.
+
+    overrides: {swatch name: (colour hex, emission hex or None[, metallic, smoothness])} from the style."""
     os.makedirs(folder, exist_ok=True)
+    overrides = overrides or {}
+
+    def entry(i):
+        name, base, glow, metal, smooth = SWATCHES[i]
+        override = overrides.get(name, ())
+        return tuple(override) + (base, glow, metal, smooth)[len(override):]
 
     def colour(i):
-        return (*_hex(SWATCHES[i][1]), 1.0)
+        return (*_hex(entry(i)[0]), 1.0)
 
     def emission(i):
-        glow = SWATCHES[i][2]
+        glow = entry(i)[1]
         if glow is None:
             return (0.0, 0.0, 0.0, 1.0)
         return (*_hex(glow), 1.0)
 
     def metal_smooth(i):
-        _name, _c, _e, metallic, smoothness = SWATCHES[i]
+        _colour, _glow, metallic, smoothness = entry(i)
         return (metallic, 0.0, 0.0, smoothness)
 
     paths = [os.path.join(folder, f"{kit_name}_{suffix}.png") for suffix in ("Colour", "Emission", "MetalSmooth")]

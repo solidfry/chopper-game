@@ -6,7 +6,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import kits, palette, parts
+from . import kits, palette, parts, styles
 from .geo import to_blender
 
 
@@ -30,19 +30,23 @@ def _triangles(obj):
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 
 
-def build(out_dir, preview_dir=None, kit="Kit01", render=True, samples=32):
+def build(out_dir, preview_dir=None, kit=None, style_name="dystopia", render=True, samples=32):
+    style = styles.get(style_name)
+    kit = kit or style["kit"]
+    parts.use_style(style)
     _reset()
     scene = bpy.context.scene
     collection = scene.collection
     models_dir = os.path.join(out_dir, "Models")
     os.makedirs(models_dir, exist_ok=True)
-    maps = palette.write_maps(os.path.join(out_dir, "Textures"), kit)
+    maps = palette.write_maps(os.path.join(out_dir, "Textures"), kit, style.get("palette"))
     material = palette.make_material(kit, maps)
 
     built = {}
     manifest = {
         "kit": kit,
         "generator": "Tools/PartForge (Blender)",
+        "style": style["name"],
         "units": "metres",
         "axes": "Unity space: +X right, +Y up, +Z forward. Socket rotation is identity (modules point +Z).",
         "material": {"name": material.name, "colour": os.path.basename(maps[0]), "emission": os.path.basename(maps[1]),
@@ -50,7 +54,7 @@ def build(out_dir, preview_dir=None, kit="Kit01", render=True, samples=32):
         "parts": [],
     }
 
-    for part in [parts.chassis(spec) for spec in kits.CHASSIS] + parts.all_modules():
+    for part in [parts.chassis(spec, style) for spec in kits.CHASSIS] + parts.all_modules():
         obj = part.builder.to_object(part.name, collection)
         palette.apply_uvs(obj)
         obj.data.materials.append(material)
