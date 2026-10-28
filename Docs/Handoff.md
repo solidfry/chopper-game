@@ -124,7 +124,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 1. **Finish Phase 2 (needs Unity):** the 4-player network test, the tick-batching fix, and the edit-mode tests.
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
    - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
-   - next: tune socket positions in Unity; own model and sockets per chassis; rotor spin on rotor modules;
+   - next: the Asset Forge part-kit spike (plan section 5, "Part kits and authoring pipeline"), then own model and sockets per chassis from the kit; tune socket positions in Unity; rotor spin on rotor modules;
    - then the green wireframe hangar (it sets `LoadoutChoice`).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
@@ -154,6 +154,8 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 - HUD: retro 80s look — CRT / vector-display shader or post-processing over the HUD (plan section 3b).
 - Weapons: heat-seeking missiles (air and ground), cluster missiles and other cool cyberpunk weapons; a dynamic HUD overlay with targeting (plan section 3b).
 - Choppers will become fully modular ("lego" modules on chassis sockets). The current chopper is a placeholder.
+  - Target modularity (owner reference): https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f
+  - Parts are designed in Kenney Asset Forge (owner has it) from our own blocks, then exported to Unity. Design and spike steps: plan section 5, "Part kits and authoring pipeline".
 - Replies to the owner: short dot points, in ASD-STE100 Simplified English.
 
 ## 8. Key files

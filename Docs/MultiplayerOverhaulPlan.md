@@ -306,7 +306,39 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 - Setup: placeholder sockets on `ChopperGhost` (nose and pylons from the old weapon slots, the rest guessed), each chassis gets the ghost and a default loadout, module art from PolygonMilitary (`SM_Veh_Heli_Attach_Minigun`, `Rocket_Pod_02`, `Missle_01`, `Flare_01`, `Winch_01`), spawner gets catalog + missile prefab. Validate checks sockets per slot, weapon/utility visuals and the spawner.
 - Not used: old `Assets/Prefabs/Weapons/*` — they carry the old NGO `Weapon` script (missing).
 - Tests: `LoadoutCodeTests`.
-- Next: the hangar sets `LoadoutChoice`; own model + sockets per chassis; rotor spin moves to rotor modules; module damage states.
+- Next: the hangar sets `LoadoutChoice`; own model + sockets per chassis (see "Part kits and authoring pipeline" below); rotor spin moves to rotor modules; module damage states.
+
+### Part kits and authoring pipeline (design, 28 Oct — not built)
+**Reference (owner):** https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f — "this is the type of modularity I want". (Not opened by Claude: fab.com is blocked in the cloud session. Owner: add a one-line summary here of what it shows, e.g. swappable noses/tails/weapons, part count, how parts connect.)
+
+**Tool:** Kenney Asset Forge (owner has a licence) as the part designer and visualiser. We make our own blocks; Asset Forge snaps them together; we export the result to Unity.
+
+**Two layers (keep them apart):**
+1. **Gameplay modules** (built): slot, stats, weapon, `ModuleDefinition.Visual`, sockets on the chassis. Unchanged.
+2. **Visual parts** (new): the look of a chassis or module is made from kit parts (body, nose, tail boom, skids, rotor mast, pods). Parts have no stats. First version: parts are put together **offline** in Asset Forge and exported as one model per chassis / module, so the runtime (sockets, `ModuleVisualSystem`, hangar) stays as it is. Later: optional runtime cosmetic parts (a "Cosmetic" slot type with no stats) if the reference shows player-swappable looks.
+
+**Conventions (one kit per chassis family, written down before art starts):**
+- Grid: one Asset Forge grid step = a fixed size in metres (pick once, e.g. 0.25 m); every part on that grid so parts and modules line up.
+- Axes: +Z forward, +Y up, origin at the chassis centre of mass (flight code uses the root).
+- **Socket markers:** a small custom marker block per slot type (Nose, Pylon, Turret, Utility, Rotor, Engine, Armour). Its position and +Z are the attach point and the muzzle direction. Index by name (`SOCKET_Pylon_0`, `SOCKET_Pylon_1`) or by left-to-right order.
+- Module parts: pivot = attach point, so a module snaps onto any socket of its type.
+- Colour: Asset Forge colours → one palette texture and one material per kit; palette mapped to the style guide (`UI/Theme/ChopperTheme.uss` `--palette-*`). Skins later = palette swap.
+- Budget: a triangle limit per chassis and per module (set after the first test).
+
+**Unity side (to build after the spike):**
+- `Assets/Chopper/Art/Kits/<Kit>/` for exported FBX/glTF.
+- `ChopperKitPostprocessor` (editor `AssetPostprocessor`): on import, find socket marker nodes, record their transforms, hide their meshes; apply the kit material.
+- Setup step "Build chassis from kit": makes or updates the chassis prefab variant (model + `SocketAuthoring` children at the markers + the ghost/physics setup the current `ChopperGhost` has) and links `ChassisDefinition.Prefab`. Module models: link `ModuleDefinition.Visual`. Same "create only what is missing" rule as the other steps.
+- Validate: a socket for every chassis slot, marker names known, one material, triangle budget, module pivots near the origin, scale on the grid.
+- The in-game visualiser is the hangar (above): it uses the same prefabs and sockets, so what you see is what flies.
+
+**Spike first (owner, needs Asset Forge + Unity, ~1 hour):** make three test blocks (a body, a pod, a marker), import them into Asset Forge as custom blocks, snap a tiny chopper, export FBX and glTF, import into Unity. Check:
+- Does the export keep block / node names? (If not: find markers by a unique marker colour instead, and set slot types in a small mapping asset.)
+- Scale, pivot and axes as expected?
+- One material + palette texture, or one material per colour?
+- Does your Asset Forge edition import custom blocks? (If not: build parts in Blender and use Asset Forge only with its own kits for blocking out.)
+
+**Build order:** spike → conventions note → postprocessor + Setup step + checks → Gunship kit replaces the placeholder `ChopperGhost` → other chassis → module art → (later) runtime cosmetic parts.
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
