@@ -31,6 +31,7 @@ namespace Chopper.Editor.Setup
             var config = ConfigAssets.Load();
             CheckConfig(config, problems);
             CheckHudLook(problems);
+            problems.AddRange(KitAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             CheckPrefab(problems);
             CheckScene(problems);
             return problems;

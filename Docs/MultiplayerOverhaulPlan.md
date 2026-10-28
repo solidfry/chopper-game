@@ -311,7 +311,7 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 ### Part kits and authoring pipeline (design, 28 Oct — not built)
 **Reference (owner):** https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f — "this is the type of modularity I want". What matters from it: the chopper is built from separate modular components that snap together. Kenney Asset Forge works the same way, so it is the tool for this. (Exact contents of the Fab asset not checked; not needed for the design.)
 
-**Tool:** Kenney Asset Forge (owner has a licence) as the part designer and visualiser. We make our own blocks; Asset Forge snaps them together; we export the result to Unity.
+**Tool (changed 28 Oct, owner):** procedural generation in Blender, not Asset Forge (its built-in blocks look too childish; we would have to make our own anyway). **Built:** `Tools/PartForge` — Python + Blender (`bpy` from PyPI or a Blender install) builds every part from numbers and a seed, exports FBX with socket empties, a palette material and a manifest, and renders previews. See its README. Asset Forge stays optional for quick block-outs.
 
 **Two layers (keep them apart):**
 1. **Gameplay modules** (built): slot, stats, weapon, `ModuleDefinition.Visual`, sockets on the chassis. Unchanged.
@@ -332,13 +332,19 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 - Validate: a socket for every chassis slot, marker names known, one material, triangle budget, module pivots near the origin, scale on the grid.
 - The in-game visualiser is the hangar (above): it uses the same prefabs and sockets, so what you see is what flies.
 
-**Spike first (owner, needs Asset Forge + Unity, ~1 hour):** make three test blocks (a body, a pod, a marker), import them into Asset Forge as custom blocks, snap a tiny chopper, export FBX and glTF, import into Unity. Check:
+**Asset Forge spike (no longer needed for the main path; kept for reference):** make three test blocks (a body, a pod, a marker), import them into Asset Forge as custom blocks, snap a tiny chopper, export FBX and glTF, import into Unity. Check:
 - Does the export keep block / node names? (If not: find markers by a unique marker colour instead, and set slot types in a small mapping asset.)
 - Scale, pivot and axes as expected?
 - One material + palette texture, or one material per colour?
 - Does your Asset Forge edition import custom blocks? (If not: build parts in Blender and use Asset Forge only with its own kits for blocking out.)
 
-**Build order:** spike → conventions note → postprocessor + Setup step + checks → Gunship kit replaces the placeholder `ChopperGhost` → other chassis → module art → (later) runtime cosmetic parts.
+**PartForge Kit01 — built 28 Oct (generated and checked in Blender; not yet opened in Unity):**
+- 4 chassis (Scout, Gunship, Assault, Lifter; 3.1–4.0k triangles) with sockets for every slot in the game's slot order; 23 modules (guns, pods, racks, bombs, utilities, turret, winch, 3 rotors, 3 engines; 0.2–1k triangles) with catalog ids in the manifest.
+- `Assets/Chopper/Art/Kits/Kit01/` (FBX, palette maps, manifest). Previews in `Tools/PartForge/previews/`.
+- Setup step 5 `KitAssets`: texture import (point, uncompressed, sRGB per map), one URP Lit kit material (base, metallic/smoothness, emission), remap on every model. Validate: kit material present, every model remapped.
+- Next: "Build chassis from kit" Setup step (chassis prefab = current ghost setup + kit model + `SocketAuthoring` from the manifest, identity socket rotation) and link kit modules to `ModuleDefinition.Visual` by the manifest's module ids; rotor spin on the rotor module; colliders per chassis.
+
+**Build order:** PartForge kit (done) → open in Unity, check look and scale → "Build chassis from kit" + module links → Gunship kit replaces the placeholder `ChopperGhost` → tune shapes in `kits.py` → (later) runtime cosmetic parts.
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
