@@ -87,6 +87,17 @@ main hull is built, `Builder.snapshot_surface()` keeps it, and `Builder.on_surfa
 from outside, puts the part on the hit point and turns it to the surface slope. Random parts (plates, patches) skip
 spots that are already covered, so they never cut into each other; the door and ladder areas are kept free.
 
+## No free-standing 90° plates
+
+Parts that stick out from the hull are swept and tapered towards the front, not square boxes:
+
+- Wings, stub mounts, sponson stubs and the tail stabiliser: `_swept_wing` (a rounded section that gets narrower and
+  moves back towards the tip; wings also droop a little).
+- End plates (the yellow wing tips, the stabiliser tips): `_end_plate` (lower at the front, raked leading edge, leaning
+  out; `Builder.fin(..., cant=)` gives the lean).
+- Slat armour and railings: `_slat_cage` (round bars that lean back, lower towards the front, top rail sloping down to
+  the front); the Lifter's top railing also gets narrower towards the front.
+
 ## Surface detail (Geometry Nodes)
 
 Every chassis runs through the **PF Surface Detail** node group after the bevel (`partforge/detail.py`); the result is

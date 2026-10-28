@@ -240,10 +240,12 @@ class Builder:
         for face in {f for v in result["verts"] for f in v.link_faces}:
             face[self.swatch] = swatch
 
-    def fin(self, outline_zy, x, thickness, swatch):
-        """Flat plate from a 2D outline in the (z, y) plane, `thickness` across x, centred on `x`."""
-        front = [(x - thickness / 2, y, z) for z, y in outline_zy]
-        back = [(x + thickness / 2, y, z) for z, y in outline_zy]
+    def fin(self, outline_zy, x, thickness, swatch, cant=0.0):
+        """Flat plate from a 2D outline in the (z, y) plane, `thickness` across x, centred on `x`. cant: sideways
+        lean, metres of x per metre of height above the outline's lowest point (an end plate leaning out)."""
+        y0 = min(y for _z, y in outline_zy)
+        front = [(x + cant * (y - y0) - thickness / 2, y, z) for z, y in outline_zy]
+        back = [(x + cant * (y - y0) + thickness / 2, y, z) for z, y in outline_zy]
         self.loft([front, back], swatch)
 
     # -- finish ----------------------------------------------------------------------------------------------------

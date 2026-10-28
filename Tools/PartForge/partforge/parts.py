@@ -8,7 +8,7 @@ import random
 
 from mathutils import Vector
 
-from .geo import Builder, chamfer_ring, rot_x, rot_y, rot_z
+from .geo import FORM, Builder, _rounded_rect, chamfer_ring, rot_x, rot_y, rot_z
 from .palette import swatch as S
 
 
@@ -424,12 +424,16 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
         b.cylinder((side * 0.3 * W, top + 0.12, -1.8), (side * 0.12 * W, 0.40 * H, -3.6), 0.05, C("gunmetal"), segments=6)
 
     # Top: cage bars, antenna array, dish.
+    # Railing: lower and narrower towards the front; posts lean back.
+    rail = {1.3: (0.15 * W, 0.36), -0.4: (0.18 * W, 0.46), -2.0: (0.2 * W, 0.55)}  # z: (half width, height)
     for side in (1, -1):
-        b.cylinder((side * 0.2 * W, top + 0.55, 1.3), (side * 0.2 * W, top + 0.55, -2.0), 0.03, C("steel"), segments=5)
-        for z in (1.3, -0.4, -2.0):
-            b.cylinder((side * 0.2 * W, top + 0.02, z), (side * 0.2 * W, top + 0.55, z), 0.03, C("steel"), segments=5)
+        b.cylinder((side * rail[1.3][0], top + rail[1.3][1], 1.3 - 0.12),
+                   (side * rail[-2.0][0], top + rail[-2.0][1], -2.0 - 0.12), 0.03, C("steel"), segments=5)
+        for z, (x, h) in rail.items():
+            b.cylinder((side * (x + 0.04), top + 0.02, z), (side * x, top + h, z - 0.12), 0.03, C("steel"), segments=5)
     for z in (1.3, -2.0):
-        b.cylinder((0.2 * W, top + 0.55, z), (-0.2 * W, top + 0.55, z), 0.03, C("steel"), segments=5)
+        x, h = rail[z]
+        b.cylinder((x, top + h, z - 0.12), (-x, top + h, z - 0.12), 0.03, C("steel"), segments=5)
     for _ in range(rng.randint(3, 5)):
         x, z = rng.uniform(-0.3, 0.3) * W, rng.uniform(F - 2.0, F - 1.2)
         b.cylinder((x, top - 0.02, z), (x, top + rng.uniform(0.5, 1.0), z - 0.1), 0.015, C("steel"), segments=5)
@@ -522,7 +526,7 @@ def _sponson_pylons(b, spec, W, H):
     for i in range(spec["slots"].count("Pylon")):
         side = 1 if i % 2 == 0 else -1
         x, y = side * (W / 2 + 0.32 + 0.5), -0.30 * H
-        b.box((x - side * 0.15, y, -0.3), (0.4, 0.12, 0.6), C("hull_dark"))
+        _swept_wing(b, side, abs(x) - 0.35, abs(x) + 0.05, y, -0.24, 0.62, 0.42, 0.12, 0.12, C("hull_dark"))
         b.box((x, y - 0.1, -0.3), (0.1, 0.1, 0.5), C("gunmetal"))
         points.append((x, y - 0.15, -0.3))
     return points
@@ -573,15 +577,7 @@ def _attack_cage(b, W, H):
     y = 0.36 * H
     x_out = 0.31 * W + 0.26 * W * 0.35 + 0.26 * W / 2 + 0.12
     for side in (1, -1):
-        x = side * x_out
-        z = 0.2
-        while z > -1.7:
-            b.box((x, y, z), (0.03, 0.34 * H, 0.03), C("gunmetal"))
-            z -= 0.26
-        for dy in (-0.15 * H, 0.15 * H):
-            b.box((x, y + dy, -0.75), (0.03, 0.03, 2.0), C("gunmetal"))
-        for z in (0.1, -1.5):
-            b.box((x - side * 0.06, y, z), (0.12, 0.03, 0.03), C("gunmetal"))
+        _slat_cage(b, side * x_out, side, y - 0.17 * H, 0.2, -1.6, 0.22 * H, 0.34 * H, standoff=0.12)
 
 
 def _canopy(b, style, W, H, F):
@@ -637,6 +633,47 @@ def _engines(b, spec, style, W, H):
             b.box((x, 0.40 * H, -2.45), (width * 0.7, 0.03, 0.7), C("soot"))
 
 
+def _swept_wing(b, side, root_x, tip_x, y, z, root_chord, tip_chord, sweep, thickness, swatch, droop=0.0):
+    """Wing or stabiliser half on one side: a rounded section that narrows (chord) and moves back (sweep) and down
+    (droop) towards the tip. Returns x -> z of the centre line at |x| (for hardpoints and end plates)."""
+    n = max(1, int(FORM["corner_segments"]))
+    sections = []
+    for x, chord, thick, dy, dz in ((root_x, root_chord, thickness, 0.0, 0.0),
+                                    (tip_x, tip_chord, thickness * 0.7, -droop, -sweep)):
+        outline = _rounded_rect(chord / 2, thick / 2, thick * 0.9, thick * 0.45, n)
+        sections.append([(side * x, y + dy + v, z + dz + u) for u, v in outline])
+    b.loft(sections, swatch)
+    return lambda x: z - sweep * (abs(x) - root_x) / (tip_x - root_x)
+
+
+def _end_plate(b, x, y, z, chord, height, thickness, swatch, cant=0.0):
+    """Swept end plate (no free-standing 90° plates): lower at the front, the leading edge raked back, the trailing
+    edge raked the other way, centred on (x, y, z). cant: lean out (signed, x per metre of height)."""
+    c, h = chord / 2, height / 2
+    b.fin([(z - c, y - h), (z + c, y - h * 0.6), (z + c * 0.35, y + h * 0.35), (z - c * 1.15, y + h)],
+          x, thickness, swatch, cant=cant)
+
+
+def _slat_cage(b, x, side, y0, z_front, z_back, h_front, h_back, spacing=0.26, lean=0.12, radius=0.02,
+               standoff=0.14):
+    """Slat armour on one side: round bars that lean back, lower towards the front (height h_front .. h_back above
+    y0, top rail sloping down to the front), on stand-offs back to the hull (inwards by `standoff`)."""
+    count = max(2, int(round((z_front - z_back) / spacing)) + 1)
+    tops = []
+    for i in range(count):
+        t = i / (count - 1)
+        z = z_front + (z_back - z_front) * t
+        h = h_front + (h_back - h_front) * t
+        top = (x - side * 0.03, y0 + h, z - lean)
+        b.cylinder((x, y0, z), top, radius, C("gunmetal"), segments=5)
+        tops.append(top)
+    b.cylinder((x, y0, z_front + 0.04), (x, y0, z_back - 0.04), radius, C("gunmetal"), segments=5)
+    b.cylinder(tops[0], tops[-1], radius, C("gunmetal"), segments=5)
+    for z, h in ((z_front, h_front), (z_back, h_back)):
+        y = y0 + h * 0.45
+        b.cylinder((x - side * standoff, y, z), (x, y, z - lean * 0.45), radius, C("gunmetal"), segments=5)
+
+
 def _wings_or_stubs(b, spec, style, W, H):
     """Stub wings (pylons under the tips) or a small side mount per pylon. Pylon 0 is on the right (+x)."""
     pylons = spec["slots"].count("Pylon")
@@ -646,20 +683,28 @@ def _wings_or_stubs(b, spec, style, W, H):
     if spec.get("wings", False):
         span = spec["wing_span"]
         thickness = 0.12 if style["facet"] <= 1.0 else 0.18
+        root_x, tip_x, sweep, droop = W / 2 - 0.1, W / 2 + span, 0.3, 0.06
         for side in (1, -1):
-            b.box((side * (W / 2 + span / 2 - 0.1), wing_y, wing_z), (span + 0.2, thickness, 1.0), C("hull"))
-            b.box((side * (W / 2 + span), wing_y - 0.04, wing_z), (0.06, 0.36, 1.05), C("hazard"))
-            b.box((side * (W / 2 + span + 0.04), wing_y + 0.1, wing_z + 0.45), (0.04, 0.05, 0.08),
+            # Swept, tapered wing; a swept end plate (low at the front, raked leading edge) leaning out at the tip.
+            centre_z = _swept_wing(b, side, root_x, tip_x, wing_y, wing_z, 1.15, 0.7, sweep, thickness, C("hull"),
+                                   droop=droop)
+            tip_y, tip_z = wing_y - droop, centre_z(tip_x)
+            _end_plate(b, side * (tip_x + 0.02), tip_y - 0.04, tip_z, 0.8, 0.4, 0.06, C("hazard"), cant=side * 0.12)
+            b.box((side * (tip_x + 0.06), tip_y + 0.04, tip_z + 0.3), (0.04, 0.05, 0.08),
                   C(lights["right"] if side > 0 else lights["left"]))
-            # Pylon hardpoint under the tip.
-            b.box((side * (W / 2 + span * 0.7), wing_y - 0.1, wing_z), (0.1, 0.1, 0.6), C("gunmetal"))
+            # Pylon hardpoint under the outer wing, following the sweep.
+            x = W / 2 + span * 0.7
+            b.block((side * x, wing_y - droop * 0.7 - 0.1, centre_z(x)), (0.1, 0.1, 0.6), C("gunmetal"), taper=1.0,
+                    taper_depth=0.8, rotation=rot_x(180))
         for i in range(pylons):
             side = 1 if i % 2 == 0 else -1
-            points.append((side * (W / 2 + spec["wing_span"] * 0.7), wing_y - 0.15, wing_z))
+            x = W / 2 + span * 0.7
+            points.append((side * x, wing_y - droop * 0.7 - 0.15, wing_z - sweep * (x - root_x) / (tip_x - root_x)))
     else:
         for i in range(pylons):
             side = 1 if i % 2 == 0 else -1
-            b.box((side * (W / 2 + 0.22), -0.15 * H, wing_z), (0.5, 0.12, 0.6), C("hull_dark"))
+            _swept_wing(b, side, W / 2 - 0.03, W / 2 + 0.47, -0.15 * H, wing_z + 0.06, 0.62, 0.42, 0.12, 0.12,
+                        C("hull_dark"))
             b.box((side * (W / 2 + 0.38), -0.15 * H - 0.1, wing_z), (0.1, 0.1, 0.5), C("gunmetal"))
             points.append((side * (W / 2 + 0.38), -0.15 * H - 0.15, wing_z))
     return points
@@ -691,10 +736,10 @@ def _tail(b, style, W, H, tail_z, open_rotor=False, tail_rotor=True):
     b.box((0, base_y + 1.33, tail_z - sweep * 0.45), (0.14, 0.06, 0.55), C("hazard"))
     if not style["neon_strips"]:
         b.box((0, base_y + 1.38, tail_z - sweep * 0.45 - 0.2), (0.06, 0.05, 0.06), C(style["lights"]["right"]))
-    # Stabiliser.
-    b.box((0, base_y - 0.02, tail_z + 0.75), (1.9, 0.07, 0.5), C("hull"))
+    # Stabiliser: swept and tapered, with swept end plates leaning out.
     for side in (1, -1):
-        b.box((side * 0.95, base_y + 0.08, tail_z + 0.72), (0.05, 0.3, 0.45), C("hull_dark"))
+        centre_z = _swept_wing(b, side, 0.0, 0.95, base_y - 0.02, tail_z + 0.75, 0.55, 0.34, 0.18, 0.07, C("hull"))
+        _end_plate(b, side * 0.96, base_y + 0.06, centre_z(0.95), 0.42, 0.3, 0.05, C("hull_dark"), cant=side * 0.15)
     if not tail_rotor:
         return
     if open_rotor:
@@ -774,22 +819,11 @@ def _cage(b, style, spec, W, H, boom):
     y = 0.5 * H + 0.12 * H
     outer = (0.30 * W if count > 1 else 0.0) + width / 2 + 0.14
     for side in (1, -1):
-        x = side * outer
-        z = 0.3
-        while z > -1.8:
-            b.box((x, y, z), (0.03, 0.34 * H, 0.03), C("gunmetal"))
-            z -= 0.26
-        for dy in (-0.17 * H, 0.17 * H):
-            b.box((x, y + dy, -0.75), (0.03, 0.03, 2.2), C("gunmetal"))
-        for z in (0.2, -1.6):
-            b.box((x - side * 0.07, y, z), (0.14, 0.03, 0.03), C("gunmetal"))
+        _slat_cage(b, side * outer, side, y - 0.17 * H, 0.3, -1.7, 0.22 * H, 0.34 * H)
     # Boom cage.
     for side in (1, -1):
-        x = side * (0.17 * W + 0.12)
-        for i in range(6):
-            b.box((x, 0.22 * H, -2.8 - i * 0.28), (0.03, 0.36 * H, 0.03), C("gunmetal"))
-        for dy in (0.05 * H, 0.38 * H):
-            b.box((x, dy, -2.8 - 0.7), (0.03, 0.03, 1.5), C("gunmetal"))
+        _slat_cage(b, side * (0.17 * W + 0.12), side, 0.04 * H, -2.8, -2.8 - 5 * 0.28, 0.24 * H, 0.36 * H,
+                   spacing=0.28, standoff=0.12)
 
 
 def _conduits(b, W, H, F, tail_z, side_x, y_low):
