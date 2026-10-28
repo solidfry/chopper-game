@@ -83,6 +83,7 @@ def _set_input(modifier, identifier, value):
 
 def _build_group():
     group = bpy.data.node_groups.new(GROUP, "GeometryNodeTree")
+    group.use_fake_user = True  # kept in the .blend for editing, even though the baked parts no longer use it
     group.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
     for name, socket_type, default, low, high, description in INPUTS:
         socket = group.interface.new_socket(name, in_out="INPUT", socket_type=socket_type)
