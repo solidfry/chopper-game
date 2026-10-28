@@ -65,6 +65,24 @@ rotor module fits the duct. The game must show the rotor module on every rotor s
 
 Per chassis shape (size, nose length, boom, wings, engines, armour amount, seed) is in `partforge/kits.py`.
 
+## Surface detail (Geometry Nodes)
+
+Every chassis runs through the **PF Surface Detail** node group after the bevel (`partforge/detail.py`); the result is
+baked into the exported mesh, so Unity gets real geometry. Style key `detail` (panel: **Surface detail**):
+
+| Value | Effect |
+|---|---|
+| `panels` | Share of large hull faces that become inset panels. |
+| `min_area` | Faces smaller than this (m²) get no panels or greebles (keeps small parts clean). |
+| `inset`, `depth` | Panel size relative to its face; how far it sinks in. |
+| `recolour` | Share of panels painted light or dark (two-tone armour). |
+| `bolt_size` | Hex nuts at every panel corner, aligned to the surface; 0 = none. |
+| `greebles`, `greeble_size` | Small boxes per m² on large hull faces; their largest size. |
+
+Only hull faces get detail (glass, lights and warning paint stay clean). The node group lives in the `.blend`: edit it
+in the Geometry Nodes editor and Rebuild uses your version; **Reset detail nodes** makes it again from code. Cost:
+about +5k to +10k triangles per chassis at the dystopia values; lower `panels`, `bolt_size` 0 or `greebles` to save.
+
 ## Ideas for the next pass
 
 - **Faction styles:** a "corporate security" style (clean white panels, cyan lights, bubble canopy) against a "militia"

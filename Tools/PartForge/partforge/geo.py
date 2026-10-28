@@ -132,8 +132,9 @@ class Builder:
         self.loft([front, back], swatch)
 
     # -- finish ----------------------------------------------------------------------------------------------------
-    def to_object(self, name, collection, bevel_width=0.025):
-        """Unity -> Blender mapping, normals out, a small bevel for hard-surface highlights, baked into the mesh."""
+    def to_object(self, name, collection, bevel_width=0.025, detail=None):
+        """Unity -> Blender mapping, normals out, a small bevel for hard-surface highlights, then (detail = (seed,
+        values)) the surface detail node group (panels, nuts, greebles); all baked into the mesh."""
         for vert in self.bm.verts:
             vert.co = to_blender(vert.co)
         bmesh.ops.remove_doubles(self.bm, verts=self.bm.verts, dist=1e-5)
@@ -152,6 +153,9 @@ class Builder:
             bevel.limit_method = "ANGLE"
             bevel.angle_limit = math.radians(35)
             bevel.harden_normals = False
+        if detail is not None:
+            from . import detail as surface_detail
+            surface_detail.add_modifier(raw, *detail)
 
         depsgraph = bpy.context.evaluated_depsgraph_get()
         baked = bpy.data.meshes.new_from_object(raw.evaluated_get(depsgraph))

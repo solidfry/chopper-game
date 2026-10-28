@@ -66,9 +66,14 @@ def generate(style, kit=None):
 
     built = {}
     for part in [parts.chassis(spec, style) for spec in specs] + parts.all_modules():
-        obj = part.builder.to_object(part.name, export_collection)
+        detail = (part.seed, style.get("detail")) if part.kind == "chassis" and style.get("detail") else None
+        obj = part.builder.to_object(part.name, export_collection, detail=detail)
         palette.apply_uvs(obj)
+        # One material per kit: Geometry Nodes can leave an empty slot behind, so start clean.
+        obj.data.materials.clear()
         obj.data.materials.append(material)
+        for polygon in obj.data.polygons:
+            polygon.material_index = 0
         # Socket names repeat across parts, so they carry the part name here; export() strips it.
         for slot, index, position, scale in part.sockets:
             empty = bpy.data.objects.new(f"{part.name}:SOCKET_{slot}_{index}", None)

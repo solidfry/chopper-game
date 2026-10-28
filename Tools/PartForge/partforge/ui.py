@@ -11,7 +11,7 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Operator, Panel, PropertyGroup
 
-from . import build, palette, styles
+from . import build, detail, palette, styles
 
 TOOL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))       # Tools/PartForge
 REPO_DIR = os.path.normpath(os.path.join(TOOL_DIR, "..", ".."))
@@ -125,6 +125,20 @@ class PartForgeSettings(PropertyGroup):
     paint_metallic: FloatProperty(name="Paint metallic", min=0.0, max=1.0, update=_changed)
     paint_smoothness: FloatProperty(name="Paint smoothness", min=0.0, max=1.0, update=_changed)
     other_palette: StringProperty(options={"HIDDEN"})  # the loaded style's other swatch overrides (JSON)
+    # Surface detail (Geometry Nodes "PF Surface Detail", chassis only)
+    detail_on: BoolProperty(name="Surface detail", default=True, update=_changed)
+    detail_panels: FloatProperty(name="Panels", min=0.0, max=1.0, update=_changed,
+                                 description="Share of large hull faces that become inset panels")
+    detail_min_area: FloatProperty(name="Min face area", min=0.0, max=2.0, update=_changed,
+                                   description="Smaller faces (m²) get no panels or greebles")
+    detail_inset: FloatProperty(name="Panel size", min=0.5, max=0.98, update=_changed)
+    detail_depth: FloatProperty(name="Panel depth", min=0.0, max=0.1, step=0.1, precision=3, update=_changed)
+    detail_recolour: FloatProperty(name="Two-tone panels", min=0.0, max=1.0, update=_changed)
+    detail_bolt_size: FloatProperty(name="Nut size", min=0.0, max=0.12, step=0.1, precision=3, update=_changed,
+                                    description="Hex nuts at panel corners; 0 = none")
+    detail_greebles: FloatProperty(name="Greebles", min=0.0, max=4.0, update=_changed,
+                                   description="Small boxes per m² on large hull faces")
+    detail_greeble_size: FloatProperty(name="Greeble size", min=0.02, max=0.6, update=_changed)
     # Chassis
     chassis: CollectionProperty(type=PartForgeChassis)
     chassis_index: IntProperty(name="Chassis")
@@ -172,6 +186,12 @@ def load_style(settings, style, name, kit=None):
                 settings.paint_smoothness = entry[3] if len(entry) > 3 else smooth
         settings.other_palette = json.dumps(overrides)
 
+        values = style.get("detail")
+        settings.detail_on = bool(values)
+        values = dict(detail.DEFAULTS, **(values or {}))
+        for key in detail.DETAIL_KEYS:
+            setattr(settings, f"detail_{key}", values[key])
+
         settings.chassis.clear()
         for spec in build.chassis_specs(style):
             item = settings.chassis.add()
@@ -210,6 +230,7 @@ def style_from(settings):
         hazard="hazard_faded" if settings.hazard_faded else "hazard",
         accents={"neon_green": settings.accent_green, "neon_pink": settings.accent_pink},
         palette=dict(json.loads(settings.other_palette or "{}"), **paint),
+        detail={key: getattr(settings, f"detail_{key}") for key in detail.DETAIL_KEYS} if settings.detail_on else {},
     )
     style["chassis"] = [dict(
         name=item.name, body=item.body, seed=item.seed, width=item.width, height=item.height, front=item.front,
@@ -292,6 +313,17 @@ class PARTFORGE_OT_save_style(Operator):
         path = styles.save(name, style, chassis)
         settings.style_name = name
         self.report({"INFO"}, f"Saved {path}")
+        return {"FINISHED"}
+
+
+class PARTFORGE_OT_reset_detail(Operator):
+    bl_idname = "partforge.reset_detail"
+    bl_label = "Reset detail nodes"
+    bl_description = "Make the PF Surface Detail node group again from PartForge (drops your node edits), then rebuild"
+
+    def execute(self, context):
+        detail.reset()
+        rebuild(context.scene.partforge)
         return {"FINISHED"}
 
 
@@ -381,6 +413,23 @@ class PARTFORGE_PT_paint(_Base, Panel):
             column.prop(settings, key)
 
 
+class PARTFORGE_PT_detail(_Base, Panel):
+    bl_label = "Surface detail"
+    bl_parent_id = "PARTFORGE_PT_main"
+
+    def draw_header(self, context):
+        self.layout.prop(context.scene.partforge, "detail_on", text="")
+
+    def draw(self, context):
+        settings = context.scene.partforge
+        column = self.layout.column()
+        column.active = settings.detail_on
+        for key in detail.DETAIL_KEYS:
+            column.prop(settings, f"detail_{key}")
+        column.operator("partforge.reset_detail", icon="NODETREE")
+        column.label(text="Edit the nodes: Geometry Nodes editor > PF Surface Detail.", icon="INFO")
+
+
 class PARTFORGE_PT_chassis(_Base, Panel):
     bl_label = "Chassis"
     bl_parent_id = "PARTFORGE_PT_main"
@@ -432,9 +481,9 @@ class PARTFORGE_PT_output(_Base, Panel):
 CLASSES = (
     PartForgeChassis, PartForgeSettings,
     PARTFORGE_OT_load_style, PARTFORGE_OT_rebuild, PARTFORGE_OT_export, PARTFORGE_OT_render, PARTFORGE_OT_save_style,
-    PARTFORGE_OT_reseed,
+    PARTFORGE_OT_reseed, PARTFORGE_OT_reset_detail,
     PARTFORGE_PT_main, PARTFORGE_PT_shape, PARTFORGE_PT_addons, PARTFORGE_PT_wear, PARTFORGE_PT_paint,
-    PARTFORGE_PT_chassis, PARTFORGE_PT_output,
+    PARTFORGE_PT_detail, PARTFORGE_PT_chassis, PARTFORGE_PT_output,
 )
 
 

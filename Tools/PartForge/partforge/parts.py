@@ -15,8 +15,9 @@ from .palette import swatch as S
 class Part:
     """One exported model: geometry + sockets (slot, index, Unity position)."""
 
-    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=()):
+    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=(), seed=0):
         self.name = name
+        self.seed = seed
         self.kind = kind  # "chassis" or "module"
         self.builder = builder
         self.slot = slot
@@ -103,7 +104,7 @@ def chassis(spec, style):
         _wear(b, rng, style, W, H, F)
 
     sockets = _sockets(spec, W, H, F, rotors, pylon_points, body)
-    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets)
+    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"])
 
 
 def _ring_fn(style):

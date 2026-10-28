@@ -28,6 +28,9 @@ STYLES = {
         hazard="hazard",
         accents={},           # swatch swaps for module glow parts
         palette={},           # swatch overrides: name: (colour, emission or None[, metallic, smoothness])
+        # Surface detail (Geometry Nodes, chassis only; see detail.py): inset panels, hex nuts, greebles.
+        detail=dict(panels=0.35, min_area=0.15, inset=0.84, depth=0.015, recolour=0.4, bolt_size=0.028,
+                    greebles=0.12, greeble_size=0.1),
     ),
     # Kit02: gritty dystopia / near future. Brutal, angular, retrofitted, worn; light is a tool, not decoration.
     "dystopia": dict(
@@ -56,6 +59,8 @@ STYLES = {
             "carbon": ("#1c1c1b", None),
             "missile": ("#a7a89f", None),
         },
+        detail=dict(panels=0.6, min_area=0.1, inset=0.8, depth=0.025, recolour=0.55, bolt_size=0.038,
+                    greebles=0.45, greeble_size=0.14),
     ),
 }
 
