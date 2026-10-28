@@ -20,6 +20,18 @@ Gritty dystopia, near future. Machines that a broken state keeps flying.
 
 "neon" (Kit01) is the first look: cleaner shapes, bubble canopy, neon strips. Keep it as a contrast or for a faction.
 
+## Body types (per chassis, `kits.py` → `body`)
+
+Body type is the core shape family; the style is applied on top of it.
+
+- **attack** (Gunship, Assault): chunky attack-helicopter shape language (the feel of an Apache, not its design).
+  Narrow, tall, flat-sided slab core with low chamfers; stepped tandem cockpit (gunner low in front, pilot higher
+  behind) with flat panes or armoured visors; cheek pods along the lower sides; engines in nacelles at the shoulders
+  with exhaust deflectors angled out; avionics hump behind the mast; boxy nose sensor turret with lenses; chin gun
+  socket under it; wheels (main + tail); open four-blade tail rotor; taller, thinner boom.
+- **utility** (Scout, Lifter, default): one rounded hull from nose to boom, canopy on top, engines on the roof, skids,
+  ducted tail rotor.
+
 ## Knobs
 
 | Value | Range | Effect |

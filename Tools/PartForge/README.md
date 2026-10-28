@@ -26,7 +26,7 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 
 | File | What |
 |---|---|
-| `Models/Chassis_<Family>.fbx` | Scout, Gunship, Assault, Lifter. Origin = centre of mass. Child empties `SOCKET_<Slot>_<Index>` = attach points (same slot order and indices as the game's chassis definitions; Pylon 0 on the right). |
+| `Models/Chassis_<Family>.fbx` | Scout, Lifter (utility body); Gunship, Assault (attack body). Origin = centre of mass. Child empties `SOCKET_<Slot>_<Index>` = attach points (same slot order and indices as the game's chassis definitions; Pylon 0 on the right). |
 | `Models/<Module>.fbx` | Guns, pods, racks, utilities, turret, winch, rotors, engines. Origin = attach point, points +Z. |
 | `Textures/<kit>_Colour/Emission/MetalSmooth.png` | 5×5 palette. Each face samples one swatch: one material per kit; a skin = new maps. |
 | `<kit>.manifest.json` | Parts, files, slot, module ids, triangle counts, sockets in Unity space. |

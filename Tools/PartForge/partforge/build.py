@@ -188,15 +188,16 @@ def _render_previews(scene, built, preview_dir, samples):
     camera, aim = _camera(scene, (-22, -52, 11), (0, 0, 2.2), lens=32)
     _render(scene, os.path.join(preview_dir, "chassis_lineup.jpg"))
 
-    # Close-up of the gunship.
-    aim.location = shown[1].location + Vector((0, 0, 0.6))
-    camera.location = shown[1].location + Vector((-11, -7, 1.8))
-    camera.data.lens = 42
-    for other in shown:
-        other.hide_render = other is not shown[1]
-        for child in other.children:
-            child.hide_render = other.hide_render
-    _render(scene, os.path.join(preview_dir, "gunship_closeup.jpg"))
+    # Close-ups of the attack chassis (Gunship, Assault).
+    for index, file_name in ((1, "gunship_closeup.jpg"), (2, "assault_closeup.jpg")):
+        aim.location = shown[index].location + Vector((0, 0, 0.6))
+        camera.location = shown[index].location + Vector((-11, -7, 1.8))
+        camera.data.lens = 42
+        for other in shown:
+            other.hide_render = other is not shown[index]
+            for child in other.children:
+                child.hide_render = other.hide_render
+        _render(scene, os.path.join(preview_dir, file_name))
 
     # Module sheet.
     for other in shown:

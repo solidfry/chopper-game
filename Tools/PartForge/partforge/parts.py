@@ -48,18 +48,71 @@ def C(name):
 # ---------------------------------------------------------------------------------------------------------------------
 
 def chassis(spec, style):
-    """A chassis from its spec (kits.py) in a style (styles.py). Same spec + style + seed = same model."""
+    """A chassis from its spec (kits.py) in a style (styles.py). Same spec + style + seed = same model.
+
+    Body types (spec "body"): "utility" (one rounded hull, glass or visor canopy, skids) and "attack" (chunky slab
+    core, stepped two-seat cockpit, cheek pods, side engine nacelles, nose sensor, wheels, open tail rotor)."""
     rng = random.Random(spec["seed"])
     b = Builder()
     W, H = spec["width"], spec["height"]
     F = spec["front"]           # nose tip, metres ahead of the centre of mass
     boom = spec["boom"]
     tail_z = -2.6 - boom
+    attack = spec.get("body") == "attack"
+    ring = _ring_fn(style)
+    tail = _boom_rings(ring, style, W, H, boom, tail_z, tall=attack)
+
+    if attack:
+        rotor_y = _attack_body(b, spec, style, ring, tail, W, H, F)
+        _wheels(b, style, W, H, F, tail_z)
+    else:
+        rotor_y = _utility_body(b, spec, style, ring, tail, W, H, F)
+        if spec.get("skids", True):
+            _skids(b, style, F, W, H)
+
+    pylon_points = _wings_or_stubs(b, spec, style, W, H)
+    _tail(b, style, W, H, tail_z, open_rotor=attack)
+    _details(b, rng, spec, style, W, H, F, tail_z)
+    if style["cage"] > 0:
+        if attack:
+            _attack_cage(b, W, H)
+        else:
+            _cage(b, style, spec, W, H, boom)
+    if style["conduits"] > 0:
+        _conduits(b, W, H, F, tail_z, side_x=(0.31 * W + 0.04) if attack else (W / 2 + 0.07),
+                  y_low=0.10 * H if attack else 0.26 * H)
+    if style["asymmetry"] > 0:
+        _retrofits(b, rng, style, W, H, F)
+    if style["wear"] > 0:
+        _wear(b, rng, style, W, H, F)
+
+    sockets = _sockets(spec, W, H, F, rotor_y, pylon_points, attack)
+    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets)
+
+
+def _ring_fn(style):
     facet, taper = style["facet"], style["top_taper"]
 
     def ring(z, w, h, chamfer, y=0.0, x=0.0, top=1.0):
         return chamfer_ring(z, w, h, min(chamfer * facet, 0.6), y=y, x=x, top_scale=min(1.0, top * taper))
 
+    return ring
+
+
+def _boom_rings(ring, style, W, H, boom, tail_z, tall=False):
+    """Tail boom sections: round-ish tube or a tall slab with flat sides. Attack bodies get a taller, thinner boom."""
+    k = 1.15 if tall else 1.0
+    if style["boom"] == "slab":
+        return [ring(-2.6, 0.30 * W, 0.42 * H * k, 0.18, y=0.20 * H),
+                ring(-2.6 - boom * 0.5, 0.22 * W, 0.34 * H * k, 0.18, y=0.22 * H),
+                ring(tail_z, 0.15 * W, 0.28 * H * k, 0.18, y=0.25 * H)]
+    return [ring(-2.6, 0.34 * W, 0.36 * H * k, 0.30, y=0.20 * H),
+            ring(-2.6 - boom * 0.5, 0.26 * W, 0.28 * H * k, 0.30, y=0.22 * H),
+            ring(tail_z, 0.17 * W, 0.22 * H * k, 0.30, y=0.26 * H)]
+
+
+def _utility_body(b, spec, style, ring, tail, W, H, F):
+    """One hull from nose to boom, canopy on top, engines on the roof. Returns the rotor height."""
     # Nose: round (tapered) or chisel (low, wide blade with a flat top).
     if style["nose"] == "chisel":
         nose = [ring(F, 0.55 * W, 0.16 * H, 0.45, y=-0.24 * H),
@@ -69,15 +122,6 @@ def chassis(spec, style):
         nose = [ring(F, 0.30 * W, 0.30 * H, 0.35, y=-0.12 * H),
                 ring(F - 0.6, 0.62 * W, 0.58 * H, 0.32, y=-0.08 * H),
                 ring(F - 1.6, 0.92 * W, 0.90 * H, 0.28, y=-0.02 * H, top=0.8)]
-    # Boom: round-ish tube or a tall slab with flat sides.
-    if style["boom"] == "slab":
-        tail = [ring(-2.6, 0.30 * W, 0.42 * H, 0.18, y=0.20 * H),
-                ring(-2.6 - boom * 0.5, 0.22 * W, 0.34 * H, 0.18, y=0.22 * H),
-                ring(tail_z, 0.15 * W, 0.28 * H, 0.18, y=0.25 * H)]
-    else:
-        tail = [ring(-2.6, 0.34 * W, 0.36 * H, 0.30, y=0.20 * H),
-                ring(-2.6 - boom * 0.5, 0.26 * W, 0.28 * H, 0.30, y=0.22 * H),
-                ring(tail_z, 0.17 * W, 0.22 * H, 0.30, y=0.26 * H)]
     b.loft(nose + [
         ring(0.6, W, H, 0.25, top=0.85),
         ring(-1.0, 0.96 * W, 0.95 * H, 0.25, y=0.02 * H, top=0.85),
@@ -93,24 +137,127 @@ def chassis(spec, style):
     # Rotor mast with a fairing.
     b.box((0, 0.5 * H + 0.1, -0.1), (0.5 * W, 0.25, 1.1), C("hull_dark"))
     b.cylinder((0, 0.5 * H, 0), (0, top + 0.35, 0), 0.14, C("steel"), segments=10)
-    rotor_y = top + 0.35
+    return top + 0.35
 
-    pylon_points = _wings_or_stubs(b, spec, style, W, H)
-    if spec.get("skids", True):
-        _skids(b, style, F, W, H)
-    _tail(b, style, W, H, tail_z)
-    _details(b, rng, spec, style, W, H, F, tail_z)
-    if style["cage"] > 0:
-        _cage(b, style, spec, W, H, boom)
-    if style["conduits"] > 0:
-        _conduits(b, W, H, F, tail_z)
-    if style["asymmetry"] > 0:
-        _retrofits(b, rng, style, W, H, F)
-    if style["wear"] > 0:
-        _wear(b, rng, style, W, H, F)
 
-    sockets = _sockets(spec, W, H, F, rotor_y, pylon_points)
-    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets)
+def _attack_body(b, spec, style, ring, tail, W, H, F):
+    """Chunky attack hull (the "Apache" shape language, not the design): a narrow, tall, flat-sided core; a stepped
+    tandem cockpit (gunner low in front, pilot higher behind); cheek pods along the sides; engines in side nacelles at
+    the shoulders; a boxy nose sensor turret. Returns the rotor height."""
+    cw = 0.62 * W                  # core width; cheek pods fill out to W
+    pod = (W - cw) / 2
+    chunk = 0.16                   # low chamfer: slab sides, hard edges
+
+    b.loft([
+        ring(F, 0.55 * cw, 0.40 * H, chunk, y=-0.18 * H),
+        ring(F - 0.5, 0.82 * cw, 0.62 * H, chunk, y=-0.12 * H, top=0.85),
+        ring(F - 1.4, cw, 0.78 * H, chunk, y=-0.05 * H, top=0.85),
+        ring(F - 2.6, cw, 0.92 * H, chunk, y=0.02 * H, top=0.85),
+        ring(-0.6, cw, 1.00 * H, chunk, y=0.05 * H, top=0.85),
+        ring(-1.8, 0.80 * cw, 0.82 * H, chunk, y=0.12 * H, top=0.9),
+    ] + tail, C("hull"), cap_front=C("hull_dark"), cap_back=C("hull_dark"))
+
+    # Cheek pods (avionics bays) along both sides, low.
+    for side in (1, -1):
+        x = side * (cw / 2 + pod / 2 - 0.03)
+        b.loft([
+            ring(F - 1.0, pod * 0.6, 0.28 * H, 0.3, y=-0.20 * H, x=x),
+            ring(F - 1.6, pod, 0.48 * H, 0.22, y=-0.12 * H, x=x),
+            ring(-0.6, pod, 0.48 * H, 0.22, y=-0.12 * H, x=x),
+            ring(-1.4, pod * 0.7, 0.30 * H, 0.3, y=-0.08 * H, x=x),
+        ], C("hull"), cap_front=C("hull_dark"), cap_back=C("hull_dark"))
+        for i in range(3):
+            b.box((side * (W / 2 - 0.01), -0.02 * H - i * 0.08, -0.9), (0.04, 0.035, 0.5), C("hull_dark"))
+
+    _tandem_cockpit(b, style, cw, H, F)
+
+    # Nose sensor turret: a chunky box with two lenses.
+    b.box((0, -0.14 * H, F + 0.2), (0.5 * cw, 0.40 * H, 0.45), C("hull_dark"))
+    b.box((0, -0.14 * H + 0.22 * H, F + 0.2), (0.3 * cw, 0.06, 0.3), C("hull"))
+    b.cylinder((-0.11 * cw, -0.13 * H, F + 0.42), (-0.11 * cw, -0.13 * H, F + 0.55), 0.11, C("gunmetal"), segments=10,
+               cap_end=C("glass"))
+    b.cylinder((0.12 * cw, -0.16 * H, F + 0.42), (0.12 * cw, -0.16 * H, F + 0.5), 0.07, C("gunmetal"), segments=8,
+               cap_end=C(style["lights"]["sensor"]))
+
+    # Engine nacelles at the shoulders, with exhaust deflectors angled out.
+    y = 0.36 * H
+    nacelle_w = 0.26 * W
+    for side in (1, -1):
+        x = side * (cw / 2 + nacelle_w * 0.35)
+        b.loft([
+            ring(0.4, nacelle_w * 0.75, 0.26 * H, 0.35, y=y, x=x),
+            ring(0.1, nacelle_w, 0.34 * H, 0.3, y=y, x=x),
+            ring(-1.4, nacelle_w * 0.95, 0.32 * H, 0.3, y=y, x=x),
+            ring(-1.8, nacelle_w * 0.8, 0.26 * H, 0.3, y=y, x=x),
+        ], C("hull"), cap_front=C("rubber"), cap_back=C("exhaust"))
+        b.box((x + side * 0.1, y, -2.05), (nacelle_w * 0.7, 0.24 * H, 0.45), C("gunmetal"), rotation=rot_y(side * 25))
+        if style["wear"] > 0:
+            b.box((x + side * 0.05, y - 0.05, -2.5), (nacelle_w * 0.5, 0.03, 0.6), C("soot"))
+
+    # Avionics hump behind the mast, mast and fairing.
+    top = 0.05 * H + 0.5 * H
+    b.box((0, top + 0.08 * H, -1.1), (0.55 * cw, 0.22 * H, 1.4), C("hull"))
+    for i in range(3):
+        b.box((0, top + 0.19 * H + 0.005, -0.7 - i * 0.3), (0.4 * cw, 0.02, 0.06), C("hull_dark"))
+    b.box((0, top + 0.08, -0.05), (0.45 * cw, 0.2, 0.9), C("hull_dark"))
+    b.cylinder((0, top - 0.1, 0), (0, top + 0.85, 0), 0.15, C("steel"), segments=10)
+    return top + 0.85
+
+
+def _tandem_cockpit(b, style, cw, H, F):
+    """Two stepped canopies of flat panes. Visor styles armour them and leave view slits."""
+    visor = style["canopy"] == "visor"
+    shell = C("hull_dark") if visor else C("glass")
+    front = [chamfer_ring(F - 0.6, 0.55 * cw, 0.14 * H, 0.5, y=0.16 * H, top_scale=0.6),
+             chamfer_ring(F - 1.1, 0.82 * cw, 0.32 * H, 0.5, y=0.30 * H, top_scale=0.6),
+             chamfer_ring(F - 1.9, 0.86 * cw, 0.34 * H, 0.5, y=0.38 * H, top_scale=0.6)]
+    rear = [chamfer_ring(F - 1.85, 0.86 * cw, 0.30 * H, 0.5, y=0.50 * H, top_scale=0.6),
+            chamfer_ring(F - 2.6, 0.86 * cw, 0.40 * H, 0.5, y=0.56 * H, top_scale=0.6),
+            chamfer_ring(F - 3.3, 0.70 * cw, 0.20 * H, 0.5, y=0.54 * H, top_scale=0.6)]
+    b.loft(front, shell)
+    b.loft(rear, shell)
+    # Frames between the panes and over the top.
+    b.box((0, 0.44 * H, F - 1.88), (0.72 * cw, 0.34 * H, 0.06), C("hull_dark"))
+    b.box((0, 0.73 * H, F - 2.45), (0.06, 0.04, 1.2), C("hull_dark"))
+    b.box((0, 0.45 * H, F - 1.25), (0.06, 0.04, 1.0), C("hull_dark"))
+    if visor:
+        for z, y, width in ((F - 1.0, 0.36 * H, 0.42 * cw), (F - 2.2, 0.66 * H, 0.46 * cw)):
+            b.box((0, y, z), (width, 0.05, 0.07), C("glass"), rotation=rot_x(30))
+        for side in (1, -1):
+            b.box((side * 0.37 * cw, 0.38 * H, F - 1.5), (0.06, 0.06, 0.6), C("glass"))
+            b.box((side * 0.37 * cw, 0.58 * H, F - 2.6), (0.06, 0.06, 0.8), C("glass"))
+
+
+def _wheels(b, style, W, H, F, tail_z):
+    """Main wheels on struts under the cheek pods and a tail wheel (attack bodies)."""
+    ground = -H / 2 - 0.75
+    for side in (1, -1):
+        x = side * 0.40 * W
+        b.cylinder((side * 0.36 * W, -0.30 * H, F - 1.6), (x, ground + 0.3, F - 1.7), 0.06, C("gunmetal"), segments=6)
+        b.cylinder((side * 0.36 * W, -0.30 * H, F - 2.4), (x, ground + 0.3, F - 1.7), 0.045, C("gunmetal"), segments=6)
+        b.cylinder((x - side * 0.1, ground + 0.3, F - 1.7), (x + side * 0.1, ground + 0.3, F - 1.7), 0.3, C("rubber"),
+                   segments=12)
+        b.cylinder((x - side * 0.12, ground + 0.3, F - 1.7), (x + side * 0.12, ground + 0.3, F - 1.7), 0.13, C("steel"),
+                   segments=8)
+    z = tail_z + 0.7
+    b.cylinder((0, 0.12 * H, z), (0, ground + 0.18, z - 0.2), 0.05, C("gunmetal"), segments=6)
+    b.cylinder((-0.07, ground + 0.18, z - 0.2), (0.07, ground + 0.18, z - 0.2), 0.18, C("rubber"), segments=10)
+
+
+def _attack_cage(b, W, H):
+    """Slat armour on the outer side of each engine nacelle."""
+    y = 0.36 * H
+    x_out = 0.31 * W + 0.26 * W * 0.35 + 0.26 * W / 2 + 0.12
+    for side in (1, -1):
+        x = side * x_out
+        z = 0.2
+        while z > -1.7:
+            b.box((x, y, z), (0.03, 0.34 * H, 0.03), C("gunmetal"))
+            z -= 0.26
+        for dy in (-0.15 * H, 0.15 * H):
+            b.box((x, y + dy, -0.75), (0.03, 0.03, 2.0), C("gunmetal"))
+        for z in (0.1, -1.5):
+            b.box((x - side * 0.06, y, z), (0.12, 0.03, 0.03), C("gunmetal"))
 
 
 def _canopy(b, style, W, H, F):
@@ -211,7 +358,7 @@ def _skids(b, style, F, W, H):
         b.cylinder((0.55 * W, y, -1.6), (-0.55 * W, y, -1.6), 0.05, C("gunmetal"), segments=6)
 
 
-def _tail(b, style, W, H, tail_z):
+def _tail(b, style, W, H, tail_z, open_rotor=False):
     base_y = 0.26 * H
     sweep = 0.5 if style["facet"] <= 1.0 else 0.8
     # Fin (convex outline in the z, y plane) with a tip.
@@ -224,6 +371,16 @@ def _tail(b, style, W, H, tail_z):
     b.box((0, base_y - 0.02, tail_z + 0.75), (1.9, 0.07, 0.5), C("hull"))
     for side in (1, -1):
         b.box((side * 0.95, base_y + 0.08, tail_z + 0.72), (0.05, 0.3, 0.45), C("hull_dark"))
+    if open_rotor:
+        # Open four-blade tail rotor on a gearbox at the top of the fin, right side.
+        hub_y, hub_z = base_y + 1.05, tail_z - 0.3
+        b.box((0.1, hub_y, hub_z), (0.14, 0.22, 0.3), C("gunmetal"))
+        b.cylinder((0.1, hub_y, hub_z), (0.3, hub_y, hub_z), 0.07, C("steel"), segments=8)
+        for angle in (0, 55, 180, 235):
+            turn = rot_x(angle)
+            centre = Vector((0.28, hub_y, hub_z)) + turn @ Vector((0, 0.45, 0))
+            b.box(tuple(centre), (0.03, 0.9, 0.14), C("carbon"), rotation=turn)
+        return
     # Ducted tail rotor (fenestron) on the fin.
     shroud_y, shroud_z = base_y + 0.55, tail_z - 0.05
     b.cylinder((-0.13, shroud_y, shroud_z), (0.13, shroud_y, shroud_z), 0.55, C("hull_dark"), segments=16,
@@ -306,17 +463,17 @@ def _cage(b, style, spec, W, H, boom):
             b.box((x, dy, -2.8 - 0.7), (0.03, 0.03, 1.5), C("gunmetal"))
 
 
-def _conduits(b, W, H, F, tail_z):
+def _conduits(b, W, H, F, tail_z, side_x, y_low):
     """External pipes and a cable bundle: retrofitted, function over form."""
     for side in (1, -1):
-        x = side * (W / 2 + 0.07)
-        for y, radius, swatch in ((0.26 * H, 0.035, "gunmetal"), (0.33 * H, 0.025, "rubber")):
+        x = side * side_x
+        for y, radius, swatch in ((y_low, 0.035, "gunmetal"), (y_low + 0.07 * H, 0.025, "rubber")):
             b.cylinder((x, y, F - 2.0), (x, y, -1.5), radius, C(swatch), segments=6)
             for z in (F - 2.0, -1.5):
                 b.cylinder((x, y, z), (x - side * 0.12, y, z), radius, C(swatch), segments=6)
         z = F - 2.2
         while z > -1.5:
-            b.box((x, 0.295 * H, z), (0.1, 0.16, 0.06), C("hull_dark"))
+            b.box((x, y_low + 0.035 * H, z), (0.1, 0.16, 0.06), C("hull_dark"))
             z -= 0.7
     b.cylinder((0.09, 0.40 * H, -2.4), (0.06, 0.38 * H, tail_z + 1.1), 0.03, C("rubber"), segments=6)
 
@@ -355,7 +512,7 @@ def _wear(b, rng, style, W, H, F):
     b.box((0, -0.24 * H if style["nose"] == "chisel" else -0.12 * H, F - 0.03), (0.5 * W, 0.03, 0.05), C("bare"))
 
 
-def _sockets(spec, W, H, F, rotor_y, pylon_points):
+def _sockets(spec, W, H, F, rotor_y, pylon_points, attack=False):
     """One socket per slot in the chassis' slot list, indexed per type (game order)."""
     positions = {
         "Nose": [(0, -0.30 * H, F - 0.9)],
@@ -367,6 +524,15 @@ def _sockets(spec, W, H, F, rotor_y, pylon_points):
         "Engine": [(0, 0.5 * H + 0.12 * H, -1.95)],
         "Armour": [(0, 0, 0)],
     }
+    if attack:
+        # Chin gun under the gunner and the nose sensor; belly turret between the cheek pods; utilities on the pod
+        # backs; engine stack at the back of the avionics hump.
+        positions.update({
+            "Nose": [(0, -0.40 * H, F - 0.75)],
+            "Turret": [(0, -H / 2 - 0.05, -0.2)],
+            "Utility": [(W / 2 - 0.05, -0.05 * H, -1.35), (-(W / 2 - 0.05), -0.05 * H, -1.35)],
+            "Engine": [(0, 0.55 * H + 0.08 * H, -1.85)],
+        })
     sockets, counts = [], {}
     for slot in spec["slots"]:
         index = counts.get(slot, 0)
