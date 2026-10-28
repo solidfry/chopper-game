@@ -309,13 +309,13 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 - Next: the hangar sets `LoadoutChoice`; own model + sockets per chassis (see "Part kits and authoring pipeline" below); rotor spin moves to rotor modules; module damage states.
 
 ### Part kits and authoring pipeline (design, 28 Oct — not built)
-**Reference (owner):** https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f — "this is the type of modularity I want". (Not opened by Claude: fab.com is blocked in the cloud session. Owner: add a one-line summary here of what it shows, e.g. swappable noses/tails/weapons, part count, how parts connect.)
+**Reference (owner):** https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f — "this is the type of modularity I want". What matters from it: the chopper is built from separate modular components that snap together. Kenney Asset Forge works the same way, so it is the tool for this. (Exact contents of the Fab asset not checked; not needed for the design.)
 
 **Tool:** Kenney Asset Forge (owner has a licence) as the part designer and visualiser. We make our own blocks; Asset Forge snaps them together; we export the result to Unity.
 
 **Two layers (keep them apart):**
 1. **Gameplay modules** (built): slot, stats, weapon, `ModuleDefinition.Visual`, sockets on the chassis. Unchanged.
-2. **Visual parts** (new): the look of a chassis or module is made from kit parts (body, nose, tail boom, skids, rotor mast, pods). Parts have no stats. First version: parts are put together **offline** in Asset Forge and exported as one model per chassis / module, so the runtime (sockets, `ModuleVisualSystem`, hangar) stays as it is. Later: optional runtime cosmetic parts (a "Cosmetic" slot type with no stats) if the reference shows player-swappable looks.
+2. **Visual parts** (new): the look of a chassis or module is made from kit parts (body, nose, tail boom, skids, rotor mast, pods). Parts have no stats. First version: parts are put together **offline** in Asset Forge and exported as one model per chassis / module, so the runtime (sockets, `ModuleVisualSystem`, hangar) stays as it is. Decision (owner, 28 Oct): start offline. Later, optional runtime cosmetic parts (a "Cosmetic" slot type with no stats) if players should swap looks in the hangar.
 
 **Conventions (one kit per chassis family, written down before art starts):**
 - Grid: one Asset Forge grid step = a fixed size in metres (pick once, e.g. 0.25 m); every part on that grid so parts and modules line up.
