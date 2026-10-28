@@ -10,6 +10,47 @@ import bpy
 from mathutils import Matrix, Vector
 
 
+# Form (art direction, style key "form"): how soft the shapes are. Set by configure() before a build.
+DEFAULT_FORM = dict(
+    corner_segments=1,   # arc segments per section corner: 1 = a straight 45° cut, 3-4 = rounded corners
+    loft_smooth=0,       # extra interpolated sections between two sections: curved silhouettes instead of kinks
+    curve_detail=1.0,    # multiplier on cylinder and duct segments
+    edge_radius=0.025,   # bevel width on hard edges (m)
+    edge_segments=1,     # bevel segments: 1 = chamfer (soft-shaded with hardened normals), 2-3 = real fillets (costly)
+    edge_profile=0.5,    # bevel profile: 0.5 = round, higher = fuller
+    box_rounding=0.0,    # boxes: long edges rounded with this share of the smaller cross size (0 = square boxes)
+    box_min=0.1,         # boxes thinner than this (m) stay square (slats, vents, bars: cheap)
+)
+FORM = dict(DEFAULT_FORM)
+
+
+def configure(style):
+    FORM.clear()
+    FORM.update(DEFAULT_FORM)
+    FORM.update(style.get("form") or {})
+
+
+def _smooth_sections(sections, extra, tension=0.35):
+    """Cardinal spline through the sections (point by point): `extra` new sections between each pair."""
+    result = []
+    count = len(sections)
+    for i in range(count - 1):
+        p0, p1, p2, p3 = sections[max(i - 1, 0)], sections[i], sections[i + 1], sections[min(i + 2, count - 1)]
+        result.append(p1)
+        for step in range(1, extra + 1):
+            t = step / (extra + 1)
+            t2, t3 = t * t, t * t * t
+            h00, h10, h01, h11 = 2 * t3 - 3 * t2 + 1, t3 - 2 * t2 + t, -2 * t3 + 3 * t2, t3 - t2
+            k = (1 - tension) / 2
+            ring = []
+            for a, b, c, d in zip(p0, p1, p2, p3):
+                ring.append(tuple(h00 * b[n] + h10 * k * (c[n] - a[n]) + h01 * c[n] + h11 * k * (d[n] - b[n])
+                                  for n in range(3)))
+            result.append(ring)
+    result.append(sections[-1])
+    return result
+
+
 def to_blender(p):
     """Unity (x right, y up, z forward) -> Blender (model faces -Y, right is -X, up is +Z).
 
@@ -39,7 +80,9 @@ class Builder:
         """Connects rings of points (same count each) in order; caps both ends.
 
         sections: list of rings, each a list of (x, y, z). cap_front/cap_back: swatch for the first/last cap
-        (default = swatch)."""
+        (default = swatch). With form "loft_smooth", three or more sections get curved in between."""
+        if FORM["loft_smooth"] > 0 and len(sections) >= 3:
+            sections = _smooth_sections(sections, int(FORM["loft_smooth"]))
         rings = [self._verts(ring) for ring in sections]
         count = len(rings[0])
         for a, b in zip(rings, rings[1:]):
@@ -51,7 +94,12 @@ class Builder:
 
     def box(self, centre, size, swatch, rotation=None, swatches=None):
         """Axis box (optionally rotated about its centre). swatches: optional dict per side
-        ('right','left','top','bottom','front','back')."""
+        ('right','left','top','bottom','front','back'). With form box_rounding, boxes that are not thin get all edges
+        and corners rounded (a moulded part, not a brick)."""
+        cross = sorted(size)[:2]
+        if swatches is None and FORM["box_rounding"] > 0 and cross[0] >= FORM["box_min"]:
+            self._rounded_box(centre, size, swatch, rotation)
+            return
         cx, cy, cz = centre
         hx, hy, hz = size[0] / 2, size[1] / 2, size[2] / 2
         corners = [(-hx, -hy, -hz), (hx, -hy, -hz), (hx, hy, -hz), (-hx, hy, -hz),
@@ -67,6 +115,25 @@ class Builder:
         for name, verts in sides.items():
             self._face(verts, (swatches or {}).get(name, swatch))
 
+    def _rounded_box(self, centre, size, swatch, rotation):
+        """Box with every edge and corner rounded (a bmesh bevel on its own 12 edges): reads as a moulded part,
+        not a brick. The radius is a share of the smallest side."""
+        cx, cy, cz = centre
+        hx, hy, hz = size[0] / 2, size[1] / 2, size[2] / 2
+        corners = [(-hx, -hy, -hz), (hx, -hy, -hz), (hx, hy, -hz), (-hx, hy, -hz),
+                   (-hx, -hy, hz), (hx, -hy, hz), (hx, hy, hz), (-hx, hy, hz)]
+        if rotation is not None:
+            corners = [tuple(rotation @ Vector(c)) for c in corners]
+        v = self._verts([(cx + x, cy + y, cz + z) for x, y, z in corners])
+        faces = [self._face(quad, swatch) for quad in (
+            [v[0], v[3], v[2], v[1]], [v[4], v[5], v[6], v[7]], [v[0], v[1], v[5], v[4]],
+            [v[3], v[7], v[6], v[2]], [v[0], v[4], v[7], v[3]], [v[1], v[2], v[6], v[5]])]
+        edges = list({edge for face in faces for edge in face.edges})
+        radius = min(size) * FORM["box_rounding"]
+        bmesh.ops.bevel(self.bm, geom=edges + v, offset=radius, offset_type="OFFSET",
+                        segments=max(2, int(FORM["corner_segments"]) - 1), profile=0.5, affect="EDGES",
+                        clamp_overlap=True)
+
     def block(self, centre, size, swatch, taper=0.85, taper_depth=0.95, rotation=None, top=None, front=None, back=None):
         """Box whose top face is smaller than its base (taper across x, taper_depth along z): the blocky,
         slightly pyramidal element of the assault body. Optional swatches for the top, front and back faces."""
@@ -78,15 +145,23 @@ class Builder:
         if rotation is not None:
             corners = [tuple(rotation @ Vector(c)) for c in corners]
         v = self._verts([(cx + x, cy + y, cz + z) for x, y, z in corners])
-        self._face([v[0], v[3], v[2], v[1]], swatch if back is None else back)
-        self._face([v[4], v[5], v[6], v[7]], swatch if front is None else front)
-        self._face([v[0], v[1], v[5], v[4]], swatch)
-        self._face([v[3], v[7], v[6], v[2]], swatch if top is None else top)
-        self._face([v[0], v[4], v[7], v[3]], swatch)
-        self._face([v[1], v[2], v[6], v[5]], swatch)
+        faces = [
+            self._face([v[0], v[3], v[2], v[1]], swatch if back is None else back),
+            self._face([v[4], v[5], v[6], v[7]], swatch if front is None else front),
+            self._face([v[0], v[1], v[5], v[4]], swatch),
+            self._face([v[3], v[7], v[6], v[2]], swatch if top is None else top),
+            self._face([v[0], v[4], v[7], v[3]], swatch),
+            self._face([v[1], v[2], v[6], v[5]], swatch),
+        ]
+        if FORM["box_rounding"] > 0 and min(size) >= FORM["box_min"]:
+            edges = list({edge for face in faces for edge in face.edges})
+            bmesh.ops.bevel(self.bm, geom=edges + v, offset=min(size) * FORM["box_rounding"] * 0.6,
+                            offset_type="OFFSET", segments=max(2, int(FORM["corner_segments"]) - 1), profile=0.5,
+                            affect="EDGES", clamp_overlap=True)
 
     def duct(self, centre, outer, inner, height, swatch, segments=24, inner_swatch=None):
         """Upright ring (a ducted-fan shroud): annulus of radii outer/inner, `height` tall, centred on `centre`."""
+        segments = max(segments, round(segments * FORM["curve_detail"]))
         cx, cy, cz = centre
         rings = []
         for y in (cy - height / 2, cy + height / 2):
@@ -104,6 +179,7 @@ class Builder:
     def cylinder(self, start, end, radius, swatch, segments=12, end_radius=None, cap_start=None, cap_end=None,
                  phase=0.0):
         """Cylinder or cone from `start` to `end` (Unity points)."""
+        segments = max(segments, round(segments * FORM["curve_detail"]))
         a, b = Vector(start), Vector(end)
         axis = (b - a).normalized()
         helper = Vector((0, 1, 0)) if abs(axis.y) < 0.9 else Vector((1, 0, 0))
@@ -119,6 +195,8 @@ class Builder:
 
     def ico(self, centre, radius, swatch, subdivisions=1):
         """Low-poly ball (sensor, turret)."""
+        if FORM["curve_detail"] >= 1.4:
+            subdivisions += 1
         result = bmesh.ops.create_icosphere(self.bm, subdivisions=subdivisions, radius=radius)
         for vert in result["verts"]:
             vert.co += Vector(centre)
@@ -132,9 +210,12 @@ class Builder:
         self.loft([front, back], swatch)
 
     # -- finish ----------------------------------------------------------------------------------------------------
-    def to_object(self, name, collection, bevel_width=0.025, detail=None):
-        """Unity -> Blender mapping, normals out, a small bevel for hard-surface highlights, then (detail = (seed,
-        values)) the surface detail node group (panels, nuts, greebles); all baked into the mesh."""
+    def to_object(self, name, collection, bevel_width=None, detail=None):
+        """Unity -> Blender mapping, normals out, a bevel on hard edges with hardened normals (form: radius, segments,
+        profile; flat faces stay flat, the bevel shades as a soft rounded edge), then the surface detail node group
+        (detail = (seed, values): panels, nuts, greebles); all baked into the mesh."""
+        if bevel_width is None:
+            bevel_width = FORM["edge_radius"]
         for vert in self.bm.verts:
             vert.co = to_blender(vert.co)
         bmesh.ops.remove_doubles(self.bm, verts=self.bm.verts, dist=1e-5)
@@ -146,13 +227,20 @@ class Builder:
 
         raw = bpy.data.objects.new(name + "_raw", mesh)
         collection.objects.link(raw)
+        segments = max(1, int(FORM["edge_segments"]))
+        soft = FORM["corner_segments"] > 1 or FORM["loft_smooth"] > 0
+        if soft:
+            # Smooth shading everywhere; the bevel's hardened normals keep flat faces flat.
+            mesh.shade_smooth()
         if bevel_width > 0:
             bevel = raw.modifiers.new("Bevel", "BEVEL")
             bevel.width = bevel_width
-            bevel.segments = 1
+            bevel.segments = segments
+            bevel.profile = FORM["edge_profile"]
             bevel.limit_method = "ANGLE"
-            bevel.angle_limit = math.radians(35)
-            bevel.harden_normals = False
+            # Soft forms: rounded corners already come in steps of 45° or less; bevel only what is still sharp.
+            bevel.angle_limit = math.radians(50 if soft else 35)
+            bevel.harden_normals = soft
         if detail is not None:
             from . import detail as surface_detail
             surface_detail.add_modifier(raw, *detail)
@@ -163,26 +251,50 @@ class Builder:
         bpy.data.objects.remove(raw)
         bpy.data.meshes.remove(mesh)
 
-        # Smooth shading with sharp edges above 35 degrees: panels read as clean armour (no crumpled facets from
-        # slightly twisted quads), while chamfers, plates and box edges stay hard.
-        baked.shade_smooth()
-        baked.set_sharp_from_angle(angle=math.radians(35))
+        if not soft:
+            # Hard look (form defaults): smooth panels, crisp 45° chamfers.
+            baked.shade_smooth()
+            baked.set_sharp_from_angle(angle=math.radians(35))
 
         obj = bpy.data.objects.new(name, baked)
         collection.objects.link(obj)
         return obj
 
 
+def _rounded_rect(hw, hh, rx, ry, n):
+    """Rounded rectangle (half sizes hw, hh; corner radii rx, ry; n arc segments per corner) as (a, b) points."""
+    rx, ry = min(rx, hw * 0.95), min(ry, hh * 0.95)
+    corners = ((hw - rx, -hh + ry, 0.0, -90.0), (-hw + rx, -hh + ry, -90.0, -180.0),
+               (-hw + rx, hh - ry, 180.0, 90.0), (hw - rx, hh - ry, 90.0, 0.0))
+    points = []
+    for cx, cy, start, end in corners:
+        for step in range(n + 1):
+            angle = math.radians(start + (end - start) * step / n)
+            points.append((cx + rx * math.cos(angle), cy + ry * math.sin(angle)))
+    return points
+
+
 def chamfer_ring(z, width, height, chamfer=0.25, y=0.0, x=0.0, top_scale=1.0):
-    """Eight-sided section (rectangle with cut corners) at forward position z. top_scale < 1 narrows the top."""
+    """Section at forward position z: a rectangle whose corners are cut (form corner_segments 1: eight points, a 45°
+    chamfer) or rounded (2+: elliptical arcs, the chamfer is the corner radius). top_scale < 1 narrows the top.
+    Every ring has 4 x (corner_segments + 1) points, so rings of one build always loft together."""
     hw, hh = width / 2, height / 2
     cw, ch = hw * chamfer, hh * chamfer
     tw = hw * top_scale
     tcw = cw * top_scale
-    return [
-        (x + hw, y - hh + ch, z), (x + hw - cw, y - hh, z), (x - hw + cw, y - hh, z), (x - hw, y - hh + ch, z),
-        (x - tw, y + hh - ch, z), (x - tw + tcw, y + hh, z), (x + tw - tcw, y + hh, z), (x + tw, y + hh - ch, z),
-    ]
+    n = max(1, int(FORM["corner_segments"]))
+    corners = (
+        (x + hw - cw, y - hh + ch, cw, 0.0, -90.0),            # bottom right: right side -> bottom
+        (x - hw + cw, y - hh + ch, cw, -90.0, -180.0),         # bottom left: bottom -> left side
+        (x - tw + tcw, y + hh - ch, tcw, 180.0, 90.0),         # top left: left side -> top
+        (x + tw - tcw, y + hh - ch, tcw, 90.0, 0.0),           # top right: top -> right side
+    )
+    points = []
+    for cx, cy, rx, start, end in corners:
+        for step in range(n + 1):
+            angle = math.radians(start + (end - start) * step / n)
+            points.append((cx + rx * math.cos(angle), cy + ch * math.sin(angle), z))
+    return points
 
 
 def rot_y(degrees):

@@ -31,6 +31,9 @@ STYLES = {
         # Surface detail (Geometry Nodes, chassis only; see detail.py): inset panels, hex nuts, greebles.
         detail=dict(panels=0.35, min_area=0.15, inset=0.84, depth=0.015, recolour=0.4, bolt_size=0.028,
                     greebles=0.12, greeble_size=0.1),
+        # Form: rounded section corners, curved silhouettes, filleted edges (see geo.DEFAULT_FORM).
+        form=dict(corner_segments=4, loft_smooth=1, curve_detail=1.5, edge_radius=0.05, edge_segments=1,
+                  edge_profile=0.5, box_rounding=0.35, box_min=0.1),
     ),
     # Kit02: gritty dystopia / near future. Brutal, angular, retrofitted, worn; light is a tool, not decoration.
     "dystopia": dict(
@@ -61,6 +64,8 @@ STYLES = {
         },
         detail=dict(panels=0.6, min_area=0.1, inset=0.8, depth=0.025, recolour=0.55, bolt_size=0.038,
                     greebles=0.45, greeble_size=0.14),
+        form=dict(corner_segments=3, loft_smooth=1, curve_detail=1.4, edge_radius=0.045, edge_segments=1,
+                  edge_profile=0.55, box_rounding=0.3, box_min=0.1),
     ),
 }
 

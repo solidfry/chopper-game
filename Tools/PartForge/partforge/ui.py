@@ -11,7 +11,7 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Operator, Panel, PropertyGroup
 
-from . import build, detail, palette, styles
+from . import build, detail, geo, palette, styles
 
 TOOL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))       # Tools/PartForge
 REPO_DIR = os.path.normpath(os.path.join(TOOL_DIR, "..", ".."))
@@ -125,6 +125,20 @@ class PartForgeSettings(PropertyGroup):
     paint_metallic: FloatProperty(name="Paint metallic", min=0.0, max=1.0, update=_changed)
     paint_smoothness: FloatProperty(name="Paint smoothness", min=0.0, max=1.0, update=_changed)
     other_palette: StringProperty(options={"HIDDEN"})  # the loaded style's other swatch overrides (JSON)
+    # Form: how soft the shapes are (geo.DEFAULT_FORM)
+    form_corner_segments: IntProperty(name="Corner rounding", min=1, max=6, update=_changed,
+                                      description="Arc segments per section corner: 1 = straight cut, 3+ = round")
+    form_loft_smooth: IntProperty(name="Curve smoothing", min=0, max=3, update=_changed,
+                                  description="Extra sections between sections: curved silhouettes instead of kinks")
+    form_curve_detail: FloatProperty(name="Cylinder detail", min=1.0, max=2.5, update=_changed)
+    form_edge_radius: FloatProperty(name="Edge radius", min=0.0, max=0.15, step=0.1, precision=3, update=_changed)
+    form_edge_segments: IntProperty(name="Edge segments", min=1, max=4, update=_changed,
+                                    description="1 = soft-shaded chamfer (cheap); 2-4 = real fillets (more triangles)")
+    form_edge_profile: FloatProperty(name="Edge profile", min=0.2, max=1.0, update=_changed)
+    form_box_rounding: FloatProperty(name="Box rounding", min=0.0, max=0.5, update=_changed,
+                                     description="Boxes get rounded edges and corners (share of their smallest side)")
+    form_box_min: FloatProperty(name="Round boxes from", min=0.0, max=0.5, step=1, precision=2, update=_changed,
+                                description="Boxes thinner than this (m) stay square: slats, vents, bars")
     # Surface detail (Geometry Nodes "PF Surface Detail", chassis only)
     detail_on: BoolProperty(name="Surface detail", default=True, update=_changed)
     detail_panels: FloatProperty(name="Panels", min=0.0, max=1.0, update=_changed,
@@ -186,6 +200,10 @@ def load_style(settings, style, name, kit=None):
                 settings.paint_smoothness = entry[3] if len(entry) > 3 else smooth
         settings.other_palette = json.dumps(overrides)
 
+        form = dict(geo.DEFAULT_FORM, **(style.get("form") or {}))
+        for key in geo.DEFAULT_FORM:
+            setattr(settings, f"form_{key}", form[key])
+
         values = style.get("detail")
         settings.detail_on = bool(values)
         values = dict(detail.DEFAULTS, **(values or {}))
@@ -231,6 +249,7 @@ def style_from(settings):
         accents={"neon_green": settings.accent_green, "neon_pink": settings.accent_pink},
         palette=dict(json.loads(settings.other_palette or "{}"), **paint),
         detail={key: getattr(settings, f"detail_{key}") for key in detail.DETAIL_KEYS} if settings.detail_on else {},
+        form={key: getattr(settings, f"form_{key}") for key in geo.DEFAULT_FORM},
     )
     style["chassis"] = [dict(
         name=item.name, body=item.body, seed=item.seed, width=item.width, height=item.height, front=item.front,
@@ -413,6 +432,17 @@ class PARTFORGE_PT_paint(_Base, Panel):
             column.prop(settings, key)
 
 
+class PARTFORGE_PT_form(_Base, Panel):
+    bl_label = "Form"
+    bl_parent_id = "PARTFORGE_PT_main"
+
+    def draw(self, context):
+        settings = context.scene.partforge
+        column = self.layout.column()
+        for key in geo.DEFAULT_FORM:
+            column.prop(settings, f"form_{key}")
+
+
 class PARTFORGE_PT_detail(_Base, Panel):
     bl_label = "Surface detail"
     bl_parent_id = "PARTFORGE_PT_main"
@@ -483,7 +513,7 @@ CLASSES = (
     PARTFORGE_OT_load_style, PARTFORGE_OT_rebuild, PARTFORGE_OT_export, PARTFORGE_OT_render, PARTFORGE_OT_save_style,
     PARTFORGE_OT_reseed, PARTFORGE_OT_reset_detail,
     PARTFORGE_PT_main, PARTFORGE_PT_shape, PARTFORGE_PT_addons, PARTFORGE_PT_wear, PARTFORGE_PT_paint,
-    PARTFORGE_PT_detail, PARTFORGE_PT_chassis, PARTFORGE_PT_output,
+    PARTFORGE_PT_form, PARTFORGE_PT_detail, PARTFORGE_PT_chassis, PARTFORGE_PT_output,
 )
 
 

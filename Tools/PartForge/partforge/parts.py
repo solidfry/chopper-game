@@ -33,7 +33,9 @@ _SWAPS = {}
 
 
 def use_style(style):
-    """Colour swaps for the whole build: glow accents and the hazard paint (see styles.py)."""
+    """Colour swaps for the whole build (glow accents, hazard paint) and the form settings (see styles.py)."""
+    from . import geo
+    geo.configure(style)
     _SWAPS.clear()
     _SWAPS.update(style.get("accents", {}))
     _SWAPS["hazard"] = style.get("hazard", "hazard")

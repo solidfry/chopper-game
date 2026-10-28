@@ -65,6 +65,21 @@ rotor module fits the duct. The game must show the rotor module on every rotor s
 
 Per chassis shape (size, nose length, boom, wings, engines, armour amount, seed) is in `partforge/kits.py`.
 
+## Form (soft shapes)
+
+Owner direction (28 Oct): "most technology isn't basic shapes with hard square edges". Style key `form`
+(panel: **Form**) sets how soft every part is:
+
+| Value | Effect |
+|---|---|
+| `corner_segments` | Arc segments per section corner. 1 = the old straight 45° cut; 3-4 = rounded corners on every hull, pod, nacelle and canopy section. |
+| `loft_smooth` | Extra spline-interpolated sections between the authored ones: curved silhouettes instead of kinks. |
+| `curve_detail` | More segments on cylinders, ducts and balls. |
+| `edge_radius`, `edge_segments`, `edge_profile` | Bevel on the remaining hard edges. 1 segment + hardened normals = a soft-shaded rounded edge at no extra cost; 2-4 = real fillets (many more triangles). |
+| `box_rounding`, `box_min` | Boxes thicker than `box_min` get every edge and corner rounded (moulded parts, not bricks); thin slats, vents and bars stay square to save triangles. |
+
+Cost at the current values: about 15k-26k triangles per chassis, 37k for the Lifter (with surface detail).
+
 ## Surface detail (Geometry Nodes)
 
 Every chassis runs through the **PF Surface Detail** node group after the bevel (`partforge/detail.py`); the result is

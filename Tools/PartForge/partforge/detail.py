@@ -248,11 +248,28 @@ def _build_group():
     link(greeble_sel.outputs["Boolean"], scatter.inputs["Selection"])
     link(gin("Greebles"), scatter.inputs["Density"])
     link(gin("Seed"), scatter.inputs["Seed"])
+    # Greeble shapes: a rounded box (subdivided cube) and a short cylinder, picked at random, smooth shaded.
     box = node("GeometryNodeMeshCube")
-    box_paint = node("GeometryNodeStoreNamedAttribute", data_type="INT", domain="FACE")
-    box_paint.inputs["Name"].default_value = "swatch"
-    link(box.outputs["Mesh"], box_paint.inputs["Geometry"])
-    link(gin("Dark Swatch"), box_paint.inputs["Value"])
+    rounded = node("GeometryNodeSubdivisionSurface")
+    rounded.inputs["Level"].default_value = 1
+    link(box.outputs["Mesh"], rounded.inputs["Mesh"])
+    puck = node("GeometryNodeMeshCylinder", fill_type="NGON")
+    puck.inputs["Vertices"].default_value = 10
+    puck.inputs["Radius"].default_value = 0.5
+    puck.inputs["Depth"].default_value = 0.6
+    shapes = node("GeometryNodeJoinGeometry")
+    link(rounded.outputs["Mesh"], shapes.inputs["Geometry"])
+    link(puck.outputs["Mesh"], shapes.inputs["Geometry"])
+    smooth = node("GeometryNodeSetShadeSmooth")
+    link(shapes.outputs["Geometry"], smooth.inputs["Mesh"])
+    shape_paint = node("GeometryNodeStoreNamedAttribute", data_type="INT", domain="FACE")
+    shape_paint.inputs["Name"].default_value = "swatch"
+    link(smooth.outputs["Mesh"], shape_paint.inputs["Geometry"])
+    link(gin("Dark Swatch"), shape_paint.inputs["Value"])
+    box_paint = node("GeometryNodeSplitToInstances", domain="FACE")
+    island = node("GeometryNodeInputMeshIsland")
+    link(shape_paint.outputs["Geometry"], box_paint.inputs["Geometry"])
+    link(island.outputs["Island Index"], box_paint.inputs["Group ID"])
     size_min = node("ShaderNodeVectorMath", operation="SCALE")
     size_min.inputs[0].default_value = (0.35, 0.25, 0.12)
     link(gin("Greeble Size"), size_min.inputs["Scale"])
@@ -268,7 +285,13 @@ def _build_group():
     link(scatter.outputs["Points"], scatter_clean.inputs["Geometry"])
     boxes = node("GeometryNodeInstanceOnPoints")
     link(scatter_clean.outputs["Geometry"], boxes.inputs["Points"])
-    link(box_paint.outputs["Geometry"], boxes.inputs["Instance"])
+    link(box_paint.outputs["Instances"], boxes.inputs["Instance"])
+    boxes.inputs["Pick Instance"].default_value = True
+    pick_shape = node("FunctionNodeRandomValue", data_type="INT")
+    pick_shape.inputs["Min"].default_value = 0
+    pick_shape.inputs["Max"].default_value = 1
+    link(gin("Seed"), pick_shape.inputs["Seed"])
+    link(pick_shape.outputs["Value"], boxes.inputs["Instance Index"])
     link(scatter.outputs["Rotation"], boxes.inputs["Rotation"])
     link(box_size.outputs["Value"], boxes.inputs["Scale"])
     boxes_real = node("GeometryNodeRealizeInstances")
