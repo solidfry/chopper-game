@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Effects;
+using Chopper.Simulation.Flight;
 using Chopper.Simulation.Loadout;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -16,8 +17,9 @@ namespace Chopper.Presentation.Visuals
     /// The loadout comes over the network as module ids; the art is local, so it costs no bandwidth.
     /// Module prefabs can carry their own effects (lights, particles); rotors spin by their module's
     /// <see cref="ModuleDefinition.VisualSpin"/> (odd sockets the other way, for tandem rotors). A socket with no slot of
-    /// its own (the Lifter's second rotor) shows the module of the first slot of its type. Renderers get the chopper's
-    /// skin row (<see cref="ChopperSkin"/>, <see cref="SkinLibrary"/>) for the runtime skin shader.
+    /// its own (the Lifter's second rotor) shows the module of the first slot of its type. Rotor speed follows the
+    /// collective. Renderers get the chopper's skin row (<see cref="ChopperSkin"/>, <see cref="SkinLibrary"/>) for the
+    /// runtime skin shader.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -27,9 +29,14 @@ namespace Chopper.Presentation.Visuals
         {
             public LoadoutCode Code;
             public int SkinRow;
+            /// <summary>Spin clock (seconds at base rotor speed): runs faster with more collective.</summary>
+            public float SpinTime;
             /// <summary>Spin in radians per second on the visual's local axes (zero for most modules).</summary>
             public readonly List<(GameObject Visual, float3 Position, quaternion Rotation, float3 Spin)> Parts = new();
         }
+
+        /// <summary>Rotor speed change at full collective: +25 % climbing, -25 % sinking.</summary>
+        private const float RotorThrottleRange = 0.25f;
 
         private readonly Dictionary<Entity, Fitted> _fitted = new();
         private readonly HashSet<Entity> _seen = new();
@@ -65,7 +72,7 @@ namespace Chopper.Presentation.Visuals
             var pool = context.ModuleVisuals;
             var skins = context.Config.Skins;
 
-            var time = (float)(SystemAPI.Time.ElapsedTime % 3600d);
+            var deltaTime = SystemAPI.Time.DeltaTime;
             _seen.Clear();
             foreach (var (loadout, pose, entity) in SystemAPI.Query<RefRO<ChopperLoadout>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
@@ -81,11 +88,14 @@ namespace Chopper.Presentation.Visuals
                     _fitted[entity] = fitted;
                 }
 
+                // Rotors follow the collective (a ghost field, so remote choppers too): faster climbing, slower sinking.
+                var collective = SystemAPI.HasComponent<ChopperFlightState>(entity) ? SystemAPI.GetComponent<ChopperFlightState>(entity).Collective : 0f;
+                fitted.SpinTime = (fitted.SpinTime + deltaTime * (1f + RotorThrottleRange * math.clamp(collective, -1f, 1f))) % 3600f;
                 var world = pose.ValueRO.Value;
                 foreach (var (visual, position, rotation, spin) in fitted.Parts)
                 {
                     if (visual == null) continue;
-                    var turned = math.all(spin == float3.zero) ? rotation : math.mul(rotation, quaternion.EulerXYZ(spin * time));
+                    var turned = math.all(spin == float3.zero) ? rotation : math.mul(rotation, quaternion.EulerXYZ(spin * fitted.SpinTime));
                     visual.transform.SetPositionAndRotation(math.transform(world, position), math.mul(pose.ValueRO.Rotation, turned));
                 }
             }
