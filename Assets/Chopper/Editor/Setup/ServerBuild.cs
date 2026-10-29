@@ -116,6 +116,9 @@ namespace Chopper.Editor.Setup
             {
                 // Saved: the build wrote the changed name to ProjectSettings.asset.
                 PlayerSettings.productName = productName;
+                // The build leaves an empty entry in the preloaded assets; drop it.
+                var preloaded = new System.Collections.Generic.List<Object>(PlayerSettings.GetPreloadedAssets());
+                if (preloaded.RemoveAll(a => a == null) > 0) PlayerSettings.SetPreloadedAssets(preloaded.ToArray());
                 AssetDatabase.SaveAssets();
             }
 
