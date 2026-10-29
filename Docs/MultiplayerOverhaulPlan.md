@@ -610,6 +610,7 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 - [ ] Menus (home, modes, nav bar with Console Green active tab) from the Figma designs, as part of the UI Toolkit migration (section 1b).
 - [ ] Team colours on world markers (Dream Cyan / Lightning Yellow) when TDM exists.
 - [ ] Optional: a safe boost "bulge" (always-on lens distortion or a custom pass) if the boost needs more punch.
+- [ ] **Damage model (owner TODO, 29 Oct):** more realistic damage. Particles at the point of impact on the chopper (sparks, smoke; the hit point must travel with the hit message to presentation). Hitting walls or the ground damages the chopper (from the impact speed at the contact, not only the speed loss per tick that `EnvironmentDamageSystem` uses now). Landing too fast damages it (vertical speed at touchdown over a safe limit). Server decides the damage; clients only show effects.
 
 ## 8. Phased roadmap
 

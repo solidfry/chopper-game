@@ -315,7 +315,8 @@
   --arc-track: rgba(255, 66, 137, 0.15);
 }
 
-.hud-hull-arc.hud-readout--low {
+/* Own class: the readout's low class also sets a dark background, which filled the arc's whole square. */
+.hud-hull-arc.hud-arc--low {
   --arc-fill: var(--chopper-red);
   --arc-track: rgba(255, 66, 70, 0.15);
 }

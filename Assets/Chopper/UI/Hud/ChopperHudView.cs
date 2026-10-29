@@ -23,6 +23,7 @@ namespace Chopper.UI.Hud
         /// <summary>On the chopper layer while boosting: USS drives the HUD's boost look from it.</summary>
         private const string BoostingClass = "hud--boosting";
         private const string HealthLowClass = "hud-readout--low";
+        private const string ArcLowClass = "hud-arc--low";
         private const string AimHiddenClass = "hud-aim--hidden";
         private const string HitClass = "hud-aim--hit";
         private const string KillClass = "hud-aim--kill";
@@ -230,7 +231,7 @@ namespace Chopper.UI.Hud
             _boost.EnableInClassList(BoostReadyClass, _model.BoostReady);
             _chopper.EnableInClassList(BoostingClass, _model.Boosting);
             _health.EnableInClassList(HealthLowClass, _model.HealthLow);
-            _hullArc.EnableInClassList(HealthLowClass, _model.HealthLow);
+            _hullArc.EnableInClassList(ArcLowClass, _model.HealthLow);
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
