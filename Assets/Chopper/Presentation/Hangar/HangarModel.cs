@@ -73,7 +73,9 @@ namespace Chopper.Presentation.Hangar
     public sealed class HangarModel
     {
         public const int Overview = -1;
-        private const float MinMultiplier = 0.5f;
+        private const float MetresPerSecondToKilometresPerHour = 3.6f;
+        /// <summary>Full bar = this much above the best chassis with its default modules (room for better modules).</summary>
+        private const float BarHeadroom = 1.25f;
 
         private readonly LoadoutCatalog _catalog;
         private readonly SkinLibrary _skins;
@@ -88,6 +90,11 @@ namespace Chopper.Presentation.Hangar
         private readonly List<HangarOptionRow> _optionRows = new();
         private readonly List<HangarStatRow> _statRows = new();
         private readonly float _maxHealth;
+        private float _maxSpeed = 1f;
+        private float _maxTurn = 1f;
+        private float _maxClimb = 1f;
+        private float _maxBoost = 1f;
+        private float _minRefill = 1f;
         private int _hovered = -1;
 
         public HangarModel(LoadoutCatalog catalog, SkinLibrary skins, LoadoutChoiceStore store, IPlayerUnlocks unlocks)
@@ -101,6 +108,7 @@ namespace Chopper.Presentation.Hangar
             if (_skins != null)
                 foreach (var skin in _skins.Skins) _skinNames.Add(skin.DisplayName.ToUpperInvariant());
             _maxHealth = MaxHealth();
+            BarScales();
 
             ChassisIndex = 0;
             if (_store != null && _store.TryLoad(out var saved, out var skinId)) Restore(saved, skinId);
@@ -315,13 +323,21 @@ namespace Chopper.Presentation.Hangar
                 preview = LoadoutRules.Compute(spec, new LoadoutSelection(chassis.Id, modules), _catalog);
             }
 
+            // Real units from the same maths the chopper flies with (FlightEstimate). A longer bar is better everywhere.
+            var flight = chassis.Flight;
             AddStat("HULL", now.Health / _maxHealth, preview.Health / _maxHealth, $"{preview.Health:0}");
-            AddStat("LIFT", Bar(now.LiftMultiplier), Bar(preview.LiftMultiplier), $"x{preview.LiftMultiplier:0.00}");
-            AddStat("TURN", Bar(now.TurnRateMultiplier), Bar(preview.TurnRateMultiplier), $"x{preview.TurnRateMultiplier:0.00}");
-            // Recharge is a time multiplier (lower = faster): show the speed, so a longer bar is better everywhere.
-            var boostNow = 1f / Math.Max(0.01f, now.BoostRechargeMultiplier);
-            var boostPreview = 1f / Math.Max(0.01f, preview.BoostRechargeMultiplier);
-            AddStat("BOOST", Bar(boostNow), Bar(boostPreview), $"x{boostPreview:0.00}");
+            var speed = FlightEstimate.TopSpeed(flight, preview) * MetresPerSecondToKilometresPerHour;
+            AddStat("SPEED", FlightEstimate.TopSpeed(flight, now) / _maxSpeed, FlightEstimate.TopSpeed(flight, preview) / _maxSpeed,
+                $"{speed:0} KM/H");
+            AddStat("TURN", FlightEstimate.TurnRate(flight, now) / _maxTurn, FlightEstimate.TurnRate(flight, preview) / _maxTurn,
+                $"{FlightEstimate.TurnRate(flight, preview):0} DEG/S");
+            AddStat("CLIMB", FlightEstimate.Climb(flight, now) / _maxClimb, FlightEstimate.Climb(flight, preview) / _maxClimb,
+                $"{FlightEstimate.Climb(flight, preview):0.0} M/S2");
+            AddStat("BOOST", FlightEstimate.BoostPower(flight, now) / _maxBoost, FlightEstimate.BoostPower(flight, preview) / _maxBoost,
+                $"{FlightEstimate.BoostPower(flight, preview):0} M/S2");
+            // Refill time: shorter is better, so the bar is the fastest refill over this one.
+            AddStat("REFILL", _minRefill / FlightEstimate.BoostRefill(flight, now), _minRefill / FlightEstimate.BoostRefill(flight, preview),
+                $"{FlightEstimate.BoostRefill(flight, preview):0.0} S");
 
             WeightFraction = now.WeightFraction;
             PreviewWeightFraction = preview.WeightFraction;
@@ -334,9 +350,6 @@ namespace Chopper.Presentation.Hangar
 
         private void AddStat(string label, float now, float preview, string text) =>
             _statRows.Add(new HangarStatRow(label, Math.Clamp(now, 0f, 1f), Math.Clamp(preview, 0f, 1f), text));
-
-        /// <summary>A multiplier on a bar: x0.5 empty, x1 half, x1.5 full.</summary>
-        private static float Bar(float multiplier) => multiplier - MinMultiplier;
 
         private string Describe(in LoadoutResult result)
         {
@@ -364,6 +377,27 @@ namespace Chopper.Presentation.Hangar
             foreach (var module in _catalog.Modules)
                 if (module != null && module.Id == id) return module;
             return null;
+        }
+
+        /// <summary>Bar lengths: each stat of every chassis with its default modules; the best one fills 1/headroom.</summary>
+        private void BarScales()
+        {
+            var refill = float.MaxValue;
+            foreach (var chassis in _catalog.Chassis)
+            {
+                if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec)) continue;
+                var modules = new ushort[chassis.Slots.Count];
+                for (var i = 0; i < modules.Length && i < chassis.DefaultModules.Count; i++)
+                    modules[i] = chassis.DefaultModules[i] != null ? chassis.DefaultModules[i].Id : LoadoutSelection.EmptySlot;
+                var stats = LoadoutRules.Compute(spec, new LoadoutSelection(chassis.Id, modules), _catalog);
+                var flight = chassis.Flight;
+                _maxSpeed = Math.Max(_maxSpeed, FlightEstimate.TopSpeed(flight, stats) * BarHeadroom);
+                _maxTurn = Math.Max(_maxTurn, FlightEstimate.TurnRate(flight, stats) * BarHeadroom);
+                _maxClimb = Math.Max(_maxClimb, FlightEstimate.Climb(flight, stats) * BarHeadroom);
+                _maxBoost = Math.Max(_maxBoost, FlightEstimate.BoostPower(flight, stats) * BarHeadroom);
+                refill = Math.Min(refill, FlightEstimate.BoostRefill(flight, stats) / BarHeadroom);
+            }
+            _minRefill = refill < float.MaxValue ? refill : 1f;
         }
 
         /// <summary>The biggest hull any chassis can get (its base plus the best hull bonus per slot): the hull bar's full length.</summary>

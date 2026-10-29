@@ -27,12 +27,18 @@ namespace Chopper.Simulation.Loadout
         /// <summary>Boost tank refill time multiplier (below 1 = refills faster).</summary>
         [UnityEngine.Serialization.FormerlySerializedAs("DashCooldownMultiplier")]
         public float BoostRechargeMultiplier;
+        /// <summary>Top speed multiplier (it thins the forward drag).</summary>
+        public float SpeedMultiplier;
+        /// <summary>Boost push and kick multiplier.</summary>
+        public float BoostPowerMultiplier;
 
         public static ModuleStats None => new()
         {
             LiftMultiplier = 1f,
             TurnRateMultiplier = 1f,
             BoostRechargeMultiplier = 1f,
+            SpeedMultiplier = 1f,
+            BoostPowerMultiplier = 1f,
         };
     }
 

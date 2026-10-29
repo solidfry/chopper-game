@@ -351,6 +351,53 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 
 **Build order:** PartForge kit (done) → open in Unity, check look and scale (done) → "Build chassis from kit" + module links (done) → Gunship kit replaces the placeholder `ChopperGhost` (done: it is only the fallback now) → tune shapes in `kits.py` → (later) runtime cosmetic parts.
 
+### Handling pass — built 29 Oct (tested in the editor)
+Each chassis now flies differently (owner: "the Lifter should be the heaviest"). Values are a table against the tuned
+Gunship (`LoadoutAssets.Handlings`, applied to the chassis assets):
+
+| Chassis | Top speed | Turn | Climb | Boost | Response (stick → rotor/turn) |
+|---|---|---|---|---|---|
+| Scout | ×1.2 (640 km/h at full tilt) | ×1.2 | ×1.0 | 28 m/s², 3 s | ×1.3 (snappy) |
+| Gunship | 539 km/h | 69 °/s | 11.9 m/s² | 24 m/s², 3.5 s | ×1 |
+| Assault | ×0.85 | ×0.8 | ×0.95 | 22 m/s², 4 s | ×0.8 |
+| Lifter | ×0.8 | ×0.7 (slowest) | ×1.25 (strongest) | 20 m/s², 4.5 s | ×0.65 (heaviest) |
+
+- Found: hover lift always cancels gravity and the tilt push grows with it, so a higher GravityScale made a chassis
+  *faster*. The tilt thrust is now divided by the gravity change; top speed and push come only from the table.
+- Modules: new stats `SpeedMultiplier` (thins the forward drag; top speed scales exactly) and `BoostPowerMultiplier`.
+  Agile and Heavy-Lift rotors −5 % top speed (agility / lift vs speed), Turbine +8 % speed, Boost Engine +15 % boost
+  power, Heavy Armour −5 % speed. Full weight also costs 8 % top speed.
+- `FlightEstimate`: the builder and the hangar use the same maths, so the hangar bars show real units (HULL, SPEED
+  km/h, TURN °/s, CLIMB, BOOST, REFILL s) and the chassis differences, not only module multipliers.
+
+### Parts, upgrade chains and chassis variants (owner TODO, 29 Oct — design not started)
+**More tweaks from parts.** The player shapes the chopper with parts that trade one thing for another:
+- More parts per slot, each with a clear trade (speed vs turn vs lift vs hull vs boost vs weight), plus parts that add
+  a behaviour (e.g. a rotor that keeps lift when damaged, an engine with a second boost charge, armour that resists
+  one damage type).
+- **Progression chains:** each part line is a short tree, not a flat list. Example, rotors: Standard → Agile →
+  Racing (fastest turn) or Standard → Heavy-Lift → Tandem-sync (most lift). A tier unlocks by player level plus
+  use of the tier before it (part mastery: XP earned while flying with it). Ties into section 6 (chassis mastery,
+  currency for side-grades).
+- **Trim (optional):** a small slider per part line in the hangar (e.g. rotor pitch: ±10 % speed against turn), no
+  cost, so two players with the same parts can still differ.
+- Data: a `PartLine` definition (ordered tiers, branch parents, unlock rules) over the existing `ModuleDefinition`s;
+  the server validates ownership and trims like the loadout (`LoadoutRules`). Hangar: the module list becomes the
+  chain view (owned / next / locked).
+
+**Chassis variants.** Each chassis class gets several variants with a different model base, a slightly different
+handling and their own ability, in the same role:
+- Example, Lifter class: a tandem-rotor heavy lifter (Chinook-like: most lift, slow) and a single-rotor
+  utility/naval lifter (Sea King-like: faster, better winch reach, can land on water). Real aircraft are references
+  only; in-game names and shapes are our own.
+- Same for the others: e.g. Scout (light observation vs stealth scout), Gunship (tandem-seat attack vs armed
+  utility), Assault (armoured gunship vs flying fortress with two turrets).
+- Data: `ChassisDefinition` gets a `ChassisClass` (Scout / Gunship / Assault / Lifter); a variant = its own chassis
+  asset (id, model prefab, sockets, handling row, slot layout within the class pattern, signature ability).
+  Matchmaking, team limits and balance work by class. Hangar: class tabs, then a variant picker.
+- Art: PartForge gets a body type per variant (own hull, nose, boom, rotor layout) and Setup step 6 builds one
+  ghost prefab per variant, as now per chassis.
+
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
 - **Chopper view:** 3D wireframe render of the chassis. URP full-screen/renderer feature or a wireframe Shader Graph (barycentric edges) in green. Installed modules render solid-glow; empty sockets pulse.

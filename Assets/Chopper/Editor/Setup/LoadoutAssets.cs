@@ -37,13 +37,15 @@ namespace Chopper.Editor.Setup
             System.IO.Directory.CreateDirectory(Folder);
 
             var gunshipFlight = CalibratedGunshipFlight();
+            // Handling pass (29 Oct): Scout fast and twitchy; Gunship the tuned middle; Assault armoured and quicker to
+            // turn than the Lifter; Lifter the heaviest (slowest to turn and respond) with the strongest climb.
             var scout = Chassis(1, "Scout", "Light. Flanks, scouts and fast nuke runs.", 70f, 60f, 0, ScoutSlots,
-                Scaled(gunshipFlight, turn: 1.2f, gravity: 1.5f, collective: 1f, boostRecharge: 5f));
+                Scaled(gunshipFlight, Handlings.Scout));
             var gunship = Chassis(DefaultChassis, "Gunship", "Medium. All-round fighter.", 100f, 90f, 0, GunshipSlots, gunshipFlight);
-            var assault = Chassis(3, "Assault", "Heavy. Tank and base defence. Has a turret.", 150f, 130f, 4, AssaultSlots,
-                Scaled(gunshipFlight, turn: 0.75f, gravity: 1.8f, collective: 0.9f, boostRecharge: 7.5f));
-            var lifter = Chassis(4, "Lifter", "Support. Winch, repair, best nuke carrier.", 110f, 100f, 6, LifterSlots,
-                Scaled(gunshipFlight, turn: 0.85f, gravity: 1.7f, collective: 1.1f, boostRecharge: 6f));
+            var assault = Chassis(3, "Assault", "Heavy armour. Tank and base defence. Has a turret.", 150f, 130f, 4, AssaultSlots,
+                Scaled(gunshipFlight, Handlings.Assault));
+            var lifter = Chassis(4, "Lifter", "Heaviest. Winch, repair, best nuke carrier: slow to turn, strongest climb.", 110f, 100f, 6,
+                LifterSlots, Scaled(gunshipFlight, Handlings.Lifter));
 
             var minigun = Hitscan("Minigun", rpm: 750f, damage: 8f, range: 600f);
             var autocannon = Hitscan("Autocannon", rpm: 240f, damage: 25f, range: 700f);
@@ -74,16 +76,20 @@ namespace Chopper.Editor.Setup
                 Module(141, "Heavy Winch", "Carries the nuke faster.", SlotType.Winch, Stats(weight: 10f), 0, null, lifter),
                 // Rotor
                 Module(151, "Standard Rotor", "Balanced.", SlotType.Rotor, Stats(weight: 10f), 0),
-                Module(152, "Agile Rotor", "Turns faster, less lift.", SlotType.Rotor, Stats(weight: 10f, lift: 0.95f, turn: 1.15f), 4),
-                Module(153, "Heavy-Lift Rotor", "More lift, turns slower.", SlotType.Rotor, Stats(weight: 12f, lift: 1.12f, turn: 0.92f), 7),
+                Module(152, "Agile Rotor", "Turns faster; less lift and top speed.", SlotType.Rotor,
+                    Stats(weight: 10f, lift: 0.95f, turn: 1.15f, speed: 0.95f), 4),
+                Module(153, "Heavy-Lift Rotor", "More lift; turns slower, lower top speed.", SlotType.Rotor,
+                    Stats(weight: 12f, lift: 1.12f, turn: 0.92f, speed: 0.95f), 7),
                 // Engine
                 Module(161, "Standard Engine", "Balanced.", SlotType.Engine, Stats(weight: 12f), 0),
-                Module(162, "Boost Engine", "Boost tank refills faster.", SlotType.Engine, Stats(weight: 14f, boost: 0.75f), 5),
-                Module(163, "Turbine", "More lift.", SlotType.Engine, Stats(weight: 16f, lift: 1.08f), 11),
+                Module(162, "Boost Engine", "Stronger boost, refills faster.", SlotType.Engine,
+                    Stats(weight: 14f, boost: 0.75f, boostPower: 1.15f), 5),
+                Module(163, "Turbine", "More lift and top speed.", SlotType.Engine, Stats(weight: 16f, lift: 1.08f, speed: 1.08f), 11),
                 // Armour
                 Module(171, "Light Armour", "+10 HP.", SlotType.Armour, Stats(weight: 6f, health: 10f), 0),
                 Module(172, "Medium Armour", "+30 HP.", SlotType.Armour, Stats(weight: 14f, health: 30f), 3),
-                Module(173, "Heavy Armour", "+60 HP, less lift.", SlotType.Armour, Stats(weight: 24f, health: 60f, lift: 0.95f), 8),
+                Module(173, "Heavy Armour", "+60 HP; less lift and top speed.", SlotType.Armour,
+                    Stats(weight: 24f, health: 60f, lift: 0.95f, speed: 0.95f), 8),
             };
 
             var catalog = ScriptableObject.CreateInstance<LoadoutCatalog>();
@@ -125,15 +131,68 @@ namespace Chopper.Editor.Setup
             return tuned;
         }
 
-        private static FlightTuning Scaled(FlightTuning source, float turn, float gravity, float collective, float boostRecharge)
+        /// <summary>
+        /// A chassis's handling against the Gunship. Turn, collective, speed, push and response are multipliers; gravity,
+        /// boost (m/s2) and the times are values. Push = acceleration from tilt; response = how fast the rotor and turns
+        /// follow the stick (low = heavy).
+        /// </summary>
+        public readonly struct Handling
+        {
+            public readonly float Turn, Gravity, Collective, Speed, Push, Response, Boost, BoostSeconds, Refill;
+
+            public Handling(float turn, float gravity, float collective, float speed, float push, float response, float boost,
+                float boostSeconds, float refill)
+            {
+                Turn = turn;
+                Gravity = gravity;
+                Collective = collective;
+                Speed = speed;
+                Push = push;
+                Response = response;
+                Boost = boost;
+                BoostSeconds = boostSeconds;
+                Refill = refill;
+            }
+        }
+
+        /// <summary>The chassis handling table (handling pass, 29 Oct). The Gunship is the tuned base.</summary>
+        public static class Handlings
+        {
+            public static readonly Handling Scout = new(turn: 1.2f, gravity: 1.5f, collective: 1f, speed: 1.2f, push: 1.15f,
+                response: 1.3f, boost: 28f, boostSeconds: 3f, refill: 5f);
+            public static readonly Handling Assault = new(turn: 0.8f, gravity: 1.75f, collective: 0.95f, speed: 0.85f, push: 0.9f,
+                response: 0.8f, boost: 22f, boostSeconds: 4f, refill: 7.5f);
+            public static readonly Handling Lifter = new(turn: 0.7f, gravity: 1.9f, collective: 1.25f, speed: 0.8f, push: 0.85f,
+                response: 0.65f, boost: 20f, boostSeconds: 4.5f, refill: 6.5f);
+        }
+
+        /// <summary>
+        /// The Gunship's tuning with a chassis's <see cref="Handling"/>. Hover lift always cancels gravity and the tilt
+        /// push grows with it, so gravity alone would make heavy chassis faster: the tilt thrust is divided by the gravity
+        /// change, so push and top speed come only from <see cref="Handling.Push"/> and <see cref="Handling.Speed"/>.
+        /// </summary>
+        public static FlightTuning Scaled(FlightTuning source, in Handling handling)
         {
             var flight = source.Clone();
-            flight.MaxPitchRate *= turn;
-            flight.MaxYawRate *= turn;
-            flight.MaxRollRate *= turn;
-            flight.GravityScale = gravity;
-            flight.CollectiveUp *= collective;
-            flight.BoostRechargeTime = boostRecharge;
+            flight.MaxPitchRate *= handling.Turn;
+            flight.MaxYawRate *= handling.Turn;
+            flight.MaxRollRate *= handling.Turn;
+            flight.TiltThrust *= handling.Push * source.GravityScale / handling.Gravity;
+            flight.GravityScale = handling.Gravity;
+            flight.CollectiveUp *= handling.Collective;
+            // Top speed ~ sqrt(push / drag): thin the forward drag so the speed lands on the target.
+            var drag = flight.QuadraticDrag;
+            drag.z *= handling.Push / (handling.Speed * handling.Speed);
+            flight.QuadraticDrag = drag;
+            var linear = flight.LinearDrag;
+            linear.z *= handling.Push / handling.Speed;
+            flight.LinearDrag = linear;
+            flight.CollectiveResponse *= handling.Response;
+            flight.TurnResponse *= handling.Response;
+            flight.BankResponse *= handling.Response;
+            flight.BoostAcceleration = handling.Boost;
+            flight.BoostDuration = handling.BoostSeconds;
+            flight.BoostRechargeTime = handling.Refill;
             return flight;
         }
 
@@ -173,13 +232,16 @@ namespace Chopper.Editor.Setup
             return asset;
         }
 
-        private static ModuleStats Stats(float weight, float health = 0f, float lift = 1f, float turn = 1f, float boost = 1f) => new()
+        private static ModuleStats Stats(float weight, float health = 0f, float lift = 1f, float turn = 1f, float boost = 1f,
+            float speed = 1f, float boostPower = 1f) => new()
         {
             Weight = weight,
             HealthBonus = health,
             LiftMultiplier = lift,
             TurnRateMultiplier = turn,
             BoostRechargeMultiplier = boost,
+            SpeedMultiplier = speed,
+            BoostPowerMultiplier = boostPower,
         };
     }
 }

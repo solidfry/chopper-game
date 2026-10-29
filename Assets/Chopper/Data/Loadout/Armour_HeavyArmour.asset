@@ -14,15 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.ModuleDefinition
   id: 173
   displayName: Heavy Armour
-  description: +60 HP, less lift.
+  description: +60 HP; less lift and top speed.
   slot: 7
   stats:
     Weight: 24
     HealthBonus: 60
     LiftMultiplier: 0.95
     TurnRateMultiplier: 1
-    DashCooldownMultiplier: 1
+    BoostRechargeMultiplier: 1
+    SpeedMultiplier: 0.95
+    BoostPowerMultiplier: 1
   unlockLevel: 8
   allowedChassis: []
   visual: {fileID: 0}
+  visualSpin: {x: 0, y: 0, z: 0}
+  muzzle: {x: 0, y: 0, z: 0}
   weapon: {fileID: 0}
+  ability: {fileID: 0}

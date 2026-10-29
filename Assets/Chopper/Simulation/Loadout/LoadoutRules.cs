@@ -11,11 +11,14 @@ namespace Chopper.Simulation.Loadout
         public float LiftMultiplier { get; }
         public float TurnRateMultiplier { get; }
         public float BoostRechargeMultiplier { get; }
+        public float SpeedMultiplier { get; }
+        public float BoostPowerMultiplier { get; }
 
         /// <summary>0 = empty, 1 = full budget.</summary>
         public float WeightFraction => WeightBudget > 0f ? Weight / WeightBudget : 0f;
 
-        public LoadoutStats(float health, float weight, float weightBudget, float lift, float turnRate, float boostRecharge)
+        public LoadoutStats(float health, float weight, float weightBudget, float lift, float turnRate, float boostRecharge,
+            float speed = 1f, float boostPower = 1f)
         {
             Health = health;
             Weight = weight;
@@ -23,6 +26,8 @@ namespace Chopper.Simulation.Loadout
             LiftMultiplier = lift;
             TurnRateMultiplier = turnRate;
             BoostRechargeMultiplier = boostRecharge;
+            SpeedMultiplier = speed;
+            BoostPowerMultiplier = boostPower;
         }
     }
 
@@ -33,8 +38,10 @@ namespace Chopper.Simulation.Loadout
     {
         /// <summary>At full weight budget a chopper turns this much slower...</summary>
         public const float FullWeightTurnPenalty = 0.15f;
-        /// <summary>...and has this much less lift.</summary>
+        /// <summary>...and has this much less lift...</summary>
         public const float FullWeightLiftPenalty = 0.1f;
+        /// <summary>...and this much less top speed.</summary>
+        public const float FullWeightSpeedPenalty = 0.08f;
 
         public static LoadoutResult Validate(in LoadoutSelection selection, ILoadoutCatalog catalog, IPlayerUnlocks unlocks)
         {
@@ -78,6 +85,8 @@ namespace Chopper.Simulation.Loadout
             var lift = 1f;
             var turnRate = 1f;
             var boostRecharge = 1f;
+            var speed = 1f;
+            var boostPower = 1f;
 
             foreach (var moduleId in selection.Modules)
             {
@@ -88,14 +97,18 @@ namespace Chopper.Simulation.Loadout
                 lift *= stats.LiftMultiplier;
                 turnRate *= stats.TurnRateMultiplier;
                 boostRecharge *= stats.BoostRechargeMultiplier;
+                // 0 = a module saved before these stats existed: no change.
+                speed *= stats.SpeedMultiplier > 0f ? stats.SpeedMultiplier : 1f;
+                boostPower *= stats.BoostPowerMultiplier > 0f ? stats.BoostPowerMultiplier : 1f;
             }
 
             // Weight makes every choice cost something: heavier = slower to turn and climb.
             var weightFraction = chassis.WeightBudget > 0f ? Math.Clamp(weight / chassis.WeightBudget, 0f, 1f) : 0f;
             turnRate *= 1f - FullWeightTurnPenalty * weightFraction;
             lift *= 1f - FullWeightLiftPenalty * weightFraction;
+            speed *= 1f - FullWeightSpeedPenalty * weightFraction;
 
-            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, boostRecharge);
+            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, boostRecharge, speed, boostPower);
         }
     }
 }

@@ -49,6 +49,9 @@ namespace Chopper.Simulation.Loadout
             if (id == 0) problems.Add($"{name}: id must not be 0.");
             if (string.IsNullOrWhiteSpace(displayName)) problems.Add($"{name}: no display name.");
             if (stats.Weight < 0f) problems.Add($"{name}: weight must not be below 0.");
+            if (stats.LiftMultiplier <= 0f || stats.TurnRateMultiplier <= 0f || stats.BoostRechargeMultiplier <= 0f ||
+                stats.SpeedMultiplier <= 0f || stats.BoostPowerMultiplier <= 0f)
+                problems.Add($"{name}: stat multipliers must be above 0 (1 = no change).");
             if (weapon is HitscanWeaponDefinition && slot != SlotType.Nose)
                 problems.Add($"{name}: a hitscan weapon must be in the Nose slot.");
             if ((weapon is RocketWeaponDefinition || weapon is GuidedMissileDefinition) && slot != SlotType.Pylon)
