@@ -109,8 +109,9 @@ Rules:
 8. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
    4-player test (done 29 Oct by Claude, measured): Multiplayer → Play Mode Tools: Num Thin Clients 3, simulator delay 75 ms (RTT about 170 ms), jitter 10, loss 2%. Thin clients fly by `ScriptedPilot` (`Session/ScriptedPilotSystems.cs`), each with the next chassis. To let it fly your chopper too, add a `ScriptedPilotOverride` singleton to the client world. Result over 75 s: 4 players, all 4 chassis, combat damage, no errors; 0–1 hitch in about 5,600 frames per chopper (own predicted and 3 remote); own chopper about 6 m ahead of the server at 50 m/s (expected). Set the tools back to 0 afterwards.
 9. Run edit-mode tests (Window → General → Test Runner): 80 tests.
-10. Hangar: Chopper → Setup → **7. Build hangar** (or Do all) after new kit models; "Open hangar scene", press Play, pick a loadout, LAUNCH.
-11. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
+10. Console (29 Oct): 0 errors, 0 warnings after a clean compile and in play. Legacy assets with deleted scripts moved out of `Resources` to `Assets/Legacy` (builds packed them); the old Cinemachine camera scripts joined the retired legacy code in `Assets/Scripts/_LegacyNGO~`; TextMesh Pro font metas upgraded; Shapes patched (UAC0005). Note: the MCP console reader shows Burst `Debug.Log` lines ("[Client] Connected") as errors; Unity counts them as logs.
+11. Hangar: Chopper → Setup → **7. Build hangar** (or Do all) after new kit models; "Open hangar scene", press Play, pick a loadout, LAUNCH.
+12. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -160,7 +161,8 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - done: Steamworks.NET 2025.165.0 (package), `steam_appid.txt` = 480 (Spacewar test ID until the owner's App ID). Tested: Steam gives a ticket; Unity refuses it ("id provider not found", no Steam provider in the dashboard yet) and the game signs in anonymously with the Steam name;
    - owner: when the real App ID exists, put it in `steam_appid.txt` and add the Steam provider in the Unity Dashboard (App ID + Web API publisher key, identity `unityauthenticationservice`);
    - owner TODO: Relay friend matches as a step before Edgegap (plan section 4);
-   - owner: install Unity Hub modules **Linux Dedicated Server Build Support** (Edgegap runs Linux containers) and **Windows Dedicated Server Build Support** (local tests); then the dedicated server build;
+   - done (29 Oct): **Linux dedicated server build**: Setup window → "Build Linux server (Edgegap)" (`Editor/Setup/ServerBuild.cs`): switches the editor to Linux Server, waits for the script reload (`UNITY_SERVER`), builds TrainingRange only to `Builds/LinuxServer` (235 MB), copies `Tools/Edgegap/Dockerfile` + `.dockerignore`, switches back (about 20 min the first time, shader compile). The server bootstrap makes only a server world listening on `-port` (default 7979). Gotcha: the product name "Airwing: Nitro" has a ':' that Entities cannot use in a folder name; the build removes it while building (decide a ':'-free product name before client builds);
+   - next: run the server in WSL (owner installing it) and connect the editor client to it; install Docker Desktop; push the image to Edgegap; then matchmaking → Edgegap;
    - Steamworks.NET and the Dashboard Steam provider;
    - Multiplayer Services sessions with a Cloud Code allocator for Edgegap;
    - a dedicated server build;

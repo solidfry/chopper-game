@@ -18,6 +18,8 @@ namespace Chopper.Services.Steam
     {
         /// <summary>Must match the identity set for the Steam provider in the Unity Dashboard.</summary>
         public const string UnityAuthIdentity = "unityauthenticationservice";
+        /// <summary>Valve's public test app ("Spacewar"), used until the game has its own App ID (<c>steam_appid.txt</c>).</summary>
+        private const uint SpacewarAppId = 480;
 
         private readonly bool _initialised;
 
@@ -41,6 +43,13 @@ namespace Chopper.Services.Steam
         public async UniTask<PlatformTicket?> GetSignInTicketAsync(CancellationToken cancellationToken)
         {
             if (!_initialised) return null;
+            if (SteamUtils.GetAppID().m_AppId == SpacewarAppId)
+            {
+                // Valve's test app: the Unity Steam provider needs the game's own App ID and Web API key, so a ticket
+                // for 480 is always refused (and the SDK logs an error). Sign in anonymously without asking.
+                Debug.Log("Steam test App ID 480: Unity sign-in needs the game's own App ID. Signing in anonymously.");
+                return null;
+            }
 
             var completion = new UniTaskCompletionSource<PlatformTicket?>();
             using var callback = Callback<GetTicketForWebApiResponse_t>.Create(response =>

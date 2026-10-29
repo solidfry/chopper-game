@@ -53,6 +53,7 @@ namespace Chopper.Editor.Setup
                 if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() && System.IO.File.Exists(HangarSetup.ScenePath))
                     EditorSceneManager.OpenScene(HangarSetup.ScenePath);
             }) { text = "Open hangar scene" });
+            root.Add(new Button(ServerBuild.BuildLinux) { text = "Build Linux server (Edgegap)" });
 
             root.Add(new Label("Problems") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 10 } });
             root.Add(new Button(Validate) { text = "Validate" });

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
 using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;

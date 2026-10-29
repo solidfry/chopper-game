@@ -56,8 +56,8 @@ namespace Shapes {
 		static Assembly EditorAssembly {
 			get {
 				if( editorAssembly == null ) {
-					Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-					editorAssembly = assemblies.First( x => x.FullName.StartsWith( "UnityEditor," ) );
+					// Chopper: the editor module from a known editor type (AppDomain.GetAssemblies can return unloaded assemblies, UAC0005).
+					editorAssembly = typeof( EditorGUI ).Assembly;
 				}
 
 				return editorAssembly;
