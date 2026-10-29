@@ -121,7 +121,7 @@ namespace Chopper.Simulation.Loadout
                         FireInterval = gun.FireInterval,
                         Damage = gun.DamagePerShot,
                         Range = gun.Range,
-                        MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, gun.MuzzleOffset, mirror: false),
+                        MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, module.Muzzle, gun.MuzzleOffset, mirror: false),
                     };
                 }
 
@@ -135,20 +135,22 @@ namespace Chopper.Simulation.Loadout
                 // Without a socket, odd pylons mirror the definition's launch point to the other side.
                 var mirror = pylonIndex % 2 == 1;
                 if (module.Weapon is RocketWeaponDefinition rocket)
-                    built.Pylons.Add(RocketPylon(module, rocket, Muzzle(sockets, SlotType.Pylon, pylonIndex, rocket.MuzzleOffset, mirror)));
+                    built.Pylons.Add(RocketPylon(module, rocket, Muzzle(sockets, SlotType.Pylon, pylonIndex, module.Muzzle, rocket.MuzzleOffset, mirror)));
                 else if (module.Weapon is GuidedMissileDefinition missile)
-                    built.Pylons.Add(MissilePylon(module, missile, Muzzle(sockets, SlotType.Pylon, pylonIndex, missile.MuzzleOffset, mirror),
+                    built.Pylons.Add(MissilePylon(module, missile, Muzzle(sockets, SlotType.Pylon, pylonIndex, module.Muzzle, missile.MuzzleOffset, mirror),
                         resolveMissilePrefab));
                 pylonIndex++;
             }
         }
 
-        /// <summary>Launch point: the matching socket if the chassis has one, else the definition's offset.</summary>
-        private static float3 Muzzle(IReadOnlyList<ChassisSocket> sockets, SlotType slot, int index, Vector3 fallback, bool mirror)
+        /// <summary>Launch point: the module's barrel tip on the matching socket if the chassis has one, else the
+        /// definition's offset.</summary>
+        private static float3 Muzzle(IReadOnlyList<ChassisSocket> sockets, SlotType slot, int index, Vector3 tip, Vector3 fallback, bool mirror)
         {
             if (sockets != null)
                 foreach (var socket in sockets)
-                    if (socket.Slot == slot && socket.Index == index) return socket.LocalPosition;
+                    if (socket.Slot == slot && socket.Index == index)
+                        return socket.LocalPosition + math.mul(socket.LocalRotation, (float3)tip);
 
             float3 offset = fallback;
             if (mirror) offset.x = -offset.x;

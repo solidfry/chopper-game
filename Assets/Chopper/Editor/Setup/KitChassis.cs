@@ -220,7 +220,8 @@ namespace Chopper.Editor.Setup
             return bounds;
         }
 
-        /// <summary>Kit models replace missing or placeholder module art; rotors that have no spin get one.</summary>
+        /// <summary>Kit models replace missing or placeholder module art; rotors that have no spin get one; weapons
+        /// that have no muzzle get the model's barrel tip.</summary>
         private static void LinkModules(LoadoutCatalog catalog, KitAssets.Manifest manifest, string folder)
         {
             var linked = 0;
@@ -242,10 +243,22 @@ namespace Chopper.Editor.Setup
                         module.SetVisualSpin(RotorSpin);
                         changed = true;
                     }
+                    if (module.Visual == model && module.Weapon != null && module.Muzzle == Vector3.zero)
+                    {
+                        module.SetMuzzle(BarrelTip(model));
+                        changed = true;
+                    }
                     if (changed) EditorUtility.SetDirty(module);
                 }
             }
             if (linked > 0) Debug.Log($"Setup: linked kit {manifest.kit} models to {linked} module(s).");
+        }
+
+        /// <summary>Front centre of the model's bounds (kit modules point +Z from the socket): where shots start.</summary>
+        private static Vector3 BarrelTip(GameObject model)
+        {
+            var bounds = ModelBounds(model.transform, model);
+            return new Vector3(bounds.center.x, bounds.center.y, bounds.max.z);
         }
 
         /// <summary>No visual, or placeholder art: kit art may replace it. Other art was chosen by hand and stays.</summary>

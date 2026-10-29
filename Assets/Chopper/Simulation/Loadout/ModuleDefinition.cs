@@ -25,6 +25,9 @@ namespace Chopper.Simulation.Loadout
         private GameObject visual;
         [SerializeField, Tooltip("Degrees per second on the visual's local axes (rotor blades). Odd sockets turn the other way.")]
         private Vector3 visualSpin;
+        [SerializeField, Tooltip("Weapons: barrel tip relative to the socket, in the visual's space (z = forward). Shots and " +
+                                 "launches start here. Setup step 6 measures it from the kit model when it is zero.")]
+        private Vector3 muzzle;
         [SerializeField, Tooltip("Nose: a hitscan weapon. Pylon: a rocket or guided missile. Empty for non-weapon modules.")]
         private WeaponDefinition weapon;
         [SerializeField, Tooltip("Utility behaviour (flares, later EMP, shield...). Empty for most modules.")]
@@ -36,6 +39,7 @@ namespace Chopper.Simulation.Loadout
         public SlotType Slot => slot;
         public GameObject Visual => visual;
         public Vector3 VisualSpin => visualSpin;
+        public Vector3 Muzzle => muzzle;
         public WeaponDefinition Weapon => weapon;
         public ModuleAbilityDefinition Ability => ability;
         public ModuleStats Stats => stats;
@@ -59,6 +63,9 @@ namespace Chopper.Simulation.Loadout
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetVisualSpin(Vector3 degreesPerSecond) => visualSpin = degreesPerSecond;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetMuzzle(Vector3 offset) => muzzle = offset;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetAbility(ModuleAbilityDefinition definition) => ability = definition;
