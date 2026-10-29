@@ -107,6 +107,7 @@ Rules:
    Kits (28 Oct, textures and skins): Setup step 5 again. It makes `Art/Kits/<kit>/Materials/<kit>_<Set>_<skin>.mat` and `<kit>_Skins.asset`, and links Kit02's skins into the game config. Drag a `Chassis_Gunship` model into a scene, try a few skin materials on it, check the normal map (no inverted bumps) and the edge wear. If an old `<kit>_Kit.mat` exists, delete it (no longer used).
 7. Kit chassis (done 29 Oct in the editor, step 6 run, play-tested): Setup → **6. Build chassis from kit** makes `Prefabs/Chassis/Chopper_<Chassis>.prefab` (variants of `ChopperGhost`: kit model, sockets on its `SOCKET_*` markers, box collider round the model) and links each chassis and the 23 kit modules. Press Play in TrainingRange: you fly the Gunship kit model. Sockets come from the model: to move one, move the marker in PartForge (`kits.py`) and export again. Nose lights and exhaust smoke were moved to the nose and engine sockets: move them in the prefab if they look wrong. `ChopperGhost` is now only the fallback.
 8. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
+   4-player test (done 29 Oct by Claude, measured): Multiplayer → Play Mode Tools: Num Thin Clients 3, simulator delay 75 ms (RTT about 170 ms), jitter 10, loss 2%. Thin clients fly by `ScriptedPilot` (`Session/ScriptedPilotSystems.cs`), each with the next chassis. To let it fly your chopper too, add a `ScriptedPilotOverride` singleton to the client world. Result over 75 s: 4 players, all 4 chassis, combat damage, no errors; 0–1 hitch in about 5,600 frames per chopper (own predicted and 3 remote); own chopper about 6 m ahead of the server at 50 m/s (expected). Set the tools back to 0 afterwards.
 9. Run edit-mode tests (Window → General → Test Runner).
 10. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
 
@@ -116,14 +117,14 @@ Rules:
 |---|---|---|
 | "Server Tick Batching" warnings (1.25–1.75 ticks/frame) | Editor below 60 FPS; maybe the Burst cache is stale | Clear `Library/BurstCache`, check Game view Stats FPS, test in a build, profile if it stays |
 | Burst "not a known entry point" messages | Stale Burst cache after big code changes | Same: clear `Library/BurstCache` |
-| Not tested with more than one player | — | Multiplayer Play Mode, 4 players, Network Simulator 150 ms / 2% loss |
+| Only tested with thin clients (29 Oct: 4 players, 170 ms, 2% loss, smooth) | — | A real Multiplayer Play Mode test with people (feel of hits and corrections) |
 | MessagePipe without a DI container (`PresentationEvents`) | API not checked in an editor before | Watch for errors on first message |
 
 ## 6. Next steps (recommended order)
 
 Next session: continue with this order (step 1 onward). The feel pass and style guide work of 28 Oct is done; its follow-ups (feel tuning, match-end, lobby and server list screens from Figma) are the backlog in plan section 7d.
 
-1. **Finish Phase 2 (needs Unity):** the 4-player network test, the tick-batching fix, and the edit-mode tests.
+1. **Finish Phase 2 (needs Unity):** the tick-batching fix (profile; it shows at 1.25–1.75 ticks/frame in the editor with 4 players). Done 29 Oct: the 4-player network test (thin clients, see step 8 above) and the edit-mode tests (63/63).
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
    - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
    - done: PartForge Kit01 (neon) and Kit02 (dystopia, the owner's direction; default), 4 chassis + 23 modules each; art direction in `Tools/PartForge/ART_DIRECTION.md`; Setup step 5 imports the kits;
@@ -148,7 +149,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - Multiplayer Services sessions with a Cloud Code allocator for Edgegap;
    - a dedicated server build;
    - party and rejoin.
-5. **Phase 6: modes:** TDM, then Capture the Nuke, then bots.
+5. **Phase 6: modes:** TDM, then Capture the Nuke, then bots. Owner TODO (29 Oct): bot AI with path finding and a needs-based (utility) decision system, for air and land units — plan section 7a.
 6. **Phase 5: progression:** Cloud Code grants, Cloud Save, unlocks, leaderboards and Steam achievements.
 7. **Any time:**
    - port the old menus to UI Toolkit and delete `Assets/Scripts` (the options overlay `UI/Options` is the first piece; reuse its style);

@@ -387,6 +387,14 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
   - Best of 3 rounds. Score bonus for carry/arm/defuse feeds progression.
   - ECS: `NukeState` ghost component (server-owned), trigger zones via Unity Physics triggers, HUD markers on all clients.
 
+## 7a. Bots and AI units (owner TODO, 29 Oct — design not started)
+
+Bot AI with proper path finding and a needs-based decision system, for **air and land units**.
+- **Decisions — needs based (utility AI):** each bot scores its needs every few ticks (survive: health, threats, locks on it; fight: targets in range, ammo; objective: nuke carry/arm/defuse, bases; regroup: team-mates) and does the highest-scoring action. Weights per bot role and difficulty in definition assets (data-driven, like the loadout).
+- **Path finding:** air — 3D (A* over a coarse voxel grid or a sparse octree baked from the level colliders, plus local obstacle avoidance by ray casts); land — Unity AI Navigation NavMesh (or A* on a 2D grid). One path query service shared by both.
+- **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
+- **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
+
 ## 7b. Status of `v2` branch (checked 25 Oct 2026)
 
 `origin/v2` = 1 commit on top of `main`: `fa63b932` "v2 fixes" (26 May 2026). 474 files; most are asset-store materials re-saved by the upgrade.
@@ -421,7 +429,8 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 - Controls: W/S collective, Left Ctrl descend, A/D yaw, mouse = pitch/roll (aim-style, 0.12 deg/px), arrows also pitch/roll, Shift dash.
 - **Parked: flight feel tuning.** "Feels better" — revisit later. Knobs: `ChopperAuthoring` on the prefab, `MouseDegreesPerPixel` + pitch invert in `ChopperInputSystem`, camera FOV/pull-back on `ChopperCameraRig`.
 - HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Set up with **Chopper → Setup**. Edit-mode tests: `ChopperHudModelTests`.
-- Left: Network Simulator test at 150 ms, editor "Server Tick Batching" warnings (profile).
+- Done (29 Oct): 4-player test with 3 thin clients at RTT ~170 ms, 10 ms jitter, 2% loss: every chassis, no errors, 0–1 render hitch per ~5,600 frames per chopper. Thin clients fly by `ScriptedPilot`; the server sets each connection's `CommandTarget` to its chopper (thin clients send input without a ghost id).
+- Left: editor "Server Tick Batching" warnings (profile), a test with real people in Multiplayer Play Mode.
 
 **Phase 2 — started (26 Oct, written without the editor — needs a compile + play check).**
 - `Simulation/Combat`: `Health` (server-written ghost field), `DamageEvent` buffer (server only), `HitscanWeaponConfig/State`, `HitConfirmRpc`.

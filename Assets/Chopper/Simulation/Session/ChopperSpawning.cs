@@ -30,6 +30,9 @@ namespace Chopper.Simulation.Session
             ecb.SetComponent(chopper, LocalTransform.FromPositionRotation(position, spawner.Rotation));
             ecb.SetComponent(chopper, new GhostOwner { NetworkId = networkId });
             ecb.AddComponent(chopper, new ConnectionOwner { Value = connection });
+            // Full clients address their chopper by ghost id (AutoCommandTarget); thin clients have no ghosts and send
+            // input without one, so the server routes it through the connection's command target.
+            ecb.SetComponent(connection, new CommandTarget { targetEntity = chopper });
             if (!requested.IsEmpty) ecb.SetComponent(chopper, ChopperLoadout.From(requested));
             ecb.SetComponent(chopper, new ChopperSkin { SkinId = skinId });
             // Despawn the chopper when the connection goes away.

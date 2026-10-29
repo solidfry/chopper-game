@@ -44,6 +44,9 @@ namespace Chopper.Simulation.Flight
 
         protected override void OnUpdate()
         {
+            // Dev: the scripted pilot flies the local chopper (Session.ScriptedPilotSystem).
+            if (SystemAPI.HasSingleton<Session.ScriptedPilotOverride>()) return;
+
             var settings = SystemAPI.TryGetSingleton<PlayerInputSettings>(out var saved) ? saved : PlayerInputSettings.Default;
             if (settings.Blocked)
             {
