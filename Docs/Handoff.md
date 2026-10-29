@@ -155,7 +155,11 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - done (not yet compiled): swarm micro-missiles (Swarm Pod);
    - next: team colours on markers when TDM exists; objective markers (nuke, bases); the other weapons in the table (railgun, EMP, chain lightning...).
    It can run in parallel with step 2: the weapons are modules.
-4. **Phase 3: services:**
+4. **Phase 3: services** (started 29 Oct; the project is linked to UGS "Airwing Nitro"; the owner has an Edgegap account):
+   - done: the composition root runs: `RootLifetimeScope` prefab + `VContainerSettings` in the preloaded assets (Setup step 1, `RootScopeSetup`); before this, sign-in never ran;
+   - done: Steamworks.NET 2025.165.0 (package), `steam_appid.txt` = 480 (Spacewar test ID until the owner's App ID). Tested: Steam gives a ticket; Unity refuses it ("id provider not found", no Steam provider in the dashboard yet) and the game signs in anonymously with the Steam name;
+   - owner: when the real App ID exists, put it in `steam_appid.txt` and add the Steam provider in the Unity Dashboard (App ID + Web API publisher key, identity `unityauthenticationservice`);
+   - owner: install Unity Hub modules **Linux Dedicated Server Build Support** (Edgegap runs Linux containers) and **Windows Dedicated Server Build Support** (local tests); then the dedicated server build;
    - Steamworks.NET and the Dashboard Steam provider;
    - Multiplayer Services sessions with a Cloud Code allocator for Edgegap;
    - a dedicated server build;

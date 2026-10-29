@@ -1,12 +1,17 @@
+using System;
 using System.Threading;
 using Chopper.Services.Platform;
 using Cysharp.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
+using UnityEngine;
 
 namespace Chopper.Services.Auth
 {
-    /// <summary>Unity Authentication: Steam provider when the platform gives a ticket, anonymous otherwise.</summary>
+    /// <summary>
+    /// Unity Authentication: Steam provider when the platform gives a ticket and the dashboard accepts it; anonymous
+    /// otherwise (no Steam, or the Steam provider not set up for this App ID).
+    /// </summary>
     public sealed class UnityAuthService : IAuthService
     {
         private readonly IPlatformIdentity _platform;
@@ -31,15 +36,23 @@ namespace Chopper.Services.Auth
             var ticket = await _platform.GetSignInTicketAsync(cancellationToken);
             if (ticket.HasValue)
             {
-                await AuthenticationService.Instance
-                    .SignInWithSteamAsync(ticket.Value.Ticket, ticket.Value.Identity)
-                    .AsUniTask().AttachExternalCancellation(cancellationToken);
+                try
+                {
+                    await AuthenticationService.Instance
+                        .SignInWithSteamAsync(ticket.Value.Ticket, ticket.Value.Identity)
+                        .AsUniTask().AttachExternalCancellation(cancellationToken);
+                    return;
+                }
+                catch (Exception e) when (e is AuthenticationException or RequestFailedException)
+                {
+                    // The Steam provider is not set up for this App ID yet (the Spacewar test ID 480 never is):
+                    // play on with an anonymous account.
+                    Debug.LogWarning($"Steam sign-in refused ({e.Message}). Signing in anonymously.");
+                }
             }
-            else
-            {
-                await AuthenticationService.Instance.SignInAnonymouslyAsync()
-                    .AsUniTask().AttachExternalCancellation(cancellationToken);
-            }
+
+            await AuthenticationService.Instance.SignInAnonymouslyAsync()
+                .AsUniTask().AttachExternalCancellation(cancellationToken);
         }
     }
 }

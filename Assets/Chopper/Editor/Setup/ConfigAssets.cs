@@ -23,6 +23,7 @@ namespace Chopper.Editor.Setup
 
         public static GameConfig EnsureAll()
         {
+            RootScopeSetup.Ensure();
             var mixer = AudioAssets.LoadMixer();
             var catalog = LoadoutAssets.Ensure();
             GuidedWeaponAssets.Ensure(catalog);

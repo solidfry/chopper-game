@@ -30,6 +30,7 @@ namespace Chopper.Editor.Setup
             var problems = new List<SetupProblem>();
             var config = ConfigAssets.Load();
             CheckConfig(config, problems);
+            problems.AddRange(RootScopeSetup.Problems().Select(m => new SetupProblem(m)));
             CheckHudLook(problems);
             problems.AddRange(KitAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(KitChassis.Problems(config).Select(p => new SetupProblem(p.Message, p.Context)));
