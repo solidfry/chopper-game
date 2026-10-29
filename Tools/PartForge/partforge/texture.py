@@ -417,9 +417,10 @@ def _quantise(pixels):
 
 
 def write(kit, sets, style, skin_list, folder, runtime_folder=None):
-    """Composes every skin on every set and writes the maps (one skin at a time: the arrays are large), the runtime
-    skin maps, and (runtime_folder) the runtime shader's result per skin for previews, with the same file names.
-    Returns the manifest's "textureSets" and "skins" entries (paths relative to the kit folder)."""
+    """Writes per set the shared maps, the runtime skin maps and the first skin's maps (the runtime shader's base);
+    with style "baked_skins" also every other skin's baked maps (one skin at a time: the arrays are large). With
+    runtime_folder, the runtime shader's result per skin (previews), with the same file names. Returns the manifest's
+    "textureSets" and "skins" entries (paths relative to the kit folder; a skin's "sets" lists its baked maps only)."""
     os.makedirs(folder, exist_ok=True)
     if runtime_folder:
         os.makedirs(runtime_folder, exist_ok=True)
@@ -452,22 +453,26 @@ def write(kit, sets, style, skin_list, folder, runtime_folder=None):
         differences = []
         started = time.time()
         for skin, entry in zip(skin_list, skin_entries):
+            # Every skin is composed (the runtime check below compares against it); only the first one (the runtime
+            # shader's base maps) is written, or all of them with style "baked_skins".
             colour, metal_smooth, emission = _compose(texture_set, style, skin)
             files = file_names(kit, texture_set.name, skin["key"])
-            write_png(os.path.join(folder, files["colour"]), colour, 3)
-            write_png(os.path.join(folder, files["metalSmooth"]), metal_smooth, 4)
-            if lights is None:
+            first = lights is None
+            if first:
                 # The first skin's emission (the lights only, for skins without glow) is the shared one.
                 lights = emission
                 write_png(os.path.join(folder, shared["emission"]), lights, 3)
                 base = _runtime_base(texture_set, colour, metal_smooth, emission, mask, wear)
-            if np.allclose(emission, lights, atol=1 / 255):
-                glow_file = shared["emission"]
-            else:
-                write_png(os.path.join(folder, files["emission"]), emission, 3)
-                glow_file = files["emission"]
-            entry["sets"].append(dict(set=texture_set.name, colour=f"{rel}/{files['colour']}",
-                                      metalSmooth=f"{rel}/{files['metalSmooth']}", emission=f"{rel}/{glow_file}"))
+            if first or style.get("baked_skins"):
+                write_png(os.path.join(folder, files["colour"]), colour, 3)
+                write_png(os.path.join(folder, files["metalSmooth"]), metal_smooth, 4)
+                if np.allclose(emission, lights, atol=1 / 255):
+                    glow_file = shared["emission"]
+                else:
+                    write_png(os.path.join(folder, files["emission"]), emission, 3)
+                    glow_file = files["emission"]
+                entry["sets"].append(dict(set=texture_set.name, colour=f"{rel}/{files['colour']}",
+                                          metalSmooth=f"{rel}/{files['metalSmooth']}", emission=f"{rel}/{glow_file}"))
             if runtime_folder:
                 row = np.array(entry["tableFlat"], dtype=np.float32).reshape(runtime.TABLE_WIDTH, 4)
                 differences.append(_write_runtime(texture_set, base, row,

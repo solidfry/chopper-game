@@ -103,15 +103,17 @@ namespace Chopper.Editor.Setup
                     yield return ($"Kit {manifest.kit}: old manifest (no texture sets or skins). Export the kit again from PartForge.", null);
                     continue;
                 }
-                if (AssetDatabase.LoadAssetAtPath<SkinLibrary>(LibraryPath(folder, manifest)) == null)
+                var library = AssetDatabase.LoadAssetAtPath<SkinLibrary>(LibraryPath(folder, manifest));
+                if (library == null)
                     yield return ($"Kit {manifest.kit}: no skin library. Press '5. Import part kits'.", null);
                 foreach (var set in manifest.textureSets)
                 foreach (var skin in manifest.skins)
-                    if (AssetDatabase.LoadAssetAtPath<Material>(MaterialPath(folder, manifest, set.name, skin.key)) == null)
+                    if (skin.sets != null && skin.sets.Any(s => s.set == set.name) &&
+                        AssetDatabase.LoadAssetAtPath<Material>(MaterialPath(folder, manifest, set.name, skin.key)) == null)
                         yield return ($"Kit {manifest.kit}: no material for set {set.name}, skin {skin.key}. Press '5. Import part kits'.", null);
                 foreach (var part in manifest.parts ?? Array.Empty<PartInfo>())
                 {
-                    var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath(folder, manifest, part.textureSet, manifest.skins[0].key));
+                    var material = ModelMaterial(folder, manifest, part.textureSet, library);
                     if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
                         yield return ($"Kit {manifest.kit}: model {part.file} is missing.", null);
                     else if (material == null || !importer.GetExternalObjectMap().ContainsValue(material))
@@ -155,7 +157,9 @@ namespace Chopper.Editor.Setup
                     var files = skin.sets?.FirstOrDefault(s => s.set == set.name);
                     if (files == null)
                     {
-                        Debug.LogWarning($"Setup: kit {manifest.kit} skin {skin.key} has no maps for set {set.name}.");
+                        // Runtime-only skin (no baked maps): a baked material from an older export is stale.
+                        var stale = MaterialPath(folder, manifest, set.name, skin.key);
+                        if (AssetDatabase.LoadAssetAtPath<Material>(stale) != null) AssetDatabase.DeleteAsset(stale);
                         continue;
                     }
                     var colour = Texture($"{folder}/{files.colour}", Map.Colour, set.size);
@@ -167,8 +171,20 @@ namespace Chopper.Editor.Setup
                 }
             }
 
-            // Models: rigid props, material remapped to the default skin of their texture set.
-            var defaultSkin = manifest.skins[0].key;
+            var library = EnsureLibrary(folder, manifest, materials);
+            if (library != null) EnsureRuntime(folder, manifest, library);
+            if (manifest.kit == DefaultKit && library != null)
+            {
+                var config = ConfigAssets.Load();
+                if (config != null && config.Skins == null)
+                {
+                    config.SetSkins(library);
+                    EditorUtility.SetDirty(config);
+                }
+            }
+
+            // Models: rigid props, material remapped to their texture set's runtime skin material (the default skin's
+            // baked material until the shader graph exists).
             foreach (var part in manifest.parts ?? Array.Empty<PartInfo>())
             {
                 if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
@@ -177,7 +193,8 @@ namespace Chopper.Editor.Setup
                     continue;
                 }
                 var set = manifest.textureSets.FirstOrDefault(s => s.name == part.textureSet);
-                if (set == null || !materials.TryGetValue((set.name, defaultSkin), out var material))
+                var material = set != null ? ModelMaterial(folder, manifest, set.name, library) : null;
+                if (material == null)
                 {
                     Debug.LogWarning($"Setup: kit {manifest.kit} part {part.name} has no texture set material.");
                     continue;
@@ -200,18 +217,13 @@ namespace Chopper.Editor.Setup
                 }
                 if (changed) importer.SaveAndReimport();
             }
+        }
 
-            var library = EnsureLibrary(folder, manifest, materials);
-            if (library != null) EnsureRuntime(folder, manifest, library);
-            if (manifest.kit == DefaultKit && library != null)
-            {
-                var config = ConfigAssets.Load();
-                if (config != null && config.Skins == null)
-                {
-                    config.SetSkins(library);
-                    EditorUtility.SetDirty(config);
-                }
-            }
+        /// <summary>The material a kit model uses: its set's runtime skin material, else the default skin's baked one.</summary>
+        private static Material ModelMaterial(string folder, Manifest manifest, string set, SkinLibrary library)
+        {
+            var runtime = library != null ? library.RuntimeMaterial(set) : null;
+            return runtime != null ? runtime : AssetDatabase.LoadAssetAtPath<Material>(MaterialPath(folder, manifest, set, manifest.skins[0].key));
         }
 
         private static SkinLibrary EnsureLibrary(string folder, Manifest manifest, Dictionary<(string Set, string Skin), Material> materials)

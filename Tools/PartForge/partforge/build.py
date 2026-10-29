@@ -212,10 +212,10 @@ def export(state, out_dir):
     return manifest
 
 
-def show_skin(state, key, use_runtime=False):
-    """Puts one skin on every texture set (Blender materials; after export): the baked skin, or (use_runtime) the
-    runtime skin shader's result."""
-    folder = state.runtime_folder if use_runtime else state.texture_folder
+def show_skin(state, key, baked=False):
+    """Puts one skin on every texture set (Blender materials; after export): the runtime skin shader's result, or
+    (baked, only with style "baked_skins") the baked skin."""
+    folder = state.texture_folder if baked and state.style.get("baked_skins") else state.runtime_folder
     for texture_set in state.sets:
         texture.preview_material(state.kit, texture_set.name, folder, key)
 
@@ -436,9 +436,9 @@ def _review_sheet(scene, camera, aim, holder, path):
 SKIN_SHEET_CHASSIS = "Gunship"
 
 
-def _skin_sheet(state, scene, camera, aim, path, use_runtime=False):
-    """Every skin on one chassis (close-up, half size), two columns, the skin name in the corner of each tile; baked
-    skins, or (use_runtime) the runtime skin shader's result."""
+def _skin_sheet(state, scene, camera, aim, path, baked=False):
+    """Every skin on one chassis (close-up, half size), two columns, the skin name in the corner of each tile; the
+    runtime skin shader's result, or (baked) the baked skins."""
     import numpy as np
 
     names = [spec["name"] for spec in state.specs]
@@ -456,8 +456,8 @@ def _skin_sheet(state, scene, camera, aim, path, use_runtime=False):
     tiles = []
     try:
         for skin in state.skins:
-            show_skin(state, skin["key"], use_runtime)
-            label.data.body = skin["name"].upper() + ("  (RUNTIME)" if use_runtime else "")
+            show_skin(state, skin["key"], baked)
+            label.data.body = skin["name"].upper() + ("  (BAKED)" if baked else "")
             tile = os.path.join(os.path.dirname(path), ".skin.jpg")
             _render(scene, tile)
             image = bpy.data.images.load(tile)
@@ -542,7 +542,8 @@ def render_previews(state, preview_dir, samples=32):
 
     if state.skins:
         _skin_sheet(state, scene, camera, aim, os.path.join(preview_dir, "skins_sheet.jpg"))
-        _skin_sheet(state, scene, camera, aim, os.path.join(preview_dir, "skins_runtime_sheet.jpg"), use_runtime=True)
+        if state.style.get("baked_skins"):
+            _skin_sheet(state, scene, camera, aim, os.path.join(preview_dir, "skins_baked_sheet.jpg"), baked=True)
 
     _set_render_visible(shown, False)
     _set_render_visible(tiles, True)

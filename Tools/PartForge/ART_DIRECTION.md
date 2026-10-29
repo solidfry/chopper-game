@@ -118,12 +118,13 @@ Export bakes real textures; the palette stays as the swatch ids and the quick lo
 - **UVs:** UV0 = a unique unwrap per chassis (all modules share one atlas); UV1 = the palette cell.
 - **Baked once per set:** normal map (fine cast grain and hammered dents; glass and lights stay smooth), occlusion,
   and the surface data the skins use: position and normal in model space, swatch id, edge mask, cavity mask.
-- **Per skin:** colour, metallic/smoothness, emission (only skins with glow lines have their own emission map).
+- **Base maps:** the first skin's colour, metallic/smoothness and emission, and the skin masks (`SkinMask`,
+  `SkinWear`): the runtime skin shader paints every skin from them (see "Skins").
 - **Wear and grime** come from the bake, on every skin: bare metal on the edges and in chips near them, dirt in the
   crevices, rain streaks, soot plumes behind each exhaust (found from the exhaust faces), a little occlusion.
 - Style key `textures`: `density` (normal-map pixels per metre, 110), `max_size` (2048), `module_size` (1024),
   `skin_scale` (0.5: skin maps at half size; small files, the paint is soft-edged anyway), `samples` (16).
-- Unity: one URP Lit material per set and skin (base, metallic/smoothness, normal, occlusion, emission).
+- Unity: one skin-shader material per set (all skins), used by the kit models.
 
 ## Skins
 
@@ -150,16 +151,18 @@ Skins now: Factory (the style's own paint), Woodland, Desert, Arctic Digital, Ur
 Night City (neon hex), Outrun (synthwave), Interceptor (white corporate livery), Night Stalker (matte black, red).
 `previews/<kit>/skins_sheet.jpg` shows them all on the Gunship.
 
-### Two ways to show a skin (A/B)
+### Runtime skins (the game's method; owner decision 29 Oct after an A/B)
 
-- **Baked:** export paints every skin into its own colour and metallic/smoothness maps (above). Simple (URP Lit), but
-  every skin is about 5 MB of files per kit, and a new part or skin means a new export.
-- **Runtime (skin shader):** `Assets/Chopper/Art/Shaders/ChopperSkin.hlsl` paints the skin on the GPU from the same
-  maths. Per texture set it needs only skin-free maps: the first skin's maps as the base, plus `SkinMask` (paint,
-  panels, warning paint, armour tone) and `SkinWear` (dirt, soot, blotches, wear threshold). A skin is one row of a
-  small table texture, so a new skin is data only (edit it in Unity's `SkinLibrary`), and one material serves every
-  skin (each chopper sets its row). `partforge/runtime.py` is the shader's numpy twin: export checks it against the
-  baked skins (mean colour difference about 0.005) and renders `previews/<kit>/skins_runtime_sheet.jpg`.
+- `Assets/Chopper/Art/Shaders/ChopperSkin.hlsl` (in `ChopperSkin.shadergraph`) paints the skin on the GPU. Per texture
+  set it needs only skin-free maps: the first skin's maps as the base, plus `SkinMask` (paint, panels, warning paint,
+  armour tone) and `SkinWear` (dirt, soot, blotches, wear threshold). A skin is one row of a small table texture, so a
+  new skin is data only (edit it in Unity's `SkinLibrary`, or here and export), and one material serves every skin
+  (each chopper sets its row).
+- `partforge/runtime.py` is the shader's numpy twin: export checks it against the composer in `skins.py` (mean colour
+  difference about 0.005) and renders `previews/<kit>/skins_sheet.jpg` with it.
+- **Baked** skins (each skin painted into its own maps, plain URP Lit) are off. Style key `"baked_skins": true` writes
+  them again (about 5 MB per skin per kit) and renders `skins_baked_sheet.jpg`; Unity then makes their materials and
+  the Skin Preview component can A/B them.
 
 New skin: copy an entry in `SKINS` (new `id`, never reused: player data saves it), or list skins in a style
 (`"skins": ["factory", "woodland", {...}]`). Ideas: faction liveries (team colour as the main colour), hazard
