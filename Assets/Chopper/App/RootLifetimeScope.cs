@@ -18,7 +18,10 @@ namespace Chopper.App
     {
         protected override void Configure(IContainerBuilder builder)
         {
-#if CHOPPER_STEAM
+#if UNITY_SERVER
+            // Dedicated server: no store platform (Steam is the players' side).
+            builder.Register<OfflinePlatform>(Lifetime.Singleton).As<IPlatformIdentity>();
+#elif CHOPPER_STEAM
             // Entry point: VContainer runs Steam callbacks every frame and shuts Steam down on exit.
             builder.RegisterEntryPoint<SteamPlatform>();
 #else
@@ -28,7 +31,10 @@ namespace Chopper.App
             // TODO: Phase 3 — replace with the Unity Matchmaker + Edgegap allocator implementation.
             builder.Register<LocalMatchmakingService>(Lifetime.Singleton).As<IMatchmakingService>();
 
+#if !UNITY_SERVER
+            // A dedicated server does not sign in as a player (later: a service account for Cloud Code, Phase 3).
             builder.RegisterEntryPoint<SignInOnStart>();
+#endif
         }
     }
 }
