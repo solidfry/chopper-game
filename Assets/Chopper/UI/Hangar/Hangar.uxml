@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+  <Style src="Hangar.uss" />
+  <!-- Hangar (HangarView): chassis tabs, slots, module list, stats, skin, launch. The 3D chopper shows through the
+       middle. Lists are filled from code. Terminal style, like the options overlay. -->
+  <ui:VisualElement name="hangar" class="hangar" picking-mode="Ignore">
+    <ui:VisualElement class="hangar__bar">
+      <ui:Label text="HANGAR//SYS" class="hangar__bar-text chopper-title" />
+      <ui:VisualElement name="chassis-tabs" class="hangar__tabs" />
+      <ui:Label text="ESC = BACK" class="hangar__bar-text" />
+    </ui:VisualElement>
+
+    <ui:VisualElement class="hangar__body" picking-mode="Ignore">
+      <ui:VisualElement class="hangar__panel hangar__panel--left">
+        <ui:Label name="chassis-name" text="CHASSIS" class="hangar__title chopper-title" />
+        <ui:Label name="chassis-description" class="hangar__description" />
+        <ui:Label text="// SLOTS" class="hangar__section chopper-title" />
+        <ui:VisualElement name="slots" class="hangar__list" />
+        <ui:Label text="// STATS" class="hangar__section chopper-title" />
+        <ui:VisualElement name="stats" class="hangar__stats" />
+        <ui:VisualElement class="hangar-stat">
+          <ui:Label text="WEIGHT" class="hangar-stat__label" />
+          <ui:VisualElement name="weight-track" class="hangar-stat__track">
+            <ui:VisualElement name="weight-fill" class="hangar-stat__fill" />
+            <ui:VisualElement name="weight-delta" class="hangar-stat__delta" />
+          </ui:VisualElement>
+          <ui:Label name="weight-text" class="hangar-stat__text" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement class="hangar__spacer" picking-mode="Ignore" />
+
+      <ui:VisualElement class="hangar__panel hangar__panel--right">
+        <ui:Label name="focus-title" text="&gt; SELECT A SLOT_" class="hangar__title chopper-title" />
+        <ui:VisualElement name="options" class="hangar__list" />
+        <ui:Label text="// PAINT" class="hangar__section chopper-title" />
+        <ui:DropdownField name="skin" label="SKIN" class="hangar__row" />
+        <ui:Toggle name="paint-view" label="SHOW PAINT" class="hangar__row" />
+        <ui:Label name="error" class="hangar__error" />
+        <ui:Button name="launch" text="[ LAUNCH ]" class="hangar__button chopper-title" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

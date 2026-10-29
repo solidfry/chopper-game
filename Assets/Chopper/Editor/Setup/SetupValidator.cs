@@ -33,6 +33,7 @@ namespace Chopper.Editor.Setup
             CheckHudLook(problems);
             problems.AddRange(KitAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(KitChassis.Problems(config).Select(p => new SetupProblem(p.Message, p.Context)));
+            problems.AddRange(HangarSetup.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             CheckPrefab(problems);
             CheckScene(problems);
             return problems;
@@ -116,6 +117,9 @@ namespace Chopper.Editor.Setup
 
         private static void CheckScene(List<SetupProblem> problems)
         {
+            // The hangar is a menu scene: no chase camera, HUD or gameplay subscene.
+            if (Object.FindAnyObjectByType<Chopper.Presentation.Hangar.HangarStage>() != null) return;
+
             var bridge = Object.FindAnyObjectByType<PresentationBridge>();
             if (bridge == null)
             {

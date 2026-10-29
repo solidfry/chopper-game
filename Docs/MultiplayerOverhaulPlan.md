@@ -306,7 +306,7 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 - Setup: placeholder sockets on `ChopperGhost` (nose and pylons from the old weapon slots, the rest guessed), each chassis gets the ghost and a default loadout, module art from PolygonMilitary (`SM_Veh_Heli_Attach_Minigun`, `Rocket_Pod_02`, `Missle_01`, `Flare_01`, `Winch_01`), spawner gets catalog + missile prefab. Validate checks sockets per slot, weapon/utility visuals and the spawner.
 - Not used: old `Assets/Prefabs/Weapons/*` — they carry the old NGO `Weapon` script (missing).
 - Tests: `LoadoutCodeTests`.
-- Next: the hangar sets `LoadoutChoice`; own model + sockets per chassis (see "Part kits and authoring pipeline" below); rotor spin moves to rotor modules; module damage states.
+- Done 29 Oct: the hangar sets `LoadoutChoice` (saved choice, read by the client world). Next: own model + sockets per chassis (see "Part kits and authoring pipeline" below); rotor spin moves to rotor modules; module damage states.
 
 ### Part kits and authoring pipeline (design, 28 Oct — not built)
 **Reference (owner):** https://www.fab.com/listings/a090fe12-34f9-4eab-9ca8-5f979a29e01f — "this is the type of modularity I want". What matters from it: the chopper is built from separate modular components that snap together. Kenney Asset Forge works the same way, so it is the tool for this. (Exact contents of the Fab asset not checked; not needed for the design.)
@@ -361,6 +361,7 @@ Decisions (owner, 27 Oct): one ghost per chassis; module visuals are pooled Game
 - **Input:** mouse, keyboard and gamepad (Input System UI navigation; reuse `UI/NavigationManager.cs`, `NavButtonHandler.cs`).
 - **Code:** `HangarController` (state: Overview / SlotFocus / ChassisSelect), `SocketFocusPose` component, `LoadoutPreview` (spawns module meshes on sockets). Data comes from the same SOs as gameplay. Loadout save → Cloud Save.
 - Also show this screen while matchmaking searches (Section 4).
+- **Built 29 Oct (tested in the editor):** hangar scene from Setup step 7. Differences from the design above: no Cinemachine or MK Glow/Shapes (a small camera blend in `HangarStage`, URP bloom, baked feature-line meshes); the focus pose is automatic from the socket position (per-socket poses optional); a "show paint" view for skins; launch starts a local session (`LocalSession`) until Phase 3 matchmaking. Loadout saved in PlayerPrefs (Cloud Save later). Not yet: slide-in animations, scan sweep, matchmaking overlay, way back from the match.
 
 ## 6. Account progression
 

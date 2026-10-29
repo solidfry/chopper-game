@@ -1,0 +1,256 @@
+/* Hangar, terminal style (same family as OptionsMenu.uss). Colours, fonts and control styles come from the shared
+   theme (ChopperTheme.uss). The middle of the screen stays clear for the 3D wireframe chopper. */
+
+.hangar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ---- Top bar with the chassis tabs ---- */
+
+.hangar__bar {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 16px;
+  background-color: var(--chopper-terminal);
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-dim);
+}
+
+.hangar__bar-text {
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.8;
+  padding: 0;
+}
+
+.hangar__tabs {
+  flex-direction: row;
+}
+
+/* Nav tab: Console Green underline on the active tab (style guide). */
+.hangar-tab {
+  margin: 0 6px;
+  padding: 6px 18px;
+  font-size: 14px;
+  color: var(--chopper-text);
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 0 0 2px 0;
+  border-color: rgba(0, 0, 0, 0);
+  border-radius: 0;
+}
+
+.hangar-tab:hover,
+.hangar-tab:focus {
+  color: var(--chopper-green);
+  background-color: var(--chopper-green-faint);
+}
+
+.hangar-tab--active {
+  color: var(--chopper-green);
+  border-color: var(--chopper-green);
+}
+
+/* ---- Side panels ---- */
+
+.hangar__body {
+  flex-grow: 1;
+  flex-direction: row;
+  padding: 20px;
+}
+
+.hangar__spacer {
+  flex-grow: 1;
+}
+
+.hangar__panel {
+  width: 440px;
+  align-self: flex-start;
+  padding: 14px 20px 18px 20px;
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hangar__title {
+  font-size: 24px;
+  color: var(--chopper-green);
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.hangar__description {
+  font-size: 12px;
+  white-space: normal;
+  opacity: 0.85;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.hangar__section {
+  font-size: 12px;
+  color: var(--chopper-yellow);
+  margin-top: 14px;
+  margin-bottom: 4px;
+  padding: 0 0 4px 0;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.hangar__list {
+  flex-shrink: 1;
+}
+
+.hangar__row {
+  margin: 5px 0;
+}
+
+.hangar__row > .unity-label {
+  min-width: 150px;
+  font-size: 13px;
+}
+
+/* A slot or a module: a card row (dark fill, thin accent border, label left, value right). */
+.hangar-item {
+  flex-direction: row;
+  justify-content: space-between;
+  margin: 3px 0;
+  padding: 6px 10px;
+  height: 32px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+}
+
+.hangar-item:hover,
+.hangar-item:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+.hangar-item__name {
+  font-size: 13px;
+  color: var(--chopper-text);
+  padding: 0;
+  -unity-text-align: middle-left;
+}
+
+.hangar-item__value {
+  font-size: 12px;
+  color: var(--chopper-green);
+  padding: 0;
+  -unity-text-align: middle-right;
+}
+
+/* The slot being edited, or the module fitted now: Cruise Pink (highlight in the style guide). */
+.hangar-item--selected {
+  border-color: var(--chopper-pink);
+  background-color: var(--chopper-pink-dark);
+}
+
+.hangar-item--selected .hangar-item__value {
+  color: var(--chopper-pink);
+}
+
+.hangar-item--empty .hangar-item__value {
+  color: var(--chopper-yellow);
+}
+
+.hangar-item--locked {
+  opacity: 0.45;
+}
+
+.hangar-item--locked .hangar-item__value {
+  color: var(--chopper-red);
+}
+
+/* ---- Stat bars: now (dim fill) and the hovered module's change (green = better, red = worse) ---- */
+
+.hangar-stat {
+  flex-direction: row;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.hangar-stat__label {
+  width: 80px;
+  font-size: 12px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.hangar-stat__track {
+  flex-grow: 1;
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-faint);
+}
+
+.hangar-stat__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background-color: var(--chopper-green-dim);
+}
+
+.hangar-stat__delta {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-color: var(--chopper-green);
+}
+
+.hangar-stat__delta--worse {
+  background-color: var(--chopper-red);
+}
+
+.hangar-stat--over .hangar-stat__fill {
+  background-color: var(--chopper-red);
+}
+
+.hangar-stat__text {
+  width: 130px;
+  font-size: 12px;
+  padding: 0 0 0 8px;
+  -unity-text-align: middle-right;
+}
+
+/* ---- Launch ---- */
+
+.hangar__error {
+  font-size: 12px;
+  color: var(--chopper-red);
+  white-space: normal;
+  margin-top: 10px;
+  padding: 0;
+}
+
+.hangar__button {
+  margin: 14px 0 0 0;
+  height: 44px;
+  font-size: 18px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.4);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hangar__button:hover,
+.hangar__button:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+  color: var(--chopper-text);
+}
+
+.hangar__button:disabled {
+  opacity: 0.4;
+}

@@ -1,4 +1,4 @@
-# Chopper game — handoff (27 Oct 2026)
+# Chopper game — handoff (updated 29 Oct 2026)
 
 Read this first, then `Docs/MultiplayerOverhaulPlan.md` (full plan + progress log) and `CLAUDE.md` (rules for AI sessions).
 
@@ -108,8 +108,9 @@ Rules:
 7. Kit chassis (done 29 Oct in the editor, step 6 run, play-tested): Setup → **6. Build chassis from kit** makes `Prefabs/Chassis/Chopper_<Chassis>.prefab` (variants of `ChopperGhost`: kit model, sockets on its `SOCKET_*` markers, box collider round the model) and links each chassis and the 23 kit modules. Press Play in TrainingRange: you fly the Gunship kit model. Sockets come from the model: to move one, move the marker in PartForge (`kits.py`) and export again. Nose lights and exhaust smoke were moved to the nose and engine sockets: move them in the prefab if they look wrong. `ChopperGhost` is now only the fallback.
 8. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
    4-player test (done 29 Oct by Claude, measured): Multiplayer → Play Mode Tools: Num Thin Clients 3, simulator delay 75 ms (RTT about 170 ms), jitter 10, loss 2%. Thin clients fly by `ScriptedPilot` (`Session/ScriptedPilotSystems.cs`), each with the next chassis. To let it fly your chopper too, add a `ScriptedPilotOverride` singleton to the client world. Result over 75 s: 4 players, all 4 chassis, combat damage, no errors; 0–1 hitch in about 5,600 frames per chopper (own predicted and 3 remote); own chopper about 6 m ahead of the server at 50 m/s (expected). Set the tools back to 0 afterwards.
-9. Run edit-mode tests (Window → General → Test Runner).
-10. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
+9. Run edit-mode tests (Window → General → Test Runner): 80 tests.
+10. Hangar: Chopper → Setup → **7. Build hangar** (or Do all) after new kit models; "Open hangar scene", press Play, pick a loadout, LAUNCH.
+11. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
@@ -132,9 +133,10 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - done (28 Oct, not compiled): runtime skin shader for A/B against the baked skins: `Art/Shaders/ChopperSkin.hlsl` (Shader Graph custom function; the graph is made by hand, see `Art/Shaders/README.md`), skin table texture from `SkinLibrary` looks (`SkinTable.Encode`, test `SkinTableTests`), one runtime material per texture set, `SkinPreview` component (Baked / Runtime, next skin, flip timer), skin id from `LoadoutChoice.SkinId` → `GoInGameRequest` → `RequestedLoadout` → `ChopperSkin` ghost field, `SkinApplySystem` (per-entity `_SkinIndex` override) and module visuals (property block);
    - decided (owner, 29 Oct): **runtime skins**. Baked skin maps are no longer exported (style `baked_skins` brings them back); kit models use the skin-shader material;
    - done (29 Oct, in the editor): Setup step 6 "Build chassis from kit": one ghost prefab per chassis (kit model, sockets from the markers, box collider), kit models on all 23 modules, rotor spin on rotor modules (`ModuleDefinition.VisualSpin`, odd sockets turn the other way), a socket with no slot of its own repeats the first module of its type (Lifter's tandem rotor); with no loadout choice the server spawns the default chassis's own prefab (`ChopperSpawner.DefaultChassisId`);
-   - next for skins: skin choice in the hangar; the server checks skin unlocks (progression);
+   - next for skins: the server checks skin unlocks (progression);
    - next: socket scale (manifest `scale`, all 1.0 now); better colliders (one box per chassis now; Lifter is tall); muzzle point at the barrel tip (now the socket); rotor speed from the throttle;
-   - then the green wireframe hangar (it sets `LoadoutChoice`).
+   - done (29 Oct, in the editor): the **hangar** (`Assets/Scenes/Hangar.unity`, Setup step 7 "Build hangar"). Green wireframe chopper on a turntable (feature lines baked per kit mesh into `Data/Hangar/WireframeLibrary.asset`, dark fill, bloom); chassis tabs; slot list; click a slot = the camera and turntable blend to that socket (automatic pose: the socket's side, from above, or from below for the bottom half; per-socket poses with `HangarSettings.useSocketPoses`); module list with level locks, hover = stat preview (green better / red worse), weight bar; skin picker and "show paint" (real material with the runtime skin); launch saves the choice (PlayerPrefs, `LoadoutChoiceStore`), starts a local server + client (`Session/LocalSession.cs`) and loads TrainingRange. The client world reads the saved choice at start (`LoadoutChoiceSystem`), so starting TrainingRange directly also uses it. Tested: Gunship with air mines and the Desert skin spawned on server and client. Logic in `HangarModel` (tests: `HangarModelTests`); unlocks are all open until progression (`AllUnlocked`);
+   - next for the hangar: a way back from the match (options menu "HANGAR"); make it the first scene once the old menus are ported; module slide-in / scan animations and sounds; mouse drag to turn the chopper; tune focus poses per chassis; lighter bloom if the owner wants thinner lines; show it while matchmaking searches (plan section 4).
 3. **Targeting, guided weapons and the dynamic HUD** (plan section 3b):
    - done (not yet compiled): heat-seeker locks, missile ghosts (AA and AG), flares, lock brackets and warnings;
    - done (not yet compiled): retro 80s HUD look (HUD to a render texture, full-screen CRT pass, `HudLookSettings`, gameplay glitches);
@@ -185,4 +187,5 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
 | Markers | `Presentation/Hud/WorldMarker*.cs`, `UI/Hud/WorldMarkerView.cs` |
 | UI components | HUD and Options use Unity 6.6 `PanelRenderer` (not `UIDocument`); views bind in `RegisterUIReloadCallback` and rebind when the panel rebuilds. A `UIDocument` next to a `PanelRenderer` shows the UI twice (Validate checks it). |
 | Options | `UI/Options/*` (overlay), `Presentation/Bridge/InputSettingsSystem.cs`, `Simulation/Input/PlayerInputSettings.cs` |
-| Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio) |
+| Hangar | `Presentation/Hangar/*` (`HangarModel`, `HangarStage`, `WireframeMesh`, `LoadoutChoiceStore` + `LoadoutChoiceSystem`), `UI/Hangar/*`, `Simulation/Session/LocalSession.cs`, setup `Editor/Setup/HangarSetup.cs`, data `Data/Hangar` |
+| Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio, hangar model, wireframe, saved choice) |

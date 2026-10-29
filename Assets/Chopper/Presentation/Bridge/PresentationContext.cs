@@ -6,6 +6,7 @@ using Chopper.Presentation.Config;
 using Chopper.Presentation.Effects;
 using Chopper.Presentation.Events;
 using Chopper.Presentation.Feedback;
+using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
 using UnityEngine;
 
@@ -21,6 +22,7 @@ namespace Chopper.Presentation.Bridge
     {
         private readonly AudioService _audio;
         private readonly List<IDisposable> _owned = new();
+        private HangarModel _hangar;
 
         public PresentationContext(GameConfig config, Transform root, ChopperCameraRig cameraRig)
         {
@@ -60,6 +62,12 @@ namespace Chopper.Presentation.Bridge
         public bool MenuOpen { get; set; }
         /// <summary>Saved control options (mouse steer, sensitivity, invert).</summary>
         public InputOptions InputOptions { get; } = new();
+        /// <summary>The hangar's saved loadout and skin (read again by the client world when a match starts).</summary>
+        public LoadoutChoiceStore LoadoutChoices { get; } = new();
+        /// <summary>Hangar view model; made on first use (null without a loadout catalog). Only the hangar scene uses it.</summary>
+        public HangarModel Hangar => _hangar ??= Config != null && Config.LoadoutCatalog != null
+            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked())
+            : null;
         public bool IsDisposed { get; private set; }
 
         /// <summary>Call from Start or later: the mixer ignores volume changes during Awake.</summary>

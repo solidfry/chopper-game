@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Chopper.Presentation.Audio;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Effects;
+using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
 using Chopper.Presentation.Visuals;
 using Chopper.Simulation.Config;
@@ -38,6 +39,10 @@ namespace Chopper.Presentation.Config
         [SerializeField, Tooltip("In-game options overlay (Escape).")] private VisualTreeAsset optionsLayout;
         [SerializeField, Tooltip("Retro HUD look: presets, intensities, gameplay reactions. Empty = plain UI HUD.")]
         private HudLookSettings hudLook;
+        [SerializeField, Tooltip("Hangar screen (loadout and skin). Setup step 7 links it.")] private VisualTreeAsset hangarLayout;
+
+        [Header("Hangar")]
+        [SerializeField, Tooltip("Hangar wireframe look and camera. Setup step 7 links it.")] private HangarSettings hangar;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
         public SkinLibrary Skins => skins;
@@ -49,6 +54,8 @@ namespace Chopper.Presentation.Config
         public VisualTreeAsset HudLayout => hudLayout;
         public VisualTreeAsset OptionsLayout => optionsLayout;
         public HudLookSettings HudLook => hudLook;
+        public VisualTreeAsset HangarLayout => hangarLayout;
+        public HangarSettings Hangar => hangar;
 
         public void CollectProblems(List<string> problems)
         {
@@ -61,6 +68,8 @@ namespace Chopper.Presentation.Config
             Require(optionsLayout, "options layout", problems);
             Require(hudLook, "HUD look settings", problems);
             Require(skins, "skin library (press '5. Import part kits')", problems);
+            Require(hangar, "hangar settings (press '7. Build hangar')", problems);
+            Require(hangarLayout, "hangar layout (press '7. Build hangar')", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
@@ -68,6 +77,7 @@ namespace Chopper.Presentation.Config
             if (camera != null) camera.CollectProblems(problems);
             if (hudLook != null) hudLook.CollectProblems(problems);
             if (skins != null) skins.CollectProblems(problems);
+            if (hangar != null) hangar.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -87,6 +97,13 @@ namespace Chopper.Presentation.Config
 
         /// <summary>Editor only: used by the kit import step.</summary>
         public void SetSkins(SkinLibrary library) => skins = library;
+
+        /// <summary>Editor only: used by the hangar step.</summary>
+        public void SetHangar(HangarSettings settings, VisualTreeAsset layout)
+        {
+            hangar = settings;
+            hangarLayout = layout;
+        }
 
         private void Require(Object value, string label, List<string> problems)
         {

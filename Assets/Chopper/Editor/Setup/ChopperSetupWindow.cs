@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -28,6 +29,7 @@ namespace Chopper.Editor.Setup
             root.Add(new Button(() => Do(GameplaySceneSetup.Apply)) { text = "4. Set up gameplay subscene" });
             root.Add(new Button(() => Do(KitAssets.EnsureAll)) { text = "5. Import part kits (PartForge)" });
             root.Add(new Button(() => Do(() => KitChassis.EnsureAll(ConfigAssets.Load()))) { text = "6. Build chassis from kit" });
+            root.Add(new Button(() => Do(() => HangarSetup.Apply(ConfigAssets.Load()))) { text = "7. Build hangar" });
             root.Add(new Button(() => Do(() =>
             {
                 var config = ConfigAssets.EnsureAll();
@@ -36,6 +38,7 @@ namespace Chopper.Editor.Setup
                 GameplaySceneSetup.Apply();
                 KitAssets.EnsureAll();
                 KitChassis.EnsureAll(config);
+                HangarSetup.Apply(config);
             })) { text = "Do all" });
 
             var configRow = new Button(() =>
@@ -45,6 +48,11 @@ namespace Chopper.Editor.Setup
             }) { text = "Select game config" };
             root.Add(configRow);
             root.Add(new Button(SkinPreviewScene.Open) { text = "Open skin preview scene" });
+            root.Add(new Button(() =>
+            {
+                if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() && System.IO.File.Exists(HangarSetup.ScenePath))
+                    EditorSceneManager.OpenScene(HangarSetup.ScenePath);
+            }) { text = "Open hangar scene" });
 
             root.Add(new Label("Problems") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 10 } });
             root.Add(new Button(Validate) { text = "Validate" });
