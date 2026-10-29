@@ -1,6 +1,7 @@
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Feedback;
 using Chopper.Simulation.Combat;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -18,6 +19,10 @@ namespace Chopper.Presentation.Hud
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class TargetingHudSystem : PresentationSystemBase
     {
+        // The selected pylon's name as text, made again only when the name changes (no string per frame).
+        private FixedString32Bytes _pylonName;
+        private string _pylonText = "";
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -52,7 +57,12 @@ namespace Chopper.Presentation.Hud
                 if (selection.Selected < weapons.Length)
                 {
                     var weapon = weapons[selection.Selected];
-                    pylonName = weapon.Name.ToString();
+                    if (weapon.Name != _pylonName)
+                    {
+                        _pylonName = weapon.Name;
+                        _pylonText = weapon.Name.ToString();
+                    }
+                    pylonName = _pylonText;
                     needsLock = weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock;
                 }
             }

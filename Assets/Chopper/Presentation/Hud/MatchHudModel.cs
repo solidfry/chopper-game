@@ -194,7 +194,7 @@ namespace Chopper.Presentation.Hud
 
         private void Set<T>(ref T field, T value, string propertyName)
         {
-            if (Equals(field, value)) return;
+            if (EqualityComparer<T>.Default.Equals(field, value)) return;
             field = value;
             propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(propertyName));
         }

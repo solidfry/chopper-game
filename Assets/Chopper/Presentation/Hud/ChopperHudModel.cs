@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -29,11 +30,14 @@ namespace Chopper.Presentation.Hud
 
         private bool _hasChopper;
         private string _speedText = "0";
+        private int _speed;
         private string _altitudeText = "0";
+        private int _altitude;
         private float _boostEnergy = 1f;
         private bool _boostReady = true;
         private bool _boosting;
         private string _healthText = "0";
+        private int _health;
         private float _healthFraction = 1f;
         private bool _healthLow;
         private bool _aimVisible;
@@ -287,8 +291,10 @@ namespace Chopper.Presentation.Hud
         public void Update(float speedMetresPerSecond, float altitudeMetres, float boostEnergy, bool boosting, float boostStartEnergy)
         {
             HasChopper = true;
-            SpeedText = ((int)MathF.Round(speedMetresPerSecond * MetresPerSecondToKilometresPerHour)).ToString();
-            AltitudeText = ((int)MathF.Round(MathF.Max(0f, altitudeMetres))).ToString();
+            if (Changed(ref _speed, (int)MathF.Round(speedMetresPerSecond * MetresPerSecondToKilometresPerHour)))
+                SpeedText = _speed.ToString();
+            if (Changed(ref _altitude, (int)MathF.Round(MathF.Max(0f, altitudeMetres))))
+                AltitudeText = _altitude.ToString();
 
             var energy = Math.Clamp(boostEnergy, 0f, 1f);
             BoostEnergy = MathF.Round(energy * 100f) / 100f;
@@ -299,7 +305,8 @@ namespace Chopper.Presentation.Hud
         public void UpdateHealth(float current, float max)
         {
             var fraction = max > 0f ? Math.Clamp(current / max, 0f, 1f) : 0f;
-            HealthText = ((int)MathF.Ceiling(MathF.Max(0f, current))).ToString();
+            if (Changed(ref _health, (int)MathF.Ceiling(MathF.Max(0f, current))))
+                HealthText = _health.ToString();
             HealthFraction = MathF.Round(fraction * 100f) / 100f;
             HealthLow = fraction < LowHealthFraction;
         }
@@ -373,9 +380,18 @@ namespace Chopper.Presentation.Hud
             UpdateThreats(false, false, false, 0f, 0f);
         }
 
+        /// <summary>Numbers become text only when they change: no string per frame.</summary>
+        private static bool Changed(ref int shown, int value)
+        {
+            if (shown == value) return false;
+            shown = value;
+            return true;
+        }
+
         private void Set<T>(ref T field, T value, string propertyName)
         {
-            if (Equals(field, value)) return;
+            // Not object.Equals: that boxes value types (garbage every frame).
+            if (EqualityComparer<T>.Default.Equals(field, value)) return;
             field = value;
             propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(propertyName));
         }

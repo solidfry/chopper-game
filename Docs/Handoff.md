@@ -109,13 +109,13 @@ Rules:
 8. Network feel: Multiplayer Play Mode or a build, Network Simulator 150 ms / 2% loss. Fly hard turns and dashes. Small corrections should be soft, not jumps. Too floaty: raise the smoothing values; still jumpy: lower them, or look for a client/server mismatch in the flight code.
    4-player test (done 29 Oct by Claude, measured): Multiplayer → Play Mode Tools: Num Thin Clients 3, simulator delay 75 ms (RTT about 170 ms), jitter 10, loss 2%. Thin clients fly by `ScriptedPilot` (`Session/ScriptedPilotSystems.cs`), each with the next chassis. To let it fly your chopper too, add a `ScriptedPilotOverride` singleton to the client world. Result over 75 s: 4 players, all 4 chassis, combat damage, no errors; 0–1 hitch in about 5,600 frames per chopper (own predicted and 3 remote); own chopper about 6 m ahead of the server at 50 m/s (expected). Set the tools back to 0 afterwards.
 9. Run edit-mode tests (Window → General → Test Runner).
-10. If tick-batching or Burst messages come back: clear `Library/BurstCache`.
+10. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
 
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |
 |---|---|---|
-| "Server Tick Batching" warnings (1.25–1.75 ticks/frame) | Editor below 60 FPS; maybe the Burst cache is stale | Clear `Library/BurstCache`, check Game view Stats FPS, test in a build, profile if it stays |
+| "Server Tick Batching" warnings — solved 29 Oct | Profiled: the editor runs at about 150–210 FPS and the server tick costs about 4 ms; 0.2 % of frames batch, each one an ~18 ms editor GC (`GC.Collect` in `EditorApplication.update`), and Netcode's 4-frame window made each lone hitch a warning | Done: incremental GC on (Player settings; the editor uses it after a restart), the HUD makes no garbage per frame, the dev diagnostics widen the warning window to 60 frames (`SessionDiagnosticsSystem`). Now 1 warning at play start (scene load), then none. A warning now means the server really falls behind |
 | Burst "not a known entry point" messages | Stale Burst cache after big code changes | Same: clear `Library/BurstCache` |
 | Only tested with thin clients (29 Oct: 4 players, 170 ms, 2% loss, smooth) | — | A real Multiplayer Play Mode test with people (feel of hits and corrections) |
 | MessagePipe without a DI container (`PresentationEvents`) | API not checked in an editor before | Watch for errors on first message |
@@ -124,7 +124,7 @@ Rules:
 
 Next session: continue with this order (step 1 onward). The feel pass and style guide work of 28 Oct is done; its follow-ups (feel tuning, match-end, lobby and server list screens from Figma) are the backlog in plan section 7d.
 
-1. **Finish Phase 2 (needs Unity):** the tick-batching fix (profile; it shows at 1.25–1.75 ticks/frame in the editor with 4 players). Done 29 Oct: the 4-player network test (thin clients, see step 8 above) and the edit-mode tests (63/63).
+1. **Phase 2 is done (29 Oct):** the 4-player network test (thin clients, see step 8 above), the edit-mode tests (63/63) and the tick-batching warnings (open-problems table). Left: a test with people.
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
    - done (not yet compiled): sockets, module visuals, the loadout on the ghost, each player's loadout at spawn;
    - done: PartForge Kit01 (neon) and Kit02 (dystopia, the owner's direction; default), 4 chassis + 23 modules each; art direction in `Tools/PartForge/ART_DIRECTION.md`; Setup step 5 imports the kits;
@@ -155,6 +155,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - port the old menus to UI Toolkit and delete `Assets/Scripts` (the options overlay `UI/Options` is the first piece; reuse its style);
    - export the `.blend` models to `.fbx`;
    - delete or rebuild the old scenes.
+   - owner TODO (29 Oct): a city building generator like PartForge (Blender, geometry nodes, styles, export + Setup step) — plan section 7a2.
 
 ## 7. Owner preferences
 

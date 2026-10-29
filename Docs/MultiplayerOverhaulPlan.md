@@ -395,6 +395,14 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
 
+## 7a2. City building generator (owner TODO, 29 Oct — design not started)
+
+A procedural generator for **city buildings**, like PartForge for the choppers (`Tools/PartForge`): code + numbers in Blender (Python and geometry nodes), so a change is a re-run, not a re-model.
+- **Same pipeline:** style values (gritty dystopia, neon accents from the style guide), a Blender N-panel with Rebuild, seeds for chance details, an audit, preview sheets, export to FBX + manifest in `Assets/Chopper/Art/...`, and a Setup window step that imports and links them (one config root, data-driven).
+- **Parts:** footprints and storey stacks (towers, blocks, slums, industrial), roof kit (vents, antennas, signs, landing pads), facade modules (windows, neon signage, pipes, balconies), wear and grime by the same bake / runtime-skin path as the choppers.
+- **Game needs:** LODs and simple colliders (boxes) per building, few materials (texture sets), sockets or markers for gameplay (spawn points, objective zones, bot path-finding hints from section 7a).
+- **Fits:** section 7 (mode maps), section 7a (bot navigation: the air grid / octree is baked from these colliders).
+
 ## 7b. Status of `v2` branch (checked 25 Oct 2026)
 
 `origin/v2` = 1 commit on top of `main`: `fa63b932` "v2 fixes" (26 May 2026). 474 files; most are asset-store materials re-saved by the upgrade.
@@ -430,7 +438,7 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Parked: flight feel tuning.** "Feels better" — revisit later. Knobs: `ChopperAuthoring` on the prefab, `MouseDegreesPerPixel` + pitch invert in `ChopperInputSystem`, camera FOV/pull-back on `ChopperCameraRig`.
 - HUD (26 Oct, written without the editor — needs a compile + play check): UI Toolkit speed/altitude/dash panel. `ChopperHudModel` (bindable view model) + `LocalChopperHudSystem` in `Chopper.Presentation/Hud`; `ChopperHudView` + UXML/USS in `Chopper.UI/Hud`; shared theme `UI/Theme/ChopperTheme.uss`. Set up with **Chopper → Setup**. Edit-mode tests: `ChopperHudModelTests`.
 - Done (29 Oct): 4-player test with 3 thin clients at RTT ~170 ms, 10 ms jitter, 2% loss: every chassis, no errors, 0–1 render hitch per ~5,600 frames per chopper. Thin clients fly by `ScriptedPilot`; the server sets each connection's `CommandTarget` to its chopper (thin clients send input without a ghost id).
-- Left: editor "Server Tick Batching" warnings (profile), a test with real people in Multiplayer Play Mode.
+- Done 29 Oct: editor "Server Tick Batching" warnings profiled and fixed (they were lone editor GC hitches: incremental GC, no HUD garbage per frame, 60-frame warning window in dev). Left: a test with real people in Multiplayer Play Mode.
 
 **Phase 2 — started (26 Oct, written without the editor — needs a compile + play check).**
 - `Simulation/Combat`: `Health` (server-written ghost field), `DamageEvent` buffer (server only), `HitscanWeaponConfig/State`, `HitConfirmRpc`.
