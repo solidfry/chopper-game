@@ -229,7 +229,8 @@ def _export_fbx(obj, path):
     bpy.ops.export_scene.fbx(
         filepath=path, use_selection=True, object_types={"MESH", "EMPTY"},
         axis_forward="-Z", axis_up="Y", bake_space_transform=True, apply_scale_options="FBX_SCALE_ALL",
-        mesh_smooth_type="EDGE", add_leaf_bones=False, bake_anim=False, path_mode="STRIP", use_mesh_modifiers=True)
+        mesh_smooth_type="EDGE", use_triangles=True,  # n-gon caps (cone tips) would be dropped by Unity's importer
+        add_leaf_bones=False, bake_anim=False, path_mode="STRIP", use_mesh_modifiers=True)
 
 
 def _triangles(obj):

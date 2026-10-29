@@ -421,10 +421,6 @@ def write(kit, sets, style, skin_list, folder, runtime_folder=None):
     skin maps, and (runtime_folder) the runtime shader's result per skin for previews, with the same file names.
     Returns the manifest's "textureSets" and "skins" entries (paths relative to the kit folder)."""
     os.makedirs(folder, exist_ok=True)
-    for old in os.listdir(folder):
-        # Old maps of this kit (renamed sets, removed skins, the old palette maps) go.
-        if old.startswith(f"{kit}_") and (old.endswith(".png") or old.endswith(".png.meta")):
-            os.remove(os.path.join(folder, old))
     if runtime_folder:
         os.makedirs(runtime_folder, exist_ok=True)
     rel = os.path.basename(folder)
@@ -483,6 +479,17 @@ def write(kit, sets, style, skin_list, folder, runtime_folder=None):
             shared = file_names(kit, texture_set.name)
             for key in ("normal", "occlusion"):
                 _copy(os.path.join(folder, shared[key]), os.path.join(runtime_folder, shared[key]))
+    # Old maps of this kit (renamed sets, removed skins, the old palette maps) go. Maps written again keep their
+    # .meta, so Unity keeps their GUIDs and the materials keep their textures.
+    written = {os.path.basename(path) for entry in set_entries for key, path in entry.items()
+               if isinstance(path, str) and path.endswith(".png")}
+    written |= {os.path.basename(path) for entry in skin_entries for files in entry["sets"]
+                for key, path in files.items() if key != "set"}
+    for old in os.listdir(folder):
+        if old.startswith(f"{kit}_") and old.endswith(".png") and old not in written:
+            os.remove(os.path.join(folder, old))
+            if os.path.exists(os.path.join(folder, old + ".meta")):
+                os.remove(os.path.join(folder, old + ".meta"))
     return set_entries, skin_entries
 
 
