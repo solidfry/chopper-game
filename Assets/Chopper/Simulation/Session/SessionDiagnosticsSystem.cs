@@ -8,7 +8,9 @@ namespace Chopper.Simulation.Session
     /// <summary>
     /// Dev only. If a world has no chopper a few seconds after start, logs once what is missing on the way to a spawn
     /// (connection, in-game state, spawner from the subscene, chopper ghost), so a failed spawn says why.
-    /// Server: widens Netcode's "Server Tick Batching" warning window (see <see cref="BatchWarningWindowFrames"/>).
+    /// Server: widens Netcode's "Server Tick Batching" warning window (see <see cref="BatchWarningWindowFrames"/>) and
+    /// mutes it while the match loads (<see cref="LoadGraceSeconds"/>). The global Netcode config (Setup step 1) lets
+    /// the server run up to 4 full ticks in a slow frame, so batching itself is now only for a real overload.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     public partial class SessionDiagnosticsSystem : SystemBase
@@ -21,17 +23,31 @@ namespace Chopper.Simulation.Session
         /// </summary>
         private const int BatchWarningWindowFrames = 60;
         private const int NetcodeDefaultWindowFrames = 4;
+        /// <summary>Loading the subscene stalls a frame or two and the server catches up once; that is not a problem.</summary>
+        private const double LoadGraceSeconds = 5.0;
 
         private bool _done;
         private bool _batchWindowSet;
+        private bool _warnAfterLoad;
+        private bool _loadGraceOver;
 
         protected override void OnUpdate()
         {
-            if (!_batchWindowSet && World.IsServer() && SystemAPI.TryGetSingletonRW<NetDebug>(out var netDebug))
+            if (World.IsServer() && !_loadGraceOver && SystemAPI.TryGetSingletonRW<NetDebug>(out var netDebug))
             {
-                _batchWindowSet = true;
-                if (netDebug.ValueRO.WarnBatchedTicksRollingWindowSize == NetcodeDefaultWindowFrames)
-                    netDebug.ValueRW.WarnBatchedTicksRollingWindowSize = BatchWarningWindowFrames;
+                if (!_batchWindowSet)
+                {
+                    _batchWindowSet = true;
+                    if (netDebug.ValueRO.WarnBatchedTicksRollingWindowSize == NetcodeDefaultWindowFrames)
+                        netDebug.ValueRW.WarnBatchedTicksRollingWindowSize = BatchWarningWindowFrames;
+                    _warnAfterLoad = netDebug.ValueRO.WarnBatchedTicks;
+                    netDebug.ValueRW.WarnBatchedTicks = false;
+                }
+                else if (SystemAPI.Time.ElapsedTime >= LoadGraceSeconds)
+                {
+                    _loadGraceOver = true;
+                    netDebug.ValueRW.WarnBatchedTicks = _warnAfterLoad;
+                }
             }
 
             if (_done || SystemAPI.Time.ElapsedTime < CheckAfterSeconds) return;

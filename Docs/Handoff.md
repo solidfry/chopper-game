@@ -116,7 +116,7 @@ Rules:
 
 | Problem | Likely cause | Next action |
 |---|---|---|
-| "Server Tick Batching" warnings — solved 29 Oct | Profiled: the editor runs at about 150–210 FPS and the server tick costs about 4 ms; 0.2 % of frames batch, each one an ~18 ms editor GC (`GC.Collect` in `EditorApplication.update`), and Netcode's 4-frame window made each lone hitch a warning | Done: incremental GC on (Player settings; the editor uses it after a restart), the HUD makes no garbage per frame, the dev diagnostics widen the warning window to 60 frames (`SessionDiagnosticsSystem`). Now 1 warning at play start (scene load), then none. A warning now means the server really falls behind |
+| "Server Tick Batching" warnings — solved 29 Oct (two passes) | 1) Lone ~18 ms editor GC hitches with Netcode's 4-frame window. 2) Netcode's default of **1 tick per frame**: any frame longer than a tick (editor at ~60 FPS with vsync, the match load) merged ticks into one batch | Incremental GC; no HUD garbage; dev window 60 frames; **global `NetcodeConfig` (Setup step 1): up to 4 full ticks per frame** (batching only for a real overload); warning muted for the first 5 s of a match (load). Tested at 60 FPS: 1,795 ticks in 30 s, no batching after load, no warnings |
 | Burst "not a known entry point" messages | Stale Burst cache after big code changes | Same: clear `Library/BurstCache` |
 | Only tested with thin clients (29 Oct: 4 players, 170 ms, 2% loss, smooth) | — | A real Multiplayer Play Mode test with people (feel of hits and corrections) |
 | MessagePipe without a DI container (`PresentationEvents`) | API not checked in an editor before | Watch for errors on first message |
@@ -159,6 +159,7 @@ Next session: continue with this order (step 1 onward). The feel pass and style 
    - done: the composition root runs: `RootLifetimeScope` prefab + `VContainerSettings` in the preloaded assets (Setup step 1, `RootScopeSetup`); before this, sign-in never ran;
    - done: Steamworks.NET 2025.165.0 (package), `steam_appid.txt` = 480 (Spacewar test ID until the owner's App ID). Tested: Steam gives a ticket; Unity refuses it ("id provider not found", no Steam provider in the dashboard yet) and the game signs in anonymously with the Steam name;
    - owner: when the real App ID exists, put it in `steam_appid.txt` and add the Steam provider in the Unity Dashboard (App ID + Web API publisher key, identity `unityauthenticationservice`);
+   - owner TODO: Relay friend matches as a step before Edgegap (plan section 4);
    - owner: install Unity Hub modules **Linux Dedicated Server Build Support** (Edgegap runs Linux containers) and **Windows Dedicated Server Build Support** (local tests); then the dedicated server build;
    - Steamworks.NET and the Dashboard Steam provider;
    - Multiplayer Services sessions with a Cloud Code allocator for Edgegap;

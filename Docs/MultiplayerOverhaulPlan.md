@@ -290,6 +290,7 @@ Flow: **Launch → Steam auto sign-in → Main menu → Play (one button) → Lo
 - **Reconnect:** store session id; on crash/disconnect offer "Rejoin" for 2 min; server keeps chopper slot.
 - **Bots** fill empty slots in FFA/TDM so matches start fast (bots = thin-client-style AI using same input command).
 - Server reads matchmaker payload: mode, team assignment, player loadouts.
+- **Relay friend matches (owner TODO, 29 Oct):** a step before hosted servers: a player hosts (client + server worlds, like training) and friends join through Unity Relay with a join code, using Multiplayer Services Sessions (`WithRelayNetwork`). No Edgegap, no dedicated build; good for playtests with friends. Later the same session code points at Edgegap servers.
 
 ## 5. Chopper customisation
 
