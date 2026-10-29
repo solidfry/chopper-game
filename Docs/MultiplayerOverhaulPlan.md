@@ -515,7 +515,8 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 | Matchmaking | **Off**: `MatchmakerClient` sign-in hook commented out; no server start path |
 | Firing bugs, server authority, hit detection | Not started |
 | Netcode for Entities / ECS | Not started (still NGO) |
-| Steam, Edgegap, customisation, progression, TDM/CTN | Not started |
+| Steam (test ID), Edgegap (first deploy works) | Started |
+| Progression, TDM/CTN | Not started |
 | ParrelSync | Still in manifest (remove; use Multiplayer Play Mode) |
 
 **Effect on roadmap:** start all new work from `v2`, not `main`. Phase 0 is ~70% done. Left in Phase 0: 6.3 → 6.6 upgrade, add Entities / Netcode for Entities / Unity Physics, remove NGO + ParrelSync, fix `WeaponSlot` firing bugs (only if NGO build must stay playable during the port), delete the commented-out `ServerStartup.cs`.
@@ -579,6 +580,9 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 - `Chopper.App`: `RootLifetimeScope` + `SignInOnStart`.
 - Steps for you: add Steamworks.NET (UPM git URL) and a `steam_appid.txt`; set up the Steam provider in the Unity Dashboard; make a prefab with `RootLifetimeScope` and set it as root in VContainer settings.
 - Left: real matchmaker (Multiplayer Services sessions + Cloud Code allocator → Edgegap), party, rejoin, server reads the matchmaker payload and checks the loadout with `LoadoutRules.Validate`.
+- Done 29 Oct (in the editor): composition root runs; Steamworks.NET (test App ID 480, anonymous sign-in fallback); Linux dedicated server build (Setup window), tested in WSL and Docker.
+- Done 29 Oct: **first Edgegap deploy, tested.** Unity no longer hosts servers (Multiplay ended 1 Apr 2026), so Edgegap stays (owner decision, 29 Oct; Relay friend matches remain an option for playtests). Image pushed with `Tools/Edgegap/push.ps1` to `registry.edgegap.com/superhotdancergames-wffvi2kvblrl/airwing-server`; app `airwing-server`, version `0.1.0` (port `gameport` 7979/UDP, 0.5 vCPU, 1 GB). The editor joined as a client: RTT ~40 ms, no loss, smooth except right after editor stalls. Fixes: client receive queue 256; HUD dark square at low hull.
+- Done 29 Oct (compiled, tests pass; needs a new server build): idle stop (`ServerLifecycle.cs`): 300 s with no first player or 120 s empty → Edgegap self-stop (`ARBITRIUM_DELETE_URL`), then quit. Port from `ARBITRIUM_PORT_GAMEPORT_INTERNAL`.
 
 **Look and feel: keep the old game's identity (user TODO, 27 Oct).** The world is a gritty, kinetic cyberpunk; match the old game wherever possible.
 - [x] HUD central and moving with the chopper: flight frame (ring, roll horizon, speed/alt right, dash left, hull below) sways up to 24 px against turns.

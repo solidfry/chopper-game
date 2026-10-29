@@ -119,12 +119,13 @@ Rules:
 |---|---|---|
 | "Server Tick Batching" warnings — solved 29 Oct (two passes) | 1) Lone ~18 ms editor GC hitches with Netcode's 4-frame window. 2) Netcode's default of **1 tick per frame**: any frame longer than a tick (editor at ~60 FPS with vsync, the match load) merged ticks into one batch | Incremental GC; no HUD garbage; dev window 60 frames; **global `NetcodeConfig` (Setup step 1): up to 4 full ticks per frame** (batching only for a real overload); warning muted for the first 5 s of a match (load). Tested at 60 FPS: 1,795 ticks in 30 s, no batching after load, no warnings |
 | Burst "not a known entry point" messages | Stale Burst cache after big code changes | Same: clear `Library/BurstCache` |
-| Only tested with thin clients (29 Oct: 4 players, 170 ms, 2% loss, smooth) | — | A real Multiplayer Play Mode test with people (feel of hits and corrections) |
+| Only tested with thin clients and one editor on Edgegap (29 Oct: 4 players, 170 ms, 2% loss, smooth; Edgegap RTT 40 ms, smooth) | — | A test with people, in client builds (editor stalls cause catch-up snaps) |
+| Edgegap `0.1.0` has no idle stop | Built before `ServerLifecycle` | Stop deployments by hand in the dashboard; build and push `0.1.1` |
 | MessagePipe without a DI container (`PresentationEvents`) | API not checked in an editor before | Watch for errors on first message |
 
 ## 6. Next steps (recommended order)
 
-Next session: continue with this order (step 1 onward). The feel pass and style guide work of 28 Oct is done; its follow-ups (feel tuning, match-end, lobby and server list screens from Figma) are the backlog in plan section 7d.
+Next session: continue with this order (step 1 onward). Newest (29 Oct evening): first Edgegap deploy works (step 4, Phase 3); owner TODOs for the damage model and death break-up are in plan section 7d. The feel pass and style guide work of 28 Oct is done; its follow-ups (feel tuning, match-end, lobby and server list screens from Figma) are the backlog in plan section 7d.
 
 1. **Phase 2 is done (29 Oct):** the 4-player network test (thin clients, see step 8 above), the edit-mode tests (63/63) and the tick-batching warnings (open-problems table). Left: a test with people.
 2. **Phase 4: modular build.** Plan section 5, "Modular build: lego sockets":
