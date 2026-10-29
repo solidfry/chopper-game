@@ -2,6 +2,7 @@
 # build in Builds/LinuxServer. From that folder:
 #   docker build -t airwing-server:<version> .
 #   docker push <your Edgegap registry>/airwing-server:<version>
+# or from the repo root: ./Tools/Edgegap/push.ps1 -Registry registry.edgegap.com/<org>/<app> -Version <version>
 # In the Edgegap app version, map the game port 7979/UDP (ChopperBootstrap.LocalPort; "-port" overrides it).
 FROM ubuntu:22.04
 
