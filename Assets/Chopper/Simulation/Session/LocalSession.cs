@@ -24,6 +24,9 @@ namespace Chopper.Simulation.Session
             foreach (var world in World.All)
                 if ((world.Flags & WorldFlags.Game) == WorldFlags.Game) menuWorlds.Add(world);
 
+            // Listen and connect only by the requests below. A port left from the start-up bootstrap (the editor started
+            // in a gameplay scene) would make the new worlds listen and connect a second time.
+            ClientServerBootstrap.AutoConnectPort = 0;
             var server = ClientServerBootstrap.CreateServerWorld("ServerWorld");
             var client = ClientServerBootstrap.CreateClientWorld("ClientWorld");
             foreach (var world in menuWorlds) world.Dispose();
@@ -35,6 +38,22 @@ namespace Chopper.Simulation.Session
 
             World.DefaultGameObjectInjectionWorld = server;
             return true;
+        }
+
+        /// <summary>
+        /// Leaves the match: removes every server, client and thin client world and makes a menu world again (what
+        /// <see cref="ChopperBootstrap"/> gives a menu scene). Load the menu scene after this.
+        /// </summary>
+        public static void Stop()
+        {
+            var netcodeWorlds = new List<World>();
+            foreach (var world in World.All)
+                if (world.IsServer() || world.IsClient() || world.IsThinClient()) netcodeWorlds.Add(world);
+            foreach (var world in netcodeWorlds) world.Dispose();
+
+            foreach (var world in World.All)
+                if ((world.Flags & WorldFlags.Game) == WorldFlags.Game) return;
+            World.DefaultGameObjectInjectionWorld = ClientServerBootstrap.CreateLocalWorld("Default World");
         }
     }
 }

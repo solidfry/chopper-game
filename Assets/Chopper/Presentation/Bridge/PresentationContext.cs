@@ -70,6 +70,19 @@ namespace Chopper.Presentation.Bridge
             : null;
         public bool IsDisposed { get; private set; }
 
+        /// <summary>The hangar scene is in the build, so a match can go back to it.</summary>
+        public bool CanOpenHangar => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != HangarStage.SceneName &&
+                                     Application.CanStreamedLevelBeLoaded(HangarStage.SceneName);
+
+        /// <summary>Leaves the match (<see cref="Simulation.Session.LocalSession.Stop"/>) and loads the hangar.</summary>
+        public void OpenHangar()
+        {
+            if (!CanOpenHangar) return;
+            MenuOpen = false;
+            Simulation.Session.LocalSession.Stop();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(HangarStage.SceneName);
+        }
+
         /// <summary>Call from Start or later: the mixer ignores volume changes during Awake.</summary>
         public void Start(AudioClip music)
         {

@@ -27,7 +27,7 @@ namespace Chopper.Editor.Setup
     /// </summary>
     internal static class HangarSetup
     {
-        public const string ScenePath = "Assets/Scenes/Hangar.unity";
+        public const string ScenePath = "Assets/Scenes/" + HangarStage.SceneName + ".unity";
         private const string Folder = "Assets/Chopper/Data/Hangar";
         private const string SettingsPath = Folder + "/HangarSettings.asset";
         private const string LibraryPath = Folder + "/WireframeLibrary.asset";

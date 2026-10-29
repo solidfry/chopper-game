@@ -19,6 +19,8 @@ namespace Chopper.Presentation.Hangar
     [DisallowMultipleComponent]
     public sealed class HangarStage : MonoBehaviour
     {
+        /// <summary>The hangar scene (Setup step 7 makes it and puts it in the build settings).</summary>
+        public const string SceneName = "Hangar";
         /// <summary>Child of a chassis prefab that holds its model and sockets (Setup step 6).</summary>
         public const string ModelName = "Model";
         private const string WireName = "Wire";

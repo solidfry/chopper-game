@@ -10,7 +10,7 @@ namespace Chopper.UI.Options
 {
     /// <summary>
     /// In-game options overlay (<c>OptionsMenu.uxml</c>): controls (mouse steer, sensitivity, invert), HUD look preset,
-    /// "reduce flicker / effects", and volumes.
+    /// "reduce flicker / effects", volumes, and HANGAR (leave the match to change the loadout).
     /// Escape or gamepad Start opens and closes it. While open, the cursor is free and flight input is blocked
     /// (<see cref="PresentationContext.MenuOpen"/>). Values are saved by the services they belong to
     /// (<see cref="InputOptions"/>, <see cref="HudLook"/>, <see cref="IAudioService"/>). The first part of the menu port (old UGUI menus).
@@ -19,6 +19,7 @@ namespace Chopper.UI.Options
     public sealed class OptionsMenuView : MonoBehaviour
     {
         private const string HiddenClass = "options--hidden";
+        private const string ButtonHiddenClass = "options__button--hidden";
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the HUD look and the audio service.")]
         private PresentationBridge bridge;
@@ -32,6 +33,7 @@ namespace Chopper.UI.Options
         private DropdownField _hudLook;
         private Toggle _reduceEffects;
         private Button _resume;
+        private Button _hangar;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
@@ -68,6 +70,7 @@ namespace Chopper.UI.Options
             _hudLook = _root.Q<DropdownField>("hud-look");
             _reduceEffects = _root.Q<Toggle>("reduce-effects");
             _resume = _root.Q<Button>("resume");
+            _hangar = _root.Q<Button>("hangar");
 
             _mouseSteer.choices = _steerNames;
             _mouseSteer.RegisterValueChangedCallback(OnMouseSteerChanged);
@@ -77,6 +80,7 @@ namespace Chopper.UI.Options
             _hudLook.RegisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.RegisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked += Close;
+            if (_hangar != null) _hangar.clicked += OpenHangar;
 
             _volumes.Clear();
             AddVolume("volume-master", AudioChannel.Master);
@@ -105,6 +109,7 @@ namespace Chopper.UI.Options
             _hudLook.UnregisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.UnregisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked -= Close;
+            if (_hangar != null) _hangar.clicked -= OpenHangar;
             foreach (var (slider, _) in _volumes) slider.UnregisterValueChangedCallback(OnVolumeChanged);
             _root = null;
         }
@@ -117,6 +122,13 @@ namespace Chopper.UI.Options
         }
 
         private void Close() => SetOpen(false);
+
+        /// <summary>Leave the match for the hangar (change the loadout). The cursor stays free there.</summary>
+        private void OpenHangar()
+        {
+            IsOpen = false;
+            _context.OpenHangar();
+        }
 
         private void SetOpen(bool open)
         {
@@ -134,6 +146,7 @@ namespace Chopper.UI.Options
             _hudLook.SetValueWithoutNotify(_presetNames[Mathf.Clamp((int)_context.HudLook.Preset, 0, _presetNames.Count - 1)]);
             _reduceEffects.SetValueWithoutNotify(_context.HudLook.ReduceEffects);
             foreach (var (slider, channel) in _volumes) slider.SetValueWithoutNotify(_context.Audio.GetVolume(channel));
+            _hangar?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHangar);
             _resume.Focus();
         }
 
