@@ -42,6 +42,7 @@ namespace Chopper.Editor.Setup
                 if (config != null) { Selection.activeObject = config; EditorGUIUtility.PingObject(config); }
             }) { text = "Select game config" };
             root.Add(configRow);
+            root.Add(new Button(SkinPreviewScene.Open) { text = "Open skin preview scene" });
 
             root.Add(new Label("Problems") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 10 } });
             root.Add(new Button(Validate) { text = "Validate" });
