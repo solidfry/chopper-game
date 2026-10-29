@@ -3,7 +3,9 @@
 #   docker build -t airwing-server:<version> .
 #   docker push <your Edgegap registry>/airwing-server:<version>
 # or from the repo root: ./Tools/Edgegap/push.ps1 -Registry registry.edgegap.com/<org>/<app> -Version <version>
-# In the Edgegap app version, map the game port 7979/UDP (ChopperBootstrap.LocalPort; "-port" overrides it).
+# In the Edgegap app version, add a port named "gameport", 7979/UDP: the server listens on its internal port
+# (ARBITRIUM_PORT_GAMEPORT_INTERNAL; "-port" overrides it; default 7979). It stops itself when idle
+# (ServerLifecycleSystem; "-idleStart" / "-idleEmpty" seconds, e.g. as extra "docker run" arguments).
 FROM ubuntu:22.04
 
 RUN apt-get update \
@@ -15,4 +17,4 @@ COPY . /app
 RUN chmod +x /app/AirwingServer.x86_64
 
 EXPOSE 7979/udp
-ENTRYPOINT ["/app/AirwingServer.x86_64", "-batchmode", "-nographics", "-logFile", "-", "-port", "7979"]
+ENTRYPOINT ["/app/AirwingServer.x86_64", "-batchmode", "-nographics", "-logFile", "-"]

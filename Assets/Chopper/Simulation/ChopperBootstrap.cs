@@ -9,7 +9,8 @@ namespace Chopper.Simulation
     /// Replaces the default Netcode for Entities bootstrap. Menus and the hangar run with only a local world.
     /// Gameplay scenes get a server and a client world; the client connects to the local server, so training
     /// runs single player with the same code as multiplayer. A dedicated server build (<c>UNITY_SERVER</c>, Setup →
-    /// "Build Linux server") makes only a server world that listens on <c>-port</c> (default <see cref="LocalPort"/>);
+    /// "Build Linux server") makes only a server world that listens on <c>-port</c> or Edgegap's game port (default <see cref="LocalPort"/>;
+    /// <see cref="Session.ServerArgs.Port"/>) and stops when idle (<see cref="Session.ServerLifecycleSystem"/>);
     /// its build has the gameplay scene first.
     /// </summary>
     [Preserve]
@@ -22,7 +23,7 @@ namespace Chopper.Simulation
         {
 #if UNITY_SERVER
             // In a player the first scene is not loaded yet here, so the scene check below cannot work.
-            AutoConnectPort = PortFromCommandLine(LocalPort);
+            AutoConnectPort = Session.ServerArgs.Port(LocalPort);
             World.DefaultGameObjectInjectionWorld = CreateServerWorld("ServerWorld");
             return true;
 #else
@@ -38,15 +39,6 @@ namespace Chopper.Simulation
             CreateLocalWorld(defaultWorldName);
             return true;
 #endif
-        }
-
-        /// <summary>The value after <c>-port</c> on the command line (the hosting service may set it), else the fallback.</summary>
-        public static ushort PortFromCommandLine(ushort fallback)
-        {
-            var args = System.Environment.GetCommandLineArgs();
-            for (var i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-port" && ushort.TryParse(args[i + 1], out var port) && port > 0) return port;
-            return fallback;
         }
 
         /// <summary>
