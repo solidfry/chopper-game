@@ -221,6 +221,7 @@ namespace Chopper.Editor.Setup
             var bridge = bridgeObject.GetComponent<PresentationBridge>();
             if (bridge == null) bridge = bridgeObject.AddComponent<PresentationBridge>();
             bridge.Configure(config, null);
+            bridge.SetMusic(Chopper.Presentation.Audio.MusicLibrary.Set.Menu);
 
             var turntable = FindOrCreate(scene, "Turntable").transform;
             var stageObject = FindOrCreate(scene, "Hangar");

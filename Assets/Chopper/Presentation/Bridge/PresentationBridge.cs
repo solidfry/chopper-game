@@ -1,3 +1,4 @@
+using Chopper.Presentation.Audio;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Config;
 using UnityEngine;
@@ -15,7 +16,9 @@ namespace Chopper.Presentation.Bridge
     {
         [SerializeField] private GameConfig config;
         [SerializeField, Tooltip("Chase camera. Optional.")] private ChopperCameraRig cameraRig;
-        [SerializeField, Tooltip("Music for this scene. Empty = the config's match music.")] private AudioClip musicOverride;
+        [SerializeField, Tooltip("Music for this scene: the match playlist or the menu identity track (GameConfig → Music).")]
+        private MusicLibrary.Set music = MusicLibrary.Set.Match;
+        [SerializeField, Tooltip("One track for this scene instead. Empty = the set above.")] private AudioClip musicOverride;
 
         private PresentationContext _context;
 
@@ -32,7 +35,10 @@ namespace Chopper.Presentation.Bridge
             cameraRig = rig;
         }
 
-        private void Start() => Context.Start(musicOverride);
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetMusic(MusicLibrary.Set set) => music = set;
+
+        private void Start() => Context.Start(music, musicOverride);
 
         private void Update() => _context?.Tick(Time.deltaTime, Time.unscaledDeltaTime);
 

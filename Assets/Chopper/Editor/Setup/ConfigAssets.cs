@@ -34,7 +34,7 @@ namespace Chopper.Editor.Setup
             var cameraSettings = EnsureCameraSettings();
             var hud = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
             var options = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(OptionsLayoutPath);
-            var music = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioAssets.MatchMusicPath);
+            var music = AudioAssets.EnsureMusic();
 
             var config = Load();
             if (config == null)
@@ -51,7 +51,7 @@ namespace Chopper.Editor.Setup
                     config.LoadoutCatalog != null ? config.LoadoutCatalog : catalog,
                     config.Audio != null ? config.Audio : library,
                     config.Effects != null ? config.Effects : effects,
-                    config.MatchMusic != null ? config.MatchMusic : music,
+                    config.Music != null ? config.Music : music,
                     config.PanelSettings != null ? config.PanelSettings : panel,
                     config.HudLayout != null ? config.HudLayout : hud,
                     config.HudLook != null ? config.HudLook : look,

@@ -15,7 +15,30 @@ namespace Chopper.Editor.Setup
     {
         private const string Folder = "Assets/Chopper/Data/Audio";
         private const string LibraryPath = Folder + "/SoundLibrary.asset";
-        private const string MatchMusic = "Assets/Sound/Music/3- Dark Fantasy Studio- Demons from Mars (seamless).mp3";
+        private const string MusicPath = Folder + "/MusicLibrary.asset";
+        private const string DarkSynth = "Assets/Sound/Music/";
+        private const string Packs = "Assets/Total Music Collection/Mega Game Collection/";
+        /// <summary>The old main menu's track: the game's identity music (owner, 29 Oct).</summary>
+        private const string IdentityTrack = Packs + "Heavy Riffs/Heavy Riff 1.mp3";
+        /// <summary>
+        /// Match playlist: metal from the music packs (the old match scene's "Crazy In My Mind" first) blended with the
+        /// owner's dark synth picks in Sound/Music.
+        /// </summary>
+        private static readonly string[] MatchPlaylist =
+        {
+            Packs + "Real Rock Music Pack/MP3/Crazy In My Mind.mp3",
+            DarkSynth + "3- Dark Fantasy Studio- Demons from Mars (seamless).mp3",
+            Packs + "Real Rock Music Pack/MP3/Heavy Battle.mp3",
+            DarkSynth + "1- Dark Fantasy Studio- Behind space (seamless).mp3",
+            Packs + "Real Rock Music Pack/MP3/Drive Angry.mp3",
+            DarkSynth + "2- Dark Fantasy Studio- Planet hell (seamless).mp3",
+            Packs + "Energy Hard Rock Pack Remasters/Cyber Rock (Remastered).wav",
+            DarkSynth + "8- Dark Fantasy Studio- You are better off dead (seamless).mp3",
+            Packs + "Real Rock Music Pack/MP3/Attack of Madness.mp3",
+            DarkSynth + "City.ogg",
+            Packs + "Heavy Riffs 5/Industrial MIX.mp3",
+            DarkSynth + "7- Dark Fantasy Studio- The 29th planet (seamless).mp3",
+        };
 
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
@@ -23,7 +46,36 @@ namespace Chopper.Editor.Setup
         private const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
 
         public const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
-        public const string MatchMusicPath = MatchMusic;
+
+        /// <summary>
+        /// The music library: identity track and match playlist. Created if missing (an existing one keeps its picks).
+        /// Music clips stream from disk, so long tracks do not sit in memory.
+        /// </summary>
+        public static MusicLibrary EnsureMusic()
+        {
+            var library = AssetDatabase.LoadAssetAtPath<MusicLibrary>(MusicPath);
+            if (library == null)
+            {
+                System.IO.Directory.CreateDirectory(Folder);
+                library = ScriptableObject.CreateInstance<MusicLibrary>();
+                library.Initialise(AssetDatabase.LoadAssetAtPath<AudioClip>(IdentityTrack),
+                    MatchPlaylist.Select(AssetDatabase.LoadAssetAtPath<AudioClip>).Where(c => c != null).ToArray());
+                AssetDatabase.CreateAsset(library, MusicPath);
+            }
+
+            foreach (var clip in library.Match.Append(library.Menu).Where(c => c != null)) Stream(clip);
+            return library;
+        }
+
+        private static void Stream(AudioClip clip)
+        {
+            if (AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(clip)) is not AudioImporter importer) return;
+            var settings = importer.defaultSampleSettings;
+            if (settings.loadType == AudioClipLoadType.Streaming) return;
+            settings.loadType = AudioClipLoadType.Streaming;
+            importer.defaultSampleSettings = settings;
+            importer.SaveAndReimport();
+        }
 
         public static AudioMixer LoadMixer()
         {

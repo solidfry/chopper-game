@@ -32,6 +32,9 @@ namespace Chopper.Presentation.Audio
         private readonly float[] _musicTarget = new float[2];
         private readonly float[] _musicFadeSpeed = new float[2];
         private int _musicCurrent;
+        private readonly List<AudioClip> _playlist = new();
+        private int _playlistIndex;
+        private float _playlistFade;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -85,22 +88,76 @@ namespace Chopper.Presentation.Audio
         public void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f)
         {
             if (clip == null) return;
+            _playlist.Clear();
             var current = _music[_musicCurrent];
             if (current.clip == clip && _musicTarget[_musicCurrent] > 0f) return;
+            StartTrack(clip, fadeSeconds, loop: true);
+        }
 
+        public void PlayPlaylist(IReadOnlyList<AudioClip> clips, float fadeSeconds = 3f)
+        {
+            _playlist.Clear();
+            if (clips != null)
+                foreach (var clip in clips)
+                    if (clip != null) _playlist.Add(clip);
+            if (_playlist.Count == 0) return;
+            if (_playlist.Count == 1)
+            {
+                PlayMusic(_playlist[0], fadeSeconds);
+                return;
+            }
+
+            _playlistFade = Mathf.Max(0.1f, fadeSeconds);
+            Shuffle(null);
+            _playlistIndex = 0;
+            StartTrack(_playlist[0], _playlistFade, loop: false);
+        }
+
+        public void StopMusic(float fadeSeconds = 1.5f)
+        {
+            _playlist.Clear();
+            FadeMusic(0, 0f, fadeSeconds);
+            FadeMusic(1, 0f, fadeSeconds);
+        }
+
+        private void StartTrack(AudioClip clip, float fadeSeconds, bool loop)
+        {
             FadeMusic(_musicCurrent, 0f, fadeSeconds);
             _musicCurrent = 1 - _musicCurrent;
             var next = _music[_musicCurrent];
             next.clip = clip;
+            next.loop = loop;
             next.volume = 0f;
             next.Play();
             FadeMusic(_musicCurrent, 1f, fadeSeconds);
         }
 
-        public void StopMusic(float fadeSeconds = 1.5f)
+        /// <summary>Playlist: when the track is near its end, cross-fade to the next one (shuffle again after the last).</summary>
+        private void AdvancePlaylist()
         {
-            FadeMusic(0, 0f, fadeSeconds);
-            FadeMusic(1, 0f, fadeSeconds);
+            if (_playlist.Count < 2) return;
+            var current = _music[_musicCurrent];
+            if (current == null || current.clip == null) return;
+            if (current.isPlaying && current.time < current.clip.length - _playlistFade) return;
+
+            _playlistIndex++;
+            if (_playlistIndex >= _playlist.Count)
+            {
+                // A new order, but never the track that just played first.
+                Shuffle(current.clip);
+                _playlistIndex = 0;
+            }
+            StartTrack(_playlist[_playlistIndex], _playlistFade, loop: false);
+        }
+
+        private void Shuffle(AudioClip notFirst)
+        {
+            for (var i = _playlist.Count - 1; i > 0; i--)
+            {
+                var j = UnityEngine.Random.Range(0, i + 1);
+                (_playlist[i], _playlist[j]) = (_playlist[j], _playlist[i]);
+            }
+            if (notFirst != null && _playlist[0] == notFirst) (_playlist[0], _playlist[^1]) = (_playlist[^1], _playlist[0]);
         }
 
         public float GetVolume(AudioChannel channel) => PlayerPrefs.GetFloat(VolumeKeyPrefix + channel, 1f);
@@ -123,6 +180,7 @@ namespace Chopper.Presentation.Audio
 
         public void Tick(float deltaTime)
         {
+            AdvancePlaylist();
             for (var i = 0; i < _music.Length; i++)
             {
                 var source = _music[i];

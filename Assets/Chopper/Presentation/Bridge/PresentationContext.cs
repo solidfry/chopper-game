@@ -83,11 +83,18 @@ namespace Chopper.Presentation.Bridge
             UnityEngine.SceneManagement.SceneManager.LoadScene(HangarStage.SceneName);
         }
 
-        /// <summary>Call from Start or later: the mixer ignores volume changes during Awake.</summary>
-        public void Start(AudioClip music)
+        /// <summary>
+        /// Call from Start or later: the mixer ignores volume changes during Awake. Music: <paramref name="musicOverride"/>
+        /// if set, else the config's <see cref="MusicLibrary"/> set (menu identity track, or the match playlist).
+        /// </summary>
+        public void Start(MusicLibrary.Set musicSet, AudioClip musicOverride)
         {
             _audio.ApplySavedVolumes();
-            _audio.PlayMusic(music != null ? music : Config != null ? Config.MatchMusic : null);
+            var music = Config != null ? Config.Music : null;
+            if (musicOverride != null) _audio.PlayMusic(musicOverride);
+            else if (music == null) return;
+            else if (musicSet == MusicLibrary.Set.Menu) _audio.PlayMusic(music.Menu);
+            else _audio.PlayPlaylist(music.Match, music.CrossFadeSeconds);
         }
 
         public void Tick(float deltaTime, float unscaledDeltaTime)

@@ -29,8 +29,8 @@ namespace Chopper.Presentation.Config
         [SerializeField] private CombatEffectsSettings effects;
         [SerializeField, Tooltip("Chopper camera: views (chase, cockpit), blends, speed effects, shake.")]
         private CameraSettings camera;
-        [SerializeField, Tooltip("Default music for gameplay scenes. A bridge can override it.")]
-        private AudioClip matchMusic;
+        [SerializeField, Tooltip("Identity track (hangar, menus) and the match playlist. Each scene's bridge picks the set.")]
+        private MusicLibrary music;
 
         [Header("UI")]
         [SerializeField, Tooltip("Shared panel settings (theme, scaling) for every UI Toolkit document.")]
@@ -49,7 +49,7 @@ namespace Chopper.Presentation.Config
         public SoundLibrary Audio => audio;
         public CombatEffectsSettings Effects => effects;
         public CameraSettings Camera => camera;
-        public AudioClip MatchMusic => matchMusic;
+        public MusicLibrary Music => music;
         public PanelSettings PanelSettings => panelSettings;
         public VisualTreeAsset HudLayout => hudLayout;
         public VisualTreeAsset OptionsLayout => optionsLayout;
@@ -61,6 +61,7 @@ namespace Chopper.Presentation.Config
         {
             Require(loadoutCatalog, "loadout catalog", problems);
             Require(audio, "sound library", problems);
+            Require(music, "music library", problems);
             Require(effects, "combat effects settings", problems);
             Require(camera, "camera settings", problems);
             Require(panelSettings, "panel settings", problems);
@@ -73,6 +74,7 @@ namespace Chopper.Presentation.Config
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
+            if (music != null) music.CollectProblems(problems);
             if (effects != null) effects.CollectProblems(problems);
             if (camera != null) camera.CollectProblems(problems);
             if (hudLook != null) hudLook.CollectProblems(problems);
@@ -81,13 +83,13 @@ namespace Chopper.Presentation.Config
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
-        public void Initialise(LoadoutCatalog catalog, SoundLibrary soundLibrary, CombatEffectsSettings effectsSettings, AudioClip music,
+        public void Initialise(LoadoutCatalog catalog, SoundLibrary soundLibrary, CombatEffectsSettings effectsSettings, MusicLibrary music,
             PanelSettings panel, VisualTreeAsset hud, HudLookSettings look, VisualTreeAsset options, CameraSettings cameraSettings)
         {
             loadoutCatalog = catalog;
             audio = soundLibrary;
             effects = effectsSettings;
-            matchMusic = music;
+            this.music = music;
             panelSettings = panel;
             hudLayout = hud;
             hudLook = look;

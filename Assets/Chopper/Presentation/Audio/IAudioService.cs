@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Chopper.Presentation.Audio
@@ -49,8 +50,14 @@ namespace Chopper.Presentation.Audio
 
         void StopLoop(SoundLoop loop);
 
-        /// <summary>Cross-fades to <paramref name="clip"/> (looping). Same clip again does nothing.</summary>
+        /// <summary>Cross-fades to <paramref name="clip"/> (looping). Same clip again does nothing. Ends a playlist.</summary>
         void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f);
+
+        /// <summary>
+        /// Plays the clips shuffled, each to its end, cross-fading <paramref name="fadeSeconds"/> into the next; shuffles
+        /// again after the last. One clip = it loops.
+        /// </summary>
+        void PlayPlaylist(IReadOnlyList<AudioClip> clips, float fadeSeconds = 3f);
 
         void StopMusic(float fadeSeconds = 1.5f);
 

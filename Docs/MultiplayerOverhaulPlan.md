@@ -27,6 +27,44 @@ Problems found:
 
 ---
 
+## 0. Original vision (2023 design notes) and how it maps onto v2
+
+Source: the owner's Obsidian notes for the first build (GPG314 Studio 4, `E:/Mind/Mind/Uni/GPG314 - Studio 4`:
+Prototype Plan, Case Study 1, Design & Branding, playtest notes, devlogs). Read 29 Oct. Use it as the north star when a
+design choice is open.
+
+**Identity.** *Airwing: Nitro*: a loud, over-the-top multiplayer chopper combat game about building *your* chopper
+from parts and taking it into team battles. Handling: Battlefield 3/4/2042 helicopters ("easy to use, hard to master").
+Ownership: Power Quest, MechWarrior Online, War Thunder (the machine is yours; a culture around it). Look: 80s retro
+and gritty: Airwolf, Blood Dragon, Cyberpunk 2077, Stranger Things, Inscryption; "found under a couch, slotted into a
+Nintendo". Music: metal (Metallica, Megadeth); a blend with dark synth is fine (owner, 29 Oct).
+
+**Already in v2:** Battlefield flight model, modular sockets and hangar, 80s CRT HUD, screen shake / boost feel,
+lock-on and homing missiles, lead indicator, out-of-bounds timer, crash and roof damage, loss of lift on the side.
+
+**To carry over (owner TODO, 29 Oct):**
+- **Classes as rock-paper-scissors.** Original: Scout draws Assaults away; Assault guards its transport and kills the
+  enemy transport; Heavy/Transport is the only class that can lift the nuke. v2 mapping: Lifter = Heavy (the heaviest,
+  done in the handling pass); Gunship = the "Interceptor" (hunts Assaults). Write a counter table (who beats whom, and
+  why) and tune weapons and parts to it.
+- **Parts with abilities, chassis-only part lines.** "Each part gives benefits, disadvantages and unique abilities";
+  parts fit only their chassis, so each chassis plays in its own way. See section 5, "Parts, upgrade chains and
+  chassis variants".
+- **Mode "Retrieval".** 6v6: steal the enemy nuke and bring it home; only the Heavy (Lifter) can carry it. Merge with
+  section 7's Capture the Nuke (name, team size, carrier rule).
+- **Ownership.** Name your chopper; its own stats and history; decals; part mastery.
+- **Single player.** Score on speed, kills and style points with online rankings; story framing: defend the nation's
+  nuclear arsenal ("Launch, launch, launch!" radio intro). Maps onto bots (section 7a) as PvE "interdiction" missions.
+- **Level.** "A rainy cyberpunk city in the desert": fog, clouds, rain on the windscreen. Lesson from tests: a dark
+  ground and too much glow made height hard to read; the city generator (7a2) must give clear ground and height cues.
+- **Cockpit.** An 80s car dashboard (Nissan 300ZX, Cyberpunk vehicle screens), glowing interior lights.
+- **Flight help (every playtest).** Flight tutorial / obstacle course in the training range; options for auto-hover
+  when W is released and auto-stabilise at low speed, off while firing (built in 2023; v2 has `AutoLevel`, off).
+- **Gun aim assist.** Main week-12 feedback: hard to hit players. Soft lock: the reticle tracks a target near the aim
+  point (guns; missiles already lock).
+- **Analytics.** Time to first kill, shots before first kill, crashes by type, most-used weapon, damage per weapon,
+  accuracy, fight heat map (balance data for the handling pass and parts).
+
 ## 1. Target tech stack
 
 | Area | Choice |
@@ -397,6 +435,17 @@ handling and their own ability, in the same role:
   Matchmaking, team limits and balance work by class. Hangar: class tabs, then a variant picker.
 - Art: PartForge gets a body type per variant (own hull, nose, boom, rotor layout) and Setup step 6 builds one
   ghost prefab per variant, as now per chassis.
+
+### Rockets and a rich weapon roster (owner TODO, 29 Oct — design not started)
+- **Rocket lead reticle always on** while a rocket pylon is selected (now it shows only in some cases).
+- **Rocket systems** as pylon modules with clear trades: slow heavy rockets (big splash), fast light rockets (weak,
+  long range), aim-guided rockets (follow the reticle while the button is held), smart rockets (proximity fuse, small
+  course correction), salvo pods (many small rockets). Data: more `RocketWeaponDefinition` fields (speed, damage,
+  splash, salvo, guidance mode, fuse) on the existing pylon path.
+- **Plenty of weapons, guns and abilities**, so customisation is intricate and rich: more guns (rate vs damage vs
+  range vs heat), more pylon weapons (section 3b list), more utility abilities (chaff, decoys, drones, EMP, shield,
+  repair). Each one a definition asset; chassis-only lines and upgrade chains from "Parts, upgrade chains and chassis
+  variants".
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
