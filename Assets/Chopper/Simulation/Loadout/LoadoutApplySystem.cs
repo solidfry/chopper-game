@@ -18,7 +18,10 @@ namespace Chopper.Simulation.Loadout
     /// TODO: player unlocks from Cloud Save (everything is unlocked for now).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    // With the first systems: after ghosts spawn (GhostSimulationSystemGroup), before prediction, so a new chopper flies
+    // with its loadout from its first predicted tick. (Prediction is OrderFirst: a plain UpdateBefore is ignored.)
+    [UpdateInGroup(typeof(SimulationSystemGroup), OrderFirst = true)]
+    [UpdateAfter(typeof(GhostSimulationSystemGroup))]
     [UpdateBefore(typeof(PredictedSimulationSystemGroup))]
     public partial class LoadoutApplySystem : SystemBase
     {

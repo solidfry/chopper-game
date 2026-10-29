@@ -21,7 +21,6 @@ namespace Chopper.Simulation.Combat
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(PylonFireSystem))]
-    [UpdateBefore(typeof(ApplyDamageSystem))]
     public partial struct GuidedMissileSystem : ISystem
     {
         private ComponentLookup<LocalToWorld> _poses;

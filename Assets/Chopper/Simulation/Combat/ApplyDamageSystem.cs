@@ -20,6 +20,8 @@ namespace Chopper.Simulation.Combat
     [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(HitscanFireSystem))]
     [UpdateAfter(typeof(RocketSystem))]
+    // Set here, not on the missile system: that one also runs on clients, where this system does not exist.
+    [UpdateAfter(typeof(GuidedMissileSystem))]
     public partial struct ApplyDamageSystem : ISystem
     {
         private ComponentLookup<ConnectionOwner> _connectionLookup;
