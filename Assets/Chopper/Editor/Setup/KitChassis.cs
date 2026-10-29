@@ -15,8 +15,8 @@ namespace Chopper.Editor.Setup
     /// <summary>
     /// "Build chassis from kit" (plan section 5). One chopper ghost per chassis from the default kit's model: a prefab
     /// variant of the placeholder ghost (same ghost, physics and flight setup) with the kit model in place of the old
-    /// one, a <see cref="SocketAuthoring"/> on each socket marker of the model, a box collider round the model and the
-    /// chassis's default loadout. Links the chassis to it, and the kit's module models to their modules (rotors also get
+    /// one, a <see cref="SocketAuthoring"/> on each socket marker of the model, body colliders that follow the model
+    /// (<see cref="FitColliders"/>) and the chassis's default loadout. Links the chassis to it, and the kit's module models to their modules (rotors also get
     /// a spin). Creates only what is missing: an existing prefab only gets missing sockets; a chassis or module linked
     /// to art other than the placeholders keeps it.
     /// </summary>
@@ -25,6 +25,11 @@ namespace Chopper.Editor.Setup
         public const string Folder = "Assets/Chopper/Prefabs/Chassis";
         private const string ModelName = "Model";
         private const string PlaceholderSocketsName = "Sockets";
+        private const string CollidersName = "Colliders";
+        /// <summary>The body is cut into this many slices along its length; each gets a box.</summary>
+        private const int ColliderSlices = 4;
+        /// <summary>Thin parts (masts, antennas, aerials) are left out of the boxes: this share of vertices on each side.</summary>
+        private const float ColliderTrim = 0.015f;
         /// <summary>Rotor blades, degrees per second about the hub (local Y). Tune it on the rotor modules.</summary>
         private static readonly Vector3 RotorSpin = new(0f, 1500f, 0f);
 
@@ -113,10 +118,12 @@ namespace Chopper.Editor.Setup
                 if (created) Build(root, model, chassis);
                 var added = AddSockets(root, part);
                 if (created) FitEffects(root);
-                if (!created && added == 0) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var fitted = FitColliders(root);
+                if (!created && added == 0 && !fitted) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
                 var saved = PrefabUtility.SaveAsPrefabAsset(root, path);
-                Debug.Log(created ? $"Setup: made {path} from kit model {model.name}." : $"Setup: added {added} socket(s) to {path}.");
+                Debug.Log(created ? $"Setup: made {path} from kit model {model.name}."
+                    : $"Setup: {path}: {added} socket(s) added{(fitted ? ", body colliders fitted" : "")}.");
                 return saved;
             }
             finally
@@ -137,16 +144,57 @@ namespace Chopper.Editor.Setup
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, root.transform);
             instance.name = ModelName;
 
-            if (root.TryGetComponent<BoxCollider>(out var box))
-            {
-                var bounds = ModelBounds(root.transform, instance);
-                box.center = bounds.center;
-                box.size = bounds.size;
-            }
-
             // The old model's blades are gone: rotor modules spin now (ModuleDefinition.VisualSpin).
             if (root.TryGetComponent<ChopperVisualsAuthoring>(out var visuals)) visuals.SetRotors(Array.Empty<ChopperVisualsAuthoring.Rotor>());
             if (root.TryGetComponent<ChopperAuthoring>(out var authoring)) authoring.SetLoadout(chassis, chassis.DefaultModules.ToArray());
+        }
+
+        /// <summary>
+        /// Body colliders that follow the model: the body is cut into <see cref="ColliderSlices"/> slices along its length
+        /// and each slice gets a box round its vertices (thin parts trimmed), so hits and crashes match the shape (the
+        /// Lifter's masts and the tail boom are not one big box). They replace the single root box. Unity Physics bakes
+        /// the child boxes into one compound collider. False when the prefab has them already.
+        /// </summary>
+        private static bool FitColliders(GameObject root)
+        {
+            var model = root.transform.Find(ModelName);
+            if (model == null || root.transform.Find(CollidersName) != null) return false;
+
+            var points = new List<Vector3>();
+            foreach (var filter in model.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null) continue;
+                var toRoot = root.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                foreach (var vertex in filter.sharedMesh.vertices) points.Add(toRoot.MultiplyPoint3x4(vertex));
+            }
+            if (points.Count == 0) return false;
+
+            var holder = new GameObject(CollidersName);
+            holder.transform.SetParent(root.transform, false);
+            var minZ = points.Min(p => p.z);
+            var length = points.Max(p => p.z) - minZ;
+            for (var slice = 0; slice < ColliderSlices; slice++)
+            {
+                var from = minZ + length * slice / ColliderSlices;
+                var to = minZ + length * (slice + 1) / ColliderSlices;
+                var inSlice = points.Where(p => p.z >= from && (p.z < to || slice == ColliderSlices - 1)).ToList();
+                if (inSlice.Count < 8) continue;
+                var (lowX, highX) = Trimmed(inSlice.Select(p => p.x));
+                var (lowY, highY) = Trimmed(inSlice.Select(p => p.y));
+                var box = holder.AddComponent<BoxCollider>();
+                box.center = new Vector3((lowX + highX) / 2f, (lowY + highY) / 2f, (from + to) / 2f);
+                box.size = new Vector3(Mathf.Max(0.2f, highX - lowX), Mathf.Max(0.2f, highY - lowY), to - from);
+            }
+
+            if (root.TryGetComponent<BoxCollider>(out var single)) Object.DestroyImmediate(single);
+            return true;
+        }
+
+        private static (float Low, float High) Trimmed(IEnumerable<float> values)
+        {
+            var sorted = values.OrderBy(v => v).ToList();
+            var cut = (int)(sorted.Count * ColliderTrim);
+            return (sorted[cut], sorted[sorted.Count - 1 - cut]);
         }
 
         /// <summary>A socket on every marker node of the model (SOCKET_Pylon_1) that has none.</summary>
