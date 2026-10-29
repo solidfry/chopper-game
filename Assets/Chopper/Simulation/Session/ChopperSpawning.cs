@@ -10,7 +10,8 @@ namespace Chopper.Simulation.Session
     public static class ChopperSpawning
     {
         /// <summary>
-        /// Spawns the chassis ghost for <paramref name="requested"/> (or the default prefab) and sets its loadout. The
+        /// Spawns the chassis ghost for <paramref name="requested"/> (no choice: the default chassis; no prefab for the
+        /// chassis: the spawner's prefab) and sets its loadout. The
         /// server's <see cref="LoadoutApplySystem"/> then validates and applies it; an invalid loadout falls back to
         /// the chassis default. <paramref name="skinId"/> is cosmetic (<see cref="ChopperSkin"/>).
         /// </summary>
@@ -21,11 +22,9 @@ namespace Chopper.Simulation.Session
             var position = spawner.Position + right * (spawner.Spacing * (networkId - 1));
 
             var prefab = spawner.Prefab;
-            if (!requested.IsEmpty)
-            {
-                foreach (var entry in chassisPrefabs)
-                    if (entry.ChassisId == requested.ChassisId) { prefab = entry.Prefab; break; }
-            }
+            var chassisId = requested.IsEmpty ? spawner.DefaultChassisId : requested.ChassisId;
+            foreach (var entry in chassisPrefabs)
+                if (entry.ChassisId == chassisId) { prefab = entry.Prefab; break; }
 
             var chopper = ecb.Instantiate(prefab);
             ecb.SetComponent(chopper, LocalTransform.FromPositionRotation(position, spawner.Rotation));

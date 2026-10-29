@@ -32,6 +32,7 @@ namespace Chopper.Editor.Setup
             CheckConfig(config, problems);
             CheckHudLook(problems);
             problems.AddRange(KitAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
+            problems.AddRange(KitChassis.Problems(config).Select(p => new SetupProblem(p.Message, p.Context)));
             CheckPrefab(problems);
             CheckScene(problems);
             return problems;
@@ -101,7 +102,8 @@ namespace Chopper.Editor.Setup
                 var missing = SocketAssets.MissingSockets(chassis).ToArray();
                 if (missing.Length > 0)
                     problems.Add(new SetupProblem(
-                        $"{chassis.DisplayName}: prefab {chassis.Prefab.name} has no socket for {string.Join(", ", missing)}. Press '2. Set up chopper prefab'.",
+                        $"{chassis.DisplayName}: prefab {chassis.Prefab.name} has no socket for {string.Join(", ", missing)}. " +
+                        "Press '6. Build chassis from kit' (kit model) or '2. Set up chopper prefab' (placeholder).",
                         chassis.Prefab));
             }
 

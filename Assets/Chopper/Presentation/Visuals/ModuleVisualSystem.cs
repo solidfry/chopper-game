@@ -14,8 +14,10 @@ namespace Chopper.Presentation.Visuals
     /// Client only. Fits every chopper's modules onto its chassis sockets ("lego" build): for each slot of its
     /// <see cref="ChopperLoadout"/>, the module's visual prefab (pooled GameObject) follows the socket each frame.
     /// The loadout comes over the network as module ids; the art is local, so it costs no bandwidth.
-    /// Module prefabs can carry their own effects (rotor spin scripts, lights, particles). Their renderers get the
-    /// chopper's skin row (<see cref="ChopperSkin"/>, <see cref="SkinLibrary"/>) for the runtime skin shader.
+    /// Module prefabs can carry their own effects (lights, particles); rotors spin by their module's
+    /// <see cref="ModuleDefinition.VisualSpin"/> (odd sockets the other way, for tandem rotors). A socket with no slot of
+    /// its own (the Lifter's second rotor) shows the module of the first slot of its type. Renderers get the chopper's
+    /// skin row (<see cref="ChopperSkin"/>, <see cref="SkinLibrary"/>) for the runtime skin shader.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -25,7 +27,8 @@ namespace Chopper.Presentation.Visuals
         {
             public LoadoutCode Code;
             public int SkinRow;
-            public readonly List<(GameObject Visual, float3 Position, quaternion Rotation)> Parts = new();
+            /// <summary>Spin in radians per second on the visual's local axes (zero for most modules).</summary>
+            public readonly List<(GameObject Visual, float3 Position, quaternion Rotation, float3 Spin)> Parts = new();
         }
 
         private readonly Dictionary<Entity, Fitted> _fitted = new();
@@ -33,6 +36,9 @@ namespace Chopper.Presentation.Visuals
         private readonly List<Entity> _gone = new();
         private readonly Dictionary<ushort, ChassisDefinition> _chassis = new();
         private readonly Dictionary<ushort, ModuleDefinition> _modules = new();
+        private readonly Dictionary<SlotType, int> _ordinals = new();
+        private readonly Dictionary<SlotType, ModuleDefinition> _firstOfType = new();
+        private readonly HashSet<(SlotType, int)> _filled = new();
         private LoadoutCatalog _indexed;
         /// <summary>The context whose pool holds the current visuals (a new context means a new pool).</summary>
         private PresentationContext _context;
@@ -59,6 +65,7 @@ namespace Chopper.Presentation.Visuals
             var pool = context.ModuleVisuals;
             var skins = context.Config.Skins;
 
+            var time = (float)(SystemAPI.Time.ElapsedTime % 3600d);
             _seen.Clear();
             foreach (var (loadout, pose, entity) in SystemAPI.Query<RefRO<ChopperLoadout>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
@@ -75,10 +82,11 @@ namespace Chopper.Presentation.Visuals
                 }
 
                 var world = pose.ValueRO.Value;
-                foreach (var (visual, position, rotation) in fitted.Parts)
+                foreach (var (visual, position, rotation, spin) in fitted.Parts)
                 {
                     if (visual == null) continue;
-                    visual.transform.SetPositionAndRotation(math.transform(world, position), math.mul(pose.ValueRO.Rotation, rotation));
+                    var turned = math.all(spin == float3.zero) ? rotation : math.mul(rotation, quaternion.EulerXYZ(spin * time));
+                    visual.transform.SetPositionAndRotation(math.transform(world, position), math.mul(pose.ValueRO.Rotation, turned));
                 }
             }
 
@@ -98,22 +106,35 @@ namespace Chopper.Presentation.Visuals
             if (!_chassis.TryGetValue(code.ChassisId, out var chassis) || !SystemAPI.HasBuffer<ChassisSocket>(entity)) return fitted;
             var sockets = SystemAPI.GetBuffer<ChassisSocket>(entity);
 
-            var ordinals = new Dictionary<SlotType, int>();
+            _ordinals.Clear();
+            _firstOfType.Clear();
+            _filled.Clear();
             for (var slot = 0; slot < chassis.Slots.Count; slot++)
             {
                 var slotType = chassis.Slots[slot];
-                ordinals.TryGetValue(slotType, out var ordinal);
-                ordinals[slotType] = ordinal + 1;
+                _ordinals.TryGetValue(slotType, out var ordinal);
+                _ordinals[slotType] = ordinal + 1;
+                _filled.Add((slotType, ordinal));
 
                 if (!_modules.TryGetValue(code.GetModule(slot), out var module) || module.Visual == null) continue;
-                if (!TryFindSocket(sockets, slotType, ordinal, out var socket)) continue;
-
-                var visual = pool.Spawn(module.Visual, Vector3.zero, Quaternion.identity);
-                DisableColliders(visual);
-                SetSkin(visual, skinRow);
-                fitted.Parts.Add((visual, socket.LocalPosition, socket.LocalRotation));
+                _firstOfType.TryAdd(slotType, module);
+                if (TryFindSocket(sockets, slotType, ordinal, out var socket)) Add(fitted, pool, module, socket, skinRow);
             }
+
+            // Sockets without a slot of their own repeat the first module of their type (tandem rotors).
+            foreach (var socket in sockets)
+                if (!_filled.Contains((socket.Slot, socket.Index)) && _firstOfType.TryGetValue(socket.Slot, out var module))
+                    Add(fitted, pool, module, socket, skinRow);
             return fitted;
+        }
+
+        private void Add(Fitted fitted, EffectPool pool, ModuleDefinition module, in ChassisSocket socket, int skinRow)
+        {
+            var visual = pool.Spawn(module.Visual, Vector3.zero, Quaternion.identity);
+            DisableColliders(visual);
+            SetSkin(visual, skinRow);
+            var spin = math.radians((float3)module.VisualSpin) * (socket.Index % 2 == 0 ? 1f : -1f);
+            fitted.Parts.Add((visual, socket.LocalPosition, socket.LocalRotation, spin));
         }
 
         /// <summary>The runtime skin shader's row on every renderer of a module visual (other shaders ignore it).</summary>
@@ -150,7 +171,7 @@ namespace Chopper.Presentation.Visuals
 
         private static void Release(EffectPool pool, Fitted fitted)
         {
-            foreach (var (visual, _, _) in fitted.Parts) pool.Release(visual);
+            foreach (var (visual, _, _, _) in fitted.Parts) pool.Release(visual);
             fitted.Parts.Clear();
         }
 

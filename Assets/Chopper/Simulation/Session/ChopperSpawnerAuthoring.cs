@@ -9,6 +9,11 @@ namespace Chopper.Simulation.Session
     {
         /// <summary>Used when a requested chassis has no prefab of its own.</summary>
         public Entity Prefab;
+        /// <summary>
+        /// The chassis of <see cref="Prefab"/>'s default loadout. A player with no loadout choice gets this chassis's own
+        /// prefab (its kit model), not the placeholder.
+        /// </summary>
+        public ushort DefaultChassisId;
         public float3 Position;
         public quaternion Rotation;
         /// <summary>Sideways gap between players so they do not spawn inside each other.</summary>
@@ -61,9 +66,15 @@ namespace Chopper.Simulation.Session
             {
                 var entity = GetEntity(TransformUsageFlags.None);
                 var transform = authoring.transform;
+                var defaultChassis = authoring.chopperPrefab != null &&
+                                     authoring.chopperPrefab.TryGetComponent<Flight.ChopperAuthoring>(out var fallback)
+                    ? fallback.Chassis
+                    : null;
+                if (defaultChassis != null) DependsOn(defaultChassis);
                 AddComponent(entity, new ChopperSpawner
                 {
                     Prefab = GetEntity(authoring.chopperPrefab, TransformUsageFlags.Dynamic),
+                    DefaultChassisId = defaultChassis != null ? defaultChassis.Id : (ushort)0,
                     Position = transform.position,
                     Rotation = transform.rotation,
                     Spacing = authoring.spacing,

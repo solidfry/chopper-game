@@ -14,7 +14,8 @@ namespace Chopper.Editor.Setup
     internal static class SocketAssets
     {
         private const string SocketsObjectName = "Sockets";
-        private const string ArtFolder = "Assets/AssetBundles/PolygonMilitary/Prefabs/Vehicles/Veh_Attachments";
+        /// <summary>Placeholder module art. Kit art (<see cref="KitChassis"/>) replaces it.</summary>
+        public const string ArtFolder = "Assets/AssetBundles/PolygonMilitary/Prefabs/Vehicles/Veh_Attachments";
 
         /// <summary>
         /// One socket per slot type and index any chassis uses, so one ghost can show every chassis until each has its
@@ -35,6 +36,10 @@ namespace Chopper.Editor.Setup
             (SlotType.Engine, 0, new Vector3(0f, 0.6f, -1.5f), 0f),
             (SlotType.Armour, 0, Vector3.zero, 0f),
         };
+
+        /// <summary>Hangar turntable yaw that shows a socket best (from the placeholder layout; 0 if it has none).</summary>
+        public static float FocusYaw(SlotType slot, int index) =>
+            Layout.FirstOrDefault(s => s.Slot == slot && s.Index == index).Yaw;
 
         /// <summary>Default module per slot type, by index (second pylon gets missiles). No entry = empty slot.</summary>
         private static readonly Dictionary<SlotType, ushort[]> DefaultsBySlot = new()

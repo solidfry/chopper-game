@@ -23,6 +23,8 @@ namespace Chopper.Simulation.Loadout
         private ChassisDefinition[] allowedChassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField, Tooltip("Mesh shown on the chassis socket (hangar and in game).")]
         private GameObject visual;
+        [SerializeField, Tooltip("Degrees per second on the visual's local axes (rotor blades). Odd sockets turn the other way.")]
+        private Vector3 visualSpin;
         [SerializeField, Tooltip("Nose: a hitscan weapon. Pylon: a rocket or guided missile. Empty for non-weapon modules.")]
         private WeaponDefinition weapon;
         [SerializeField, Tooltip("Utility behaviour (flares, later EMP, shield...). Empty for most modules.")]
@@ -33,6 +35,7 @@ namespace Chopper.Simulation.Loadout
         public string Description => description;
         public SlotType Slot => slot;
         public GameObject Visual => visual;
+        public Vector3 VisualSpin => visualSpin;
         public WeaponDefinition Weapon => weapon;
         public ModuleAbilityDefinition Ability => ability;
         public ModuleStats Stats => stats;
@@ -53,6 +56,9 @@ namespace Chopper.Simulation.Loadout
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetVisual(GameObject prefab) => visual = prefab;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetVisualSpin(Vector3 degreesPerSecond) => visualSpin = degreesPerSecond;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetAbility(ModuleAbilityDefinition definition) => ability = definition;

@@ -16,8 +16,8 @@ namespace Chopper.Editor.Setup
     /// material per texture set and skin (baked skins), one skin-shader material per texture set (runtime skins, when the
     /// <see cref="RuntimeShader"/> graph exists), remaps every model to its set's default-skin material, fills the kit's
     /// <see cref="SkinLibrary"/> and rebuilds its skin table (the default kit's library goes into the game config).
-    /// Creates only what is missing (materials are left alone once made). Linking kit models to chassis and modules is a
-    /// later step (plan section 5).
+    /// Creates only what is missing (materials are left alone once made). Linking kit models to chassis and modules is
+    /// <see cref="KitChassis"/> (step 6).
     /// </summary>
     internal static class KitAssets
     {
@@ -28,7 +28,7 @@ namespace Chopper.Editor.Setup
         public const string RuntimeShader = "Shader Graphs/ChopperSkin";
 
         [Serializable]
-        private sealed class Manifest
+        internal sealed class Manifest
         {
             public string kit;
             public TextureSetInfo[] textureSets;
@@ -37,7 +37,7 @@ namespace Chopper.Editor.Setup
         }
 
         [Serializable]
-        private sealed class TextureSetInfo
+        internal sealed class TextureSetInfo
         {
             public string name;
             public int size;
@@ -52,7 +52,7 @@ namespace Chopper.Editor.Setup
         }
 
         [Serializable]
-        private sealed class SkinInfo
+        internal sealed class SkinInfo
         {
             public int id;
             public string key;
@@ -63,7 +63,7 @@ namespace Chopper.Editor.Setup
         }
 
         [Serializable]
-        private sealed class SkinSetInfo
+        internal sealed class SkinSetInfo
         {
             public string set;
             public string colour;
@@ -72,7 +72,7 @@ namespace Chopper.Editor.Setup
         }
 
         [Serializable]
-        private sealed class PartInfo
+        internal sealed class PartInfo
         {
             public string name;
             public string file;
@@ -81,6 +81,17 @@ namespace Chopper.Editor.Setup
             public int[] moduleIds;
             public int triangles;
             public string textureSet;
+            /// <summary>Chassis only: the socket marker nodes in the model.</summary>
+            public SocketInfo[] sockets;
+        }
+
+        [Serializable]
+        internal sealed class SocketInfo
+        {
+            /// <summary>Marker node name in the model (SOCKET_Pylon_1).</summary>
+            public string name;
+            public string slot;
+            public int index;
         }
 
         private enum Map { Colour, Data, Normal }
@@ -120,6 +131,14 @@ namespace Chopper.Editor.Setup
                         yield return ($"Kit {manifest.kit}: {part.name} does not use its kit material. Press '5. Import part kits'.", importer);
                 }
             }
+        }
+
+        /// <summary>The manifest of one kit (<see cref="DefaultKit"/> for the game's chassis), or null.</summary>
+        public static Manifest LoadKit(string kit, out string folder)
+        {
+            folder = null;
+            var path = ManifestPaths().FirstOrDefault(p => Path.GetFileName(p) == $"{kit}.manifest.json");
+            return path != null ? Load(path, out folder) : null;
         }
 
         private static IEnumerable<string> ManifestPaths() => Directory.Exists(KitsFolder)
