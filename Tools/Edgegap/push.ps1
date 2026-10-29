@@ -9,7 +9,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Registry,
     [Parameter(Mandatory = $true)][string]$Version
 )
-$ErrorActionPreference = 'Stop'
+# Not 'Stop': docker writes progress to stderr, which Windows PowerShell 5.1 treats as an error. Exit codes are checked.
+$ErrorActionPreference = 'Continue'
 
 $build = Join-Path $PSScriptRoot '../../Builds/LinuxServer'
 if (-not (Test-Path (Join-Path $build 'AirwingServer.x86_64'))) { throw "No server build in $build" }
