@@ -15,7 +15,7 @@ namespace Chopper.Simulation.Flight
         [Tooltip("Extra rotor lift at full W, m/s², along the rotor axis: level = rise, nose down = rise and go forward.")]
         public float CollectiveUp = 12f;
         [Tooltip("Lift taken away at full S, m/s² (sink).")]
-        public float CollectiveDown = 10f;
+        public float CollectiveDown = 18f;
         [Tooltip("How fast the rotor spools to the W/S input (1/s). Lower = heavier, higher = snappier.")]
         public float CollectiveResponse = 6f;
 
