@@ -611,6 +611,7 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 - [ ] Team colours on world markers (Dream Cyan / Lightning Yellow) when TDM exists.
 - [ ] Optional: a safe boost "bulge" (always-on lens distortion or a custom pass) if the boost needs more punch.
 - [ ] **Damage model (owner TODO, 29 Oct):** more realistic damage. Particles at the point of impact on the chopper (sparks, smoke; the hit point must travel with the hit message to presentation). Hitting walls or the ground damages the chopper (from the impact speed at the contact, not only the speed loss per tick that `EnvironmentDamageSystem` uses now). Landing too fast damages it (vertical speed at touchdown over a safe limit). Server decides the damage; clients only show effects.
+- [ ] **Death break-up (owner TODO, 29 Oct):** on death the chopper blows apart and its modules scatter (the socket modules are the natural parts). Small parts: client-only visual debris (pooled, no network cost). Large parts (body sections, rotors): server-simulated physics ghosts with a short lifetime, so they collide with other players the same for everyone; the server decides any damage they deal (who gets the kill credit is still open).
 
 ## 8. Phased roadmap
 
