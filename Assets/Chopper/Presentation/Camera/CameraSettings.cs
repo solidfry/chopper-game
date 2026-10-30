@@ -27,6 +27,11 @@ namespace Chopper.Presentation.Camera
         public float LookAhead = 25f;
         [Tooltip("Mounted: where the eye looks (the old ReticalPosition). Chase: not used.")]
         public Vector3 LookPoint = new(0f, -1.5f, 79f);
+        [Tooltip("Mounted: always use Offset. Off = sit at the chassis's cockpit eye when it has a cockpit (gunner seats turn this on).")]
+        public bool FixedEye;
+        [Tooltip("Mounted: still draw your own chopper's hull and modules. Off (cockpit): only the cockpit model shows; the " +
+                 "hull's outside details would float in the view, and the pilot sees out through a camera feed.")]
+        public bool ShowOwnChopper;
 
         [Header("Lens")]
         public float FieldOfView = 65f;

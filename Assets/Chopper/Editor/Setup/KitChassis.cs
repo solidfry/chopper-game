@@ -62,6 +62,7 @@ namespace Chopper.Editor.Setup
             }
 
             LinkModules(catalog, manifest, folder);
+            LinkCockpits(catalog, manifest, folder);
             AssetDatabase.SaveAssets();
         }
 
@@ -83,6 +84,12 @@ namespace Chopper.Editor.Setup
                     else if (chassis.Prefab == null || chassis.Prefab == ghost)
                         yield return ($"{chassis.name} flies the placeholder chopper. Press '6. Build chassis from kit'.", chassis);
                 }
+                else if (part.kind == "cockpit")
+                {
+                    var chassis = ChassisForCockpit(catalog, part);
+                    if (chassis != null && chassis.Cockpit == null)
+                        yield return ($"{chassis.name} has no cockpit ({part.name}). Press '6. Build chassis from kit'.", chassis);
+                }
                 else if (part.moduleIds != null)
                 {
                     foreach (var module in Modules(catalog, part).Where(m => IsPlaceholder(m.Visual)))
@@ -94,6 +101,10 @@ namespace Chopper.Editor.Setup
         /// <summary>Kit chassis parts match chassis assets by name (Chassis_Gunship).</summary>
         private static ChassisDefinition ChassisFor(LoadoutCatalog catalog, KitAssets.PartInfo part) =>
             catalog.Chassis.FirstOrDefault(c => c != null && c.name == part.name);
+
+        /// <summary>Kit cockpit parts match chassis assets by family (Cockpit_Gunship → Chassis_Gunship).</summary>
+        private static ChassisDefinition ChassisForCockpit(LoadoutCatalog catalog, KitAssets.PartInfo part) =>
+            catalog.Chassis.FirstOrDefault(c => c != null && c.name == "Chassis_" + part.name.Replace("Cockpit_", ""));
 
         private static IEnumerable<ModuleDefinition> Modules(LoadoutCatalog catalog, KitAssets.PartInfo part) =>
             catalog.Modules.Where(m => m != null && part.moduleIds.Contains(m.Id));
@@ -300,6 +311,34 @@ namespace Chopper.Editor.Setup
                 }
             }
             if (linked > 0) Debug.Log($"Setup: linked kit {manifest.kit} models to {linked} module(s).");
+        }
+
+        /// <summary>
+        /// Kit cockpits (interior model + eye socket) go to their chassis: shown in cockpit views of your own chopper
+        /// (<c>CockpitVisualSystem</c>), and the camera sits at the eye. A cockpit chosen by hand (not kit art) stays.
+        /// </summary>
+        private static void LinkCockpits(LoadoutCatalog catalog, KitAssets.Manifest manifest, string folder)
+        {
+            var linked = 0;
+            foreach (var part in manifest.parts.Where(p => p.kind == "cockpit"))
+            {
+                var chassis = ChassisForCockpit(catalog, part);
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{folder}/{part.file}");
+                var eye = part.sockets?.FirstOrDefault(s => s.slot == "Eye")?.position;
+                if (chassis == null || model == null || eye == null || eye.Length != 3)
+                {
+                    Debug.LogWarning($"Setup: kit cockpit {part.name} has no chassis of its family, no model, or no eye socket.");
+                    continue;
+                }
+
+                var position = new Vector3(eye[0], eye[1], eye[2]);
+                if (chassis.Cockpit != null && !AssetDatabase.GetAssetPath(chassis.Cockpit).StartsWith(folder)) continue;
+                if (chassis.Cockpit == model && chassis.CockpitEye == position) continue;
+                chassis.SetCockpit(model, position);
+                EditorUtility.SetDirty(chassis);
+                linked++;
+            }
+            if (linked > 0) Debug.Log($"Setup: linked kit {manifest.kit} cockpits to {linked} chassis.");
         }
 
         /// <summary>Front centre of the model's bounds (kit modules point +Z from the socket): where shots start.</summary>

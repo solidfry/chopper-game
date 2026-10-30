@@ -26,6 +26,12 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Loadout used when a player has not chosen one, or theirs is not valid. One module per slot.")]
         private ModuleDefinition[] defaultModules = System.Array.Empty<ModuleDefinition>();
 
+        [Header("Cockpit (client only: your own chopper, in cockpit views)")]
+        [SerializeField, Tooltip("Interior model in chassis space (kit model Cockpit_<chassis>). Empty = no interior.")]
+        private GameObject cockpit;
+        [SerializeField, Tooltip("The pilot's eye in chassis space: where cockpit views sit (kit socket SOCKET_Eye_0).")]
+        private Vector3 cockpitEye;
+
         public ushort Id => id;
         public string DisplayName => displayName;
         public string Description => description;
@@ -34,12 +40,21 @@ namespace Chopper.Simulation.Loadout
         public CrashTuning Crash => crash;
         public IReadOnlyList<SlotType> Slots => slots;
         public IReadOnlyList<ModuleDefinition> DefaultModules => defaultModules;
+        public GameObject Cockpit => cockpit;
+        public Vector3 CockpitEye => cockpitEye;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetDefaults(GameObject chassisPrefab, ModuleDefinition[] modules)
         {
             if (chassisPrefab != null) prefab = chassisPrefab;
             if (modules != null) defaultModules = modules;
+        }
+
+        /// <summary>Editor only: used by the setup tool (kit cockpit model and its eye socket).</summary>
+        public void SetCockpit(GameObject model, Vector3 eye)
+        {
+            cockpit = model;
+            cockpitEye = eye;
         }
 
         public void CollectProblems(List<string> problems)

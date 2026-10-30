@@ -59,8 +59,10 @@ namespace Chopper.Simulation.Flight
             var flight = _controls.Flight;
             var thrust = math.clamp(flight.Thrust.ReadValue<float>(), -1f, 1f);
             var yaw = math.clamp(flight.Yaw.ReadValue<float>(), -1f, 1f);
-            var pitch = math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f);
-            var roll = math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
+            // Head look (Alt / R3) uses the mouse and the right stick for the camera: those axes are neutral meanwhile.
+            var headLook = settings.HeadLook;
+            var pitch = headLook ? 0f : math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f);
+            var roll = headLook ? 0f : math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
             var boost = flight.Dash.IsPressed();
             var fire = flight.Fire1.IsPressed();
             var fireSecondary = flight.Fire2.IsPressed();
@@ -69,7 +71,7 @@ namespace Chopper.Simulation.Flight
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
-            var mouseDelta = (float2)flight.MouseLook.ReadValue<Vector2>();
+            var mouseDelta = headLook ? float2.zero : (float2)flight.MouseLook.ReadValue<Vector2>();
             var targetRate = mouseDelta * (MouseDegreesPerPixel * math.max(settings.MouseSensitivity, 0.05f)) / dt;
             _mouseRate = math.lerp(_mouseRate, targetRate, 1f - math.exp(-MouseSmoothing * dt));
 

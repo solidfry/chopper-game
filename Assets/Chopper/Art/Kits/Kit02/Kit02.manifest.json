@@ -4,7 +4,7 @@
   "style": "dystopia",
   "units": "metres",
   "axes": "Unity space: +X right, +Y up, +Z forward. Socket rotation is identity (modules point +Z).",
-  "uv": "UV0 = baked texture set (unique unwrap); UV1 = palette swatch (cell centre of a 5 x 5 grid).",
+  "uv": "UV0 = baked texture set (unique unwrap; textureSet Palette: palette swatch); UV1 = palette swatch (cell centre of a 5 x 5 grid).",
   "textureSets": [
     {
       "name": "Scout",
@@ -16,7 +16,7 @@
       "skinMask": "Textures/Kit02_Scout_SkinMask.png",
       "skinWear": "Textures/Kit02_Scout_SkinWear.png",
       "heightRange": [
-        -1.3580334186553955,
+        -1.3580632209777832,
         1.7820024490356445
       ],
       "baseSkin": "factory"
@@ -61,7 +61,7 @@
       "skinMask": "Textures/Kit02_Lifter_SkinMask.png",
       "skinWear": "Textures/Kit02_Lifter_SkinWear.png",
       "heightRange": [
-        -2.8595423698425293,
+        -2.9000020027160645,
         3.6500024795532227
       ],
       "baseSkin": "factory"
@@ -82,6 +82,12 @@
       "baseSkin": "factory"
     }
   ],
+  "palette": {
+    "material": "Kit02_Kit",
+    "colour": "Textures/Kit02_Colour.png",
+    "emission": "Textures/Kit02_Emission.png",
+    "metalSmooth": "Textures/Kit02_MetalSmooth.png"
+  },
   "skins": [
     {
       "id": 1,
@@ -1686,7 +1692,7 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 16188,
+      "triangles": 16152,
       "textureSet": "Scout",
       "sockets": [
         {
@@ -1950,7 +1956,7 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 38022,
+      "triangles": 37806,
       "textureSet": "Lifter",
       "sockets": [
         {
@@ -2049,6 +2055,94 @@
             0,
             3.65,
             -3.4
+          ],
+          "scale": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Cockpit_Scout",
+      "file": "Models/Cockpit_Scout.fbx",
+      "kind": "cockpit",
+      "slot": null,
+      "moduleIds": [],
+      "triangles": 15380,
+      "textureSet": "Palette",
+      "sockets": [
+        {
+          "name": "SOCKET_Eye_0",
+          "slot": "Eye",
+          "index": 0,
+          "position": [
+            0.0,
+            0.58,
+            1.1
+          ],
+          "scale": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Cockpit_Gunship",
+      "file": "Models/Cockpit_Gunship.fbx",
+      "kind": "cockpit",
+      "slot": null,
+      "moduleIds": [],
+      "triangles": 15796,
+      "textureSet": "Palette",
+      "sockets": [
+        {
+          "name": "SOCKET_Eye_0",
+          "slot": "Eye",
+          "index": 0,
+          "position": [
+            0.0,
+            1.0,
+            1.15
+          ],
+          "scale": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Cockpit_Assault",
+      "file": "Models/Cockpit_Assault.fbx",
+      "kind": "cockpit",
+      "slot": null,
+      "moduleIds": [],
+      "triangles": 15752,
+      "textureSet": "Palette",
+      "sockets": [
+        {
+          "name": "SOCKET_Eye_0",
+          "slot": "Eye",
+          "index": 0,
+          "position": [
+            0.0,
+            1.168,
+            1.4499999999999997
+          ],
+          "scale": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Cockpit_Lifter",
+      "file": "Models/Cockpit_Lifter.fbx",
+      "kind": "cockpit",
+      "slot": null,
+      "moduleIds": [],
+      "triangles": 23612,
+      "textureSet": "Palette",
+      "sockets": [
+        {
+          "name": "SOCKET_Eye_0",
+          "slot": "Eye",
+          "index": 0,
+          "position": [
+            0.0,
+            0.744,
+            2.8499999999999996
           ],
           "scale": 1.0
         }

@@ -152,11 +152,12 @@ class Builder:
         return placed is not None
 
     # -- primitives ------------------------------------------------------------------------------------------------
-    def loft(self, sections, swatch, cap_front=None, cap_back=None):
+    def loft(self, sections, swatch, cap_front=None, cap_back=None, open_back=False):
         """Connects rings of points (same count each) in order; caps both ends.
 
         sections: list of rings, each a list of (x, y, z). cap_front/cap_back: swatch for the first/last cap
-        (default = swatch). With form "loft_smooth", three or more sections get curved in between."""
+        (default = swatch). open_back: no last cap (an end hidden inside another part that a cockpit view looks
+        through). With form "loft_smooth", three or more sections get curved in between."""
         if FORM["loft_smooth"] > 0 and len(sections) >= 3:
             sections = _smooth_sections(sections, int(FORM["loft_smooth"]))
         rings = [self._verts(ring) for ring in sections]
@@ -166,7 +167,8 @@ class Builder:
                 j = (i + 1) % count
                 self._face([a[i], a[j], b[j], b[i]], swatch)
         self._face(list(reversed(rings[0])), swatch if cap_front is None else cap_front)
-        self._face(rings[-1], swatch if cap_back is None else cap_back)
+        if not open_back:
+            self._face(rings[-1], swatch if cap_back is None else cap_back)
 
     def box(self, centre, size, swatch, rotation=None, swatches=None):
         """Axis box (optionally rotated about its centre). swatches: optional dict per side

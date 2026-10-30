@@ -54,7 +54,8 @@ def main():
     if args.audit:
         from partforge import audit, build as builder, parts
         parts.use_style(style)
-        items = [parts.chassis(spec, style) for spec in builder.chassis_specs(style)] + parts.all_modules()
+        specs = builder.chassis_specs(style)
+        items = [parts.chassis(spec, style) for spec in specs] + parts.cockpits(specs, style) + parts.all_modules()
         problems = audit.run(items)
         print(f"{problems} problems")
         sys.exit(1 if problems else 0)

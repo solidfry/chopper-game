@@ -131,9 +131,14 @@ def save_images(images, folder):
     return paths
 
 
+def material_name(kit_name):
+    return f"{kit_name}_Kit"
+
+
 def make_material(kit_name, images):
-    """The palette material: the quick look in the panel before export (export bakes the real texture sets)."""
-    name = f"{kit_name}_Kit"
+    """The palette material: the quick look in the panel before export (export bakes the real texture sets), and the
+    exported material of parts in no texture set (cockpits)."""
+    name = material_name(kit_name)
     old = bpy.data.materials.get(name)
     if old is not None:
         bpy.data.materials.remove(old)
@@ -169,11 +174,12 @@ def make_material(kit_name, images):
     return material
 
 
-def apply_uvs(obj):
+def apply_uvs(obj, palette_only=False):
     """UV layers: "UVMap" first (UV0, unwrapped by texture.py on export) and "Palette" (UV1): every face's palette UVs
-    go to the centre of its swatch (read from the 'swatch' face attribute, kept through the bevel)."""
+    go to the centre of its swatch (read from the 'swatch' face attribute, kept through the bevel). palette_only: the
+    part is drawn with the palette maps, so UV0 gets the palette UVs too (no unwrap, no bake)."""
     mesh = obj.data
-    mesh.uv_layers.new(name="UVMap")
+    base = mesh.uv_layers.new(name="UVMap")
     layer = mesh.uv_layers.new(name="Palette")
     attribute = mesh.attributes.get("swatch")
     for poly in mesh.polygons:
@@ -181,5 +187,7 @@ def apply_uvs(obj):
         u, v = uv_of(index)
         for loop_index in poly.loop_indices:
             layer.data[loop_index].uv = (u, v)
+            if palette_only:
+                base.data[loop_index].uv = (u, v)
     if attribute is not None:
         mesh.attributes.remove(attribute)

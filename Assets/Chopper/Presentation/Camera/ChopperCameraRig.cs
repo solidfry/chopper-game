@@ -12,6 +12,9 @@ namespace Chopper.Presentation.Camera
         /// <summary>World velocity, m/s.</summary>
         public Vector3 Velocity;
         public bool Boosting;
+        /// <summary>The chassis has a cockpit: mounted views sit at <see cref="Eye"/> (chopper space).</summary>
+        public bool HasEye;
+        public Vector3 Eye;
     }
 
     /// <summary>
@@ -19,7 +22,7 @@ namespace Chopper.Presentation.Camera
     /// rendered pose, so the camera never lags a frame behind it.
     /// <list type="bullet">
     /// <item>Views come from <see cref="CameraSettings"/> (on the game config): chase (smoothed heading, roll on a delay,
-    /// speed pull-back) and mounted (cockpit: rigid to the chopper). C / gamepad Y cycles them; the choice is saved.</item>
+    /// speed pull-back) and mounted (cockpit: rigid to the chopper). C / gamepad Y cycles them for the session; the start view is the saved default (cockpit). Alt / R3 looks around on a mounted view.</item>
     /// <item>Switching blends position, rotation, field of view and near clip over the blend time.</item>
     /// <item>Each view can add noise (handheld / engine wobble); hits add shake (<see cref="AddShake"/>).</item>
     /// <item>Weight: the camera lags with acceleration (the chopper pulls away when it speeds up, closes in when it brakes,
@@ -32,7 +35,17 @@ namespace Chopper.Presentation.Camera
     [RequireComponent(typeof(UnityEngine.Camera))]
     public sealed class ChopperCameraRig : MonoBehaviour
     {
-        private const string ViewKey = "Chopper.Camera.View";
+        /// <summary>The view used at start (a view name). C / gamepad Y only switches for the current session.</summary>
+        private const string DefaultViewKey = "Chopper.Camera.DefaultView";
+        private const string DefaultViewName = "Cockpit";
+        /// <summary>Head look: degrees per mouse pixel (at sensitivity 1) and per second at full right stick.</summary>
+        private const float HeadMouseDegreesPerPixel = 0.15f;
+        private const float HeadStickDegreesPerSecond = 140f;
+        private const float HeadMaxYaw = 130f;
+        private const float HeadMinPitch = -50f;
+        private const float HeadMaxPitch = 65f;
+        /// <summary>How fast the head snaps back to the front when the look key is released (1/s).</summary>
+        private const float HeadReturnSharpness = 14f;
         /// <summary>A jump larger than this in one frame (metres) is a respawn or teleport: snap, do not smooth.</summary>
         private const float TeleportDistance = 60f;
         /// <summary>Seconds the boost must be off before a new boost counts as a new kick.</summary>
@@ -79,6 +92,12 @@ namespace Chopper.Presentation.Camera
         private float _trauma;
         /// <summary>A menu is open (<see cref="SetCursorFree"/>): no view switching.</summary>
         private bool _menuOpen;
+        private float _headYaw;
+        private float _headPitch;
+        /// <summary>The chassis's cockpit eye this frame (chopper space), if it has one.</summary>
+        private Vector3? _eye;
+        /// <summary>Alt / R3 held on a mounted view: flight turn input must be neutral (see <c>InputSettingsSystem</c>).</summary>
+        public bool HeadLookActive { get; private set; }
 
         private CameraSettings Settings
         {
@@ -98,12 +117,14 @@ namespace Chopper.Presentation.Camera
         public int ViewIndex => _view;
         public string ViewName => ViewAt(_view)?.Name ?? "";
         public bool IsMounted => ViewAt(_view)?.Kind == CameraViewKind.Mounted;
+        /// <summary>The view is a cockpit: your own hull and module art are not drawn, the cockpit model is.</summary>
+        public bool HidesOwnChopper => IsMounted && !ViewAt(_view).ShowOwnChopper;
 
         /// <summary>Called by the presentation context with the game config's settings, unless this rig has its own.</summary>
         public void UseSettings(CameraSettings value)
         {
             if (settings == null && value != null) settings = value;
-            _view = Mathf.Clamp(PlayerPrefs.GetInt(ViewKey, 0), 0, Mathf.Max(0, Settings.Views.Count - 1));
+            _view = FindDefaultView();
             _states = new ViewState[Settings.Views.Count];
             if (_camera == null) return;
             // The effects read their shader from the settings: make them again for new settings.
@@ -125,7 +146,57 @@ namespace Chopper.Presentation.Camera
             EnsureStates();
             // The new view starts from the chopper's current heading, not from where it was last used.
             _states[_view].Valid = false;
-            PlayerPrefs.SetInt(ViewKey, index);
+        }
+
+        /// <summary>The saved default view (set in the options). Cockpit when nothing is saved.</summary>
+        public string DefaultView
+        {
+            get => PlayerPrefs.GetString(DefaultViewKey, DefaultViewName);
+            set => PlayerPrefs.SetString(DefaultViewKey, value ?? DefaultViewName);
+        }
+
+        private int FindDefaultView()
+        {
+            var views = Settings.Views;
+            var wanted = DefaultView;
+            for (var i = 0; i < views.Count; i++)
+                if (views[i] != null && views[i].Name == wanted) return i;
+            return 0;
+        }
+
+        /// <summary>Head look while Alt / R3 is held on a mounted view; snaps back to the front on release.</summary>
+        private void UpdateHeadLook(float deltaTime)
+        {
+            var keyboard = Keyboard.current;
+            var gamepad = Gamepad.current;
+            var altHeld = keyboard != null && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed);
+            var stickHeld = gamepad != null && gamepad.rightStickButton.isPressed;
+            HeadLookActive = IsMounted && !_menuOpen && (altHeld || stickHeld);
+
+            if (HeadLookActive)
+            {
+                var sensitivity = 1f;
+                if (altHeld && Mouse.current != null)
+                {
+                    var delta = Mouse.current.delta.ReadValue();
+                    _headYaw += delta.x * HeadMouseDegreesPerPixel * sensitivity;
+                    _headPitch -= delta.y * HeadMouseDegreesPerPixel * sensitivity;
+                }
+                if (stickHeld)
+                {
+                    var stick = gamepad.rightStick.ReadValue();
+                    _headYaw += stick.x * HeadStickDegreesPerSecond * deltaTime;
+                    _headPitch -= stick.y * HeadStickDegreesPerSecond * deltaTime;
+                }
+                _headYaw = Mathf.Clamp(_headYaw, -HeadMaxYaw, HeadMaxYaw);
+                _headPitch = Mathf.Clamp(_headPitch, HeadMinPitch, HeadMaxPitch);
+            }
+            else
+            {
+                var k = 1f - Mathf.Exp(-HeadReturnSharpness * deltaTime);
+                _headYaw = Mathf.Lerp(_headYaw, 0f, k);
+                _headPitch = Mathf.Lerp(_headPitch, 0f, k);
+            }
         }
 
         public void NextView() => SetView(_view + 1);
@@ -138,6 +209,8 @@ namespace Chopper.Presentation.Camera
             var settingsAsset = Settings;
             if (settingsAsset.Views.Count == 0 || _camera == null) return;
             EnsureStates();
+            UpdateHeadLook(deltaTime);
+            _eye = target.HasEye ? target.Eye : null;
             var targetPosition = target.Position;
             var targetRotation = target.Rotation;
             UpdateSpeed(target, deltaTime, settingsAsset);
@@ -236,7 +309,8 @@ namespace Chopper.Presentation.Camera
         {
             var view = ViewAt(index);
             var pose = view.Kind == CameraViewKind.Mounted
-                ? EvaluateMounted(view, targetPosition, targetRotation)
+                ? EvaluateMounted(view, targetPosition, targetRotation, Quaternion.Euler(_headPitch, _headYaw, 0f),
+                    view.FixedEye ? null : _eye)
                 : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01,
                     Settings.BoostPullBack * Mathf.Max(_boost, 0f));
             pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01) + Settings.BoostFieldOfView * _boost;
@@ -275,11 +349,15 @@ namespace Chopper.Presentation.Camera
             return new Pose { Position = position, Rotation = Quaternion.LookRotation(lookPoint - position, state.Up) };
         }
 
-        /// <summary>Rigid to the chopper: the horizon tilts and turns with it, as from the pilot's seat.</summary>
-        private static Pose EvaluateMounted(CameraView view, Vector3 targetPosition, Quaternion targetRotation) => new()
+        /// <summary>
+        /// Rigid to the chopper: the horizon tilts and turns with it, as from the pilot's seat. The eye is the chassis's
+        /// cockpit eye when it has one, else the view's offset; the look direction is the view's either way.
+        /// </summary>
+        private static Pose EvaluateMounted(CameraView view, Vector3 targetPosition, Quaternion targetRotation, Quaternion head,
+            Vector3? eye) => new()
         {
-            Position = targetPosition + targetRotation * view.Offset,
-            Rotation = targetRotation * Quaternion.LookRotation(view.LookPoint - view.Offset, Vector3.up),
+            Position = targetPosition + targetRotation * (eye ?? view.Offset),
+            Rotation = targetRotation * head * Quaternion.LookRotation(view.LookPoint - view.Offset, Vector3.up),
         };
 
         private static Quaternion Noise(CameraView view, int index)

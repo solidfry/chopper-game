@@ -6,7 +6,7 @@ with no offset, pointing forward (+z), hanging down (-y).
 import math
 import random
 
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from .geo import FORM, Builder, _rounded_rect, chamfer_ring, rot_x, rot_y, rot_z
 from .palette import swatch as S
@@ -108,6 +108,661 @@ def chassis(spec, style):
 
     sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body))
     return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"])
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Cockpit interior
+# ---------------------------------------------------------------------------------------------------------------------
+
+EMBED = 0.001  # cockpit details sink this far into what they sit on, so the audit sees them joined
+
+
+def _basis(x, y, z):
+    """Rotation matrix from its local axes (Unity space)."""
+    return Matrix((x, y, z)).transposed()
+
+
+def _facing(point, eye):
+    """Rotation whose local -z points from `point` back to the eye, local x level: a panel at `point` faces the pilot."""
+    z = (Vector(point) - Vector(eye)).normalized()
+    x = Vector((0, 1, 0)).cross(z).normalized()
+    return _basis(x, z.cross(x), z)
+
+
+FACE_PILOT = _basis((1, 0, 0), (0, 1, 0), (0, 0, 1))   # a face looking back (-z), at a pilot behind it
+FACE_UP = _basis((1, 0, 0), (0, 0, 1), (0, -1, 0))     # a top face (local y = forward)
+FACE_DOWN = _basis((1, 0, 0), (0, 0, -1), (0, 1, 0))   # an underside (overhead panels; local y = backward)
+
+
+class _Face:
+    """Places parts on a flat face. Local x right, y up, -z out of the face; `surface` is the face's local z."""
+
+    def __init__(self, b, origin, rotation, surface=0.0):
+        self.b, self.origin, self.rotation, self.surface = b, Vector(origin), rotation, surface
+
+    def at(self, x, y, h=0.0):
+        """World point at (x, y) on the face, `h` out from it (negative = into the part behind)."""
+        return tuple(self.origin + self.rotation @ Vector((x, y, self.surface - h)))
+
+    def raised(self, h):
+        """The same face, `h` further out (the top of something standing on it)."""
+        return _Face(self.b, self.origin, self.rotation, self.surface - h)
+
+    def box(self, x, y, size, swatch, lift=0.0, spin=0.0):
+        """Box standing on the face (size z = height out of it), turned `spin` degrees in the face."""
+        rotation = self.rotation @ rot_z(spin) if spin else self.rotation
+        self.b.box(self.at(x, y, size[2] / 2 + lift - EMBED), size, swatch, rotation=rotation)
+
+    def line(self, x0, y0, x1, y1, swatch, width=0.0035, height=0.002):
+        """A glowing stroke from (x0, y0) to (x1, y1): screen graphics."""
+        length = math.hypot(x1 - x0, y1 - y0)
+        spin = math.degrees(math.atan2(y1 - y0, x1 - x0))
+        self.box((x0 + x1) / 2, (y0 + y1) / 2, (length, width, height), swatch, spin=spin)
+
+    def cylinder(self, x, y, height, radius, swatch, segments=10, cap=None, end_radius=None):
+        self.b.cylinder(self.at(x, y, -EMBED), self.at(x, y, height), radius, swatch, segments=segments,
+                        cap_end=cap, end_radius=end_radius)
+
+
+def _beam(b, a, c, section, swatch):
+    """A square-section bar from a to c (frames, rails); section = (width, depth)."""
+    a, c = Vector(a), Vector(c)
+    z = (c - a).normalized()
+    up = Vector((0, 1, 0)) if abs(z.y) < 0.9 else Vector((1, 0, 0))
+    x = up.cross(z).normalized()
+    b.box(tuple((a + c) / 2), (section[0], section[1], (c - a).length), swatch, rotation=_basis(x, z.cross(x), z))
+
+
+def _screen(b, centre, rotation, w, h, content, glow, rng, buttons=True):
+    """A CRT display: bezel housing, dark glass, soft-key buttons down both sides (an MFD) and glowing graphics."""
+    b.box(centre, (w + (0.07 if buttons else 0.03), h + 0.05, 0.03), C("carbon"), rotation=rotation)
+    bezel = _Face(b, centre, rotation, surface=-0.015)
+    bezel.box(0, 0, (w, h, 0.004), C("glass"))
+    if buttons:
+        rows = max(3, int(h / 0.026))
+        for side in (-1, 1):
+            for i in range(rows):
+                bezel.box(side * (w / 2 + 0.019), (i - (rows - 1) / 2) * h / rows, (0.016, 0.011, 0.006),
+                          C("hull_light") if (i + side) % 3 else C("gunmetal"))
+        for i in range(4):
+            bezel.box((i - 1.5) * w / 4.5, h / 2 + 0.013, (0.012, 0.006, 0.004), glow if i == 0 else C("gunmetal"))
+    _screen_graphics(bezel.raised(0.004 - EMBED), w, h, content, glow, rng)
+
+
+def _screen_graphics(face, w, h, kind, glow, rng):
+    """Placeholder graphics in the screen's glow colour (the live feeds replace them later)."""
+    alert, line = C("warning"), face.line
+    if kind in ("horizon", "rear"):
+        bank = math.radians(rng.uniform(-14, 14))
+        dx, dy = math.cos(bank), math.sin(bank)
+        line(-0.36 * w * dx, -0.36 * w * dy, 0.36 * w * dx, 0.36 * w * dy, glow)
+        if kind == "horizon":
+            for k in (-2, -1, 1, 2):
+                ox, oy = -dy * k * 0.17 * h, dx * k * 0.17 * h
+                for side in (-1, 1):
+                    a, c = side * 0.05 * w, side * 0.15 * w
+                    line(ox + a * dx, oy + a * dy, ox + c * dx, oy + c * dy, glow, width=0.0025)
+            for side in (-1, 1):  # speed and altitude tapes with ticks
+                x = side * 0.42 * w
+                line(x, -0.38 * h, x, 0.38 * h, glow, width=0.0025)
+                for i in range(7):
+                    y = (i - 3) * 0.11 * h
+                    line(x, y, x - side * 0.035 * w, y, glow, width=0.002)
+            line(-0.06 * w, 0, -0.02 * w, 0, alert)   # own aircraft mark
+            line(0.02 * w, 0, 0.06 * w, 0, alert)
+        else:  # rear camera: horizon and a chevron behind
+            line(-0.08 * w, -0.1 * h, 0, 0.12 * h, alert)
+            line(0, 0.12 * h, 0.08 * w, -0.1 * h, alert)
+    elif kind == "radar":
+        r = 0.42 * h
+        line(-r, 0, r, 0, glow, width=0.002)
+        line(0, -r, 0, r, glow, width=0.002)
+        for radius in (r, 0.55 * r):
+            for i in range(8):
+                a0, a1 = 2 * math.pi * i / 8, 2 * math.pi * (i + 1) / 8
+                line(radius * math.cos(a0), radius * math.sin(a0), radius * math.cos(a1), radius * math.sin(a1), glow,
+                     width=0.0025)
+        sweep = rng.uniform(0, 2 * math.pi)
+        line(0, 0, r * math.cos(sweep), r * math.sin(sweep), glow)
+        for i in range(4):
+            a, d = rng.uniform(0, 2 * math.pi), rng.uniform(0.25, 0.9) * r
+            face.box(d * math.cos(a), d * math.sin(a), (0.008, 0.008, 0.002), alert if i == 0 else glow)
+    elif kind == "bars":
+        base = -0.36 * h
+        line(-0.42 * w, base, 0.42 * w, base, glow, width=0.0025)
+        for i in range(7):
+            x, top = (i - 3) * 0.12 * w, rng.uniform(0.15, 0.7) * h
+            face.box(x, base + top / 2, (0.07 * w, top, 0.002), alert if top > 0.62 * h else glow)
+    elif kind == "map":
+        for i in range(1, 4):
+            line(-0.45 * w + i * 0.225 * w, -0.42 * h, -0.45 * w + i * 0.225 * w, 0.42 * h, glow, width=0.0012)
+        for i in range(1, 3):
+            line(-0.45 * w, -0.42 * h + i * 0.28 * h, 0.45 * w, -0.42 * h + i * 0.28 * h, glow, width=0.0012)
+        points = [(rng.uniform(-0.4, 0.4) * w, (-0.35 + 0.23 * i) * h) for i in range(4)]
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            line(x0, y0, x1, y1, glow)
+        for x, y in points:
+            face.box(x, y, (0.007, 0.007, 0.0025), glow)
+        face.box(points[-1][0], points[-1][1], (0.01, 0.01, 0.003), alert, spin=45)
+    else:  # text: rows of words, a header bar, one alert line
+        rows = max(3, int(h / 0.014))
+        for row in range(rows):
+            y = 0.4 * h - row * 0.8 * h / max(rows - 1, 1)
+            if row == 0:
+                face.box(0, y, (0.84 * w, 0.008, 0.002), glow)
+                continue
+            x, swatch = -0.42 * w, alert if row == rows - 2 else glow
+            while x < 0.3 * w:
+                word = rng.uniform(0.06, 0.2) * w
+                line(x, y, x + word, y, swatch, width=0.003)
+                x += word + 0.035 * w
+
+
+def _gauge(b, centre, rotation, r, glow, rng):
+    """Round 80s gauge facing the pilot: bezel, dark dial, glowing ticks with a red line, a needle and a hub."""
+    face = _Face(b, centre, rotation)
+    b.cylinder(face.at(0, 0, -0.02), face.at(0, 0, 0.006), r, C("gunmetal"), segments=14, cap_end=C("glass"))
+    dial = face.raised(0.006)
+    for i in range(7):
+        a = math.radians(-135 + i * 45)
+        dial.box(0.74 * r * math.sin(a), 0.74 * r * math.cos(a), (0.22 * r, 0.0035, 0.002),
+                 C("warning") if i >= 5 else glow, spin=90 - math.degrees(a))
+    a = math.radians(rng.uniform(-120, 80))
+    dial.box(0.32 * r * math.sin(a), 0.32 * r * math.cos(a), (0.64 * r, 0.004, 0.003), C("warning"),
+             spin=90 - math.degrees(a))
+    dial.cylinder(0, 0, 0.005, 0.006, C("steel"), segments=6)
+
+
+def _toggles(face, x0, y, count, spacing, glow, rng, guarded=False):
+    """A plate with a row of toggle switches, a lamp over each; guarded = red flip guards (master switches)."""
+    face.box(x0 + (count - 1) * spacing / 2, y, (count * spacing + 0.012, 0.055, 0.005), C("hull_light"))
+    top = face.raised(0.005 - EMBED)
+    for i in range(count):
+        x, on = x0 + i * spacing, rng.random() < 0.6
+        top.cylinder(x, y - 0.006, 0.008, 0.005, C("steel"), segments=8)
+        lever = top.raised(0.008)
+        tip = lever.at(x, y - 0.006 + (0.012 if on else -0.012), 0.022)
+        top.b.cylinder(lever.at(x, y - 0.006, -EMBED), tip, 0.0025, C("steel"), segments=6, end_radius=0.0045)
+        top.box(x, y + 0.018, (0.008, 0.006, 0.003), glow if on else C("gunmetal"))
+        if guarded:
+            for side in (-1, 1):
+                top.box(x + side * 0.0115, y - 0.006, (0.003, 0.004, 0.03), C("warhead"))
+            top.box(x, y - 0.006, (0.026, 0.004, 0.004), C("warhead"), lift=0.027)
+
+
+def _rockers(face, x0, y, count, spacing, glow, lit=(0,)):
+    """Row of rocker switches with a lit tip on some."""
+    for i in range(count):
+        x = x0 + i * spacing
+        face.box(x, y, (0.016, 0.028, 0.008), C("carbon"))
+        face.raised(0.008 - EMBED).box(x, y + 0.008, (0.011, 0.006, 0.002), glow if i in lit else C("hull_light"))
+
+
+def _keypad(face, x0, y0, cols, rows, glow, pitch=0.024):
+    for row in range(rows):
+        for col in range(cols):
+            face.box(x0 + col * pitch, y0 - row * pitch, (0.019, 0.019, 0.007),
+                     glow if row == rows - 1 and col == cols - 1 else C("hull_light"))
+
+
+def _knob(face, x, y, radius, glow):
+    face.cylinder(x, y, 0.016, radius, C("gunmetal"), segments=12, cap=C("carbon"))
+    face.raised(0.016).box(x, y + radius * 0.5, (0.003, radius, 0.002), glow)
+
+
+def _readout(face, x, y, digits, glow):
+    """Seven-segment style readout: a dark window with glowing digit blocks."""
+    face.box(x, y, (digits * 0.013 + 0.01, 0.018, 0.004), C("glass"))
+    lit = face.raised(0.004 - EMBED)
+    for i in range(digits):
+        lit.box(x + (i - (digits - 1) / 2) * 0.013, y, (0.008, 0.011, 0.002), glow)
+
+
+def cockpit(spec, style):
+    """The pilot's cockpit interior, in the chassis' own space (placed at the chassis root with no offset). Attack and
+    utility bodies (Gunship, Assault, Scout) get a minimal military cockpit with a wide view; the heavy Lifter gets
+    the busy 80s cabin dash. The socket "Eye" is the pilot's eye (the cockpit camera view)."""
+    H, F = spec["height"], spec["front"]
+    body = spec.get("body", "utility")
+    if body in ("attack", "assault"):
+        eye, build = (0.0, 0.56 * H + 0.02, F - 2.45), _military_cockpit   # rear (pilot) seat of the tandem canopy
+    elif body == "heavy":
+        eye, build = (0.0, 0.24 * H, F - 1.75), _cabin_cockpit             # behind the glazed nose
+    else:
+        eye, build = (0.0, 0.40 * H, F - 1.9), _scout_cockpit              # under the bubble canopy
+    b = Builder()
+    build(b, eye, random.Random(spec["seed"] + 7))
+    return Part(f"Cockpit_{spec['name']}", "cockpit", b, sockets=[("Eye", 0, eye, 1.0)], seed=spec["seed"])
+
+
+def _sweep(b, path, profiles, swatch, y0):
+    """Lofts a profile along a polyline in plan (Unity x, z), corners mitred so each straight run stays flat
+    (faceted). profiles: one [(u, v)] per path point, u outward (left of travel), v height above y0.
+    Returns the joint frames [((x, z), outward, mitre scale)] for placing parts along the sweep."""
+    runs = []
+    for (x0, z0), (x1, z1) in zip(path, path[1:]):
+        length = math.hypot(x1 - x0, z1 - z0)
+        runs.append(Vector(((z0 - z1) / length, (x1 - x0) / length)))
+    frames, rings = [], []
+    for k, (x, z) in enumerate(path):
+        if 0 < k < len(path) - 1:
+            outward = (runs[k - 1] + runs[k]).normalized()
+            scale = 1.0 / outward.dot(runs[k])
+        else:
+            outward, scale = runs[0] if k == 0 else runs[-1], 1.0
+        frames.append(((x, z), outward, scale))
+        rings.append([(x + outward.x * u * scale, y0 + v, z + outward.y * u * scale) for u, v in profiles[k]])
+    smooth = FORM["loft_smooth"]
+    FORM["loft_smooth"] = 0  # faceted: no curved in-between sections
+    try:
+        b.loft(rings, swatch)
+    finally:
+        FORM["loft_smooth"] = smooth
+    return frames
+
+
+def _display(face, w, h, content, glow, rng, keys=5):
+    """A display set into a panel face: glass flush with a thin frame, soft keys down both sides."""
+    face.box(0, 0, (w, h, 0.003), C("glass"))
+    for side in (-1, 1):
+        face.box(0, side * (h / 2 + 0.004), (w + 0.016, 0.008, 0.005), C("gunmetal"))
+        face.box(side * (w / 2 + 0.004), 0, (0.008, h, 0.005), C("gunmetal"))
+        for i in range(keys):
+            face.box(side * (w / 2 + 0.021), (i - (keys - 1) / 2) * h / keys, (0.014, 0.011, 0.006), C("hull_light"))
+    graphics = face.raised(0.003 - EMBED)
+    _screen_graphics(graphics, w, h, content, glow, rng)
+    _vector_frame(graphics, w, h, glow)
+
+
+def _vector_frame(face, w, h, glow):
+    """A thin frame with cut corners just inside the glass (vector-display look)."""
+    x, y, cut = 0.46 * w, 0.46 * h, 0.08 * min(w, h)
+    points = [(-x + cut, y), (x - cut, y), (x, y - cut), (x, -y + cut), (x - cut, -y), (-x + cut, -y),
+              (-x, -y + cut), (-x, y - cut)]
+    for (x0, y0), (x1, y1) in zip(points, points[1:] + points[:1]):
+        face.line(x0, y0, x1, y1, glow, width=0.0012)
+
+
+def _scout_cockpit(b, eye, rng):
+    """The Scout's open cockpit: the military cockpit with no frame in front of the pilot (the first hoop is behind
+    the head) and everything about 7 cm lower, with smaller displays. The widest view of all chassis: the Scout's
+    edge for spotting."""
+    _military_cockpit(b, eye, rng, open_view=True)
+
+
+def _military_cockpit(b, eye, rng, open_view=False):
+    """Minimal military cockpit (Gunship, Assault; the Scout with open_view): built for the view. Everything sits
+    low, under a glare shield at about 18 degrees below the eye line (open_view: about 25, and no frame in front);
+    the canopy frame is thin and sweeps out of view.
+
+    - one faceted shell wraps round the pilot: dash in front, low side consoles at the sides;
+    - one faceted instrument panel across the front, facets facing the eye: two square displays with soft keys (flight
+      and target pages), a centre strip with an up-front readout, two standby gauges, caution and warning lamps; a
+      glare shield over it with an amber eyebrow light underneath;
+    - master-arm switches under guards, power levers and collective on the left, a side-stick cyclic and keypad
+      on the right, a narrow pedestal between the knees (small display, keys, lamps), pedals;
+    - thin frame: windscreen pillars, roof rails, door hoops, a standby compass on the bow;
+    - armoured seat with side plates, pads, headrest and harness; a rear bulkhead with a data module and an
+      extinguisher.
+
+    Single-colour displays (neon_green: green in the neon style, amber in dystopia), matte surfaces, little glow."""
+    ex, ey, ez = eye
+
+    def P(x, y, z):
+        """Point relative to the eye."""
+        return (ex + x, ey + y, ez + z)
+
+    dark, carbon, metal = C("hull_dark"), C("carbon"), C("gunmetal")
+    glow, amber, alert = C("neon_green"), C("sodium"), C("warning")
+
+    # -- floor and the wrap-round shell -----------------------------------------------------------------------------
+    b.box(P(0, -0.47, -0.10), (0.70, 0.04, 1.5), dark)
+    deck = -0.37 if open_view else -0.30   # shell and console top
+    drop = deck + 0.30                     # how much lower than the attack layout
+    shell = [(-0.34, -0.80), (-0.34, 0.12), (-0.27, 0.33), (-0.12, 0.44), (0.12, 0.44), (0.27, 0.33), (0.34, 0.12),
+             (0.34, -0.80)]
+    widths = [0.12, 0.12, 0.16, 0.40, 0.40, 0.16, 0.12, 0.12]
+    _sweep(b, [(ex + x, ez + z) for x, z in shell],
+           [[(0, -0.46), (0, deck - 0.03), (0.02, deck), (w, deck), (w, -0.46)] for w in widths], dark, ey)
+
+    # -- instrument panel: three facets facing the eye, glare shield on top -----------------------------------------
+    r0, bottom = 0.47, deck - 0.01
+    top = bottom + (0.10 if open_view else 0.13)
+    lean = math.atan2(-(bottom + top) / 2, r0)   # the face looks at the eye
+    screen, end = (0.085, 0.10) if open_view else (0.105, 0.13)
+    dirs = [Vector((math.sin(a), math.cos(a))) for a in map(math.radians, (-24, 0, 24))]
+
+    def along(d):
+        return Vector((d.y, -d.x))
+
+    def joint(a, c):
+        return r0 * (a + c) / (1 + a.dot(c))
+
+    path = [r0 * dirs[0] - end * along(dirs[0]), joint(dirs[0], dirs[1]), joint(dirs[1], dirs[2]),
+            r0 * dirs[2] + end * along(dirs[2])]
+    lip = (top - bottom) * math.tan(lean)
+    frames = _sweep(b, [(ex + p.x, ez + p.y) for p in path],
+                    [[(0, bottom), (lip, top), (-0.03, top + 0.012), (-0.03, top + 0.022), (depth, top + 0.018),
+                      (depth, bottom)] for depth in (0.15, 0.20, 0.20, 0.15)], carbon, ey)
+
+    def facet(j, offset, v):
+        """A face on panel facet j, `offset` metres right of its middle, at height v (eye-relative)."""
+        a, c, d = path[j], path[j + 1], dirs[j]
+        run = (c - a).normalized()
+        middle = (a + c) / 2 + run * offset
+        u = (v - bottom) * math.tan(lean)
+        x_axis = Vector((run.x, 0, run.y))
+        y_axis = Vector((d.x * math.sin(lean), math.cos(lean), d.y * math.sin(lean)))
+        return _Face(b, (ex + middle.x + d.x * u, ey + v, ez + middle.y + d.y * u),
+                     _basis(x_axis, y_axis, x_axis.cross(y_axis)))
+
+    middle = (bottom + top) / 2
+    _display(facet(0, 0.01, middle), screen, screen, "horizon", glow, rng)
+    _display(facet(2, -0.01, middle), screen, screen, "radar", glow, rng)
+    _readout(facet(1, 0, top - 0.02), 0, 0, 8, glow)
+    for x in (-0.045, 0.045):
+        face = facet(1, x, bottom + 0.042)
+        _gauge(b, face.at(0, 0, 0), face.rotation, 0.022, glow, rng)
+    facet(1, -0.078, top - 0.02).box(0, 0, (0.022, 0.012, 0.004), amber)   # master caution
+    facet(1, 0.078, top - 0.02).box(0, 0, (0.022, 0.012, 0.004), alert)    # master warning
+
+    def at_joint(k, u, v):
+        (x, z), outward, scale = frames[k]
+        return (x + outward.x * u * scale, ey + v, z + outward.y * u * scale)
+
+    for k in range(len(frames) - 1):                                       # eyebrow light under the glare shield
+        _beam(b, at_joint(k, -0.015, top + 0.009), at_joint(k + 1, -0.015, top + 0.009), (0.006, 0.006), amber)
+
+    # Master-arm switches either side of the pedestal, on the shell.
+    arm = _Face(b, P(0, (deck - 0.49) / 2, 0.44), FACE_PILOT)
+    for x0 in (-0.20, 0.11):
+        _toggles(arm, x0, 0, 2, 0.045, alert, rng, guarded=True)
+    arm.box(-0.1775, 0.045, (0.07, 0.012, 0.003), C("hazard_faded"))
+
+    # -- side consoles ----------------------------------------------------------------------------------------------
+    left = _Face(b, P(-0.40, deck, 0), FACE_UP)
+    left.box(0, 0.02, (0.07, 0.12, 0.015), carbon)                         # power levers
+    for i, x in enumerate((-0.016, 0.016)):
+        b.cylinder(left.at(x, 0.02, 0.014), left.at(x, -0.01, 0.07), 0.005, C("steel"), segments=6)
+        b.box(left.at(x, -0.01, 0.075), (0.024, 0.014, 0.018), (C("hull_light"), C("warhead"))[i])
+    _toggles(left, -0.03, -0.25, 3, 0.03, glow, rng)
+    left.box(0, -0.42, (0.09, 0.12, 0.004), C("hull"))
+    _rockers(left.raised(0.004 - EMBED), -0.02, -0.42, 3, 0.02, glow, lit=(1,))
+    right = _Face(b, P(0.40, deck, 0), FACE_UP)
+    _keypad(right, -0.036, -0.06, 4, 3, glow)
+    _knob(right, -0.022, -0.21, 0.013, glow)
+    _knob(right, 0.022, -0.21, 0.013, glow)
+    _readout(right, 0, -0.29, 5, glow)
+    _toggles(right, -0.03, -0.42, 3, 0.03, alert, rng)
+
+    # -- controls ---------------------------------------------------------------------------------------------------
+    b.cylinder(P(-0.345, -0.40, -0.42), P(-0.29, -0.29, -0.02), 0.013, C("steel"), segments=8)   # collective
+    b.cylinder(P(-0.292, -0.293, -0.03), P(-0.285, -0.287, 0.03), 0.018, C("rubber"), segments=10)
+    b.box(P(-0.283, -0.28, 0.06), (0.045, 0.04, 0.06), carbon)
+    head = _Face(b, P(-0.283, -0.26, 0.06), FACE_UP)
+    head.box(-0.011, 0.01, (0.01, 0.01, 0.004), alert)
+    head.box(0.011, 0.01, (0.01, 0.01, 0.004), glow)
+    right.cylinder(0, 0.08, 0.04, 0.03, C("rubber"), segments=10, end_radius=0.014)            # side-stick cyclic
+    b.cylinder(right.at(0, 0.08, 0.035), right.at(0, 0.075, 0.09), 0.009, C("steel"), segments=8)
+    b.cylinder(right.at(0, 0.075, 0.085), right.at(0, 0.068, 0.15), 0.016, C("rubber"), segments=10)
+    for i in range(3):
+        b.cylinder(right.at(0, 0.074 - i * 0.002, 0.095 + i * 0.016),
+                   right.at(0, 0.0735 - i * 0.002, 0.101 + i * 0.016), 0.0175, carbon, segments=10)
+    b.box(right.at(0, 0.066, 0.165), (0.034, 0.04, 0.03), carbon)
+    b.box(right.at(0, 0.09, 0.14), (0.01, 0.012, 0.02), C("warhead"))                           # trigger
+    b.cylinder(right.at(-0.006, 0.066, 0.178), right.at(-0.006, 0.066, 0.188), 0.007, metal, segments=8,
+               cap_end=glow)                                                                    # hat
+    b.cylinder(right.at(0.009, 0.072, 0.178), right.at(0.009, 0.072, 0.186), 0.005, metal, segments=6,
+               cap_end=alert)
+
+    # Narrow pedestal between the knees, its top tilted to the pilot: a small display, keys and a lamp row.
+    b.box(P(0, -0.39 + drop / 2, 0.34), (0.14, 0.12 + drop, 0.20), dark)
+    tilt = rot_x(-25) @ FACE_UP
+    b.box(P(0, -0.326 + drop, 0.335), (0.13, 0.012, 0.20), carbon, rotation=rot_x(-25))
+    pedestal = _Face(b, P(0, -0.326 + drop, 0.335), tilt, surface=-0.006)
+    _display(_Face(b, pedestal.at(0, 0.05, 0), tilt), 0.075, 0.045, "text", glow, rng, keys=3)
+    _keypad(pedestal, -0.024, -0.02, 3, 2, glow)
+    for i in range(4):
+        pedestal.box(-0.036 + i * 0.024, -0.085, (0.014, 0.01, 0.004), alert if i % 2 == 0 else amber)
+    for side in (-1, 1):                                                                                 # pedals
+        b.box(P(side * 0.12, -0.43, 0.40), (0.02, 0.04, 0.04), metal)
+        b.box(P(side * 0.12, -0.40, 0.395), (0.07, 0.11, 0.02), C("hull_light"), rotation=rot_x(25))  # top leans away
+
+    # -- canopy frame: thin, sweeps out of the view (open view: nothing in front of the pilot) ------------------------
+    for side in (-1, 1):
+        hoop = P(side * 0.31, 0.28, -0.35)
+        if not open_view:
+            base, crown = P(side * 0.34, -0.31, 0.48), P(side * 0.30, 0.28, 0.10)
+            _beam(b, base, crown, (0.03, 0.025), dark)                                 # windscreen pillar
+            a, c = Vector(base), Vector(crown)
+            _beam(b, a + (c - a) * 0.05, a + (c - a) * 0.11, (0.034, 0.029), C("hazard_faded"))
+            _beam(b, crown, hoop, (0.025, 0.022), dark)                                # roof rail
+        _beam(b, hoop, P(side * 0.30, 0.28, -0.75), (0.025, 0.022), dark)
+        _beam(b, P(side * 0.40, deck - 0.01, -0.35), hoop, (0.025, 0.022), dark)        # door hoop
+        _beam(b, P(side * 0.40, deck - 0.01, -0.75), P(side * 0.30, 0.28, -0.75), (0.03, 0.025), dark)  # rear arch
+    _beam(b, P(-0.31, 0.28, -0.35), P(0.31, 0.28, -0.35), (0.025, 0.022), dark)
+    if open_view:   # standby compass on the glare shield
+        b.box(P(0, top + 0.04, r0 + 0.04), (0.05, 0.04, 0.035), carbon)
+        compass = _Face(b, P(0, top + 0.04, r0 + 0.0225), FACE_PILOT)
+    else:           # standby compass under the windscreen bow
+        _beam(b, P(-0.30, 0.28, 0.10), P(0.30, 0.28, 0.10), (0.03, 0.025), dark)
+        b.box(P(0, 0.248, 0.10), (0.05, 0.04, 0.035), carbon)
+        compass = _Face(b, P(0, 0.248, 0.0825), FACE_PILOT)
+    compass.box(0, 0, (0.032, 0.024, 0.003), C("glass"))
+    compass.box(0, 0, (0.002, 0.02, 0.002), amber, lift=0.002)
+
+    # -- armoured seat ----------------------------------------------------------------------------------------------
+    wing = [(-0.08, -0.45), (-0.08, -0.33), (-0.14, -0.27), (-0.42, -0.27), (-0.48, 0.08), (-0.54, 0.16),
+            (-0.66, 0.16), (-0.70, -0.45)]
+    for side in (-1, 1):
+        b.fin([(ez + z, ey + y) for z, y in wing], ex + side * 0.24, 0.025, metal)    # side armour
+        b.box(P(side * 0.08, -0.02, -0.535), (0.045, 0.42, 0.006), C("hull_light"), rotation=rot_x(-8))  # harness
+        b.box(P(side * 0.09, -0.288, -0.22), (0.045, 0.006, 0.22), C("hull_light"))
+    b.box(P(0, -0.405, -0.36), (0.46, 0.09, 0.52), dark)                               # seat bucket
+    b.box(P(0, -0.325, -0.31), (0.44, 0.07, 0.42), carbon)                             # cushion
+    b.box(P(0, -0.06, -0.60), (0.46, 0.60, 0.03), metal, rotation=rot_x(-8))           # back armour
+    b.box(P(0, -0.06, -0.565), (0.40, 0.56, 0.05), carbon, rotation=rot_x(-8))         # back pad
+    b.box(P(0, 0.27, -0.62), (0.22, 0.13, 0.06), carbon, rotation=rot_x(-8))           # headrest
+    b.box(P(0, -0.285, -0.13), (0.07, 0.012, 0.06), C("steel"))                        # buckle
+
+    # -- rear bulkhead ----------------------------------------------------------------------------------------------
+    b.box(P(0, -0.02, -0.83), (0.78, 0.86, 0.04), dark)
+    bulkhead = _Face(b, P(0, -0.02, -0.81), _basis((-1, 0, 0), (0, 1, 0), (0, 0, -1)))
+    bulkhead.box(-0.24, 0.05, (0.18, 0.22, 0.05), C("hull"))                           # data module
+    for i in range(4):
+        bulkhead.box(-0.24, -0.02 + i * 0.035, (0.13, 0.008, 0.056), metal)
+    bulkhead.box(-0.19, 0.14, (0.012, 0.012, 0.056), glow)
+    b.box(P(-0.30, -0.10, -0.79), (0.08, 0.03, 0.04), metal)                           # extinguisher bracket
+    b.cylinder(P(-0.30, -0.25, -0.77), P(-0.30, 0.05, -0.77), 0.035, C("warhead"), segments=10, cap_end=metal)
+    b.cylinder(P(-0.30, 0.05, -0.77), P(-0.30, 0.09, -0.77), 0.012, metal, segments=8)
+
+
+def _cabin_cockpit(b, eye, rng):
+    """The Lifter's cabin dash: an 80s car-dash cockpit (art direction: Nissan 300ZX binnacle and satellite pods,
+    cyberpunk vehicle screens), retrofitted and worn, busy with instruments:
+
+    - dash: binnacle hood over the main display (attitude), satellite pods with rockers and knobs, side displays
+      (radar, systems), a retrofitted map monitor on a gooseneck, a glowing edge strip;
+    - dash face: a cluster of six round gauges, a keypad, guarded master switches, an under-dash light;
+    - centre pedestal, cyclic stick with a grip, collective with its switch head, throttle quadrant;
+    - side consoles (keypad, small CRT, rockers, lamp strips), side walls with vents;
+    - canopy frame (pillars with hazard bands and a cable loom, roof bow, rails, sills), a rear-camera screen where
+      a car's mirror sits, an overhead breaker panel and a dome light;
+    - bucket seat with bolsters, headrest and harness; rear bulkhead with avionics, a screen and an extinguisher.
+
+    Screens and gauges face the eye (readable). Everything stays within 0.47 m of the eye sideways."""
+    ex, ey, ez = eye
+
+    def P(x, y, z):
+        """Point relative to the eye."""
+        return (ex + x, ey + y, ez + z)
+
+    dark, carbon, metal = C("hull_dark"), C("carbon"), C("gunmetal")
+    cyan, amber, alert = C("neon_cyan"), C("neon_green"), C("warning")   # neon_green is amber in the dystopia style
+
+    def facing(x, y, z):
+        return _facing(P(x, y, z), eye)
+
+    # -- tub, dash and binnacle -------------------------------------------------------------------------------------
+    b.box(P(0, -0.46, -0.05), (0.82, 0.06, 1.5), dark)                     # floor tub
+    for i in range(4):
+        b.box(P(0, -0.428, 0.06 + i * 0.07), (0.46, 0.006, 0.02), metal)    # footwell treads
+    b.box(P(0, -0.38, 0.72), (0.94, 0.30, 0.50), dark)                      # dash cowl
+    b.box(P(0, -0.225, 0.74), (0.96, 0.03, 0.56), carbon)                   # dash top
+    b.box(P(0, -0.205, 0.99), (0.98, 0.05, 0.10), carbon)                   # far lip
+    b.box(P(0, -0.215, 0.462), (0.86, 0.008, 0.012), cyan)                  # glowing edge strip
+
+    _screen(b, P(0, -0.145, 0.60), facing(0, -0.145, 0.60), 0.22, 0.13, "horizon", cyan, rng)
+    b.box(P(0, -0.05, 0.66), (0.36, 0.016, 0.15), carbon)                   # binnacle hood
+    for side in (1, -1):
+        b.box(P(side * 0.172, -0.13, 0.66), (0.016, 0.16, 0.15), carbon)    # hood cheeks
+        b.box(P(side * 0.172, -0.06, 0.588), (0.012, 0.012, 0.006), amber)  # hood lamps
+
+    # Satellite pods either side of the binnacle (300ZX): rockers and a readout on the left, knobs on the right.
+    for side in (-1, 1):
+        centre = P(side * 0.225, -0.165, 0.56)
+        rotation = facing(side * 0.225, -0.165, 0.56)
+        b.box(centre, (0.09, 0.09, 0.07), dark, rotation=rotation)
+        pod = _Face(b, centre, rotation, surface=-0.035)
+        if side < 0:
+            _readout(pod, 0, 0.025, 4, amber)
+            _rockers(pod, -0.027, -0.015, 3, 0.027, amber, lit=(0, 2))
+        else:
+            _knob(pod, -0.02, 0.012, 0.013, cyan)
+            _knob(pod, 0.022, 0.012, 0.011, amber)
+            for i in range(3):
+                pod.box(-0.02 + i * 0.02, -0.025, (0.012, 0.008, 0.004), (alert, amber, cyan)[i])
+
+    _screen(b, P(-0.37, -0.155, 0.64), facing(-0.37, -0.155, 0.64), 0.12, 0.095, "radar", amber, rng)
+    _screen(b, P(0.37, -0.155, 0.64), facing(0.37, -0.155, 0.64), 0.12, 0.095, "bars", amber, rng)
+
+    # Retrofitted map monitor on a gooseneck, clamped to the right of the dash (a later add-on).
+    b.box(P(0.40, -0.20, 0.84), (0.05, 0.03, 0.05), C("hazard_faded"))
+    monitor = P(0.36, -0.03, 0.73)
+    monitor_rotation = facing(0.36, -0.03, 0.73)
+    _screen(b, monitor, monitor_rotation, 0.10, 0.07, "map", cyan, rng, buttons=False)
+    b.cylinder(P(0.40, -0.19, 0.84), _Face(b, monitor, monitor_rotation).at(0, -0.035, -0.01), 0.008, metal,
+               segments=8)
+
+    # -- dash face: gauge cluster, keypad, master switches, under-dash light ----------------------------------------
+    face = _Face(b, P(0, -0.38, 0.47), FACE_PILOT)
+    for x in (-0.41, -0.29, -0.17, 0.17, 0.29, 0.41):
+        point = face.at(x, 0.085, 0)
+        _gauge(b, point, _facing(point, eye), 0.034 if abs(x) < 0.4 else 0.026, amber if abs(x) < 0.25 else cyan, rng)
+    _keypad(face, -0.33, 0.01, 4, 3, amber)
+    face.box(-0.19, -0.005, (0.06, 0.016, 0.003), C("hazard_faded"))      # placard
+    _toggles(face, 0.20, -0.02, 4, 0.045, alert, rng, guarded=True)
+    face.box(0, -0.045, (0.86, 0.01, 0.01), C("sodium"))                    # under-dash light
+
+    # Centre pedestal between the knees: knobs and a readout.
+    b.box(P(0, -0.37, 0.42), (0.17, 0.12, 0.095), dark)                    # under 0.1 m: crisp, not rounded
+    pedestal = _Face(b, P(0, -0.37, 0.37), FACE_PILOT)
+    _knob(pedestal, -0.045, 0.02, 0.014, cyan)
+    _knob(pedestal, 0.045, 0.02, 0.014, amber)
+    _readout(pedestal, 0, -0.03, 5, cyan)
+
+    # -- controls ---------------------------------------------------------------------------------------------------
+    b.cylinder(P(0, -0.432, 0.28), P(0, -0.37, 0.285), 0.05, C("rubber"), segments=10, end_radius=0.02)   # boot
+    b.cylinder(P(0, -0.38, 0.285), P(0, -0.29, 0.30), 0.012, C("steel"), segments=8)
+    b.cylinder(P(0, -0.295, 0.30), P(0, -0.235, 0.288), 0.017, C("rubber"), segments=10)                   # grip
+    for i in range(3):
+        b.cylinder(P(0, -0.285 + i * 0.016, 0.298 - i * 0.003), P(0, -0.279 + i * 0.016, 0.297 - i * 0.003),
+                   0.0185, carbon, segments=10)                                                             # finger ridges
+    b.box(P(0, -0.222, 0.293), (0.042, 0.03, 0.05), carbon, rotation=rot_x(-12))                           # grip head
+    b.box(P(0, -0.245, 0.315), (0.01, 0.022, 0.012), C("warhead"))                                          # trigger
+    b.cylinder(P(0, -0.208, 0.285), P(0, -0.198, 0.284), 0.008, metal, segments=8, cap_end=cyan)            # hat
+    b.cylinder(P(0.014, -0.209, 0.300), P(0.014, -0.201, 0.299), 0.005, metal, segments=6, cap_end=alert)   # weapon release
+    b.cylinder(P(-0.36, -0.20, -0.40), P(-0.31, -0.17, 0.02), 0.014, C("steel"), segments=8)               # collective
+    b.cylinder(P(-0.312, -0.172, 0.0), P(-0.305, -0.168, 0.06), 0.02, C("rubber"), segments=10)            # twist grip
+    b.box(P(-0.30, -0.155, 0.09), (0.05, 0.045, 0.07), carbon)                                              # switch head
+    head = _Face(b, P(-0.30, -0.1325, 0.09), FACE_UP)
+    head.box(-0.012, 0.01, (0.01, 0.01, 0.004), alert)
+    head.box(0.012, 0.01, (0.01, 0.01, 0.004), amber)
+    head.box(0, -0.015, (0.02, 0.008, 0.004), C("hull_light"))
+
+    # -- side consoles and walls ------------------------------------------------------------------------------------
+    for side in (-1, 1):
+        x = side * 0.40
+        b.box(P(x, -0.32, -0.04), (0.14, 0.24, 1.02), dark)
+        top = _Face(b, P(x, -0.20, 0), FACE_UP)
+        top.box(-side * 0.062, 0.05, (0.006, 0.5, 0.004), cyan if side < 0 else C("sodium"))   # inner lamp strip
+        _rockers(top, -0.03, -0.45, 3, 0.03, amber, lit=(1,))
+        b.box(P(side * 0.455, -0.12, -0.05), (0.03, 0.16, 1.0), dark)                         # side wall
+        wall = _Face(b, P(side * 0.44, -0.12, -0.05), _basis((0, 0, -side), (0, 1, 0), (side, 0, 0)))
+        for i in range(6):
+            wall.box(-0.25 + i * 0.025, -0.02, (0.008, 0.07, 0.006), metal)                  # vent slats
+        wall.box(0.25, 0.055, (0.15, 0.012, 0.004), C("sodium"))                             # side lamp
+        wall.box(0.05, 0.03, (0.06, 0.03, 0.003), C("primer") if side > 0 else C("hazard_faded"))
+    left = _Face(b, P(-0.40, -0.20, 0), FACE_UP)
+    left.box(0, 0.25, (0.08, 0.14, 0.02), carbon)                                              # throttle quadrant
+    for i, x in enumerate((-0.018, 0.018)):
+        b.cylinder(left.at(x, 0.25, 0.019), left.at(x, 0.22, 0.075), 0.005, C("steel"), segments=6)
+        b.box(left.at(x, 0.22, 0.08), (0.026, 0.016, 0.02), (C("hull_light"), C("warhead"))[i])
+    right = _Face(b, P(0.40, -0.20, 0), FACE_UP)
+    _keypad(right, -0.024, -0.02, 3, 4, cyan)
+    _knob(right, 0.0, -0.17, 0.016, amber)
+    _screen(b, P(0.40, -0.16, 0.21), facing(0.40, -0.16, 0.21), 0.09, 0.065, "text", amber, rng, buttons=False)
+
+    # -- canopy frame -----------------------------------------------------------------------------------------------
+    for side in (-1, 1):
+        base, top = P(side * 0.44, -0.26, 0.86), P(side * 0.40, 0.30, 0.42)
+        _beam(b, base, top, (0.045, 0.035), metal)                                             # windscreen pillar
+        a, c = Vector(base), Vector(top)
+        for i in range(4):                                                                     # hazard band
+            _beam(b, a + (c - a) * (0.10 + i * 0.04), a + (c - a) * (0.14 + i * 0.04), (0.05, 0.04),
+                  C("hazard_faded") if i % 2 == 0 else dark)
+        _beam(b, top, P(side * 0.38, 0.30, -0.80), (0.035, 0.03), metal)                       # roof rail
+        _beam(b, P(side * 0.44, -0.20, -0.80), P(side * 0.38, 0.30, -0.80), (0.04, 0.03), metal)
+        _beam(b, P(side * 0.425, -0.05, 0.70), P(side * 0.44, -0.05, -0.80), (0.03, 0.03), metal)  # sill
+    for k, swatch in enumerate((C("rubber"), C("warhead"), C("hazard_faded"))):                # cable loom
+        offset = Vector((0.026, 0, -0.012 + k * 0.012))
+        b.cylinder(Vector(P(-0.44, -0.26, 0.86)) + offset, Vector(P(-0.40, 0.30, 0.42)) + offset, 0.006, swatch,
+                   segments=6)
+    _beam(b, P(-0.40, 0.30, 0.42), P(0.40, 0.30, 0.42), (0.05, 0.04), metal)                   # roof bow
+    _beam(b, P(0, 0.30, 0.42), P(0, 0.30, -0.80), (0.03, 0.025), metal)                        # roof spine
+
+    # Rear-camera screen where a car's mirror sits.
+    b.cylinder(P(0, 0.29, 0.415), P(0, 0.235, 0.405), 0.008, metal, segments=8)
+    _screen(b, P(0, 0.215, 0.40), facing(0, 0.215, 0.40), 0.17, 0.04, "rear", cyan, rng, buttons=False)
+
+    # Overhead breaker panel, switches and a dome light.
+    b.box(P(0, 0.31, 0.05), (0.30, 0.04, 0.50), dark)
+    overhead = _Face(b, P(0, 0.29, 0.05), FACE_DOWN)
+    for row in range(3):
+        for i in range(7):
+            tripped = rng.random() < 0.12
+            overhead.cylinder(-0.09 + i * 0.03, -0.17 + row * 0.04, 0.012, 0.0065, metal, segments=6,
+                              cap=alert if tripped else C("hull_light"))
+    _toggles(overhead, -0.08, 0.06, 5, 0.04, amber, rng)
+    _readout(overhead, 0, 0.17, 6, cyan)
+    b.box(P(0, 0.278, -0.35), (0.06, 0.02, 0.10), C("sodium"))                                 # dome light
+
+    # -- seat and rear bulkhead -------------------------------------------------------------------------------------
+    b.box(P(0, -0.36, -0.30), (0.44, 0.10, 0.48), carbon)
+    for side in (-1, 1):
+        b.box(P(side * 0.20, -0.30, -0.30), (0.06, 0.08, 0.46), carbon)                        # cushion bolsters
+        b.box(P(side * 0.20, -0.08, -0.53), (0.06, 0.56, 0.12), carbon, rotation=rot_x(-8))    # back bolsters
+        b.box(P(side * 0.15, -0.42, -0.30), (0.03, 0.04, 0.5), metal)                          # seat rails
+        b.box(P(side * 0.07, -0.307, -0.25), (0.045, 0.006, 0.36), C("hazard_faded"))          # harness
+    b.box(P(0, -0.08, -0.58), (0.44, 0.60, 0.10), carbon, rotation=rot_x(-8))
+    b.box(P(0, 0.28, -0.62), (0.26, 0.18, 0.09), C("rubber"))
+    b.box(P(0, -0.303, -0.10), (0.05, 0.012, 0.04), C("steel"))                               # buckle
+    b.box(P(0, 0.08, -0.86), (0.90, 0.70, 0.05), dark)
+    bulkhead = _Face(b, P(0, 0.08, -0.835), _basis((-1, 0, 0), (0, 1, 0), (0, 0, -1)))
+    bulkhead.box(-0.25, -0.08, (0.22, 0.30, 0.06), C("hull_light"))                            # avionics box
+    for i in range(5):
+        bulkhead.box(-0.25, -0.18 + i * 0.03, (0.16, 0.008, 0.066), metal)
+    bulkhead.box(-0.19, 0.04, (0.012, 0.012, 0.066), amber)
+    b.box(P(-0.30, -0.10, -0.81), (0.08, 0.03, 0.04), metal)                                   # extinguisher bracket
+    b.cylinder(P(-0.30, -0.25, -0.79), P(-0.30, 0.05, -0.79), 0.035, C("warhead"), segments=10, cap_end=metal)
+    b.cylinder(P(-0.30, 0.05, -0.79), P(-0.30, 0.09, -0.79), 0.012, metal, segments=8)
+    _screen(b, P(0, 0.20, -0.82), _basis((-1, 0, 0), (0, 1, 0), (0, 0, -1)), 0.14, 0.08, "text", cyan, rng,
+            buttons=False)
+
+
+def cockpits(specs, style):
+    """The interior part of every chassis that has one."""
+    return [part for part in (cockpit(spec, style) for spec in specs) if part is not None]
 
 
 def _ring_fn(style):
@@ -349,7 +1004,7 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
     b.loft([chamfer_ring(F + 0.02, 0.50 * W, 0.18 * H, 0.45, y=0.06 * H, top_scale=0.7),
             chamfer_ring(F - 0.55, 0.80 * W, 0.34 * H, 0.40, y=0.20 * H, top_scale=0.75),
             chamfer_ring(F - 1.25, 0.86 * W, 0.30 * H, 0.40, y=0.30 * H, top_scale=0.75)],
-           C("hull_dark") if visor else C("glass"))
+           C("hull_dark") if visor else C("glass"), open_back=True)  # the back is inside the hull; the pilot looks through it
     for x in (-0.2 * W, 0.0, 0.2 * W):
         b.box((x, 0.18 * H, F - 0.3), (0.05, 0.3 * H, 0.05), C("hull_dark"), rotation=rot_x(-40))
     b.box((0, 0.27 * H, F - 0.7), (0.84 * W, 0.05, 0.05), C("hull_dark"))
@@ -548,7 +1203,8 @@ def _tandem_cockpit(b, style, cw, H, F):
     b.loft(front, shell)
     b.loft(rear, shell)
     # Frames between the panes and over the top.
-    b.box((0, 0.44 * H, F - 1.88), (0.72 * cw, 0.34 * H, 0.06), C("hull_dark"))
+    # Its top meets the front canopy's top: under the pilot's sight line from the rear seat (cockpit view).
+    b.box((0, 0.38 * H, F - 1.88), (0.72 * cw, 0.34 * H, 0.06), C("hull_dark"))
     b.box((0, 0.73 * H, F - 2.45), (0.06, 0.04, 1.2), C("hull_dark"))
     b.box((0, 0.45 * H, F - 1.25), (0.06, 0.04, 1.0), C("hull_dark"))
     if visor:

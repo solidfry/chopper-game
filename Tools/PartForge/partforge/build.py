@@ -23,6 +23,7 @@ STAGE_COLLECTION = "PartForge: stage"
 MODULE_COLUMNS = 6
 MODULE_GRID_Y = 30.0
 CHASSIS_SPACING = 14.0
+COCKPIT_BEVEL = 0.004
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")  # not in git
 
 
@@ -68,10 +69,13 @@ def generate(style, kit=None):
     specs = chassis_specs(style)
 
     built = {}
-    for part in [parts.chassis(spec, style) for spec in specs] + parts.all_modules():
+    for part in ([parts.chassis(spec, style) for spec in specs] + parts.cockpits(specs, style)
+                 + parts.all_modules()):
         detail = (part.seed, style.get("detail")) if part.kind == "chassis" and style.get("detail") else None
-        obj = part.builder.to_object(part.name, export_collection, detail=detail)
-        palette.apply_uvs(obj)
+        # Cockpit details are centimetres small and seen up close: a fine bevel, not the hull's.
+        bevel = COCKPIT_BEVEL if part.kind == "cockpit" else None
+        obj = part.builder.to_object(part.name, export_collection, bevel_width=bevel, detail=detail)
+        palette.apply_uvs(obj, palette_only=part.kind == "cockpit")
         # One material per kit: Geometry Nodes can leave an empty slot behind, so start clean.
         obj.data.materials.clear()
         obj.data.materials.append(material)
@@ -172,14 +176,20 @@ def export(state, out_dir):
             obj.data.materials.append(material)
             set_of[obj.name] = texture_set.name
         texture_set.surface = None  # large; not needed after the maps are written
+    # Parts in no set (cockpits) keep the palette material; the palette maps go out with the kit.
+    palette_files = [os.path.basename(path) for path in palette.save_images(state.images, texture_dir)]
     manifest = {
         "kit": state.kit,
         "generator": "Tools/PartForge (Blender)",
         "style": state.style.get("name", ""),
         "units": "metres",
         "axes": "Unity space: +X right, +Y up, +Z forward. Socket rotation is identity (modules point +Z).",
-        "uv": "UV0 = baked texture set (unique unwrap); UV1 = palette swatch (cell centre of a 5 x 5 grid).",
+        "uv": "UV0 = baked texture set (unique unwrap; textureSet Palette: palette swatch); UV1 = palette swatch (cell "
+              "centre of a 5 x 5 grid).",
         "textureSets": set_entries,
+        "palette": {"material": palette.material_name(state.kit),
+                    **{key: f"{os.path.basename(texture_dir)}/{name}"
+                       for key, name in zip(("colour", "emission", "metalSmooth"), palette_files)}},
         "skins": skin_entries,
         "runtime": {"tableWidth": runtime.TABLE_WIDTH, "styleWear": runtime.style_wear(state.style),
                     "patterns": list(runtime.PATTERNS), "coverTable": list(runtime.COVER_TABLE)},
@@ -199,7 +209,7 @@ def export(state, out_dir):
                 child.name = prefix + child.name
             manifest["parts"].append({
                 "name": part.name, "file": f"Models/{file_name}", "kind": part.kind, "slot": part.slot,
-                "moduleIds": part.module_ids, "triangles": _triangles(obj), "textureSet": set_of[obj.name],
+                "moduleIds": part.module_ids, "triangles": _triangles(obj), "textureSet": set_of.get(obj.name, texture.PALETTE_SET),
                 "sockets": [{"name": f"SOCKET_{slot}_{index}", "slot": slot, "index": index, "position": list(position),
                              "scale": scale}
                             for slot, index, position, scale in part.sockets],

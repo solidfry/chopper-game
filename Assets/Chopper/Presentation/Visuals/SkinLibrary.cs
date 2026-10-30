@@ -7,7 +7,7 @@ namespace Chopper.Presentation.Visuals
 {
     /// <summary>
     /// The paint skins of one part kit (made by PartForge, <c>Tools/PartForge/partforge/skins.py</c>). Texture sets: one
-    /// per chassis (named after it, e.g. "Gunship") and one shared "Modules" set. Two ways to show a skin (A/B):
+    /// per chassis (named after it, e.g. "Gunship"), one shared "Modules" set and one shared "Cockpits" set. Two ways to show a skin (A/B):
     /// <list type="bullet">
     /// <item><b>Baked:</b> one URP Lit material per set and skin (<see cref="Skin.Materials"/>).</item>
     /// <item><b>Runtime:</b> one skin-shader material per set (<see cref="RuntimeMaterials"/>) for every skin; the skin is

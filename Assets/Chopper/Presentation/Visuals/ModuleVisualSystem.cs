@@ -73,6 +73,8 @@ namespace Chopper.Presentation.Visuals
             var skins = context.Config.Skins;
 
             var deltaTime = SystemAPI.Time.DeltaTime;
+            // Cockpit view: the local chopper's module art is hidden, like its hull (CockpitVisualSystem).
+            var hideLocal = context.CameraRig != null && context.CameraRig.HidesOwnChopper;
             _seen.Clear();
             foreach (var (loadout, pose, entity) in SystemAPI.Query<RefRO<ChopperLoadout>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
@@ -92,9 +94,13 @@ namespace Chopper.Presentation.Visuals
                 var collective = SystemAPI.HasComponent<ChopperFlightState>(entity) ? SystemAPI.GetComponent<ChopperFlightState>(entity).Collective : 0f;
                 fitted.SpinTime = (fitted.SpinTime + deltaTime * (1f + RotorThrottleRange * math.clamp(collective, -1f, 1f))) % 3600f;
                 var world = pose.ValueRO.Value;
+                var hidden = hideLocal && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&
+                             SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 foreach (var (visual, position, rotation, spin) in fitted.Parts)
                 {
                     if (visual == null) continue;
+                    if (visual.activeSelf == hidden) visual.SetActive(!hidden);
+                    if (hidden) continue;
                     var turned = math.all(spin == float3.zero) ? rotation : math.mul(rotation, quaternion.EulerXYZ(spin * fitted.SpinTime));
                     visual.transform.SetPositionAndRotation(math.transform(world, position), math.mul(pose.ValueRO.Rotation, turned));
                 }

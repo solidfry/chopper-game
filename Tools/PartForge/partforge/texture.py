@@ -36,6 +36,7 @@ SPAN = 40.0  # positions are baked as p / SPAN + 0.5 (every part fits in +-20 m)
 BUMP = {"glass": 0.0, "rubber": 0.3, "carbon": 0.2, "neon_green": 0.0, "neon_cyan": 0.0, "neon_pink": 0.0,
         "exhaust": 0.0, "sodium": 0.0, "warning": 0.0, "steel": 0.4, "bare": 0.6, "gunmetal": 0.6, "missile": 0.5}
 MODULES_SET = "Modules"
+PALETTE_SET = "Palette"  # parts drawn straight from the palette maps (UV0 = palette cells): the cockpits
 
 
 class TextureSet:
@@ -56,18 +57,19 @@ def settings(style):
 
 
 def texture_sets(state):
-    """Chassis sets (one per chassis, named after it) and the shared module set."""
+    """Chassis sets (one per chassis, named after it) and the shared module set. Cockpits have no set: they are seen
+    up close with millimetre details, which no bake resolution holds, so they use the palette maps directly."""
     values = settings(state.style)
     chassis = [(part, obj) for part, obj in state.built.values() if part.kind == "chassis"]
     modules = [obj for part, obj in state.built.values() if part.kind == "module"]
     scale = values["skin_scale"]
-    sets = [TextureSet(part.name.replace("Chassis_", ""), [obj], _size(obj, values), scale) for part, obj in chassis]
+    sets = [TextureSet(part.name.replace("Chassis_", ""), [obj], _size([obj], values), scale) for part, obj in chassis]
     sets.append(TextureSet(MODULES_SET, modules, int(values["module_size"]), scale))
     return sets
 
 
-def _size(obj, values):
-    area = sum(polygon.area for polygon in obj.data.polygons)
+def _size(objects, values):
+    area = sum(polygon.area for obj in objects for polygon in obj.data.polygons)
     side = math.sqrt(area / 0.45) * values["density"]  # about 45 % of the square holds islands (margins, small parts)
     size = 2 ** round(math.log2(max(side, 1.0)))
     return int(min(max(size, values["min_size"]), values["max_size"]))

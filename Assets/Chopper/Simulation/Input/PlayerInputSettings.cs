@@ -19,6 +19,8 @@ namespace Chopper.Simulation.Input
     {
         /// <summary>A menu is open: flight input is neutral.</summary>
         public bool Blocked;
+        /// <summary>Head look (Alt / R3) is held: mouse and pitch / roll axes are neutral, the camera uses them.</summary>
+        public bool HeadLook;
         public MouseSteer MouseSteer;
         /// <summary>Multiplies mouse turn speed. 1 = default.</summary>
         public float MouseSensitivity;

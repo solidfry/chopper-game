@@ -26,14 +26,31 @@ namespace Chopper.Editor.Setup
         public const string DefaultKit = "Kit02";
         /// <summary>The runtime skin shader graph (Art/Shaders/ChopperSkin.shadergraph, see Art/Shaders/README.md).</summary>
         public const string RuntimeShader = "Shader Graphs/ChopperSkin";
+        /// <summary>Texture set name of parts drawn with the palette maps (UV0 = palette cells).</summary>
+        public const string PaletteSet = "Palette";
+        /// <summary>Glow of the palette material's lit cells (HDR multiplier, for bloom).</summary>
+        private const float PaletteGlow = 2.5f;
 
         [Serializable]
         internal sealed class Manifest
         {
             public string kit;
             public TextureSetInfo[] textureSets;
+            public PaletteInfo palette;
             public SkinInfo[] skins;
             public PartInfo[] parts;
+        }
+
+        /// <summary>The kit palette (5 x 5 swatch cells): parts with texture set <see cref="PaletteSet"/> (the cockpits) use it
+        /// directly, so millimetre details stay sharp up close.</summary>
+        [Serializable]
+        internal sealed class PaletteInfo
+        {
+            /// <summary>The material name in the models (remapped to the palette material).</summary>
+            public string material;
+            public string colour;
+            public string emission;
+            public string metalSmooth;
         }
 
         [Serializable]
@@ -81,7 +98,7 @@ namespace Chopper.Editor.Setup
             public int[] moduleIds;
             public int triangles;
             public string textureSet;
-            /// <summary>Chassis only: the socket marker nodes in the model.</summary>
+            /// <summary>The socket marker nodes in the model (chassis: module sockets; cockpit: the eye).</summary>
             public SocketInfo[] sockets;
         }
 
@@ -92,6 +109,8 @@ namespace Chopper.Editor.Setup
             public string name;
             public string slot;
             public int index;
+            /// <summary>Unity space, metres, in the part's own space.</summary>
+            public float[] position;
         }
 
         private enum Map { Colour, Data, Normal }
@@ -124,7 +143,9 @@ namespace Chopper.Editor.Setup
                         yield return ($"Kit {manifest.kit}: no material for set {set.name}, skin {skin.key}. Press '5. Import part kits'.", null);
                 foreach (var part in manifest.parts ?? Array.Empty<PartInfo>())
                 {
-                    var material = ModelMaterial(folder, manifest, part.textureSet, library);
+                    var material = part.textureSet == PaletteSet
+                        ? AssetDatabase.LoadAssetAtPath<Material>(PaletteMaterialPath(folder, manifest))
+                        : ModelMaterial(folder, manifest, part.textureSet, library);
                     if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
                         yield return ($"Kit {manifest.kit}: model {part.file} is missing.", null);
                     else if (material == null || !importer.GetExternalObjectMap().ContainsValue(material))
@@ -155,6 +176,59 @@ namespace Chopper.Editor.Setup
             $"{folder}/Materials/{manifest.kit}_{set}_{skin}.mat";
 
         private static string LibraryPath(string folder, Manifest manifest) => $"{folder}/{manifest.kit}_Skins.asset";
+
+        private static string PaletteMaterialPath(string folder, Manifest manifest) => $"{folder}/Materials/{manifest.kit}_Palette.mat";
+
+        /// <summary>
+        /// URP Lit on the palette maps: point filtered, no mipmaps (each face samples the centre of one 8-pixel cell, so
+        /// colours stay exact at any distance), emission on. Rebuilt from the maps every time (no hand edits to keep).
+        /// </summary>
+        private static Material EnsurePaletteMaterial(string folder, Manifest manifest)
+        {
+            var info = manifest.palette;
+            if (info == null || string.IsNullOrEmpty(info.colour)) return null;
+            var colour = PaletteTexture($"{folder}/{info.colour}", true);
+            var emission = PaletteTexture($"{folder}/{info.emission}", true);
+            var metalSmooth = PaletteTexture($"{folder}/{info.metalSmooth}", false);
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (colour == null || shader == null) return null;
+
+            var path = PaletteMaterialPath(folder, manifest);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = Path.GetFileNameWithoutExtension(path) };
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.SetTexture("_BaseMap", colour);
+            material.SetColor("_BaseColor", Color.white);
+            material.SetTexture("_MetallicGlossMap", metalSmooth);
+            material.SetFloat("_Smoothness", 1f);
+            material.EnableKeyword("_METALLICSPECGLOSSMAP");
+            material.SetTexture("_EmissionMap", emission);
+            material.SetColor("_EmissionColor", Color.white * PaletteGlow);
+            material.EnableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Texture2D PaletteTexture(string path, bool colour)
+        {
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return null;
+            var changed = importer.filterMode != FilterMode.Point || importer.mipmapEnabled || importer.sRGBTexture != colour ||
+                          importer.textureCompression != TextureImporterCompression.Uncompressed;
+            if (changed)
+            {
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.sRGBTexture = colour;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
 
         private static void Ensure(string manifestPath)
         {
@@ -203,7 +277,8 @@ namespace Chopper.Editor.Setup
             }
 
             // Models: rigid props, material remapped to their texture set's runtime skin material (the default skin's
-            // baked material until the shader graph exists).
+            // baked material until the shader graph exists); palette parts (cockpits) to the palette material.
+            var paletteMaterial = EnsurePaletteMaterial(folder, manifest);
             foreach (var part in manifest.parts ?? Array.Empty<PartInfo>())
             {
                 if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
@@ -211,8 +286,9 @@ namespace Chopper.Editor.Setup
                     Debug.LogWarning($"Setup: kit {manifest.kit} model {part.file} not found.");
                     continue;
                 }
+                var onPalette = part.textureSet == PaletteSet;
                 var set = manifest.textureSets.FirstOrDefault(s => s.name == part.textureSet);
-                var material = set != null ? ModelMaterial(folder, manifest, set.name, library) : null;
+                var material = onPalette ? paletteMaterial : set != null ? ModelMaterial(folder, manifest, set.name, library) : null;
                 if (material == null)
                 {
                     Debug.LogWarning($"Setup: kit {manifest.kit} part {part.name} has no texture set material.");
@@ -228,7 +304,7 @@ namespace Chopper.Editor.Setup
                 // Tangents for the normal map: Unity's MikkTSpace matches the Blender bake.
                 if (importer.importTangents != ModelImporterTangents.CalculateMikk) { importer.importTangents = ModelImporterTangents.CalculateMikk; changed = true; }
 
-                var source = new AssetImporter.SourceAssetIdentifier(typeof(Material), set.material);
+                var source = new AssetImporter.SourceAssetIdentifier(typeof(Material), onPalette ? manifest.palette.material : set.material);
                 if (!importer.GetExternalObjectMap().TryGetValue(source, out var mapped) || mapped != material)
                 {
                     importer.AddRemap(source, material);

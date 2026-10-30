@@ -64,11 +64,13 @@ namespace Chopper.Presentation.Bridge
             if (!TryGetContext(out var context))
             {
                 settings.Blocked = false;
+                settings.HeadLook = false;
                 return;
             }
 
             var options = context.InputOptions;
             settings.Blocked = context.MenuOpen;
+            settings.HeadLook = context.CameraRig != null && context.CameraRig.HeadLookActive;
             settings.MouseSteer = options.MouseSteer;
             settings.MouseSensitivity = options.MouseSensitivity;
             settings.InvertPitch = options.InvertPitch;
