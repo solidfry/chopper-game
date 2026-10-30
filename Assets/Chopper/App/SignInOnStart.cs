@@ -22,7 +22,7 @@ namespace Chopper.App
             try
             {
                 await _auth.SignInAsync(cancellation);
-                Debug.Log($"Signed in as {_auth.DisplayName} ({_auth.PlayerId}).");
+                Debug.Log($"Signed in as {_auth.DisplayName} ({_auth.PlayerId}), environment {Chopper.Services.ServiceEnvironment.Current}.");
             }
             catch (OperationCanceledException)
             {

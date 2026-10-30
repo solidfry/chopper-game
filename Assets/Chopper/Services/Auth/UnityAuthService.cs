@@ -4,6 +4,7 @@ using Chopper.Services.Platform;
 using Cysharp.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
+using Unity.Services.Core.Environments;
 using UnityEngine;
 
 namespace Chopper.Services.Auth
@@ -30,7 +31,8 @@ namespace Chopper.Services.Auth
         public async UniTask SignInAsync(CancellationToken cancellationToken)
         {
             if (UnityServices.State != ServicesInitializationState.Initialized)
-                await UnityServices.InitializeAsync().AsUniTask().AttachExternalCancellation(cancellationToken);
+                await UnityServices.InitializeAsync(new InitializationOptions().SetEnvironmentName(ServiceEnvironment.Current))
+                    .AsUniTask().AttachExternalCancellation(cancellationToken);
             if (AuthenticationService.Instance.IsSignedIn) return;
 
             var ticket = await _platform.GetSignInTicketAsync(cancellationToken);
