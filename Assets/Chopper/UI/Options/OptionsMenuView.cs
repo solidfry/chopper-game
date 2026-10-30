@@ -9,11 +9,11 @@ using UnityEngine.UIElements;
 namespace Chopper.UI.Options
 {
     /// <summary>
-    /// In-game options overlay (<c>OptionsMenu.uxml</c>): controls (mouse steer, sensitivity, invert), HUD look preset,
+    /// In-game options overlay (<c>OptionsMenu.uxml</c>): controls (mouse steer, sensitivity, invert), start camera view, HUD look preset,
     /// "reduce flicker / effects", volumes, and HANGAR (leave the match to change the loadout).
     /// Escape or gamepad Start opens and closes it. While open, the cursor is free and flight input is blocked
     /// (<see cref="PresentationContext.MenuOpen"/>). Values are saved by the services they belong to
-    /// (<see cref="InputOptions"/>, <see cref="HudLook"/>, <see cref="IAudioService"/>). The first part of the menu port (old UGUI menus).
+    /// (<see cref="InputOptions"/>, <see cref="HudLook"/>, <see cref="IAudioService"/>, the camera rig's default view). The first part of the menu port (old UGUI menus).
     /// </summary>
     [RequireComponent(typeof(PanelRenderer))]
     public sealed class OptionsMenuView : MonoBehaviour
@@ -30,6 +30,7 @@ namespace Chopper.UI.Options
         private DropdownField _mouseSteer;
         private Slider _mouseSensitivity;
         private Toggle _invertPitch;
+        private DropdownField _defaultView;
         private DropdownField _hudLook;
         private Toggle _reduceEffects;
         private Button _resume;
@@ -39,6 +40,8 @@ namespace Chopper.UI.Options
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
         /// <summary>Same order as <see cref="InputOptions.MouseSteerIndex"/>.</summary>
         private readonly List<string> _steerNames = new() { "TURN (AIM)", "ROLL (BATTLEFIELD)" };
+        /// <summary>The camera views (<see cref="Presentation.Camera.CameraSettings.Views"/>), upper case; filled when the menu opens.</summary>
+        private readonly List<string> _viewNames = new();
 
         public bool IsOpen { get; private set; }
 
@@ -67,6 +70,7 @@ namespace Chopper.UI.Options
             _mouseSteer = _root.Q<DropdownField>("mouse-steer");
             _mouseSensitivity = _root.Q<Slider>("mouse-sensitivity");
             _invertPitch = _root.Q<Toggle>("invert-pitch");
+            _defaultView = _root.Q<DropdownField>("default-view");
             _hudLook = _root.Q<DropdownField>("hud-look");
             _reduceEffects = _root.Q<Toggle>("reduce-effects");
             _resume = _root.Q<Button>("resume");
@@ -76,6 +80,8 @@ namespace Chopper.UI.Options
             _mouseSteer.RegisterValueChangedCallback(OnMouseSteerChanged);
             _mouseSensitivity.RegisterValueChangedCallback(OnSensitivityChanged);
             _invertPitch.RegisterValueChangedCallback(OnInvertPitchChanged);
+            _defaultView.choices = _viewNames;
+            _defaultView.RegisterValueChangedCallback(OnDefaultViewChanged);
             _hudLook.choices = _presetNames;
             _hudLook.RegisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.RegisterValueChangedCallback(OnReduceEffectsChanged);
@@ -106,6 +112,7 @@ namespace Chopper.UI.Options
             _mouseSteer.UnregisterValueChangedCallback(OnMouseSteerChanged);
             _mouseSensitivity.UnregisterValueChangedCallback(OnSensitivityChanged);
             _invertPitch.UnregisterValueChangedCallback(OnInvertPitchChanged);
+            _defaultView.UnregisterValueChangedCallback(OnDefaultViewChanged);
             _hudLook.UnregisterValueChangedCallback(OnHudLookChanged);
             _reduceEffects.UnregisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked -= Close;
@@ -143,6 +150,7 @@ namespace Chopper.UI.Options
             _mouseSteer.SetValueWithoutNotify(_steerNames[Mathf.Clamp(input.MouseSteerIndex, 0, _steerNames.Count - 1)]);
             _mouseSensitivity.SetValueWithoutNotify(input.MouseSensitivity);
             _invertPitch.SetValueWithoutNotify(input.InvertPitch);
+            ShowDefaultView();
             _hudLook.SetValueWithoutNotify(_presetNames[Mathf.Clamp((int)_context.HudLook.Preset, 0, _presetNames.Count - 1)]);
             _reduceEffects.SetValueWithoutNotify(_context.HudLook.ReduceEffects);
             foreach (var (slider, channel) in _volumes) slider.SetValueWithoutNotify(_context.Audio.GetVolume(channel));
@@ -168,6 +176,37 @@ namespace Chopper.UI.Options
         private void OnSensitivityChanged(ChangeEvent<float> evt) => _context.InputOptions.MouseSensitivity = evt.newValue;
 
         private void OnInvertPitchChanged(ChangeEvent<bool> evt) => _context.InputOptions.InvertPitch = evt.newValue;
+
+        /// <summary>Lists the camera views and shows the saved one. Hidden when there is no rig or only one view.</summary>
+        private void ShowDefaultView()
+        {
+            _viewNames.Clear();
+            var rig = _context.CameraRig;
+            var current = -1;
+            if (rig != null)
+            {
+                var views = rig.ActiveSettings.Views;
+                var wanted = rig.DefaultView;
+                foreach (var view in views)
+                {
+                    if (view == null) continue;
+                    if (view.Name == wanted) current = _viewNames.Count;
+                    _viewNames.Add(view.Name.ToUpperInvariant());
+                }
+            }
+            _defaultView.choices = _viewNames;
+            _defaultView.style.display = _viewNames.Count > 1 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_viewNames.Count > 0) _defaultView.SetValueWithoutNotify(_viewNames[Mathf.Max(current, 0)]);
+        }
+
+        /// <summary>Saved for the next match; the current view does not change (C / gamepad Y does that).</summary>
+        private void OnDefaultViewChanged(ChangeEvent<string> evt)
+        {
+            var rig = _context.CameraRig;
+            if (rig == null) return;
+            foreach (var view in rig.ActiveSettings.Views)
+                if (view != null && view.Name.ToUpperInvariant() == evt.newValue) rig.DefaultView = view.Name;
+        }
 
         private void OnHudLookChanged(ChangeEvent<string> evt)
         {
