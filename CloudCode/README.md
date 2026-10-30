@@ -19,14 +19,10 @@ Unity Editor: **Services → Deployment**, select `Assets/Chopper/CloudCode/Chop
 
 ### Matchmaker queue
 
-Dashboard → Matchmaker → Queues → `production` → its pool → **Hosting: Cloud Code**:
-
-| Field | Value |
-|---|---|
-| Module name | `ChopperAllocator` |
-| Allocate function | `Matchmaker_AllocateServer` |
-| Poll function | `Matchmaker_PollAllocation` |
-
-The game joins the queue named in `HangarSettings` (`production`).
+The queue is a file too: `Assets/Chopper/Matchmaker/Default.mmq` (queue `Default`, pool `ffa`: one team of 1-8
+players, Cloud Code hosting with this module) and `Matchmaker.mme` (matchmaker on, default queue `Default`). Deploy
+both from **Services → Deployment** like the module; deploying replaces the queue in the dashboard. The files are
+camelCase (the editor reader needs `"type": "CloudCode"` in lower case). The game joins the queue named in
+`HangarSettings` (`Default`) in the environment from `ServiceEnvironment` (`development` in the editor).
 
 Build locally: `dotnet build -c Release` in `CloudCode/ChopperAllocator`.

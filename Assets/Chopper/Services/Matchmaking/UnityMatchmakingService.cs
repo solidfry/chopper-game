@@ -38,12 +38,16 @@ namespace Chopper.Services.Matchmaking
             var players = new List<Player> { new(AuthenticationService.Instance.PlayerId, customData) };
             var ticket = await MatchmakerService.Instance.CreateTicketAsync(players, new CreateTicketOptions(request.Queue));
             var done = false;
+            var lastStatus = "";
             try
             {
                 while (true)
                 {
                     await UniTask.Delay(TimeSpan.FromSeconds(PollSeconds), cancellationToken: cancellationToken);
                     var status = await MatchmakerService.Instance.GetTicketAsync(ticket.Id);
+                    // Each change once in the log: shows where a search hangs (rules, allocator, hosting type).
+                    var text = status == null ? "no status" : $"{status.Type?.Name}: {Describe(status.Value)}";
+                    if (text != lastStatus) Debug.Log($"Matchmaking ticket {ticket.Id}: {lastStatus = text}");
                     if (status?.Value is not IpPortAssignment assignment) continue;
 
                     switch (assignment.Status)
@@ -73,6 +77,14 @@ namespace Chopper.Services.Matchmaking
                 if (!done) DeleteTicket(ticket.Id);
             }
         }
+
+        private static string Describe(object assignment) => assignment switch
+        {
+            IpPortAssignment a => $"{a.Status} match={a.MatchId} {a.Ip}:{a.Port} {a.Message}",
+            MultiplayAssignment a => $"{a.Status} match={a.MatchId} {a.Message}",
+            null => "none",
+            _ => assignment.ToString(),
+        };
 
         private static void DeleteTicket(string ticketId)
         {

@@ -14,7 +14,7 @@ namespace Chopper.Presentation.Hangar
     {
         [Header("Online")]
         [SerializeField, Tooltip("Unity Matchmaker queue that FIND MATCH joins (its pool allocates Edgegap servers).")]
-        private string matchQueue = "production";
+        private string matchQueue = "Default";
 
         [Header("Wireframe")]
         [SerializeField, Tooltip("Line meshes of every chassis and module model (baked by Setup step 7).")]
