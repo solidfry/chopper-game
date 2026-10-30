@@ -4,7 +4,8 @@ namespace Chopper.Presentation.Hud
 {
     /// <summary>
     /// The gameplay-driven part of the HUD look: turns hits, low hull, locks, missiles and disruptions (EMP, hack, death)
-    /// into glitch, flicker, colour split, noise and pulse values for the shader. Plain C#, so it can be tested.
+    /// into glitch, flicker, colour split, noise and pulse values for the shader. In a cockpit view it also drives the
+    /// world feed (<see cref="Feed"/>): static on spawn that clears (boot-up), and noise again on hits. Plain C#, so it can be tested.
     /// <see cref="HudLook"/> feeds it and sends the outputs to the GPU.
     /// </summary>
     public sealed class HudLookModel
@@ -28,6 +29,8 @@ namespace Chopper.Presentation.Hud
         private float _disruptionTime;
         private float _sampleTime;
         private float _flickerSample;
+        private float _feedBoot;
+        private float _feedHold;
 
         public HudLookModel(int seed = 1984) => _random = new Random(seed);
 
@@ -36,6 +39,9 @@ namespace Chopper.Presentation.Hud
 
         /// <summary>0 = no missile, 1 = about to hit (<see cref="ChopperHudModel.MissileUrgency"/>).</summary>
         public float MissileUrgency { get; set; }
+
+        /// <summary>The camera is in a cockpit view: the world is seen through a camera feed.</summary>
+        public bool CockpitView { get; set; }
 
         /// <summary>0 = clean, 1 = full glitch (bands torn sideways, colour split).</summary>
         public float Glitch { get; private set; }
@@ -48,6 +54,8 @@ namespace Chopper.Presentation.Hud
         public float Noise { get; private set; }
         /// <summary>Changes <see cref="SampleRate"/> times a second while glitching, so the torn bands jump.</summary>
         public float GlitchSeed { get; private set; }
+        /// <summary>World feed noise: 0 = clear view, 1 = full static. Always 0 outside a cockpit view.</summary>
+        public float Feed { get; private set; }
 
         public void Configure(in HudLookProfile profile, in HudLookReactions reactions, bool reduceEffects)
         {
@@ -76,6 +84,14 @@ namespace Chopper.Presentation.Hud
             _disruptionTime = Math.Max(_disruptionTime, seconds);
         }
 
+        /// <summary>The chopper spawned: the world feed boots (full static, then clears). Seen only in a cockpit view.</summary>
+        public void BootFeed()
+        {
+            if (_reactions.FeedBootSeconds <= 0f) return;
+            _feedBoot = 1f;
+            _feedHold = Math.Max(0f, _reactions.FeedBootHold);
+        }
+
         public void Tick(float deltaTime)
         {
             _impulse = Math.Max(0f, _impulse - _reactions.GlitchDecay * deltaTime);
@@ -89,6 +105,14 @@ namespace Chopper.Presentation.Hud
             Glitch = Math.Max(_impulse, _disruption) * scale;
             Pulse = _pulse * _reactions.LockPulse * scale;
             Chromatic = _profile.Chromatic + Glitch * _reactions.GlitchChromatic;
+            // The hold first; time left over this frame goes to clearing.
+            var held = Math.Min(_feedHold, deltaTime);
+            _feedHold -= held;
+            if (_feedBoot > 0f)
+                _feedBoot = _reactions.FeedBootSeconds > 0f ? Math.Max(0f, _feedBoot - (deltaTime - held) / _reactions.FeedBootSeconds) : 0f;
+            // Ease out: the picture locks in quickly at the end, not a slow fade.
+            var boot = _feedBoot * _feedBoot;
+            Feed = CockpitView ? Math.Clamp(Math.Max(boot * scale, Glitch * _reactions.FeedGlitch), 0f, 1f) : 0f;
             Noise = (_profile.Noise + Glitch * GlitchNoise + Math.Clamp(MissileUrgency, 0f, 1f) * _reactions.MissileNoise) * scale;
 
             _sampleTime -= deltaTime;

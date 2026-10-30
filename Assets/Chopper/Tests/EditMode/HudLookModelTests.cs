@@ -15,6 +15,7 @@ namespace Chopper.Tests
         {
             FullGlitchDamage = 40f, GlitchDecay = 2f, GlitchChromatic = 4f, LowHullFlicker = 0.2f,
             LockPulse = 0.5f, PulseDecay = 2f, MissileNoise = 0.2f, SpawnGlitch = 0.8f,
+            FeedBootHold = 0.5f, FeedBootSeconds = 1f, FeedGlitch = 0.5f,
         };
 
         private static HudLookModel Make(bool reduceEffects = false)
@@ -115,6 +116,53 @@ namespace Chopper.Tests
             threatened.MissileUrgency = 1f;
             threatened.Tick(0f);
             Assert.That(threatened.Noise, Is.EqualTo(calm.Noise + Reactions.MissileNoise).Within(0.001f));
+        }
+
+        [Test]
+        public void Feed_BootsOnSpawnThenClears()
+        {
+            var model = Make();
+            model.CockpitView = true;
+            model.BootFeed();
+            model.Tick(0.4f);
+            Assert.That(model.Feed, Is.EqualTo(1f).Within(0.001f), "full static during the hold");
+            model.Tick(0.6f);
+            Assert.That(model.Feed, Is.InRange(0.01f, 0.99f), "clearing");
+            for (var i = 0; i < 60; i++) model.Tick(1f / 60f);
+            Assert.That(model.Feed, Is.EqualTo(0f).Within(0.0001f));
+        }
+
+        [Test]
+        public void Feed_OnlyInCockpitView()
+        {
+            var model = Make();
+            model.BootFeed();
+            model.OnDamage(40f);
+            model.Tick(0f);
+            Assert.That(model.Feed, Is.EqualTo(0f));
+            model.CockpitView = true;
+            model.Tick(0f);
+            Assert.That(model.Feed, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void Feed_HitsBringNoiseBack()
+        {
+            var model = Make();
+            model.CockpitView = true;
+            model.OnDamage(40f);
+            model.Tick(0f);
+            Assert.That(model.Feed, Is.EqualTo(model.Glitch * Reactions.FeedGlitch).Within(0.001f));
+        }
+
+        [Test]
+        public void Feed_ReduceEffectsWeakensBoot()
+        {
+            var model = Make(reduceEffects: true);
+            model.CockpitView = true;
+            model.BootFeed();
+            model.Tick(0f);
+            Assert.That(model.Feed, Is.EqualTo(HudLookModel.ReducedScale).Within(0.001f));
         }
     }
 }

@@ -20,14 +20,17 @@ namespace Chopper.Presentation.Hud
         public static readonly int Params1 = Shader.PropertyToID("_ChopperHudParams1");
         /// <summary>(brightness, glitch, glitch seed, unused).</summary>
         public static readonly int Params2 = Shader.PropertyToID("_ChopperHudParams2");
-        /// <summary>(trail decay per frame, trail strength, unused, unused). Strength 0 = no history pass.</summary>
+        /// <summary>(trail decay per frame, trail strength, world feed 0..1, cockpit depth in metres). Strength 0 = no history pass;
+        /// feed 0 = the world is not changed.</summary>
         public static readonly int Params3 = Shader.PropertyToID("_ChopperHudParams3");
     }
 
     /// <summary>
     /// Retro HUD look (plan section 3b). Moves the HUD panel renderer into a render texture, feeds gameplay into
     /// <see cref="HudLookModel"/> (damage, low hull, lock, missile, death/spawn) and writes the result as global shader
-    /// properties for <see cref="HudLookRendererFeature"/>. With the Clean preset (or no settings) the HUD stays plain UI.
+    /// properties for <see cref="HudLookRendererFeature"/>. With the Clean preset (or no settings) the HUD stays plain UI
+    /// and there is no world feed either. In a cockpit view (<see cref="CockpitView"/>) the world gets the camera feed
+    /// look: it boots up on spawn and gets noise on hits.
     /// Owned by the <see cref="Bridge.PresentationContext"/>; the HUD view calls <see cref="Attach"/>.
     /// </summary>
     public sealed class HudLook : IDisposable
@@ -87,6 +90,9 @@ namespace Chopper.Presentation.Hud
         /// <summary>True while the HUD renders into the texture and the look pass draws it.</summary>
         public bool IsActive => _texture != null;
 
+        /// <summary>Set each frame by the context: the camera is in a cockpit view (the world is a camera feed).</summary>
+        public bool CockpitView { get; set; }
+
         /// <summary>For EMP and hack effects (not built yet): hold a glitch for a time.</summary>
         public void Disrupt(float strength, float seconds) => _model.Disrupt(strength, seconds);
 
@@ -117,6 +123,7 @@ namespace Chopper.Presentation.Hud
             _model.Configure(profile, _settings.Reactions, _reduceEffects);
             _model.LowHull = _hud.HasChopper && _hud.HealthLow;
             _model.MissileUrgency = _hud.MissileInbound ? _hud.MissileUrgency : 0f;
+            _model.CockpitView = CockpitView;
             _model.Tick(deltaTime);
 
             Shader.SetGlobalVector(HudLookShaderIds.Params0,
@@ -126,7 +133,7 @@ namespace Chopper.Presentation.Hud
             Shader.SetGlobalVector(HudLookShaderIds.Params2, new Vector4(_model.Brightness, _model.Glitch, _model.GlitchSeed, 0f));
             // Frame-rate independent fade: after PersistenceTime seconds the trail is at 1/e.
             var decay = profile.PersistenceTime > 0f ? Mathf.Exp(-deltaTime / profile.PersistenceTime) : 0f;
-            Shader.SetGlobalVector(HudLookShaderIds.Params3, new Vector4(decay, profile.Persistence, 0f, 0f));
+            Shader.SetGlobalVector(HudLookShaderIds.Params3, new Vector4(decay, profile.Persistence, _model.Feed, _settings.FeedCockpitDepth));
         }
 
         public void Dispose()
@@ -150,6 +157,7 @@ namespace Chopper.Presentation.Hud
                 _hadChopper = _hud.HasChopper;
                 var strength = _settings != null ? _settings.Reactions.SpawnGlitch : 0f;
                 _model.Disrupt(strength, _hadChopper ? SpawnBootSeconds : DeathDropoutSeconds);
+                if (_hadChopper) _model.BootFeed();
             }
         }
 

@@ -104,6 +104,7 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);
             Match.Tick(deltaTime);
+            HudLook.CockpitView = CameraRig != null && CameraRig.HidesOwnChopper;
             HudLook.Tick(unscaledDeltaTime);
         }
 

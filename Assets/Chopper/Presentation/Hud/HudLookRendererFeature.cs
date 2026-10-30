@@ -11,6 +11,8 @@ namespace Chopper.Presentation.Hud
     /// (<c>Hidden/Chopper/HudLook</c>). Runs only on the last game camera, and only while <see cref="HudLook"/> has bound a
     /// HUD texture (global <see cref="HudLookShaderIds.Enabled"/>), so menus, the scene view and the Clean preset cost nothing.
     /// Phosphor persistence: a HUD-size history texture (two, ping-pong) keeps a fading trail of the HUD, drawn under it.
+    /// World feed (cockpit view): the same pass gives the game view a camera-feed look; it reads the depth texture
+    /// (only while the feed is on) so the cockpit near the eye stays clean.
     /// Chopper → Setup adds it to every URP renderer in the project.
     /// </summary>
     public sealed class HudLookRendererFeature : ScriptableRendererFeature
@@ -43,6 +45,8 @@ namespace Chopper.Presentation.Hud
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
             if (_material == null || UnityEngine.Shader.GetGlobalFloat(HudLookShaderIds.Enabled) < 0.5f) return;
+            var feed = UnityEngine.Shader.GetGlobalVector(HudLookShaderIds.Params3).z > 0f;
+            _pass.ConfigureInput(feed ? ScriptableRenderPassInput.Depth : ScriptableRenderPassInput.None);
             renderer.EnqueuePass(_pass);
         }
 
@@ -61,6 +65,7 @@ namespace Chopper.Presentation.Hud
             private const int CompositePass = 0;
             private const int PersistencePass = 1;
             private static readonly int HistoryId = UnityEngine.Shader.PropertyToID("_ChopperHudHistory");
+            private static readonly int DepthId = UnityEngine.Shader.PropertyToID("_ChopperFeedDepth");
 
             private readonly Material _material;
             private readonly RTHandle[] _history = new RTHandle[2];
@@ -72,6 +77,8 @@ namespace Chopper.Presentation.Hud
                 public TextureHandle Source;
                 public TextureHandle History;
                 public bool HasHistory;
+                public TextureHandle Depth;
+                public bool HasDepth;
             }
 
             public HudLookPass(Material material)
@@ -122,8 +129,12 @@ namespace Chopper.Presentation.Hud
                     data.Source = source;
                     data.History = history;
                     data.HasHistory = history.IsValid();
+                    var feed = UnityEngine.Shader.GetGlobalVector(HudLookShaderIds.Params3).z > 0f;
+                    data.Depth = feed ? resources.cameraDepthTexture : TextureHandle.nullHandle;
+                    data.HasDepth = data.Depth.IsValid();
                     builder.UseTexture(source);
                     if (data.HasHistory) builder.UseTexture(history);
+                    if (data.HasDepth) builder.UseTexture(data.Depth);
                     builder.SetRenderAttachment(destination, 0);
                     builder.SetRenderFunc(static (CompositeData pass, RasterGraphContext context) =>
                     {
@@ -131,6 +142,11 @@ namespace Chopper.Presentation.Hud
                             pass.Material.SetTexture(HistoryId, (RTHandle)pass.History);
                         else
                             pass.Material.SetTexture(HistoryId, Texture2D.blackTexture);
+                        // No depth: black = far (reversed Z), so the whole view gets the feed.
+                        if (pass.HasDepth)
+                            pass.Material.SetTexture(DepthId, (RTHandle)pass.Depth);
+                        else
+                            pass.Material.SetTexture(DepthId, Texture2D.blackTexture);
                         Blitter.BlitTexture(context.cmd, pass.Source, new Vector4(1f, 1f, 0f, 0f), pass.Material, CompositePass);
                     });
                 }

@@ -61,6 +61,14 @@ namespace Chopper.Presentation.Hud
         public float MissileNoise;
         [Range(0f, 1f), Tooltip("Glitch when the chopper dies or spawns (the HUD drops out / boots up).")]
         public float SpawnGlitch;
+
+        [Header("World feed (cockpit view: the pilot sees out through a camera feed)")]
+        [Tooltip("Seconds of full static when the chopper spawns, before the feed starts to clear.")]
+        public float FeedBootHold;
+        [Tooltip("Seconds for the feed to clear after the hold. 0 = no boot-up.")]
+        public float FeedBootSeconds;
+        [Range(0f, 1f), Tooltip("Feed noise from a hit, as a part of the HUD glitch (damage brings the noise back).")]
+        public float FeedGlitch;
     }
 
     /// <summary>
@@ -75,6 +83,8 @@ namespace Chopper.Presentation.Hud
         private HudLookPreset defaultPreset = HudLookPreset.Crt84;
         [SerializeField, Range(0.25f, 1f), Tooltip("HUD texture size as a part of the screen size. Lower = softer and cheaper.")]
         private float renderScale = 1f;
+        [SerializeField, Tooltip("World feed: pixels nearer the eye than this (metres) are the cockpit, and stay clean.")]
+        private float feedCockpitDepth = 4f;
 
         [SerializeField] private HudLookProfile vector = new()
         {
@@ -92,10 +102,12 @@ namespace Chopper.Presentation.Hud
         {
             FullGlitchDamage = 40f, GlitchDecay = 2.5f, GlitchChromatic = 4f, LowHullFlicker = 0.2f,
             LockPulse = 0.5f, PulseDecay = 3f, MissileNoise = 0.15f, SpawnGlitch = 0.8f,
+            FeedBootHold = 0.45f, FeedBootSeconds = 1.6f, FeedGlitch = 0.6f,
         };
 
         public HudLookPreset DefaultPreset => defaultPreset;
         public float RenderScale => renderScale;
+        public float FeedCockpitDepth => feedCockpitDepth;
         public HudLookReactions Reactions => reactions;
 
         /// <summary>False for <see cref="HudLookPreset.Clean"/>: the HUD is then drawn as plain UI.</summary>
@@ -115,6 +127,7 @@ namespace Chopper.Presentation.Hud
             if (reactions.FullGlitchDamage <= 0f) problems.Add($"{name}: full glitch damage must be above 0.");
             if (reactions.GlitchDecay <= 0f || reactions.PulseDecay <= 0f)
                 problems.Add($"{name}: glitch and pulse decay must be above 0, or the effect never clears.");
+            if (reactions.FeedBootHold < 0f || reactions.FeedBootSeconds < 0f) problems.Add($"{name}: feed boot times must not be below 0.");
             if (vector.ScanlineCount <= 0f || crt84.ScanlineCount <= 0f) problems.Add($"{name}: scanline count must be above 0.");
         }
     }
