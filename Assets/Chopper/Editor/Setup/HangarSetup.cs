@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Chopper.App;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Config;
 using Chopper.Presentation.Hangar;
@@ -229,6 +230,11 @@ namespace Chopper.Editor.Setup
             if (stage == null) stage = stageObject.AddComponent<HangarStage>();
             stage.Configure(bridge, camera, turntable);
 
+            // Child of the root scope: hands the stage the matchmaking service (FIND MATCH).
+            var scopeObject = FindOrCreate(scene, "Hangar Scope");
+            var scope = scopeObject.GetComponent<HangarLifetimeScope>();
+            if (scope == null) scope = scopeObject.AddComponent<HangarLifetimeScope>();
+
             var uiObject = FindOrCreate(scene, "Hangar UI");
             var panel = uiObject.GetComponent<PanelRenderer>();
             if (panel == null) panel = uiObject.AddComponent<PanelRenderer>();
@@ -241,7 +247,7 @@ namespace Chopper.Editor.Setup
             if (sounds == null) sounds = uiObject.AddComponent<UISoundBinder>();
             sounds.SetBridge(bridge);
 
-            foreach (var component in new Object[] { camera, volume, bridge, stage, panel, view, sounds }) EditorUtility.SetDirty(component);
+            foreach (var component in new Object[] { camera, volume, bridge, stage, scope, panel, view, sounds }) EditorUtility.SetDirty(component);
             EditorSceneManager.MarkSceneDirty(scene);
         }
 

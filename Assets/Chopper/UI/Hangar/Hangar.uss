@@ -254,3 +254,15 @@
 .hangar__button:disabled {
   opacity: 0.4;
 }
+
+/* Training (local match): smaller, under FIND MATCH. */
+.hangar__button--secondary {
+  margin-top: 8px;
+  height: 34px;
+  font-size: 14px;
+}
+
+/* Online search status: Lightning Yellow while it runs (errors stay red via the text). */
+.hangar__match-status {
+  color: var(--chopper-yellow);
+}

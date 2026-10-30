@@ -12,6 +12,10 @@ namespace Chopper.Presentation.Hangar
     [CreateAssetMenu(menuName = "Chopper/Hangar/Hangar Settings", fileName = "HangarSettings")]
     public sealed class HangarSettings : ScriptableObject, IValidatedAsset
     {
+        [Header("Online")]
+        [SerializeField, Tooltip("Unity Matchmaker queue that FIND MATCH joins (its pool allocates Edgegap servers).")]
+        private string matchQueue = "production";
+
         [Header("Wireframe")]
         [SerializeField, Tooltip("Line meshes of every chassis and module model (baked by Setup step 7).")]
         private WireframeLibrary wireframes;
@@ -63,6 +67,7 @@ namespace Chopper.Presentation.Hangar
         public float OverviewDistance => overviewDistance;
         public float OverviewHeight => overviewHeight;
         public float OverviewFieldOfView => overviewFieldOfView;
+        public string MatchQueue => matchQueue;
         public float IdleSpin => idleSpin;
         public float FocusDistance => focusDistance;
         public float FocusElevation => focusElevation;

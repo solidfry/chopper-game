@@ -119,6 +119,12 @@ namespace Chopper.Presentation.Hangar
         public event Action StatsChanged;
         /// <summary>A valid loadout was saved; the scene starts the match.</summary>
         public event Action Launched;
+        /// <summary>A valid loadout was saved and the player asked for an online match; the scene runs the search.</summary>
+        public event Action MatchRequested;
+        /// <summary>The player cancelled the search.</summary>
+        public event Action SearchCancelled;
+        /// <summary><see cref="Searching"/> or <see cref="MatchStatus"/> changed.</summary>
+        public event Action MatchStatusChanged;
 
         public IReadOnlyList<string> ChassisNames => _chassisNames;
         public int ChassisIndex { get; private set; }
@@ -141,6 +147,10 @@ namespace Chopper.Presentation.Hangar
         /// <summary>Why the loadout cannot launch; empty when it can.</summary>
         public string Error { get; private set; } = "";
         public bool CanLaunch => Error.Length == 0;
+        /// <summary>An online search runs (launch and find match are off; Escape cancels).</summary>
+        public bool Searching { get; private set; }
+        /// <summary>What the search is doing, or why it stopped; empty when idle.</summary>
+        public string MatchStatus { get; private set; } = "";
 
         public void SelectChassis(int index)
         {
@@ -203,10 +213,35 @@ namespace Chopper.Presentation.Hangar
             Refresh();
         }
 
+        /// <summary>Saves the loadout and raises <see cref="MatchRequested"/>. False when it is not valid or a search runs.</summary>
+        public bool FindMatch()
+        {
+            if (!CanLaunch || Searching) return false;
+            _store?.Save(Selection(FittedFor(Chassis)), SkinId);
+            SetMatchStatus("SEARCHING", true);
+            MatchRequested?.Invoke();
+            return true;
+        }
+
+        /// <summary>Asks the scene to stop the search (it then calls <see cref="SetMatchStatus"/>).</summary>
+        public void CancelSearch()
+        {
+            if (Searching) SearchCancelled?.Invoke();
+        }
+
+        /// <summary>Set by the scene while it searches, and when the search ends (searching false).</summary>
+        public void SetMatchStatus(string status, bool searching)
+        {
+            if (status == MatchStatus && searching == Searching) return;
+            MatchStatus = status ?? "";
+            Searching = searching;
+            MatchStatusChanged?.Invoke();
+        }
+
         /// <summary>Saves the loadout and raises <see cref="Launched"/>. False (nothing saved) when it is not valid.</summary>
         public bool Launch()
         {
-            if (!CanLaunch) return false;
+            if (!CanLaunch || Searching) return false;
             _store?.Save(Selection(FittedFor(Chassis)), SkinId);
             Launched?.Invoke();
             return true;

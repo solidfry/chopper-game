@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using Chopper.Presentation.Bridge;
+using Chopper.Services.Matchmaking;
+using Cysharp.Threading.Tasks;
 using Chopper.Simulation;
 using Chopper.Simulation.Loadout;
 using Chopper.Simulation.Session;
@@ -59,6 +63,11 @@ namespace Chopper.Presentation.Hangar
         private MaterialPropertyBlock _block;
         private Mesh _markerMesh;
         private bool _launching;
+        private IMatchmakingService _matchmaking;
+        private CancellationTokenSource _search;
+
+        /// <summary>Online play: set by the hangar scene's lifetime scope (the root scope's matchmaking service).</summary>
+        public void UseMatchmaking(IMatchmakingService matchmaking) => _matchmaking = matchmaking;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Configure(PresentationBridge presentation, UnityEngine.Camera view, Transform table)
@@ -87,6 +96,8 @@ namespace Chopper.Presentation.Hangar
             }
             _model.Changed += OnChanged;
             _model.Launched += OnLaunched;
+            _model.MatchRequested += OnMatchRequested;
+            _model.SearchCancelled += OnSearchCancelled;
             OnChanged();
             SnapCamera();
         }
@@ -96,6 +107,9 @@ namespace Chopper.Presentation.Hangar
             if (_model == null) return;
             _model.Changed -= OnChanged;
             _model.Launched -= OnLaunched;
+            _model.MatchRequested -= OnMatchRequested;
+            _model.SearchCancelled -= OnSearchCancelled;
+            OnSearchCancelled();
         }
 
         private void OnDestroy()
@@ -363,6 +377,56 @@ namespace Chopper.Presentation.Hangar
             // False when worlds already run (a match scene opened the hangar): just load the scene.
             LocalSession.Start();
             SceneManager.LoadScene(matchScene);
+        }
+
+        private void OnMatchRequested() => FindMatchAsync().Forget();
+
+        private void OnSearchCancelled()
+        {
+            _search?.Cancel();
+        }
+
+        /// <summary>Online: matchmaker ticket → Edgegap server → client-only worlds connect to it → the match scene.</summary>
+        private async UniTaskVoid FindMatchAsync()
+        {
+            if (_matchmaking == null)
+            {
+                _model.SetMatchStatus("ONLINE PLAY IS NOT SET UP (NO MATCHMAKING SERVICE)", false);
+                return;
+            }
+            _search?.Dispose();
+            _search = new CancellationTokenSource();
+            var token = CancellationTokenSource.CreateLinkedTokenSource(_search.Token, destroyCancellationToken).Token;
+            var modules = new List<ushort>();
+            foreach (var module in _model.Fitted) modules.Add(module != null ? module.Id : (ushort)0);
+            var request = new MatchRequest(_settings.MatchQueue, _model.Chassis.Id, modules);
+            var progress = new Progress<MatchmakingStatus>(status => _model.SetMatchStatus(status switch
+            {
+                MatchmakingStatus.ServerStarting => "MATCH FOUND - SERVER STARTING",
+                MatchmakingStatus.Connecting => "CONNECTING",
+                _ => "SEARCHING",
+            }, true));
+
+            try
+            {
+                var assignment = await _matchmaking.FindMatchAsync(request, progress, token);
+                if (!LocalSession.Join(assignment.Address, assignment.Port))
+                {
+                    _model.SetMatchStatus($"CANNOT CONNECT TO {assignment.Address}:{assignment.Port}", false);
+                    return;
+                }
+                _launching = true;
+                SceneManager.LoadScene(matchScene);
+            }
+            catch (OperationCanceledException)
+            {
+                if (this != null) _model.SetMatchStatus("", false);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Matchmaking failed: {e}");
+                if (this != null) _model.SetMatchStatus(e.Message.ToUpperInvariant(), false);
+            }
         }
 
         /// <summary>Wire octahedron (unit size) for empty sockets.</summary>

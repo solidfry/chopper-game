@@ -28,8 +28,8 @@ namespace Chopper.App
             builder.Register<OfflinePlatform>(Lifetime.Singleton).As<IPlatformIdentity>();
 #endif
             builder.Register<UnityAuthService>(Lifetime.Singleton).As<IAuthService>();
-            // TODO: Phase 3 — replace with the Unity Matchmaker + Edgegap allocator implementation.
-            builder.Register<LocalMatchmakingService>(Lifetime.Singleton).As<IMatchmakingService>();
+            // Unity Matchmaker; its queue's pool allocates Edgegap servers (Cloud Code module CloudCode/ChopperAllocator).
+            builder.Register<UnityMatchmakingService>(Lifetime.Singleton).As<IMatchmakingService>();
 
 #if !UNITY_SERVER
             // A dedicated server does not sign in as a player (later: a service account for Cloud Code, Phase 3).

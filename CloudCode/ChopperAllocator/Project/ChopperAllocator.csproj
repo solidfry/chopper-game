@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Cloud Code C# module: Unity Matchmaker allocates match servers on Edgegap through it (see ../README.md). -->
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <AssemblyName>ChopperAllocator</AssemblyName>
+        <RootNamespace>ChopperAllocator</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Com.Unity.Services.CloudCode.Apis" Version="0.0.24" />
+        <PackageReference Include="Com.Unity.Services.CloudCode.Core" Version="0.0.3" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    </ItemGroup>
+
+</Project>

@@ -44,6 +44,8 @@ namespace Chopper.UI.Hangar
         private Toggle _paintView;
         private Label _error;
         private Button _launch;
+        private Button _findMatch;
+        private Label _matchStatus;
         private readonly List<(VisualElement Fill, VisualElement Delta, Label Text)> _bars = new();
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -101,11 +103,15 @@ namespace Chopper.UI.Hangar
             _paintView = _root.Q<Toggle>("paint-view");
             _error = _root.Q<Label>("error");
             _launch = _root.Q<Button>("launch");
+            _findMatch = _root.Q<Button>("find-match");
+            _matchStatus = _root.Q<Label>("match-status");
 
             _skin.choices = new List<string>(_model.SkinNames);
             _skin.RegisterValueChangedCallback(OnSkinChanged);
             _paintView.RegisterValueChangedCallback(OnPaintViewChanged);
             _launch.clicked += OnLaunch;
+            _findMatch.clicked += OnFindMatch;
+            _model.MatchStatusChanged += RefreshMatch;
             Refresh();
             _launch.Focus();
         }
@@ -116,6 +122,8 @@ namespace Chopper.UI.Hangar
             _skin.UnregisterValueChangedCallback(OnSkinChanged);
             _paintView.UnregisterValueChangedCallback(OnPaintViewChanged);
             _launch.clicked -= OnLaunch;
+            _findMatch.clicked -= OnFindMatch;
+            _model.MatchStatusChanged -= RefreshMatch;
             _root = null;
         }
 
@@ -123,7 +131,9 @@ namespace Chopper.UI.Hangar
         {
             var escape = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             var back = Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;
-            if ((escape || back) && _model.Back()) _launch?.Focus();
+            if (!(escape || back)) return;
+            if (_model.Searching) _model.CancelSearch();
+            else if (_model.Back()) _launch?.Focus();
         }
 
         private void Refresh()
@@ -140,7 +150,16 @@ namespace Chopper.UI.Hangar
             _skin.SetEnabled(_model.SkinNames.Count > 0);
             _paintView.SetValueWithoutNotify(_model.PaintView);
             _error.text = _model.Error;
-            _launch.SetEnabled(_model.CanLaunch);
+            RefreshMatch();
+        }
+
+        /// <summary>Launch and find match are off while a search runs; the status line shows what it does.</summary>
+        private void RefreshMatch()
+        {
+            if (_root == null) return;
+            _launch.SetEnabled(_model.CanLaunch && !_model.Searching);
+            _findMatch.SetEnabled(_model.CanLaunch && !_model.Searching);
+            _matchStatus.text = _model.Searching ? $"{_model.MatchStatus}... (ESC = CANCEL)" : _model.MatchStatus;
         }
 
         private void BuildTabs()
@@ -271,5 +290,7 @@ namespace Chopper.UI.Hangar
         private void OnPaintViewChanged(ChangeEvent<bool> evt) => _model.SetPaintView(evt.newValue);
 
         private void OnLaunch() => _model.Launch();
+
+        private void OnFindMatch() => _model.FindMatch();
     }
 }

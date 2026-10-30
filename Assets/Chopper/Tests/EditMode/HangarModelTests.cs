@@ -175,6 +175,30 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void FindMatch_SearchesAndBlocksLaunchUntilItEnds()
+        {
+            var model = new HangarModel(_catalog, null, null, null);
+            var requested = 0;
+            var cancelled = 0;
+            model.MatchRequested += () => requested++;
+            model.SearchCancelled += () => cancelled++;
+
+            Assert.That(model.FindMatch(), Is.True);
+            Assert.That(model.Searching, Is.True);
+            Assert.That(model.FindMatch(), Is.False, "One search at a time.");
+            Assert.That(model.Launch(), Is.False, "No training launch while searching.");
+            Assert.That(requested, Is.EqualTo(1));
+
+            model.CancelSearch();
+            Assert.That(cancelled, Is.EqualTo(1));
+            model.SetMatchStatus("", false);
+            Assert.That(model.Searching, Is.False);
+            Assert.That(model.Launch(), Is.True);
+            model.CancelSearch();
+            Assert.That(cancelled, Is.EqualTo(1), "Nothing to cancel when idle.");
+        }
+
+        [Test]
         public void ChoiceText_RoundTrips()
         {
             var selection = new LoadoutSelection(2, new ushort[] { 10, 0, 20 });

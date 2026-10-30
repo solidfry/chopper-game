@@ -9,8 +9,8 @@ namespace Chopper.Simulation.Session
     /// Starts a match from a menu scene (the hangar): <see cref="ChopperBootstrap"/> gives menus only a local world, so
     /// leaving a menu needs a server and a client world. Makes both, has the server listen and the client connect on
     /// the loopback, and removes the menu's local world. Load the gameplay scene after this: its subscene loads into the
-    /// new worlds. Same result as starting the editor in a gameplay scene.
-    /// TODO: Phase 3 replaces this with the Multiplayer Services session (dedicated server, matchmaker).
+    /// new worlds. Same result as starting the editor in a gameplay scene. <see cref="Join"/> makes only a client world
+    /// that connects to a hosted server (the address the matchmaker gave).
     /// </summary>
     public static class LocalSession
     {
@@ -37,6 +37,31 @@ namespace Chopper.Simulation.Session
             client.EntityManager.SetComponentData(connect, new NetworkStreamRequestConnect { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port) });
 
             World.DefaultGameObjectInjectionWorld = server;
+            return true;
+        }
+
+        /// <summary>
+        /// Online match: makes only a client world and connects it to a hosted server (Edgegap, from the matchmaker),
+        /// and removes the menu's local world. Load the gameplay scene after this. False if netcode worlds already run or
+        /// the address is not valid (nothing is changed then).
+        /// </summary>
+        public static bool Join(string address, ushort port)
+        {
+            foreach (var world in World.All)
+                if (world.IsServer() || world.IsClient()) return false;
+            if (!NetworkEndpoint.TryParse(address, port, out var endpoint)) return false;
+
+            var menuWorlds = new List<World>();
+            foreach (var world in World.All)
+                if ((world.Flags & WorldFlags.Game) == WorldFlags.Game) menuWorlds.Add(world);
+
+            ClientServerBootstrap.AutoConnectPort = 0;
+            var client = ClientServerBootstrap.CreateClientWorld("ClientWorld");
+            foreach (var world in menuWorlds) world.Dispose();
+
+            var connect = client.EntityManager.CreateEntity(typeof(NetworkStreamRequestConnect));
+            client.EntityManager.SetComponentData(connect, new NetworkStreamRequestConnect { Endpoint = endpoint });
+            World.DefaultGameObjectInjectionWorld = client;
             return true;
         }
 
