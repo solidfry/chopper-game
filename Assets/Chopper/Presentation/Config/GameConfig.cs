@@ -40,6 +40,10 @@ namespace Chopper.Presentation.Config
         [SerializeField, Tooltip("Retro HUD look: presets, intensities, gameplay reactions. Empty = plain UI HUD.")]
         private HudLookSettings hudLook;
         [SerializeField, Tooltip("Hangar screen (loadout and skin). Setup step 7 links it.")] private VisualTreeAsset hangarLayout;
+        [SerializeField, Tooltip("Live cockpit screens: the pages drawn on the cockpit displays.")]
+        private VisualTreeAsset cockpitScreensLayout;
+        [SerializeField, Tooltip("Draws the cockpit screen pages into the render texture the kit's screen material reads.")]
+        private PanelSettings cockpitScreensPanel;
 
         [Header("Hangar")]
         [SerializeField, Tooltip("Hangar wireframe look and camera. Setup step 7 links it.")] private HangarSettings hangar;
@@ -55,6 +59,8 @@ namespace Chopper.Presentation.Config
         public VisualTreeAsset OptionsLayout => optionsLayout;
         public HudLookSettings HudLook => hudLook;
         public VisualTreeAsset HangarLayout => hangarLayout;
+        public VisualTreeAsset CockpitScreensLayout => cockpitScreensLayout;
+        public PanelSettings CockpitScreensPanel => cockpitScreensPanel;
         public HangarSettings Hangar => hangar;
 
         public void CollectProblems(List<string> problems)
@@ -68,6 +74,8 @@ namespace Chopper.Presentation.Config
             Require(hudLayout, "HUD layout", problems);
             Require(optionsLayout, "options layout", problems);
             Require(hudLook, "HUD look settings", problems);
+            Require(cockpitScreensLayout, "cockpit screens layout", problems);
+            Require(cockpitScreensPanel, "cockpit screens panel settings", problems);
             Require(skins, "skin library (press '5. Import part kits')", problems);
             Require(hangar, "hangar settings (press '7. Build hangar')", problems);
             Require(hangarLayout, "hangar layout (press '7. Build hangar')", problems);
@@ -95,6 +103,13 @@ namespace Chopper.Presentation.Config
             hudLook = look;
             optionsLayout = options;
             camera = cameraSettings;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetCockpitScreens(VisualTreeAsset layout, PanelSettings panel)
+        {
+            cockpitScreensLayout = layout;
+            cockpitScreensPanel = panel;
         }
 
         /// <summary>Editor only: used by the kit import step.</summary>

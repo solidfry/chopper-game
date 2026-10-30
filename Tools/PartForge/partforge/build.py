@@ -66,6 +66,7 @@ def generate(style, kit=None):
     export_collection = _collection(scene, EXPORT_COLLECTION)
     images = palette.make_images(kit, style.get("palette"))
     material = palette.make_material(kit, images)
+    screen_material = palette.make_screen_material(kit)
     specs = chassis_specs(style)
 
     built = {}
@@ -81,6 +82,7 @@ def generate(style, kit=None):
         obj.data.materials.append(material)
         for polygon in obj.data.polygons:
             polygon.material_index = 0
+        palette.apply_screens(obj, screen_material)
         # Socket names repeat across parts, so they carry the part name here; export() strips it.
         for slot, index, position, scale in part.sockets:
             empty = bpy.data.objects.new(f"{part.name}:SOCKET_{slot}_{index}", None)
@@ -165,7 +167,10 @@ def export(state, out_dir):
     texture.bake(sets, state.style, names)
     skin_list = skins.every(state.style)
     runtime_dir = os.path.join(CACHE_DIR, state.kit, "runtime")
-    set_entries, skin_entries = texture.write(state.kit, sets, state.style, skin_list, texture_dir, runtime_dir)
+    # The palette maps first: the texture writer removes old maps of the kit, and keeps these.
+    palette_files = [os.path.basename(path) for path in palette.save_images(state.images, texture_dir)]
+    set_entries, skin_entries = texture.write(state.kit, sets, state.style, skin_list, texture_dir, runtime_dir,
+                                              keep=palette_files)
     state.texture_folder, state.skins, state.sets = texture_dir, skin_list, sets
     state.runtime_folder = runtime_dir
     set_of = {}
@@ -177,7 +182,6 @@ def export(state, out_dir):
             set_of[obj.name] = texture_set.name
         texture_set.surface = None  # large; not needed after the maps are written
     # Parts in no set (cockpits) keep the palette material; the palette maps go out with the kit.
-    palette_files = [os.path.basename(path) for path in palette.save_images(state.images, texture_dir)]
     manifest = {
         "kit": state.kit,
         "generator": "Tools/PartForge (Blender)",
@@ -190,6 +194,7 @@ def export(state, out_dir):
         "palette": {"material": palette.material_name(state.kit),
                     **{key: f"{os.path.basename(texture_dir)}/{name}"
                        for key, name in zip(("colour", "emission", "metalSmooth"), palette_files)}},
+        "screen": {"material": palette.screen_material_name(state.kit), "pages": list(palette.SCREEN_PAGES)},
         "skins": skin_entries,
         "runtime": {"tableWidth": runtime.TABLE_WIDTH, "styleWear": runtime.style_wear(state.style),
                     "patterns": list(runtime.PATTERNS), "coverTable": list(runtime.COVER_TABLE)},

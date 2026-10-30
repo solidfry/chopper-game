@@ -65,14 +65,17 @@ namespace Chopper.Presentation.Hud
             model.ClearChopper();
         }
 
-        /// <summary>Bank angle for the horizon line, and turn rates (chopper axes) for the frame sway.</summary>
+        /// <summary>Bank and pitch for the horizon, heading for the compass, turn rates (chopper axes) for the frame sway.</summary>
         private static void UpdateAttitude(ChopperHudModel model, in LocalToWorld pose, in PhysicsVelocity velocity, in PhysicsMass mass)
         {
             var worldUp = math.up();
             var roll = math.degrees(math.atan2(math.dot(pose.Right, worldUp), math.dot(pose.Up, worldUp)));
             // Same conversion as the flight model: angular velocity is stored in inertia space.
             var localRate = math.degrees(math.mul(mass.InertiaOrientation, velocity.Angular));
-            model.UpdateAttitude(roll, yawRate: localRate.y, pitchRate: localRate.x);
+            var forward = pose.Forward;
+            var pitch = math.degrees(math.asin(math.clamp(math.dot(forward, worldUp), -1f, 1f)));
+            var heading = math.degrees(math.atan2(forward.x, forward.z));
+            model.UpdateAttitude(roll, yawRate: localRate.y, pitchRate: localRate.x, pitchDegrees: pitch, headingDegrees: heading);
         }
 
         private static void UpdateAim(ChopperHudModel model, in HitscanWeaponConfig gun, in LocalToWorld pose)

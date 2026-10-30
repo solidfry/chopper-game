@@ -67,6 +67,9 @@ class Builder:
     def __init__(self):
         self.bm = bmesh.new()
         self.swatch = self.bm.faces.layers.int.new("swatch")
+        # Live cockpit screens (palette.apply_screens): the page a face shows (0 = none) and its atlas UVs.
+        self.screen = self.bm.faces.layers.int.new("screen")
+        self.screen_uv = self.bm.loops.layers.uv.new("Screen")
         self._surface = None
         self._covered = []
         self._everything = None
@@ -78,6 +81,14 @@ class Builder:
     def _face(self, verts, swatch):
         face = self.bm.faces.new(verts)
         face[self.swatch] = swatch
+        return face
+
+    def screen_quad(self, points, uvs, page, swatch):
+        """One flat quad that shows a live page of the cockpit screen atlas (palette.SCREEN_PAGES)."""
+        face = self._face(self._verts(points), swatch)
+        face[self.screen] = page + 1
+        for loop, uv in zip(face.loops, uvs):
+            loop[self.screen_uv].uv = uv
         return face
 
     # -- surface placement ----------------------------------------------------------------------------------------

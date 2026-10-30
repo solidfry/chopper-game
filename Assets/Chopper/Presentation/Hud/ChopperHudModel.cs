@@ -51,6 +51,8 @@ namespace Chopper.Presentation.Hud
         private bool _damageIndicatorVisible;
         private float _damageDirectionDegrees;
         private float _rollDegrees;
+        private float _pitchDegrees;
+        private float _headingDegrees;
         private Vector2 _sway;
         private Vector2 _swayTarget;
         private Vector2 _swaySmoothed;
@@ -266,6 +268,22 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _rollDegrees, value, nameof(RollDegrees));
         }
 
+        /// <summary>Nose above the horizon, degrees (negative = nose down; steps of 0.5°). Cockpit flight display.</summary>
+        [CreateProperty]
+        public float PitchDegrees
+        {
+            get => _pitchDegrees;
+            private set => Set(ref _pitchDegrees, value, nameof(PitchDegrees));
+        }
+
+        /// <summary>Compass heading, whole degrees 0..359 (0 = world +Z). Cockpit flight display.</summary>
+        [CreateProperty]
+        public float HeadingDegrees
+        {
+            get => _headingDegrees;
+            private set => Set(ref _headingDegrees, value, nameof(HeadingDegrees));
+        }
+
         /// <summary>Flight frame offset in pixels (x right, y down). Lags behind turns, so the HUD feels kinetic.</summary>
         [CreateProperty]
         public Vector2 Sway
@@ -277,9 +295,13 @@ namespace Chopper.Presentation.Hud
         /// <param name="rollDegrees">Positive = rolled left.</param>
         /// <param name="yawRate">Degrees per second, positive = nose right.</param>
         /// <param name="pitchRate">Degrees per second, positive = nose down.</param>
-        public void UpdateAttitude(float rollDegrees, float yawRate, float pitchRate)
+        /// <param name="pitchDegrees">Nose above the horizon (negative = down).</param>
+        /// <param name="headingDegrees">Compass heading, any range (wrapped to 0..359).</param>
+        public void UpdateAttitude(float rollDegrees, float yawRate, float pitchRate, float pitchDegrees = 0f, float headingDegrees = 0f)
         {
             RollDegrees = MathF.Round(rollDegrees * 2f) / 2f;
+            PitchDegrees = MathF.Round(pitchDegrees * 2f) / 2f;
+            HeadingDegrees = (MathF.Round(headingDegrees) % 360f + 360f) % 360f;
             // The frame swings against the turn, like a head-up display on a moving head.
             _swayTarget = new Vector2(
                 Math.Clamp(-yawRate * SwayPerDegreePerSecond, -MaxSway, MaxSway),

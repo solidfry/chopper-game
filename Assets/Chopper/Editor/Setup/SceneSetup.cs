@@ -2,6 +2,7 @@ using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Config;
 using Chopper.UI.Audio;
+using Chopper.UI.Cockpit;
 using Chopper.UI.Hud;
 using Chopper.UI.Options;
 using UnityEditor;
@@ -54,6 +55,7 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(hud);
             EditorUtility.SetDirty(sounds);
             EnsureOptions(config, bridge);
+            EnsureCockpitScreens(config, bridge);
             EditorSceneManager.MarkSceneDirty(bridge.gameObject.scene);
             Selection.activeGameObject = bridge.gameObject;
         }
@@ -107,6 +109,33 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(panel);
             EditorUtility.SetDirty(view);
             EditorUtility.SetDirty(sounds);
+        }
+
+        /// <summary>Live cockpit screens: a panel renderer that draws into the screens' render texture (its own panel settings).</summary>
+        private static void EnsureCockpitScreens(GameConfig config, PresentationBridge bridge)
+        {
+            var view = Object.FindAnyObjectByType<CockpitScreensView>(FindObjectsInactive.Include);
+            GameObject go;
+            if (view != null)
+            {
+                go = view.gameObject;
+            }
+            else
+            {
+                go = new GameObject("Cockpit Screens");
+                Undo.RegisterCreatedObjectUndo(go, "Add Cockpit Screens");
+            }
+
+            var panel = EnsurePanelRenderer(go, config != null ? config.CockpitScreensPanel : null,
+                config != null ? config.CockpitScreensLayout : null, sortingOrder: 0);
+
+            view = go.GetComponent<CockpitScreensView>();
+            if (view == null) view = Undo.AddComponent<CockpitScreensView>(go);
+            Undo.RecordObject(view, "Configure Cockpit Screens");
+            view.SetBridge(bridge);
+
+            EditorUtility.SetDirty(panel);
+            EditorUtility.SetDirty(view);
         }
 
         /// <summary>

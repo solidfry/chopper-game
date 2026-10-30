@@ -61,6 +61,11 @@ namespace Chopper.Editor.Setup
                     config.Camera != null ? config.Camera : cameraSettings);
             }
 
+            if (config.CockpitScreensLayout == null || config.CockpitScreensPanel == null)
+                config.SetCockpitScreens(
+                    config.CockpitScreensLayout != null ? config.CockpitScreensLayout : CockpitScreenAssets.Layout,
+                    config.CockpitScreensPanel != null ? config.CockpitScreensPanel : CockpitScreenAssets.EnsurePanel(config.PanelSettings));
+
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             return config;

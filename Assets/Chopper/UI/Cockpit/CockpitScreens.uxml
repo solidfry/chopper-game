@@ -1,0 +1,49 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
+  <Style src="CockpitScreens.uss" />
+  <!-- Live cockpit screens (CockpitScreensView). Drawn into a 1536 x 512 render texture: three square pages, left to
+       right in PartForge's SCREEN_PAGES order. Wide displays show only the middle band of a page (about y 110..400),
+       so the main readouts sit there. -->
+  <ui:VisualElement name="screens" class="screens" picking-mode="Ignore">
+
+    <ui:VisualElement name="flight" class="page page--flight" picking-mode="Ignore">
+      <cockpit:AttitudeIndicator name="attitude" class="attitude" />
+      <ui:Label text="FLT" class="page__title chopper-title" />
+      <ui:Label name="heading" text="HDG 000" class="flight__heading" />
+      <ui:VisualElement class="flight__readout flight__readout--left" picking-mode="Ignore">
+        <ui:Label text="SPD" class="readout__label" />
+        <ui:Label name="speed" text="0" class="readout__value" />
+      </ui:VisualElement>
+      <ui:VisualElement class="flight__readout flight__readout--right" picking-mode="Ignore">
+        <ui:Label text="ALT" class="readout__label" />
+        <ui:Label name="altitude" text="0" class="readout__value" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="tactical" class="page page--tactical" picking-mode="Ignore">
+      <cockpit:RadarScope name="radar" class="radar" range="500" />
+      <ui:Label text="TAC" class="page__title chopper-title" />
+      <ui:Label text="500 M" class="tactical__range" />
+      <ui:Label name="lock" text="SCAN" class="tactical__lock chopper-title" />
+      <ui:Label name="threat" text="" class="tactical__threat chopper-title" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="systems" class="page page--systems" picking-mode="Ignore">
+      <ui:Label text="SYS" class="page__title chopper-title" />
+      <ui:VisualElement class="systems__body" picking-mode="Ignore">
+        <ui:VisualElement name="hull-row" class="systems__row" picking-mode="Ignore">
+          <ui:Label text="HULL" class="systems__label" />
+          <ui:Label name="hull-value" text="0" class="systems__value" />
+        </ui:VisualElement>
+        <cockpit:SegmentBar name="hull" class="systems__bar systems__bar--hull" segments="10" />
+        <ui:VisualElement class="systems__row" picking-mode="Ignore">
+          <ui:Label text="BOOST" class="systems__label" />
+        </ui:VisualElement>
+        <cockpit:SegmentBar name="boost" class="systems__bar systems__bar--boost" segments="10" />
+        <ui:Label name="weapon" text="" class="systems__weapon chopper-title" />
+        <ui:Label name="flares" text="FLR" class="systems__flares" />
+      </ui:VisualElement>
+      <ui:Label name="warning" text="" class="systems__warning chopper-title" />
+    </ui:VisualElement>
+
+  </ui:VisualElement>
+</ui:UXML>

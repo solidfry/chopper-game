@@ -9,6 +9,7 @@ import random
 from mathutils import Matrix, Vector
 
 from .geo import FORM, Builder, _rounded_rect, chamfer_ring, rot_x, rot_y, rot_z
+from .palette import SCREEN_OF, screen_uvs
 from .palette import swatch as S
 
 
@@ -173,6 +174,17 @@ def _beam(b, a, c, section, swatch):
     b.box(tuple((a + c) / 2), (section[0], section[1], (c - a).length), swatch, rotation=_basis(x, z.cross(x), z))
 
 
+def _live(face, w, h, content):
+    """The display's glass shows a live page (palette.SCREEN_OF) instead of baked graphics; False if it has none."""
+    page = SCREEN_OF.get(content)
+    if page is None:
+        return False
+    top = face.raised(0.0005)
+    points = [top.at(-w / 2, -h / 2), top.at(w / 2, -h / 2), top.at(w / 2, h / 2), top.at(-w / 2, h / 2)]
+    face.b.screen_quad(points, screen_uvs(page, w, h), page, C("glass"))
+    return True
+
+
 def _screen(b, centre, rotation, w, h, content, glow, rng, buttons=True):
     """A CRT display: bezel housing, dark glass, soft-key buttons down both sides (an MFD) and glowing graphics."""
     b.box(centre, (w + (0.07 if buttons else 0.03), h + 0.05, 0.03), C("carbon"), rotation=rotation)
@@ -186,11 +198,13 @@ def _screen(b, centre, rotation, w, h, content, glow, rng, buttons=True):
                           C("hull_light") if (i + side) % 3 else C("gunmetal"))
         for i in range(4):
             bezel.box((i - 1.5) * w / 4.5, h / 2 + 0.013, (0.012, 0.006, 0.004), glow if i == 0 else C("gunmetal"))
-    _screen_graphics(bezel.raised(0.004 - EMBED), w, h, content, glow, rng)
+    glass = bezel.raised(0.004 - EMBED)
+    if not _live(glass, w, h, content):
+        _screen_graphics(glass, w, h, content, glow, rng)
 
 
 def _screen_graphics(face, w, h, kind, glow, rng):
-    """Placeholder graphics in the screen's glow colour (the live feeds replace them later)."""
+    """Baked graphics in the screen's glow colour, for displays with no live page (palette.SCREEN_OF)."""
     alert, line = C("warning"), face.line
     if kind in ("horizon", "rear"):
         bank = math.radians(rng.uniform(-14, 14))
@@ -370,8 +384,9 @@ def _display(face, w, h, content, glow, rng, keys=5):
         for i in range(keys):
             face.box(side * (w / 2 + 0.021), (i - (keys - 1) / 2) * h / keys, (0.014, 0.011, 0.006), C("hull_light"))
     graphics = face.raised(0.003 - EMBED)
-    _screen_graphics(graphics, w, h, content, glow, rng)
-    _vector_frame(graphics, w, h, glow)
+    if not _live(graphics, w, h, content):
+        _screen_graphics(graphics, w, h, content, glow, rng)
+        _vector_frame(graphics, w, h, glow)
 
 
 def _vector_frame(face, w, h, glow):

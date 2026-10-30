@@ -132,6 +132,17 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void UpdateAttitude_PitchRoundsAndHeadingWraps()
+        {
+            var model = new ChopperHudModel();
+            model.UpdateAttitude(0f, 0f, 0f, pitchDegrees: -7.8f, headingDegrees: -90.4f);
+            Assert.That(model.PitchDegrees, Is.EqualTo(-8f));
+            Assert.That(model.HeadingDegrees, Is.EqualTo(270f));
+            model.UpdateAttitude(0f, 0f, 0f, headingDegrees: 359.7f);
+            Assert.That(model.HeadingDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void Sway_LagsBehindTurnsAndStaysWithinLimit()
         {
             var model = new ChopperHudModel();

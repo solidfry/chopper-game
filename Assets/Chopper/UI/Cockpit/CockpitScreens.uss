@@ -1,0 +1,219 @@
+/* Live cockpit screens: three 512 px pages in one render texture (see CockpitScreens.uxml). One colour per page,
+   from the style guide: flight = Dream Cyan, tactical = Lightning Yellow, systems = Console Green; alerts Screamer Red.
+   Text is large: a page is 15-25 cm wide in the cockpit. */
+
+.screens {
+  flex-direction: row;
+  width: 1536px;
+  height: 512px;
+}
+
+.screens--hidden {
+  display: none;
+}
+
+.page {
+  width: 512px;
+  height: 512px;
+  overflow: hidden;
+  border-width: 3px;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.page__title {
+  position: absolute;
+  top: 116px;
+  left: 20px;
+  font-size: 24px;
+  letter-spacing: 4px;
+  opacity: 0.7;
+}
+
+/* ---- Flight ---- */
+
+.page--flight {
+  color: var(--chopper-cyan);
+  border-color: rgba(0, 240, 255, 0.25);
+}
+
+.attitude {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 512px;
+  height: 512px;
+  overflow: hidden;
+  --attitude-line: var(--chopper-cyan);
+  --attitude-ground: rgba(0, 240, 255, 0.07);
+  --attitude-mark: var(--chopper-yellow);
+}
+
+.flight__heading {
+  position: absolute;
+  top: 116px;
+  right: 20px;
+  font-size: 30px;
+  -unity-text-align: middle-right;
+}
+
+.flight__readout {
+  position: absolute;
+  top: 300px;
+  width: 150px;
+  padding: 4px 10px;
+  background-color: rgba(28, 40, 41, 0.85);
+  border-width: 2px;
+  border-color: var(--chopper-cyan);
+}
+
+.flight__readout--left {
+  left: 14px;
+}
+
+.flight__readout--right {
+  right: 14px;
+}
+
+.readout__label {
+  font-size: 18px;
+  letter-spacing: 3px;
+  opacity: 0.75;
+  padding: 0;
+  margin: 0;
+}
+
+.readout__value {
+  font-size: 46px;
+  -unity-text-align: middle-right;
+  padding: 0;
+  margin: 0;
+}
+
+/* ---- Tactical ---- */
+
+.page--tactical {
+  color: var(--chopper-yellow);
+  border-color: rgba(255, 223, 107, 0.25);
+}
+
+.radar {
+  position: absolute;
+  left: 106px;
+  top: 106px;
+  width: 300px;
+  height: 300px;
+  --radar-line: var(--chopper-yellow);
+  --radar-air: var(--chopper-red);
+  --radar-ground: var(--chopper-yellow);
+  --radar-alert: var(--chopper-red);
+}
+
+.tactical__range {
+  position: absolute;
+  top: 116px;
+  right: 20px;
+  font-size: 22px;
+  opacity: 0.7;
+}
+
+.tactical__lock {
+  position: absolute;
+  left: 20px;
+  top: 360px;
+  font-size: 26px;
+  letter-spacing: 2px;
+}
+
+.tactical__lock--locked {
+  color: var(--chopper-red);
+}
+
+.tactical__threat {
+  position: absolute;
+  right: 20px;
+  top: 360px;
+  font-size: 26px;
+  color: var(--chopper-red);
+  -unity-text-align: middle-right;
+}
+
+/* ---- Systems ---- */
+
+.page--systems {
+  color: var(--chopper-green);
+  border-color: rgba(0, 255, 148, 0.25);
+}
+
+.systems__body {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 150px;
+}
+
+.systems__row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.systems__label {
+  font-size: 22px;
+  letter-spacing: 3px;
+  opacity: 0.8;
+  padding: 0;
+  margin: 0;
+}
+
+.systems__value {
+  font-size: 40px;
+  padding: 0;
+  margin: 0;
+}
+
+.systems__bar {
+  height: 34px;
+  margin: 6px 0 14px 0;
+  --bar-fill: var(--chopper-green);
+  --bar-track: rgba(0, 255, 148, 0.14);
+}
+
+.systems__bar--boost {
+  --bar-fill: var(--chopper-cyan);
+  --bar-track: rgba(0, 240, 255, 0.14);
+}
+
+.systems--low .systems__bar--hull {
+  --bar-fill: var(--chopper-red);
+  --bar-track: rgba(255, 66, 70, 0.18);
+}
+
+.systems--low .systems__value {
+  color: var(--chopper-red);
+}
+
+.systems__weapon {
+  font-size: 24px;
+  letter-spacing: 1px;
+  margin-top: 4px;
+  padding: 0;
+}
+
+.systems__flares {
+  font-size: 22px;
+  opacity: 0.45;
+  padding: 0;
+}
+
+.systems__flares--ready {
+  opacity: 1;
+}
+
+.systems__warning {
+  position: absolute;
+  right: 20px;
+  top: 112px;
+  font-size: 24px;
+  color: var(--chopper-red);
+  -unity-text-align: middle-right;
+}

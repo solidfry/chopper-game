@@ -20,6 +20,8 @@ namespace Chopper.Presentation.Hud
         public bool OnScreen;
         /// <summary>Off screen only: arrow direction, clockwise from up (0 = up, 90 = right).</summary>
         public float EdgeAngleDegrees;
+        /// <summary>Direction from your chopper, clockwise from its nose in the horizontal plane (-180..180). Cockpit radar.</summary>
+        public float BearingDegrees;
         /// <summary>Metres, rounded to <see cref="WorldMarkerModel.DistanceStep"/>.</summary>
         public int Distance;
         /// <summary>0 to 1; below 0 = no bar (too far to read).</summary>

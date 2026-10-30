@@ -46,6 +46,66 @@ def swatch(name):
     return INDEX[name]
 
 
+# Live cockpit screens: one render texture in the game holds these pages side by side (square tiles, left to right).
+# A display shows the page for its placeholder content; other contents keep their baked graphics.
+SCREEN_PAGES = ("Flight", "Tactical", "Systems")
+SCREEN_OF = {"horizon": 0, "radar": 1, "map": 1, "bars": 2, "text": 2}
+
+
+def screen_uvs(page, w, h):
+    """UVs (bottom-left, bottom-right, top-right, top-left) of a w x h display in its page tile: the middle of the
+    square page, cut to the display's shape (a wide display shows the middle band, a tall one the middle column)."""
+    du = 1.0 / len(SCREEN_PAGES)
+    aspect = w / h
+    sx, sy = (1.0, 1.0 / aspect) if aspect >= 1.0 else (aspect, 1.0)
+    u0, u1 = du * (page + 0.5 - sx / 2), du * (page + 0.5 + sx / 2)
+    v0, v1 = 0.5 - sy / 2, 0.5 + sy / 2
+    return [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+
+
+def screen_material_name(kit_name):
+    return f"{kit_name}_Screen"
+
+
+def make_screen_material(kit_name):
+    """Live screens: the game draws the pages on them (Unity material <kit>_Screen). Here a dark glowing stand-in."""
+    name = screen_material_name(kit_name)
+    old = bpy.data.materials.get(name)
+    if old is not None:
+        bpy.data.materials.remove(old)
+    material = bpy.data.materials.new(name)
+    material.use_nodes = True
+    bsdf = material.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (0.01, 0.03, 0.03, 1.0)
+    bsdf.inputs["Emission Color"].default_value = (0.0, 0.35, 0.2, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = 1.0
+    bsdf.inputs["Roughness"].default_value = 0.1
+    material.diffuse_color = (0.0, 0.35, 0.2, 1.0)
+    return material
+
+
+def apply_screens(obj, material):
+    """Faces tagged as live screens (geo.Builder.screen_quad) get the screen material (slot 1) and their atlas UVs
+    in UV0. Removes the builder's screen layers from every part."""
+    mesh = obj.data
+    attribute = mesh.attributes.get("screen")
+    layer = mesh.uv_layers.get("Screen")
+    pages = [poly.index for poly in mesh.polygons if attribute is not None and attribute.data[poly.index].value > 0]
+    if pages:
+        base = mesh.uv_layers["UVMap"]
+        mesh.materials.append(material)
+        for index in pages:
+            poly = mesh.polygons[index]
+            poly.material_index = 1
+            for loop_index in poly.loop_indices:
+                base.data[loop_index].uv = layer.data[loop_index].uv
+    if layer is not None:
+        mesh.uv_layers.remove(layer)
+    if attribute is not None:
+        mesh.attributes.remove(mesh.attributes["screen"])
+    return bool(pages)
+
+
 def uv_of(index):
     """Centre of a swatch cell in UV space (v = 0 at the bottom)."""
     col, row = index % GRID, index // GRID

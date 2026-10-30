@@ -50,7 +50,7 @@ namespace Chopper.Presentation.Hud
                          .WithEntityAccess())
             {
                 model.Begin();
-                AddMarkers(model, camera, pose.ValueRO.Position, targetLock.ValueRO.Target);
+                AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
                 model.End();
                 return;
@@ -59,8 +59,9 @@ namespace Chopper.Presentation.Hud
             model.Clear();
         }
 
-        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, Entity lockTarget)
+        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, Entity lockTarget)
         {
+            var heading = math.atan2(forward.x, forward.z);
             _candidates.Clear();
             foreach (var (targetable, health, pose, entity) in SystemAPI
                          .Query<RefRO<Targetable>, RefRO<Health>, RefRO<LocalToWorld>>()
@@ -80,6 +81,7 @@ namespace Chopper.Presentation.Hud
                     Viewport = viewport,
                     OnScreen = onScreen,
                     EdgeAngleDegrees = angle,
+                    BearingDegrees = Bearing(pose.ValueRO.Position - position, heading),
                     Distance = (int)math.round(distance / WorldMarkerModel.DistanceStep) * WorldMarkerModel.DistanceStep,
                     HealthFraction = distance <= HealthBarRange && max > 0f ? math.saturate(health.ValueRO.Current / max) : -1f,
                     IsLockTarget = entity == lockTarget,
@@ -89,6 +91,13 @@ namespace Chopper.Presentation.Hud
             _candidates.Sort((a, b) => a.DistanceSq.CompareTo(b.DistanceSq));
             foreach (var candidate in _candidates)
                 if (!model.Add(candidate.Marker)) break;
+        }
+
+        /// <summary>Clockwise from the nose in the horizontal plane, degrees -180..180.</summary>
+        private static float Bearing(float3 offset, float heading)
+        {
+            var angle = math.degrees(math.atan2(offset.x, offset.z) - heading);
+            return (angle % 360f + 540f) % 360f - 180f;
         }
 
         private void UpdateLead(WorldMarkerModel model, UnityEngine.Camera camera, Entity self, in LocalToWorld pose, float3 velocity,

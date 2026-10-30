@@ -30,6 +30,8 @@ namespace Chopper.Editor.Setup
         public const string PaletteSet = "Palette";
         /// <summary>Glow of the palette material's lit cells (HDR multiplier, for bloom).</summary>
         private const float PaletteGlow = 2.5f;
+        /// <summary>The live cockpit screens' shader (Presentation/Visuals/CockpitScreen.shader).</summary>
+        public const string ScreenShader = "Chopper/CockpitScreen";
 
         [Serializable]
         internal sealed class Manifest
@@ -37,6 +39,7 @@ namespace Chopper.Editor.Setup
             public string kit;
             public TextureSetInfo[] textureSets;
             public PaletteInfo palette;
+            public ScreenInfo screen;
             public SkinInfo[] skins;
             public PartInfo[] parts;
         }
@@ -51,6 +54,17 @@ namespace Chopper.Editor.Setup
             public string colour;
             public string emission;
             public string metalSmooth;
+        }
+
+        /// <summary>Live cockpit screens: faces of palette parts with this material show the screen pages
+        /// (the cockpit screens view draws them into a render texture; <see cref="CockpitScreenAssets"/>).</summary>
+        [Serializable]
+        internal sealed class ScreenInfo
+        {
+            /// <summary>The material name in the models (remapped to the screen material).</summary>
+            public string material;
+            /// <summary>Page names, left to right in the screen atlas.</summary>
+            public string[] pages;
         }
 
         [Serializable]
@@ -179,6 +193,36 @@ namespace Chopper.Editor.Setup
 
         private static string PaletteMaterialPath(string folder, Manifest manifest) => $"{folder}/Materials/{manifest.kit}_Palette.mat";
 
+        private static string ScreenMaterialPath(string folder, Manifest manifest) => $"{folder}/Materials/{manifest.kit}_Screen.mat";
+
+        /// <summary>The live screens' material: the screen shader reads the pages from a global texture, so one material
+        /// serves every cockpit. Null when the kit has no live screens or the shader is missing.</summary>
+        private static Material EnsureScreenMaterial(string folder, Manifest manifest)
+        {
+            if (string.IsNullOrEmpty(manifest.screen?.material)) return null;
+            var shader = Shader.Find(ScreenShader);
+            if (shader == null)
+            {
+                Debug.LogWarning($"Setup: shader {ScreenShader} not found; cockpit screens stay blank.");
+                return null;
+            }
+            var path = ScreenMaterialPath(folder, manifest);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = Path.GetFileNameWithoutExtension(path) };
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else if (material.shader != shader)
+            {
+                material.shader = shader;
+            }
+            material.SetTexture("_ScreenTex", CockpitScreenAssets.EnsureTexture());
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         /// <summary>
         /// URP Lit on the palette maps: point filtered, no mipmaps (each face samples the centre of one 8-pixel cell, so
         /// colours stay exact at any distance), emission on. Rebuilt from the maps every time (no hand edits to keep).
@@ -279,6 +323,7 @@ namespace Chopper.Editor.Setup
             // Models: rigid props, material remapped to their texture set's runtime skin material (the default skin's
             // baked material until the shader graph exists); palette parts (cockpits) to the palette material.
             var paletteMaterial = EnsurePaletteMaterial(folder, manifest);
+            var screenMaterial = EnsureScreenMaterial(folder, manifest);
             foreach (var part in manifest.parts ?? Array.Empty<PartInfo>())
             {
                 if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
@@ -309,6 +354,16 @@ namespace Chopper.Editor.Setup
                 {
                     importer.AddRemap(source, material);
                     changed = true;
+                }
+                // Cockpits: the live screen faces have their own material.
+                if (onPalette && screenMaterial != null)
+                {
+                    var screen = new AssetImporter.SourceAssetIdentifier(typeof(Material), manifest.screen.material);
+                    if (!importer.GetExternalObjectMap().TryGetValue(screen, out var mappedScreen) || mappedScreen != screenMaterial)
+                    {
+                        importer.AddRemap(screen, screenMaterial);
+                        changed = true;
+                    }
                 }
                 if (changed) importer.SaveAndReimport();
             }
