@@ -54,9 +54,35 @@ namespace Chopper.Presentation.Camera
         [Tooltip("Degrees.")] public float NoiseAmplitude;
         [Tooltip("Cycles per second.")] public float NoiseFrequency = 1f;
 
-        [Header("Weight")]
-        [Range(0f, 1f), Tooltip("How much of the inertia lag (chopper pulls away when it speeds up) and the boost rumble this view gets. 1 = all.")]
+        [Header("Feel (this view's share of the shared effects; 1 = all)")]
+        [Range(0f, 1f), Tooltip("Inertia lag: the chopper pulls away when it speeds up. Keep near 0 in a cockpit (the eye is fixed to the seat).")]
         public float Inertia = 1f;
+        [Tooltip("Extra field of view at full boost, degrees.")]
+        public float BoostFieldOfView = 14f;
+        [Range(0f, 1f), Tooltip("Engine rumble while boosting.")]
+        public float Rumble = 1f;
+        [Range(0f, 1f), Tooltip("Shake from hits and the boost kick.")]
+        public float Shake = 1f;
+        [Range(0f, 1f), Tooltip("Speed and boost post effects (colour split, vignette, flash) and speed lines.")]
+        public float Effects = 1f;
+
+        /// <summary>The feel values of two views mixed (view blends).</summary>
+        public static ViewFeel Mix(CameraView from, CameraView to, float t) => new()
+        {
+            Inertia = Mathf.Lerp(from?.Inertia ?? to.Inertia, to.Inertia, t),
+            Rumble = Mathf.Lerp(from?.Rumble ?? to.Rumble, to.Rumble, t),
+            Shake = Mathf.Lerp(from?.Shake ?? to.Shake, to.Shake, t),
+            Effects = Mathf.Lerp(from?.Effects ?? to.Effects, to.Effects, t),
+        };
+    }
+
+    /// <summary>How much of the shared camera effects the current view (or blend) gets.</summary>
+    public struct ViewFeel
+    {
+        public float Inertia;
+        public float Rumble;
+        public float Shake;
+        public float Effects;
     }
 
     /// <summary>
@@ -75,13 +101,17 @@ namespace Chopper.Presentation.Camera
                 Name = "Chase", Kind = CameraViewKind.Chase, Offset = new Vector3(0f, 4.5f, -15f), LookAhead = 25f,
                 FieldOfView = 65f, MaxFieldOfView = 85f, NearClip = 0.3f, HeadingSharpness = 8f, RollFollow = 0.85f,
                 RollSharpness = 4f, PullBack = 0.3f, NoiseAmplitude = 0.15f, NoiseFrequency = 0.6f, Inertia = 1f,
+                BoostFieldOfView = 14f, Rumble = 1f, Shake = 1f, Effects = 1f,
             },
             new CameraView
             {
                 // The old game's Cinemachine cockpit camera.
                 Name = "Cockpit", Kind = CameraViewKind.Mounted, Offset = new Vector3(0f, -0.51f, 2.47f),
-                LookPoint = new Vector3(0f, -1.5f, 79f), FieldOfView = 70f, MaxFieldOfView = 76f, NearClip = 0.05f,
-                NoiseAmplitude = 0.25f, NoiseFrequency = 6f, Inertia = 0.15f,
+                LookPoint = new Vector3(0f, -1.5f, 79f), FieldOfView = 70f, MaxFieldOfView = 73f, NearClip = 0.05f,
+                // The eye sits in the seat: almost no lag, a small boost punch, light shake, few post effects (they
+                // would cross the dashboard too).
+                NoiseAmplitude = 0.06f, NoiseFrequency = 3f, Inertia = 0f,
+                BoostFieldOfView = 4f, Rumble = 0.35f, Shake = 0.45f, Effects = 0.3f,
             },
         };
 
@@ -106,9 +136,8 @@ namespace Chopper.Presentation.Camera
         [SerializeField, Tooltip("Largest lag, metres.")] private float maxLag = 3f;
         [SerializeField, Tooltip("How fast the lag follows (1/s). Lower = more weight.")] private float lagSharpness = 4f;
 
-        [Header("Boost")]
-        [SerializeField, Tooltip("Extra field of view at full boost, degrees.")] private float boostFieldOfView = 14f;
-        [SerializeField, Tooltip("Extra chase distance at full boost, as a fraction of the offset.")] private float boostPullBack = 0.3f;
+        [Header("Boost (each view sets its own boost field of view, rumble and shake share)")]
+        [SerializeField, Tooltip("Chase views: extra distance at full boost, as a fraction of the offset.")] private float boostPullBack = 0.3f;
         [SerializeField, Tooltip("Spring that drives the boost look. Damping below 1 overshoots: the punch.")]
         private float boostSpringFrequency = 5f;
         [SerializeField, Range(0.1f, 1f)] private float boostSpringDamping = 0.45f;
@@ -149,7 +178,6 @@ namespace Chopper.Presentation.Camera
         public float AccelerationLag => accelerationLag;
         public float MaxLag => maxLag;
         public float LagSharpness => lagSharpness;
-        public float BoostFieldOfView => boostFieldOfView;
         public float BoostPullBack => boostPullBack;
         public float BoostSpringFrequency => boostSpringFrequency;
         public float BoostSpringDamping => boostSpringDamping;

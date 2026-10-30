@@ -78,7 +78,8 @@ namespace Chopper.Presentation.Camera
         /// <param name="speed01">Speed as a fraction of the full effect speed.</param>
         /// <param name="boost">Boost look, 0..1 (can overshoot a little: the punch).</param>
         /// <param name="kicked">A boost started this frame.</param>
-        public void Apply(CameraSettings settings, float speed, float speed01, float boost, bool kicked, float deltaTime)
+        /// <param name="share">The view's share of the speed and boost effects (<see cref="CameraView.Effects"/>); bloom stays.</param>
+        public void Apply(CameraSettings settings, float speed, float speed01, float boost, bool kicked, float deltaTime, float share = 1f)
         {
             // Off = no post processing on the camera at all (not only an empty volume), so it can be ruled out.
             _volume.weight = settings.PostEffects ? 1f : 0f;
@@ -93,21 +94,21 @@ namespace Chopper.Presentation.Camera
             // Clamp: a near-infinite pixel (smooth surface catching the sun) overflows the bloom chain and blacks out or
             // whites out the whole frame. Stop NaN does not catch it: the pixel is not NaN.
             _bloom.clamp.Override(settings.BloomClamp);
-            _chromatic.intensity.Override(Mathf.Clamp01(settings.SpeedChromatic * speed01 + settings.BoostChromatic * boost));
-            _vignette.intensity.Override(Mathf.Clamp01(settings.BoostVignette * boost));
-            _colour.postExposure.Override(settings.BoostFlash * _flash);
-            _colour.saturation.Override(12f * boost01);
+            _chromatic.intensity.Override(Mathf.Clamp01((settings.SpeedChromatic * speed01 + settings.BoostChromatic * boost) * share));
+            _vignette.intensity.Override(Mathf.Clamp01(settings.BoostVignette * boost * share));
+            _colour.postExposure.Override(settings.BoostFlash * _flash * share);
+            _colour.saturation.Override(12f * boost01 * share);
 
-            UpdateLines(settings, speed, boost01);
+            UpdateLines(settings, speed, boost01, share);
         }
 
-        private void UpdateLines(CameraSettings settings, float speed, float boost01)
+        private void UpdateLines(CameraSettings settings, float speed, float boost01, float share)
         {
             if (_lines == null) return;
             var full = Mathf.Max(settings.FullEffectSpeed, settings.SpeedLineStartSpeed + 1f);
             var speedPart = Mathf.Clamp01((speed - settings.SpeedLineStartSpeed) / (full - settings.SpeedLineStartSpeed));
             var emission = _lines.emission;
-            emission.rateOverTime = settings.SpeedLineRate * speedPart + settings.SpeedLineBoostRate * boost01;
+            emission.rateOverTime = (settings.SpeedLineRate * speedPart + settings.SpeedLineBoostRate * boost01) * share;
 
             // New lines only: lines in flight keep the speed and colour they started with.
             var lineSpeed = speed + LineExtraSpeed * (0.3f + boost01);

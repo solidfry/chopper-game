@@ -240,12 +240,13 @@ namespace Chopper.Presentation.Camera
             }
 
             var blendT = _previousView >= 0 ? Mathf.SmoothStep(0f, 1f, _blend) : 1f;
-            var inertia = Mathf.Lerp(ViewAt(_previousView)?.Inertia ?? 1f, ViewAt(_view).Inertia, blendT);
-            var rumble = Rumble(settingsAsset, inertia, out var jolt);
+            var feel = CameraView.Mix(ViewAt(_previousView), ViewAt(_view), blendT);
+            var rumble = Rumble(settingsAsset, feel.Rumble, out var jolt);
             _camera.fieldOfView = pose.FieldOfView;
             _camera.nearClipPlane = pose.NearClip;
-            transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt, pose.Rotation * rumble * Shake(deltaTime, settingsAsset));
-            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime);
+            transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt,
+                pose.Rotation * rumble * Shake(deltaTime, settingsAsset, feel.Shake));
+            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime, feel.Effects);
         }
 
         /// <summary>
@@ -286,9 +287,10 @@ namespace Chopper.Presentation.Camera
         }
 
         /// <summary>Engine rumble while boosting: fast small shake and a jolt of the camera (the chopper seems to shudder).</summary>
-        private Quaternion Rumble(CameraSettings settingsAsset, float inertia, out Vector3 jolt)
+        /// <param name="share">The view's rumble share (<see cref="CameraView.Rumble"/>).</param>
+        private Quaternion Rumble(CameraSettings settingsAsset, float share, out Vector3 jolt)
         {
-            var amount = Mathf.Clamp01(_boost) * Mathf.Lerp(0.35f, 1f, inertia);
+            var amount = Mathf.Clamp01(_boost) * share;
             jolt = Vector3.zero;
             if (amount <= 0.001f) return Quaternion.identity;
 
@@ -313,7 +315,7 @@ namespace Chopper.Presentation.Camera
                     view.FixedEye ? null : _eye)
                 : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01,
                     Settings.BoostPullBack * Mathf.Max(_boost, 0f));
-            pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01) + Settings.BoostFieldOfView * _boost;
+            pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01) + view.BoostFieldOfView * _boost;
             pose.NearClip = view.NearClip;
             pose.Position += _lag * view.Inertia;
             pose.Rotation *= Noise(view, index);
@@ -392,12 +394,13 @@ namespace Chopper.Presentation.Camera
             _hasLastTarget = true;
         }
 
-        private Quaternion Shake(float deltaTime, CameraSettings settingsAsset)
+        /// <param name="share">The view's shake share (<see cref="CameraView.Shake"/>).</param>
+        private Quaternion Shake(float deltaTime, CameraSettings settingsAsset, float share)
         {
             if (_trauma <= 0f) return Quaternion.identity;
             _trauma = Mathf.Max(0f, _trauma - settingsAsset.ShakeRecovery * deltaTime);
 
-            var amount = _trauma * _trauma * settingsAsset.MaxShakeDegrees;
+            var amount = _trauma * _trauma * settingsAsset.MaxShakeDegrees * share;
             var t = Time.time * settingsAsset.ShakeFrequency;
             return Quaternion.Euler(
                 amount * (Mathf.PerlinNoise(t, 0.1f) * 2f - 1f),
