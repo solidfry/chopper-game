@@ -150,6 +150,9 @@ float3 SkinPattern(UnityTexture2D table, float row, float3 p, float3 n, float he
     bool glowOn = t6.z > 0.5;
     glow = 0;
     int index = 0;
+    // One exit point: early returns inside [branch] blocks give "potentially uninitialized" warnings on Vulkan / GL.
+    float3 result = 0;
+    bool painted = false;
 
     [branch] if (kind == 1)  // camo
     {
@@ -195,7 +198,8 @@ float3 SkinPattern(UnityTexture2D table, float row, float3 p, float3 n, float he
             int pick = clamp((int)(SkinHash(int3(id.x, id.y, axis + 9), seed) * t11.z), 0, 1);
             glow = (nearEdge && lit) ? pick + 1 : 0;
         }
-        return colour;
+        result = colour;
+        painted = true;
     }
     else if (kind == 6)  // synthwave
     {
@@ -219,7 +223,8 @@ float3 SkinPattern(UnityTexture2D table, float row, float3 p, float3 n, float he
             float dv = abs(v / size - round(v / size));
             glow = ((du < width || dv < width) && !inBand && height < 0.75) ? 1 : 0;
         }
-        return colour;
+        result = colour;
+        painted = true;
     }
     else if (kind == 7)  // livery
     {
@@ -231,7 +236,7 @@ float3 SkinPattern(UnityTexture2D table, float row, float3 p, float3 n, float he
         if (side && abs(height - t11.x - t11.y * 1.7) < t11.y * 0.35) index = 2;
         if (n.y < -0.55) index = 2;
     }
-    return colours[min(index, 3)];
+    return painted ? result : colours[min(index, 3)];
 }
 
 // Blotches, bare metal where the skin's wear is above the threshold, dirt, soot, a little occlusion.
