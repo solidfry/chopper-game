@@ -153,6 +153,23 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Searching_LoadoutStaysEditableAndSaveChoiceFollowsIt()
+        {
+            var model = new HangarModel(_catalog, null, null, null);
+            Assert.That(model.FindMatch(), Is.True);
+
+            model.FocusSlot(0);
+            model.Fit(0);
+            Assert.That(model.Fitted[0], Is.Null, "Fitting works while searching.");
+            Assert.That(model.SaveChoice(), Is.True);
+
+            model.Fit(2); // Heavy Gun: over the Scout budget.
+            Assert.That(model.SaveChoice(), Is.False, "An invalid loadout is not saved; the last valid one stays.");
+            Assert.That(model.Back(), Is.True, "Back works while searching.");
+            Assert.That(model.Searching, Is.True);
+        }
+
+        [Test]
         public void Back_ReturnsToOverviewOnce()
         {
             var model = new HangarModel(_catalog, null, null, null);

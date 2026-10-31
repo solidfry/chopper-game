@@ -73,6 +73,10 @@ namespace Chopper.Editor.Setup
             if (!scenes.Contains(ScenePath)) yield return ("The hangar scene is not in the build settings. Press '7. Build hangar'.", null);
             if (!scenes.Any(p => Path.GetFileNameWithoutExtension(p) == ChopperBootstrap.TrainingRangeScene))
                 yield return ($"{ChopperBootstrap.TrainingRangeScene} is not in the build settings: the hangar cannot launch it.", null);
+            if (scenes.Length > 0 && scenes[0] != ScenePath)
+                yield return ($"The first build scene is {scenes[0]}, not the hangar: the game starts there. Press '7. Build hangar'.", null);
+            foreach (var path in scenes.Where(p => p != ScenePath && !IsMatchScene(p)))
+                yield return ($"Old scene {path} is in the build (missing scripts). Press '7. Build hangar' to turn it off.", null);
         }
 
         private static HangarSettings EnsureSettings()
@@ -262,13 +266,19 @@ namespace Chopper.Editor.Setup
             return created;
         }
 
-        /// <summary>Adds the hangar to the build settings (at the end; the order of the others stays).</summary>
+        /// <summary>
+        /// Client build scenes: the hangar first (the game starts there), then the match scene. The old 2023 scenes stay
+        /// in the list but off: their scripts are gone (missing-script warnings, wrong start scene) until they are ported.
+        /// </summary>
         private static void EnsureBuildScenes()
         {
-            var scenes = EditorBuildSettings.scenes.ToList();
-            if (!scenes.Any(s => s.path == ScenePath)) scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
-            foreach (var scene in scenes.Where(s => s.path == ScenePath)) scene.enabled = true;
+            var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
+            scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
+            foreach (var scene in scenes.Skip(1)) scene.enabled = IsMatchScene(scene.path);
             EditorBuildSettings.scenes = scenes.ToArray();
         }
+
+        private static bool IsMatchScene(string path) =>
+            Path.GetFileNameWithoutExtension(path) == ChopperBootstrap.TrainingRangeScene;
     }
 }

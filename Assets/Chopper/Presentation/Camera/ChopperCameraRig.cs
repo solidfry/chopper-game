@@ -117,8 +117,30 @@ namespace Chopper.Presentation.Camera
         public int ViewIndex => _view;
         public string ViewName => ViewAt(_view)?.Name ?? "";
         public bool IsMounted => ViewAt(_view)?.Kind == CameraViewKind.Mounted;
-        /// <summary>The view is a cockpit: your own hull and module art are not drawn, the cockpit model is.</summary>
-        public bool HidesOwnChopper => IsMounted && !ViewAt(_view).ShowOwnChopper;
+        /// <summary>
+        /// The camera is in a cockpit: your own hull and module art are not drawn, the cockpit model is. During a blend the
+        /// swap waits until the camera is nearly inside (going in) or just outside (going out), so the hull does not
+        /// vanish in plain view.
+        /// </summary>
+        public bool HidesOwnChopper
+        {
+            get
+            {
+                var hides = Hides(_view);
+                if (_previousView < 0 || _blend >= 1f || hides == Hides(_previousView)) return hides;
+                return Mathf.SmoothStep(0f, 1f, _blend) >= (hides ? HideSwapIn : HideSwapOut) ? hides : !hides;
+            }
+        }
+
+        /// <summary>Blend points (0..1, camera travel) where the own hull hides going into a cockpit and shows going out.</summary>
+        private const float HideSwapIn = 0.9f;
+        private const float HideSwapOut = 0.1f;
+
+        private bool Hides(int index)
+        {
+            var view = ViewAt(index);
+            return view != null && view.Kind == CameraViewKind.Mounted && !view.ShowOwnChopper;
+        }
 
         /// <summary>Called by the presentation context with the game config's settings, unless this rig has its own.</summary>
         public void UseSettings(CameraSettings value)

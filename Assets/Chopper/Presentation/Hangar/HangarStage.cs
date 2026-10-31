@@ -410,6 +410,8 @@ namespace Chopper.Presentation.Hangar
             try
             {
                 var assignment = await _matchmaking.FindMatchAsync(request, progress, token);
+                // The hangar stays usable while searching: spawn with the loadout as it is now (if still valid).
+                _model.SaveChoice();
                 if (!LocalSession.Join(assignment.Address, assignment.Port))
                 {
                     _model.SetMatchStatus($"CANNOT CONNECT TO {assignment.Address}:{assignment.Port}", false);

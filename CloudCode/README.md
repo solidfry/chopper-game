@@ -10,7 +10,9 @@ Unity's example allocators (github.com/Unity-Technologies/matchmaker-hosting-pro
 - `Matchmaker_PollAllocation`: reports the server's public IP and the external port of `gameport` when it is ready.
 - The Edgegap **API token** comes from the Unity secret `edgegap1` (Dashboard → Administration → Secrets).
 
-New server version: change `Version` in `Project/EdgegapAllocator.cs` and deploy again.
+New server version: build the Linux server (Setup window), then `./Tools/Edgegap/release.ps1 -Version <v>` pushes the
+image, makes the Edgegap app version (a copy of the current one; `-InPlace <name>` re-points an existing version when the
+account's version limit is reached) and sets `Version` in `Project/EdgegapAllocator.cs`. Then deploy the module again.
 
 ### Deploy
 

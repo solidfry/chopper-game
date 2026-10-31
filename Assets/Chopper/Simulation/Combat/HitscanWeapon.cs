@@ -21,7 +21,7 @@ namespace Chopper.Simulation.Combat
     /// <summary>Predicted on the owner so the fire rhythm matches the server; interpolated for other players.</summary>
     public struct HitscanWeaponState : IComponentData
     {
-        [GhostField(Quantization = 1000)] public float CooldownRemaining;
+        [GhostField] public float CooldownRemaining;
         /// <summary>Shots fired so far. Sent to everyone; clients draw a tracer each time it goes up.</summary>
         [GhostField] public uint ShotCount;
     }

@@ -459,6 +459,17 @@ handling and their own ability, in the same role:
 - **Code:** `HangarController` (state: Overview / SlotFocus / ChassisSelect), `SocketFocusPose` component, `LoadoutPreview` (spawns module meshes on sockets). Data comes from the same SOs as gameplay. Loadout save → Cloud Save.
 - Also show this screen while matchmaking searches (Section 4).
 - **Built 29 Oct (tested in the editor):** hangar scene from Setup step 7. Differences from the design above: no Cinemachine or MK Glow/Shapes (a small camera blend in `HangarStage`, URP bloom, baked feature-line meshes); the focus pose is automatic from the socket position (per-socket poses optional); a "show paint" view for skins; launch starts a local session (`LocalSession`) until Phase 3 matchmaking. Loadout saved in PlayerPrefs (Cloud Save later). Not yet: slide-in animations, scan sweep, matchmaking overlay, way back from the match.
+- [ ] **New layout (owner TODO, 31 Oct):** replace the two side panels and the chassis tabs. References: `Docs/References/hangar-callouts.png` (overview) and `Docs/References/hangar-slot-grid.png` (slot open).
+  - No tabs at the top: the top bar is kept for the main game navigation (later).
+  - Overview (callouts reference): the chopper in the middle; a line from each socket to a small slot card (module icon, name, "+" when empty), drawn in screen space from the socket position each frame.
+  - Slots: a grid of slot tiles along the bottom of the screen (the same slots as the callouts; either opens the slot).
+  - Chassis: a small grid of chassis cards (not tabs).
+  - Stats: float next to the chopper (big numbers + bars with before/after delta, as in the slot-grid reference), not in a side panel.
+  - Slot open (slot-grid reference): title "SELECT <SLOT>", a grid of that slot's modules (icon, name, weight cost, lock icon, tick on the fitted one, an "empty" tile), and a detail block for the hovered module (name, description, EQUIPPED). Hover = stat preview, click = fit, as now. Back / Escape closes it. The camera focus on the socket stays.
+  - **Remember the build per chassis** across sessions (now only the last chassis's build is saved; the others reset on restart).
+  - **Saved builds (presets):** several named builds per chassis; pick, save, rename, delete. Saved locally first (`LoadoutChoiceStore`), Cloud Save later (Phase 5).
+  - **3D view:** the rendered (painted) chopper always shows; the green wireframe becomes a subtle overlay on it (no paint / wireframe toggle). Less bloom.
+  - `HangarModel` keeps the logic (slots, options, stats, focus) and gains builds; the layout is `Hangar.uxml` / `Hangar.uss` / `HangarView`; the render change is `HangarStage` and the hangar scene's volume.
 
 ## 6. Account progression
 
@@ -622,6 +633,7 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
   - The feeds and dials show **real data** (speed, altitude, hull, boost, ammo, threats, a rear or weapon camera feed). They add realism and atmosphere and are not the focus, but they must be readable when the player looks at them. Feed them from the same HUD models the HUD uses (one data path), drawn on the cockpit screens (render textures / world-space UI Toolkit panels).
   - **Head look:** hold Alt (keyboard) or R3 (gamepad right stick click) (owner, 29 Oct) to look around the cockpit and out of the side windows; release to snap back to the front. Mouse / right stick turns the head while held; flight input is held neutral for that axis meanwhile. A new camera input in `ChopperCameraRig` (yaw/pitch offset on the Mounted view), not a new camera.
   - The cockpit view becomes the **default** view. The player can switch to third person (C / gamepad Y, as now) and set the default view in the options (`CameraSettings` views list + a saved option, like the other `InputOptions`).
+- [ ] **Cockpit bevels (owner TODO, 31 Oct):** add bevels to the cockpit surfaces (PartForge `parts.cockpit`: panel, glare shield, displays, frame, seat edges), so they catch light instead of flat hard edges. Check `--audit` and the palette UVs after.
 - [ ] **Death break-up (owner TODO, 29 Oct):** on death the chopper blows apart and its modules scatter (the socket modules are the natural parts). Small parts: client-only visual debris (pooled, no network cost). Large parts (body sections, rotors): server-simulated physics ghosts with a short lifetime, so they collide with other players the same for everyone; the server decides any damage they deal. Kill credit (owner, 29 Oct): a kill by debris goes to the player who destroyed that chopper (the debris carries the killer's id).
 
 ## 8. Phased roadmap

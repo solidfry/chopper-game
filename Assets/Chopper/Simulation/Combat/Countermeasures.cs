@@ -14,8 +14,8 @@ namespace Chopper.Simulation.Combat
     /// <summary>Predicted on the owner, sent to everyone (<see cref="FlareCount"/> drives the flare visuals).</summary>
     public struct CountermeasureState : IComponentData
     {
-        [GhostField(Quantization = 100)] public float CooldownRemaining;
-        [GhostField(Quantization = 100)] public float DecoyRemaining;
+        [GhostField] public float CooldownRemaining;
+        [GhostField] public float DecoyRemaining;
         /// <summary>Times flares were dropped. Clients show a flare burst each time it goes up.</summary>
         [GhostField] public uint FlareCount;
     }

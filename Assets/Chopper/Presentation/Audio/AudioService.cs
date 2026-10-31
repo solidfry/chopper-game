@@ -160,7 +160,10 @@ namespace Chopper.Presentation.Audio
             if (notFirst != null && _playlist[0] == notFirst) (_playlist[0], _playlist[^1]) = (_playlist[^1], _playlist[0]);
         }
 
-        public float GetVolume(AudioChannel channel) => PlayerPrefs.GetFloat(VolumeKeyPrefix + channel, 1f);
+        public float GetVolume(AudioChannel channel) => PlayerPrefs.GetFloat(VolumeKeyPrefix + channel, DefaultVolume(channel));
+
+        /// <summary>Until the player sets it: music at half, so it sits under the effects (owner, 31 Oct).</summary>
+        private static float DefaultVolume(AudioChannel channel) => channel == AudioChannel.Music ? 0.5f : 1f;
 
         public void SetVolume(AudioChannel channel, float volume)
         {

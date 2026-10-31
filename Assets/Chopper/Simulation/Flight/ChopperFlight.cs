@@ -72,7 +72,7 @@ namespace Chopper.Simulation.Flight
     {
         /// <summary>Boost tank used: 0 = full (the default), 1 = empty.</summary>
         [GhostField(Quantization = 1000)] public float BoostUsed;
-        [GhostField(Quantization = 100)] public float BoostRechargeWait;
+        [GhostField] public float BoostRechargeWait;
         [GhostField] public bool Boosting;
         /// <summary>Spooled collective, -1..1 (follows the W/S input at <see cref="ChopperFlightConfig.CollectiveResponse"/>).</summary>
         [GhostField(Quantization = 1000)] public float Collective;

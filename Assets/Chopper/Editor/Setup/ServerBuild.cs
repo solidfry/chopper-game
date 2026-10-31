@@ -15,6 +15,8 @@ namespace Chopper.Editor.Setup
     /// Entities builds its content only for the active platform, and switching to Linux Server changes the script
     /// defines (<c>UNITY_SERVER</c>), so the build runs in steps: switch, let the editor recompile and reload, build
     /// (<see cref="Resume"/>), switch back. The result is in the console and in <see cref="ResultFile"/>.
+    /// Unity 6.6: Build Profiles → Linux Server → "Build and Run on" must not be "Local Machine" on Windows (set
+    /// RemoteSSH; no device needed), or the build fails at once with 0 errors (the Entities content build refuses).
     /// </summary>
     internal static class ServerBuild
     {

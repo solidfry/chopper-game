@@ -27,6 +27,14 @@ namespace Chopper.Simulation.Combat
     [UpdateAfter(typeof(ExportPhysicsWorld))]
     public partial struct PylonFireSystem : ISystem
     {
+        /// <summary>
+        /// Client: the newest tick each pylon drew a predicted launch on (serialized <see cref="NetworkTick"/>, 0 = none).
+        /// Netcode can mark a tick it already predicted as "first time" again (when it resets its last-full-tick record),
+        /// so <see cref="NetworkTime.IsFirstTimeFullyPredictingTick"/> alone drew a second rocket next to the first online.
+        /// A system field, so prediction rollback does not restore it.
+        /// </summary>
+        private FixedList64Bytes<uint> _launchTicks;
+
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
@@ -39,7 +47,8 @@ namespace Chopper.Simulation.Combat
             var deltaTime = SystemAPI.Time.DeltaTime;
             var isServer = state.WorldUnmanaged.IsServer();
             // Prediction replays old ticks; only the first prediction of a tick may spawn things on the client.
-            var firstPrediction = SystemAPI.GetSingleton<NetworkTime>().IsFirstTimeFullyPredictingTick;
+            var networkTime = SystemAPI.GetSingleton<NetworkTime>();
+            var firstPrediction = networkTime.IsFirstTimeFullyPredictingTick;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (input, weapons, cooldownBuffer, selection, transform, velocity, owner, shooter) in SystemAPI
@@ -76,7 +85,7 @@ namespace Chopper.Simulation.Combat
                             cooldown.SalvoTimer += salvoWeapon.SalvoInterval;
                             var shot = salvoWeapon.SalvoCount - cooldown.SalvoRemaining;
                             cooldown.SalvoRemaining--;
-                            if (isServer || firstPrediction)
+                            if (isServer || (firstPrediction && ClaimLaunch(i, networkTime.ServerTick)))
                                 LaunchMissile(ecb, salvoWeapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot);
                         }
                     }
@@ -105,14 +114,26 @@ namespace Chopper.Simulation.Combat
                 {
                     var position = pose.Position + math.mul(pose.Rotation, weapon.MuzzleOffset);
                     var launchVelocity = velocity.ValueRO.Linear + math.mul(pose.Rotation, math.forward()) * weapon.Speed;
-                    LaunchRocket(ecb, weapon, shooter, shooterId, position, launchVelocity, isServer, firstPrediction);
+                    LaunchRocket(ecb, weapon, shooter, shooterId, position, launchVelocity, isServer,
+                        firstPrediction && ClaimLaunch(selected, networkTime.ServerTick));
                 }
-                else if (isServer || firstPrediction)
+                else if (isServer || (firstPrediction && ClaimLaunch(selected, networkTime.ServerTick)))
                 {
                     LaunchMissile(ecb, weapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot: 0);
                 }
             }
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>Client: true once per pylon and tick (see <see cref="_launchTicks"/>).</summary>
+        private bool ClaimLaunch(int pylon, NetworkTick tick)
+        {
+            if (pylon >= _launchTicks.Capacity) return true;
+            while (_launchTicks.Length <= pylon) _launchTicks.Add(0);
+            var last = _launchTicks[pylon];
+            if (last != 0 && !tick.IsNewerThan(new NetworkTick { SerializedData = last })) return false;
+            _launchTicks[pylon] = tick.SerializedData;
+            return true;
         }
 
         private static void LaunchRocket(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId,

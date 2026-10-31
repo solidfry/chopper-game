@@ -23,6 +23,11 @@ namespace Chopper.Presentation.Effects
     {
         /// <summary>A big jump (late join, packet loss) draws at most this many shots.</summary>
         private const uint MaxShotsPerFrame = 3;
+        /// <summary>
+        /// Cockpit view, own gun: bullets start this far ahead of the muzzle. The flash and the trail start stay where they
+        /// spawn (world space) and, when the chopper goes down, rose into the canopy view.
+        /// </summary>
+        private const float CockpitBulletStart = 8f;
 
         private sealed class Bullet
         {
@@ -62,6 +67,7 @@ namespace Chopper.Presentation.Effects
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var world = physics.CollisionWorld;
             var now = UnityEngine.Time.time;
+            var cockpitView = context.CameraRig != null && context.CameraRig.HidesOwnChopper;
 
             _seen.Clear();
             foreach (var (weapon, config, pose, entity) in SystemAPI
@@ -76,8 +82,12 @@ namespace Chopper.Presentation.Effects
                 var muzzle = math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset);
                 var forward = pose.ValueRO.Forward;
                 var rotation = quaternion.LookRotationSafe(forward, pose.ValueRO.Up);
+                // Own gun from the cockpit: no muzzle flash (the pilot sits right above it), bullets start ahead.
+                var fromCockpit = cockpitView && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&
+                                  SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
 
-                if (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval)
+                if (!fromCockpit &&
+                    (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval))
                 {
                     _effects.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
                     _lastFlashTime[entity] = now;
@@ -87,8 +97,9 @@ namespace Chopper.Presentation.Effects
 
                 var hit = RayCast(world, entity, muzzle, forward, config.ValueRO.Range, out var distance);
                 var shots = math.min(count - last, MaxShotsPerFrame);
+                var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
                 for (var i = 0u; i < shots; i++)
-                    Fire(settings, muzzle, forward, rotation, distance, hit);
+                    Fire(settings, muzzle + forward * start, forward, rotation, distance - start, hit);
             }
 
             // Swap, so despawned choppers drop out.

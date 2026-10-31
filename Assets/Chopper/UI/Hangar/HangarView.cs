@@ -22,6 +22,9 @@ namespace Chopper.UI.Hangar
         private const string LockedClass = "hangar-item--locked";
         private const string WorseClass = "hangar-stat__delta--worse";
         private const string OverClass = "hangar-stat--over";
+        private const string CancelClass = "hangar__button--cancel";
+        private const string FindMatchText = "[ FIND MATCH ]";
+        private const string CancelSearchText = "[ CANCEL SEARCH ]";
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the hangar model.")]
         private PresentationBridge bridge;
@@ -46,6 +49,9 @@ namespace Chopper.UI.Hangar
         private Button _launch;
         private Button _findMatch;
         private Label _matchStatus;
+        /// <summary>Unscaled time the current search started; -1 when not searching.</summary>
+        private float _searchStart = -1f;
+        private int _shownSeconds = -1;
         private readonly List<(VisualElement Fill, VisualElement Delta, Label Text)> _bars = new();
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -131,9 +137,23 @@ namespace Chopper.UI.Hangar
         {
             var escape = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             var back = Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;
-            if (!(escape || back)) return;
-            if (_model.Searching) _model.CancelSearch();
-            else if (_model.Back()) _launch?.Focus();
+            if (escape || back)
+            {
+                // Back out of a slot first: the loadout can be changed while a search runs.
+                if (_model.Back()) (_model.Searching ? _findMatch : _launch)?.Focus();
+                else if (_model.Searching) _model.CancelSearch();
+            }
+            TickSearchTime();
+        }
+
+        /// <summary>Updates the elapsed search time once a second.</summary>
+        private void TickSearchTime()
+        {
+            if (_root == null || _searchStart < 0f) return;
+            var seconds = (int)(Time.unscaledTime - _searchStart);
+            if (seconds == _shownSeconds) return;
+            _shownSeconds = seconds;
+            _matchStatus.text = $"{_model.MatchStatus} {seconds / 60}:{seconds % 60:00}";
         }
 
         private void Refresh()
@@ -153,13 +173,23 @@ namespace Chopper.UI.Hangar
             RefreshMatch();
         }
 
-        /// <summary>Launch and find match are off while a search runs; the status line shows what it does.</summary>
+        /// <summary>
+        /// While a search runs: training is off, FIND MATCH becomes CANCEL SEARCH, and the status line shows the step
+        /// and the time searched. The rest of the hangar stays usable.
+        /// </summary>
         private void RefreshMatch()
         {
             if (_root == null) return;
-            _launch.SetEnabled(_model.CanLaunch && !_model.Searching);
-            _findMatch.SetEnabled(_model.CanLaunch && !_model.Searching);
-            _matchStatus.text = _model.Searching ? $"{_model.MatchStatus}... (ESC = CANCEL)" : _model.MatchStatus;
+            var searching = _model.Searching;
+            if (searching && _searchStart < 0f) _searchStart = Time.unscaledTime;
+            if (!searching) _searchStart = -1f;
+            _shownSeconds = -1;
+            _launch.SetEnabled(_model.CanLaunch && !searching);
+            _findMatch.SetEnabled(searching || _model.CanLaunch);
+            _findMatch.text = searching ? CancelSearchText : FindMatchText;
+            _findMatch.EnableInClassList(CancelClass, searching);
+            _matchStatus.text = _model.MatchStatus;
+            TickSearchTime();
         }
 
         private void BuildTabs()
@@ -291,6 +321,10 @@ namespace Chopper.UI.Hangar
 
         private void OnLaunch() => _model.Launch();
 
-        private void OnFindMatch() => _model.FindMatch();
+        private void OnFindMatch()
+        {
+            if (_model.Searching) _model.CancelSearch();
+            else _model.FindMatch();
+        }
     }
 }

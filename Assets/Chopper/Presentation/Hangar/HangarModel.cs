@@ -213,11 +213,21 @@ namespace Chopper.Presentation.Hangar
             Refresh();
         }
 
+        /// <summary>
+        /// Saves the loadout for the next spawn (the client world reads it when it starts). False (nothing saved) when
+        /// it is not valid. The scene calls it again when a match is found: changes made while searching count.
+        /// </summary>
+        public bool SaveChoice()
+        {
+            if (!CanLaunch) return false;
+            _store?.Save(Selection(FittedFor(Chassis)), SkinId);
+            return true;
+        }
+
         /// <summary>Saves the loadout and raises <see cref="MatchRequested"/>. False when it is not valid or a search runs.</summary>
         public bool FindMatch()
         {
-            if (!CanLaunch || Searching) return false;
-            _store?.Save(Selection(FittedFor(Chassis)), SkinId);
+            if (Searching || !SaveChoice()) return false;
             SetMatchStatus("SEARCHING", true);
             MatchRequested?.Invoke();
             return true;
@@ -241,8 +251,7 @@ namespace Chopper.Presentation.Hangar
         /// <summary>Saves the loadout and raises <see cref="Launched"/>. False (nothing saved) when it is not valid.</summary>
         public bool Launch()
         {
-            if (!CanLaunch || Searching) return false;
-            _store?.Save(Selection(FittedFor(Chassis)), SkinId);
+            if (Searching || !SaveChoice()) return false;
             Launched?.Invoke();
             return true;
         }

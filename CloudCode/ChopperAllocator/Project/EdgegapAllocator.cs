@@ -37,7 +37,7 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
 {
     /// <summary>Edgegap application and version to deploy, and the port players connect to.</summary>
     private const string Application = "airwingnitro";
-    private const string Version = "0.1.1";
+    private const string Version = "0.1.2";
     private const string GamePort = "gameport";
     /// <summary>Unity Dashboard → Administration → Secrets: the Edgegap API token (not the registry token).</summary>
     private const string TokenSecret = "edgegap1";

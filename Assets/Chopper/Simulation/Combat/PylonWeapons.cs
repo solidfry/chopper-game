@@ -59,14 +59,18 @@ namespace Chopper.Simulation.Combat
         public float FlareResistance;
     }
 
-    /// <summary>Per-pylon cooldown, same order as <see cref="PylonWeapon"/>. Predicted on the owner.</summary>
+    /// <summary>
+    /// Per-pylon cooldown, same order as <see cref="PylonWeapon"/>. Predicted on the owner. Timers that gate firing are
+    /// sent unquantized: a rounded cooldown (0.00033 instead of 0) made the client's replay fire one tick later than its
+    /// first prediction, and it drew the rocket twice.
+    /// </summary>
     [InternalBufferCapacity(4)]
     public struct PylonWeaponState : IBufferElementData
     {
-        [GhostField(Quantization = 1000)] public float CooldownRemaining;
+        [GhostField] public float CooldownRemaining;
         /// <summary>Missiles of the current salvo still to fire.</summary>
         [GhostField] public byte SalvoRemaining;
-        [GhostField(Quantization = 1000)] public float SalvoTimer;
+        [GhostField] public float SalvoTimer;
     }
 
     /// <summary>Salvo maths shared by the fire system and tests.</summary>
