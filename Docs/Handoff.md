@@ -205,7 +205,7 @@ Next session: continue with this order (step 1 onward). Newest (29 Oct evening):
    - port the old menus to UI Toolkit and delete `Assets/Scripts` (the options overlay `UI/Options` is the first piece; reuse its style);
    - export the `.blend` models to `.fbx`;
    - delete or rebuild the old scenes.
-   - owner TODO (29 Oct): a city building generator like PartForge (Blender, geometry nodes, styles, export + Setup step) — plan section 7a2.
+   - city building generator (plan section 7a2): **first version built 3 Nov** in `Tools/CityForge` (Blender side, checked with `bpy`; 13 buildings, LODs, colliders, markers, audit, previews). Not yet in Unity: next is a Setup step that imports `Assets/Chopper/Art/City/City01` (palette material, LOD heights, colliders and markers from the manifest, prefabs).
 
 ## 7. Owner preferences
 
@@ -236,4 +236,5 @@ Next session: continue with this order (step 1 onward). Newest (29 Oct evening):
 | UI components | HUD and Options use Unity 6.6 `PanelRenderer` (not `UIDocument`); views bind in `RegisterUIReloadCallback` and rebind when the panel rebuilds. A `UIDocument` next to a `PanelRenderer` shows the UI twice (Validate checks it). |
 | Options | `UI/Options/*` (overlay), `Presentation/Bridge/InputSettingsSystem.cs`, `Simulation/Input/PlayerInputSettings.cs` |
 | Hangar | `Presentation/Hangar/*` (`HangarModel`, `HangarStage`, `WireframeMesh`, `LoadoutChoiceStore` + `LoadoutChoiceSystem`), `UI/Hangar/*`, `Simulation/Session/LocalSession.cs`, setup `Editor/Setup/HangarSetup.cs`, data `Data/Hangar` |
+| City buildings | `Tools/CityForge` (Blender: `generate.py`, `cityforge/specs.py`, `kit.py`, `buildings.py`, `audit.py`); output `Assets/Chopper/Art/City/City01` |
 | Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio, hangar model, wireframe, saved choice) |

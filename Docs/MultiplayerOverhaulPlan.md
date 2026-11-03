@@ -522,7 +522,13 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
 
-## 7a2. City building generator (owner TODO, 29 Oct — design not started)
+## 7a2. City building generator (owner TODO, 29 Oct — first version built 3 Nov)
+
+**Built (3 Nov, Blender side only, not yet in Unity):** `Tools/CityForge` (see its README). Uses PartForge's builder
+and palette. 13 buildings (towers, blocks, slums, industrial), 3 LODs each, box colliders, `RoofPad` / `Roof`
+markers, manifest, audit (floating parts, colliders, clear zones, budgets), previews by day and night. Output in
+`Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
+
 
 A procedural generator for **city buildings**, like PartForge for the choppers (`Tools/PartForge`): code + numbers in Blender (Python and geometry nodes), so a change is a re-run, not a re-model.
 - **Same pipeline:** style values (gritty dystopia, neon accents from the style guide), a Blender N-panel with Rebuild, seeds for chance details, an audit, preview sheets, export to FBX + manifest in `Assets/Chopper/Art/...`, and a Setup window step that imports and links them (one config root, data-driven).
