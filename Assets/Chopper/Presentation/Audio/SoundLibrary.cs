@@ -46,6 +46,12 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue uiClick;
         [SerializeField] private SoundCue uiNavigate;
 
+        [Header("Hangar")]
+        [SerializeField, Tooltip("A module locks onto its socket.")] private SoundCue moduleFit;
+        [SerializeField, Tooltip("A socket is emptied.")] private SoundCue moduleRemove;
+        [SerializeField, Tooltip("The camera moves to a slot or back to the overview.")] private SoundCue slotFocus;
+        [SerializeField, Tooltip("A new chassis scans in.")] private SoundCue chassisScan;
+
         public AudioMixer Mixer => mixer;
         public AudioMixerGroup MusicGroup => musicGroup;
         public SoundCue RotorLocal => rotorLocal;
@@ -65,6 +71,10 @@ namespace Chopper.Presentation.Audio
         public SoundCue Flares => flares;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
+        public SoundCue ModuleFit => moduleFit;
+        public SoundCue ModuleRemove => moduleRemove;
+        public SoundCue SlotFocus => slotFocus;
+        public SoundCue ChassisScan => chassisScan;
 
         public void CollectProblems(List<string> problems)
         {
@@ -87,6 +97,10 @@ namespace Chopper.Presentation.Audio
             Check(flares, nameof(flares), problems);
             Check(uiClick, nameof(uiClick), problems);
             Check(uiNavigate, nameof(uiNavigate), problems);
+            Check(moduleFit, nameof(moduleFit), problems);
+            Check(moduleRemove, nameof(moduleRemove), problems);
+            Check(slotFocus, nameof(slotFocus), problems);
+            Check(chassisScan, nameof(chassisScan), problems);
         }
 
         private void Check(SoundCue cue, string slot, List<string> problems)
@@ -100,6 +114,15 @@ namespace Chopper.Presentation.Audio
         {
             boostStart = start;
             boostLoop = loop;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseHangar(SoundCue fit, SoundCue remove, SoundCue focus, SoundCue scan)
+        {
+            moduleFit = fit;
+            moduleRemove = remove;
+            slotFocus = focus;
+            chassisScan = scan;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

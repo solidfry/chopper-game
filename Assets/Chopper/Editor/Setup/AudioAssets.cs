@@ -135,6 +135,17 @@ namespace Chopper.Editor.Setup
                 Slot(library.BoostLoop, () => Cue("BoostLoop", Clips(SciFi + "/Loops/loop_rocket2.wav"), effects, 0.8f, blend: 0.3f, voices: 8,
                     pitch: 0.5f)));
 
+            // Hangar (placeholders): mechanical reload clunks for fit and remove, short laser charges for focus and scan.
+            library.InitialiseHangar(
+                Slot(library.ModuleFit, () => Cue("ModuleFit", Clips(SciFiGuns + "/Weapon 01 Reload 1.wav", SciFiGuns + "/Weapon 07 Reload 1.wav"),
+                    ui, 0.6f, blend: 0f, voices: 2, cooldown: 0.08f)),
+                Slot(library.ModuleRemove, () => Cue("ModuleRemove", Clips(SciFiGuns + "/Weapon 02 Reload 1.wav"), ui, 0.5f, blend: 0f, voices: 2,
+                    cooldown: 0.08f, pitch: 0.8f)),
+                Slot(library.SlotFocus, () => Cue("SlotFocus", Clips(SciFiGuns + "/Weapon 05 Load (Laser).wav"), ui, 0.3f, blend: 0f, voices: 2,
+                    cooldown: 0.1f, pitch: 1.3f)),
+                Slot(library.ChassisScan, () => Cue("ChassisScan", Clips(SciFiGuns + "/Weapon 08 Reload 1 (Laser).wav"), ui, 0.5f, blend: 0f,
+                    voices: 1, cooldown: 0.2f, pitch: 0.85f)));
+
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();

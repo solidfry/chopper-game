@@ -103,6 +103,7 @@ namespace Chopper.Editor.Setup
                 settings.Highlight != null ? settings.Highlight : EnsureMaterial("HangarHighlight", CruisePink * Glow),
                 settings.EmptySocket != null ? settings.EmptySocket : EnsureMaterial("HangarEmptySocket", LightningYellow * Glow),
                 settings.Volume != null ? settings.Volume : EnsureVolume());
+            if (settings.Scan == null) settings.InitialiseScan(EnsureMaterial("HangarScan", ConsoleGreen * Glow));
             EditorUtility.SetDirty(settings);
             return settings;
         }

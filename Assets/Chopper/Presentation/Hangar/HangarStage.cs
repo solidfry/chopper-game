@@ -17,7 +17,10 @@ namespace Chopper.Presentation.Hangar
     /// module prefabs as the game ("what you see is what flies"). The real paint with the chosen skin, and a subtle green
     /// wireframe over it (lines baked in the <see cref="WireframeLibrary"/>); the selected slot's module lines in the
     /// highlight colour; empty sockets pulse. Gives the UI each slot's screen point (callouts). The camera and turntable blend to the
-    /// selected socket's focus pose (<see cref="SocketAuthoring"/>); the overview turns slowly. Launch starts a local
+    /// selected socket's focus pose (<see cref="SocketAuthoring"/>); the overview turns slowly. The player turns the
+    /// chopper by mouse drag or right stick (<see cref="Drag"/>, <see cref="Steer"/>). A new chassis or module is built by a scan line from
+    /// bottom to top (each part shows with bright lines as the line reaches it); a fitted module also slides onto its
+    /// socket. Hangar sounds: fit, remove, slot focus, chassis scan. Launch starts a local
     /// session (<see cref="LocalSession"/>) and loads the match scene. Set up by Chopper → Setup, step 7.
     /// </summary>
     [DisallowMultipleComponent]
@@ -47,13 +50,42 @@ namespace Chopper.Presentation.Hangar
             public MeshRenderer Wire;
             /// <summary>Loadout slot of the module (-1 = the chassis).</summary>
             public int Slot;
+            /// <summary>The renderer's own state (some model parts start off).</summary>
+            public bool Shown;
+            /// <summary>Unscaled time the scan reaches this part (hidden before it); 0 = shown.</summary>
+            public float RevealAt;
+            /// <summary>Unscaled time its scan glow ends.</summary>
+            public float GlowUntil;
         }
 
         private readonly List<Part> _parts = new();
-        private readonly List<(Transform Visual, Quaternion Start, Vector3 Spin)> _spinners = new();
+        private readonly List<Spinner> _spinners = new();
+
+        /// <summary>
+        /// A turning module visual (rotor). It holds still while it builds and while its slot is open (so the player
+        /// can see the blades), then spins up again.
+        /// </summary>
+        private sealed class Spinner
+        {
+            public Transform Visual;
+            public Quaternion Rest;
+            /// <summary>Degrees per second on each axis.</summary>
+            public Vector3 Spin;
+            public int Slot;
+            /// <summary>Seconds of full-speed spin so far (the angle is Spin times this).</summary>
+            public float Phase;
+            /// <summary>Unscaled time it may start to spin up.</summary>
+            public float HoldUntil;
+            /// <summary>0 = still, 1 = full speed; ramps both ways.</summary>
+            public float Speed = 1f;
+        }
         /// <summary>Socket of each loadout slot (null when the model has none).</summary>
         private readonly List<SocketAuthoring> _slotSockets = new();
         private readonly List<(GameObject Marker, int Slot)> _markers = new();
+        /// <summary>Fitted modules sliding onto their sockets.</summary>
+        private readonly List<(Transform Visual, Vector3 Home, Vector3 From, float Start)> _slides = new();
+        /// <summary>Slots whose module changed in this build (they scan and slide in).</summary>
+        private readonly HashSet<int> _changedSlots = new();
         private readonly Dictionary<SlotType, int> _ordinals = new();
         private PresentationContext _context;
         private HangarModel _model;
@@ -70,6 +102,50 @@ namespace Chopper.Presentation.Hangar
         private bool _launching;
         private IMatchmakingService _matchmaking;
         private CancellationTokenSource _search;
+        /// <summary>Degrees of turn asked for since the last frame (drag, stick).</summary>
+        private float _turnInput;
+        private bool _turnFlings;
+        /// <summary>Fling speed after a drag (degrees per second); it slows down.</summary>
+        private float _turnVelocity;
+        /// <summary>Slot focus: the player's turn away from the socket's view (degrees).</summary>
+        private float _focusTurn;
+        /// <summary>Seconds left before the idle spin starts again after the player turned the chopper.</summary>
+        private float _spinWait;
+        private int _lastFocus = HangarModel.Overview;
+        /// <summary>Unscaled time the last scan or slide ends: parts get their look each frame until then.</summary>
+        private float _animationEnd;
+        private bool _built;
+        /// <summary>This build changed modules on the same chassis: the new ones slide in.</summary>
+        private bool _slideIn;
+
+        /// <summary>
+        /// True while the pointer holds the chopper (a drag): no idle spin and no fling until it lets go.
+        /// </summary>
+        public bool Holding { get; set; }
+
+        /// <summary>
+        /// Turns the chopper by <paramref name="degrees"/> this frame (<see cref="Drag"/>, <see cref="Steer"/>). In the overview it turns the turntable; with a
+        /// slot open it turns away from the socket's view, up to <see cref="HangarSettings.FocusTurnLimit"/>.
+        /// <paramref name="fling"/>: keep turning after the pointer lets go (mouse drag, not the stick).
+        /// </summary>
+        private void Turn(float degrees, bool fling)
+        {
+            _turnInput += degrees;
+            _turnFlings = fling;
+        }
+
+        /// <summary>Mouse drag across the view by <paramref name="pixels"/> this frame (right = positive).</summary>
+        public void Drag(float pixels)
+        {
+            // Positive yaw moves the near side to the left: a drag to the right turns the other way.
+            if (_settings != null) Turn(-pixels * _settings.DragDegreesPerPixel, fling: true);
+        }
+
+        /// <summary>Gamepad stick, -1..1 (right = positive), held this frame.</summary>
+        public void Steer(float axis)
+        {
+            if (_settings != null) Turn(-axis * _settings.StickTurnSpeed * Time.unscaledDeltaTime, fling: false);
+        }
 
         /// <summary>Online play: set by the hangar scene's lifetime scope (the root scope's matchmaking service).</summary>
         public void UseMatchmaking(IMatchmakingService matchmaking) => _matchmaking = matchmaking;
@@ -149,7 +225,19 @@ namespace Chopper.Presentation.Hangar
         private void OnChanged()
         {
             if (_model.Chassis != _builtChassis || !SameModules(_model.Fitted)) Build();
+            if (_model.FocusedSlot != _lastFocus)
+            {
+                _lastFocus = _model.FocusedSlot;
+                _focusTurn = 0f;
+                _turnVelocity = 0f;
+                Play(_context.Sounds != null ? _context.Sounds.SlotFocus : null);
+            }
             ApplyLook();
+        }
+
+        private void Play(Audio.SoundCue cue)
+        {
+            if (cue != null) _context.Audio.Play(cue);
         }
 
         private bool SameModules(IReadOnlyList<ModuleDefinition> fitted)
@@ -167,9 +255,33 @@ namespace Chopper.Presentation.Hangar
             _spinners.Clear();
             _slotSockets.Clear();
             _markers.Clear();
+            _slides.Clear();
 
             var chassis = _model.Chassis;
             var fitted = _model.Fitted;
+            var newChassis = chassis != _builtChassis;
+            var fittedSome = false;
+            var removedSome = false;
+            _changedSlots.Clear();
+            for (var i = 0; i < fitted.Count; i++)
+            {
+                var before = !newChassis && i < _builtModules.Length ? _builtModules[i] : null;
+                if (fitted[i] == before) continue;
+                if (fitted[i] != null) _changedSlots.Add(i);
+                if (newChassis) continue;
+                fittedSome |= fitted[i] != null;
+                removedSome |= fitted[i] == null;
+            }
+            // The first build (scene start) scans in too, but without a sound.
+            var sounds = _context.Sounds;
+            if (_built && sounds != null)
+            {
+                if (newChassis) Play(sounds.ChassisScan);
+                else if (fittedSome) Play(sounds.ModuleFit);
+                else if (removedSome) Play(sounds.ModuleRemove);
+            }
+            _built = true;
+            _slideIn = !newChassis;
             _builtChassis = chassis;
             _builtModules = new ModuleDefinition[fitted.Count];
             for (var i = 0; i < fitted.Count; i++) _builtModules[i] = fitted[i];
@@ -188,6 +300,42 @@ namespace Chopper.Presentation.Hangar
             AddParts(_chopper, -1);
             FitModules(chassis, fitted);
             Centre();
+            StartScan(newChassis);
+        }
+
+        /// <summary>
+        /// New chassis: every part scans in. Else only the parts of the changed slots. The scan line goes up through
+        /// the parts being built over <see cref="HangarSettings.ScanSeconds"/>.
+        /// </summary>
+        private void StartScan(bool everything)
+        {
+            var start = Time.unscaledTime;
+            float min = float.MaxValue, max = float.MinValue;
+            foreach (var part in _parts)
+            {
+                if (!everything && !_changedSlots.Contains(part.Slot)) continue;
+                min = Mathf.Min(min, part.Renderer.bounds.min.y);
+                max = Mathf.Max(max, part.Renderer.bounds.min.y);
+            }
+            if (min > max) return;
+            var height = Mathf.Max(0.01f, max - min);
+            foreach (var part in _parts)
+            {
+                if (!everything && !_changedSlots.Contains(part.Slot)) continue;
+                part.RevealAt = start + _settings.ScanSeconds * Mathf.Clamp01((part.Renderer.bounds.min.y - min) / height);
+                part.GlowUntil = part.RevealAt + _settings.ScanGlowSeconds;
+                _animationEnd = Mathf.Max(_animationEnd, part.GlowUntil);
+            }
+            _animationEnd = Mathf.Max(_animationEnd, start + _settings.FitSlideSeconds);
+            // New rotors hold still until their scan and slide end.
+            foreach (var spinner in _spinners)
+                if (everything || _changedSlots.Contains(spinner.Slot))
+                {
+                    spinner.HoldUntil = _animationEnd;
+                    spinner.Speed = 0f;
+                }
+            // After Centre (it measures the model at rest): parts hide, slides start out.
+            ApplySlides(start);
         }
 
         /// <summary>Same mapping as the game (<c>ModuleVisualSystem</c>): slot order picks the socket of that type by
@@ -234,8 +382,24 @@ namespace Chopper.Presentation.Hangar
             var visual = Instantiate(module.Visual, socket.transform, false);
             foreach (var collider in visual.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
             AddParts(visual, slot);
+            if (_slideIn && _changedSlots.Contains(slot) && _settings.FitSlideSeconds > 0f)
+            {
+                // Slides in from outside the chopper (away from its axis, a little from above).
+                var outward = socket.transform.position - turntable.position;
+                outward.y = 0f;
+                outward = outward.sqrMagnitude > 0.01f ? outward.normalized : Vector3.zero;
+                var from = (outward + Vector3.up * 0.35f).normalized * _settings.FitSlideDistance;
+                var rest = visual.transform.localPosition;
+                _slides.Add((visual.transform, rest, rest + socket.transform.InverseTransformVector(from), Time.unscaledTime));
+            }
             if (module.VisualSpin != Vector3.zero)
-                _spinners.Add((visual.transform, visual.transform.localRotation, module.VisualSpin * (socket.Index % 2 == 0 ? 1f : -1f)));
+                _spinners.Add(new Spinner
+                {
+                    Visual = visual.transform,
+                    Rest = visual.transform.localRotation,
+                    Spin = module.VisualSpin * (socket.Index % 2 == 0 ? 1f : -1f),
+                    Slot = slot,
+                });
         }
 
         /// <summary>Each mesh keeps its paint and gets its baked line mesh (the wireframe overlay).</summary>
@@ -254,7 +418,7 @@ namespace Chopper.Presentation.Hangar
                     wire.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     wire.receiveShadows = false;
                 }
-                _parts.Add(new Part { Renderer = target, Wire = wire, Slot = slot });
+                _parts.Add(new Part { Renderer = target, Wire = wire, Slot = slot, Shown = target.enabled });
             }
         }
 
@@ -298,12 +462,77 @@ namespace Chopper.Presentation.Hangar
                 part.Renderer.GetPropertyBlock(_block);
                 _block.SetFloat(Visuals.SkinLibrary.SkinIndexProperty, row);
                 part.Renderer.SetPropertyBlock(_block);
-                if (part.Wire == null) continue;
-                // The focused slot's module glows; the rest is a faint overlay on the paint.
-                var focused = part.Slot >= 0 && part.Slot == _model.FocusedSlot;
-                part.Wire.sharedMaterial = focused ? _settings.Highlight : _settings.Overlay;
-                part.Wire.enabled = focused || _settings.Overlay != null;
             }
+            ApplyPartLooks(Time.unscaledTime);
+        }
+
+        /// <summary>
+        /// Before the scan reaches a part: hidden. Then its lines glow (scan material) for a moment. Else the focused
+        /// slot's module glows (highlight) and the rest is a faint overlay on the paint.
+        /// </summary>
+        private void ApplyPartLooks(float time)
+        {
+            foreach (var part in _parts)
+            {
+                if (part.Renderer == null) continue;
+                var hidden = time < part.RevealAt;
+                part.Renderer.enabled = part.Shown && !hidden;
+                if (part.Wire == null) continue;
+                var scanning = !hidden && time < part.GlowUntil && _settings.Scan != null;
+                var focused = part.Slot >= 0 && part.Slot == _model.FocusedSlot;
+                part.Wire.sharedMaterial = scanning ? _settings.Scan : focused ? _settings.Highlight : _settings.Overlay;
+                part.Wire.enabled = !hidden && (scanning || focused || _settings.Overlay != null);
+            }
+        }
+
+        /// <summary>Fitted modules ease onto their sockets (fast, then slow).</summary>
+        private void ApplySlides(float time)
+        {
+            for (var i = _slides.Count - 1; i >= 0; i--)
+            {
+                var (visual, rest, from, start) = _slides[i];
+                if (visual == null)
+                {
+                    _slides.RemoveAt(i);
+                    continue;
+                }
+                var t = Mathf.Clamp01((time - start) / _settings.FitSlideSeconds);
+                var ease = 1f - (1f - t) * (1f - t) * (1f - t);
+                visual.localPosition = Vector3.LerpUnclamped(from, rest, ease);
+                if (t >= 1f) _slides.RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// Player turning: drag or stick input this frame; after a drag lets go the chopper keeps turning and slows
+        /// down. Returns the degrees to turn now.
+        /// </summary>
+        private float TakeTurn(float deltaTime)
+        {
+            float degrees;
+            if (_turnInput != 0f)
+            {
+                degrees = _turnInput;
+                if (_turnFlings && deltaTime > 0f)
+                    _turnVelocity = Mathf.Lerp(_turnVelocity, _turnInput / deltaTime, 0.5f);
+                else _turnVelocity = 0f;
+                _spinWait = _settings.SpinResumeDelay;
+            }
+            else if (Holding)
+            {
+                degrees = 0f;
+                _turnVelocity = 0f;
+                _spinWait = _settings.SpinResumeDelay;
+            }
+            else
+            {
+                degrees = _turnVelocity * deltaTime;
+                _turnVelocity *= Mathf.Exp(-_settings.FlingDamping * deltaTime);
+                if (Mathf.Abs(_turnVelocity) < 1f) _turnVelocity = 0f;
+                _spinWait = Mathf.Max(0f, _spinWait - deltaTime);
+            }
+            _turnInput = 0f;
+            return degrees;
         }
 
         private void Update()
@@ -312,12 +541,22 @@ namespace Chopper.Presentation.Hangar
             var blend = 1f - Mathf.Exp(-BlendRate / _settings.FocusBlendSeconds * deltaTime);
             var focus = FocusedSocket();
 
-            // The idle spin eases to a stop while the pointer is near the chopper, so the callout cards hold still.
-            var spinTarget = PointerNearChopper() ? 0f : _settings.IdleSpin;
+            // The idle spin eases to a stop while the pointer is near the chopper (so the callout cards hold still)
+            // and for a while after the player turned it.
+            var turn = TakeTurn(deltaTime);
+            var spinTarget = Holding || _spinWait > 0f || PointerNearChopper() ? 0f : _settings.IdleSpin;
             _spin = Mathf.Lerp(_spin, spinTarget, 1f - Mathf.Exp(-BlendRate / _settings.SpinEaseSeconds * deltaTime));
-            _yaw = focus != null
-                ? _yaw + Mathf.DeltaAngle(_yaw, FocusYaw(focus)) * blend
-                : _yaw + _spin * deltaTime;
+            if (focus != null)
+            {
+                var limit = _settings.FocusTurnLimit;
+                var turned = Mathf.Clamp(_focusTurn + turn, -limit, limit);
+                if (Mathf.Abs(turned) >= limit) _turnVelocity = 0f;
+                // The drag follows the pointer at once; the blend only eases to a new slot.
+                _yaw += turned - _focusTurn;
+                _focusTurn = turned;
+                _yaw += Mathf.DeltaAngle(_yaw, FocusYaw(focus) + _focusTurn) * blend;
+            }
+            else _yaw += turn + _spin * deltaTime;
             _yaw = Mathf.Repeat(_yaw, 360f);
             turntable.localRotation = Quaternion.Euler(0f, _yaw, 0f);
 
@@ -328,8 +567,21 @@ namespace Chopper.Presentation.Hangar
             viewCamera.fieldOfView = Mathf.Lerp(viewCamera.fieldOfView, fieldOfView, blend);
 
             var time = Time.unscaledTime;
-            foreach (var (visual, rest, spin) in _spinners)
-                if (visual != null) visual.localRotation = rest * Quaternion.Euler(spin * (time % 3600f));
+            if (time <= _animationEnd + deltaTime)
+            {
+                ApplyPartLooks(time);
+                ApplySlides(time);
+            }
+            foreach (var spinner in _spinners)
+            {
+                if (spinner.Visual == null) continue;
+                // Still while it builds or while its slot is open; ramps down and up over the spin-up time.
+                var hold = time < spinner.HoldUntil || spinner.Slot == _model.FocusedSlot;
+                var ramp = _settings.RotorSpinUpSeconds > 0f ? deltaTime / _settings.RotorSpinUpSeconds : 1f;
+                spinner.Speed = Mathf.MoveTowards(spinner.Speed, hold ? 0f : 1f, ramp);
+                spinner.Phase = (spinner.Phase + Mathf.SmoothStep(0f, 1f, spinner.Speed) * deltaTime) % 3600f;
+                spinner.Visual.localRotation = spinner.Rest * Quaternion.Euler(spinner.Spin * spinner.Phase);
+            }
 
             var pulse = 1f + 0.25f * Mathf.Sin(time * _settings.SocketPulseRate * 2f * Mathf.PI);
             foreach (var (marker, slot) in _markers)
@@ -358,7 +610,7 @@ namespace Chopper.Presentation.Hangar
                 return;
             }
 
-            lookAt = centre + Quaternion.Euler(0f, FocusYaw(focus), 0f) * SocketOnTurntable(focus);
+            lookAt = centre + Quaternion.Euler(0f, FocusYaw(focus) + _focusTurn, 0f) * SocketOnTurntable(focus);
             if (_settings.UseSocketPoses)
             {
                 position = lookAt + focus.FocusCameraOffset;

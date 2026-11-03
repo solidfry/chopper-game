@@ -57,6 +57,8 @@ namespace Chopper.UI.Hangar
         private const float SideColumn = 418f;
         /// <summary>Card movement smoothing (per second); cards glide when the chopper turns.</summary>
         private const float CalloutFollowRate = 10f;
+        /// <summary>Gamepad right stick dead zone for turning the chopper.</summary>
+        private const float StickDeadZone = 0.15f;
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the hangar model.")]
         private PresentationBridge bridge;
@@ -102,6 +104,8 @@ namespace Chopper.UI.Hangar
         private int _shownSeconds = -1;
         /// <summary>Preset picked in the dropdown (-1 = none); the target of rename and delete.</summary>
         private int _presetIndex = -1;
+        /// <summary>The left mouse button went down on the empty view (not on UI) and is still held.</summary>
+        private bool _dragging;
         private readonly List<(VisualElement Fill, VisualElement Delta, Label Text)> _bars = new();
         private readonly List<(Label Value, Label Unit)> _headlines = new();
         private readonly List<Callout> _cards = new();
@@ -234,7 +238,40 @@ namespace Chopper.UI.Hangar
                 else if (_model.Searching) _model.CancelSearch();
             }
             TickSearchTime();
+            TurnChopper();
             PlaceCallouts(Time.unscaledDeltaTime);
+        }
+
+        /// <summary>
+        /// Mouse drag on the empty view (not on a panel, card or tile) turns the chopper; so does the gamepad right
+        /// stick.
+        /// </summary>
+        private void TurnChopper()
+        {
+            if (stage == null) return;
+            var mouse = Mouse.current;
+            if (mouse != null)
+            {
+                if (mouse.leftButton.wasPressedThisFrame && !PointerOverUI(mouse.position.ReadValue())) _dragging = true;
+                if (!mouse.leftButton.isPressed) _dragging = false;
+                if (_dragging) stage.Drag(mouse.delta.ReadValue().x);
+            }
+            else _dragging = false;
+            stage.Holding = _dragging;
+
+            var pad = Gamepad.current;
+            if (pad == null) return;
+            var axis = pad.rightStick.ReadValue().x;
+            if (Mathf.Abs(axis) > StickDeadZone) stage.Steer(axis);
+        }
+
+        /// <summary>True when the screen point (pixels, y up) is on a hangar control or panel.</summary>
+        private bool PointerOverUI(Vector2 screen)
+        {
+            if (_root?.panel == null) return false;
+            var point = RuntimePanelUtils.ScreenToPanel(_root.panel, new Vector2(screen.x, Screen.height - screen.y));
+            var picked = _root.panel.Pick(point);
+            return picked != null && picked != _root && _root.Contains(picked);
         }
 
         /// <summary>Updates the elapsed search time once a second.</summary>

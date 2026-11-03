@@ -24,6 +24,8 @@ namespace Chopper.Presentation.Hangar
         private Material overlay;
         [SerializeField, Tooltip("Lines of the module in the selected slot.")] private Material highlight;
         [SerializeField, Tooltip("Marker on an empty socket; it pulses.")] private Material emptySocket;
+        [SerializeField, Tooltip("Lines of a part as the scan builds it (bright, over the bloom threshold).")]
+        private Material scan;
         [SerializeField, Tooltip("Faces that meet at a bigger angle get a line (used when baking).")]
         private float creaseDegrees = 35f;
         [SerializeField, Tooltip("Metres the lines sit off the surface (used when baking).")]
@@ -60,6 +62,32 @@ namespace Chopper.Presentation.Hangar
         private float socketMarkerSize = 0.5f;
         [SerializeField] private float socketPulseRate = 1.5f;
 
+        [Header("Turning")]
+        [SerializeField, Tooltip("Mouse drag on the empty view: degrees the chopper turns per pixel.")]
+        private float dragDegreesPerPixel = 0.35f;
+        [SerializeField, Tooltip("After a drag the chopper keeps turning and slows down at this rate (per second).")]
+        private float flingDamping = 4f;
+        [SerializeField, Tooltip("Gamepad right stick: degrees per second at full tilt.")]
+        private float stickTurnSpeed = 140f;
+        [SerializeField, Tooltip("Seconds after a drag before the idle spin starts again.")]
+        private float spinResumeDelay = 3f;
+        [SerializeField, Tooltip("Slot focus: the most a drag turns away from the socket's view (degrees, each way). It " +
+                                 "springs back when another slot opens.")]
+        private float focusTurnLimit = 60f;
+
+        [Header("Animation")]
+        [SerializeField, Tooltip("Seconds for the scan line to build a chassis (or a module) from bottom to top.")]
+        private float scanSeconds = 0.7f;
+        [SerializeField, Tooltip("Seconds a part's lines glow in the highlight colour after the scan reaches it.")]
+        private float scanGlowSeconds = 0.35f;
+        [SerializeField, Tooltip("A fitted module slides in from this far out (metres) ...")]
+        private float fitSlideDistance = 0.8f;
+        [SerializeField, Tooltip("... in this many seconds.")]
+        private float fitSlideSeconds = 0.3f;
+
+        [SerializeField, Tooltip("Rotors hold still while they build and while their slot is open; this many seconds to stop or reach full speed.")]
+        private float rotorSpinUpSeconds = 1.2f;
+
         [Header("Look")]
         [SerializeField, Tooltip("Bloom and vignette for the neon lines.")] private UnityEngine.Rendering.VolumeProfile volume;
 
@@ -67,6 +95,7 @@ namespace Chopper.Presentation.Hangar
         public Material Overlay => overlay;
         public Material Highlight => highlight;
         public Material EmptySocket => emptySocket;
+        public Material Scan => scan;
         public float CreaseDegrees => creaseDegrees;
         public float LinePush => linePush;
         public float OverviewDistance => overviewDistance;
@@ -85,16 +114,30 @@ namespace Chopper.Presentation.Hangar
         public float SocketMarkerSize => socketMarkerSize;
         public float SocketPulseRate => socketPulseRate;
         public UnityEngine.Rendering.VolumeProfile Volume => volume;
+        public float DragDegreesPerPixel => dragDegreesPerPixel;
+        public float FlingDamping => flingDamping;
+        public float StickTurnSpeed => stickTurnSpeed;
+        public float SpinResumeDelay => spinResumeDelay;
+        public float FocusTurnLimit => focusTurnLimit;
+        public float ScanSeconds => scanSeconds;
+        public float ScanGlowSeconds => scanGlowSeconds;
+        public float FitSlideDistance => fitSlideDistance;
+        public float FitSlideSeconds => fitSlideSeconds;
+        public float RotorSpinUpSeconds => rotorSpinUpSeconds;
 
         public void CollectProblems(List<string> problems)
         {
             if (wireframes == null) problems.Add($"{name}: no wireframe library. Press '7. Build hangar'.");
             else wireframes.CollectProblems(problems);
-            if (overlay == null || highlight == null || emptySocket == null)
+            if (overlay == null || highlight == null || emptySocket == null || scan == null)
                 problems.Add($"{name}: a hangar material is missing. Press '7. Build hangar'.");
             if (focusBlendSeconds <= 0f) problems.Add($"{name}: focus blend time must be above 0.");
             if (spinEaseSeconds <= 0f) problems.Add($"{name}: spin ease time must be above 0.");
+            if (flingDamping <= 0f) problems.Add($"{name}: fling damping must be above 0.");
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void InitialiseScan(Material scanMaterial) => scan = scanMaterial;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Initialise(WireframeLibrary library, Material overlayMaterial, Material highlightMaterial,
