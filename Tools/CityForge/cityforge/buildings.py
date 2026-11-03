@@ -9,7 +9,7 @@ from .kit import ALL, L0, L01, L1, L2, Rect, faces
 
 
 def build(b):
-    {"tower": tower, "block": block, "slum": slum, "industrial": industrial}[b.type](b)
+    {"tower": tower, "mega": mega, "block": block, "slum": slum, "industrial": industrial}[b.type](b)
     return b
 
 
@@ -85,6 +85,103 @@ def _crown(b, rect, y, crown):
         spot = Rect.centred(rect.cx, rect.cz - rect.d * 0.15, rect.w - 2.0, 2.0)
         kit.roof_sign(b, spot, y)
         return [spot.inset(-1.5)]
+    return []
+
+
+# -- mega ------------------------------------------------------------------------------------------------------------
+
+def mega(b):
+    """Megatower (300 to 550 m): podium, many setback tiers with alternating facades, sky-lobby rings every N floors,
+    neon corner strips, giant billboards, landing pads that stand out from the walls, a tall crown."""
+    spec, style, rng = b.spec, b.style, b.rng
+    storey = style["storey"]
+    plot = b.plot
+    podium = spec["podium"]
+    tiers = [(Rect.centred(plot.w * ox, plot.d * oz, plot.w * sw_, plot.d * sd_), floors, facade)
+             for sw_, sd_, floors, ox, oz, facade in spec["tiers"]]
+    base = tiers[0][0]
+    b.span(base.x0, base.x1, 0.0, podium, base.z0, base.z1, "wall", L01)
+    sides = faces(base)
+    for name in ("front", "left", "right"):
+        kit.shopfront(b, sides[name], podium)
+        kit.sky_lobby(b, base, podium - 3.2, "neon_cyan")
+    kit.service_side(b, sides["back"], podium)
+
+    every = spec.get("lobby_every", 20)
+    info = []
+    y = podium
+    for index, (rect, floors, facade) in enumerate(tiers):
+        build_facade = kit.ribbon if facade == "ribbon" else kit.grid
+        top = build_facade(b, rect, y, floors, storey)
+        b.mass(rect, 0.0 if index == 0 else y, top, swatch="glass", top="tar")
+        for f in range(every, floors, every):
+            kit.sky_lobby(b, rect, y + f * storey - 1.3)
+        if index in spec.get("neon", ()):
+            kit.neon_edges(b, rect, y, top, rng.choice(("neon_cyan", "neon_pink")))
+        kit.tier_lights(b, rect, y, top)
+        upper = tiers[index + 1][0] if index + 1 < len(tiers) else None
+        kit.parapet(b, rect, top, height=1.2)
+        kit.obstruction_lights(b, rect, top + 1.2)
+        blocked = [upper.inset(-1.0)] if upper else []
+        if upper is None:
+            blocked += _mega_crown(b, rect, top, spec["crown"])
+        kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.6)
+        info.append((rect, y, top, floors))
+        y = top
+
+    for index, side in spec.get("billboards", ()):
+        rect, y0, top, _floors = info[index]
+        face = faces(rect)[side]
+        width = min(face.length * 0.7, 40.0)
+        height = min((top - y0) * 0.45, width * 1.3)
+        kit.billboard(b, face, face.length / 2, y0 + (top - y0) * 0.55, width, height)
+    for index, side in spec.get("pads", ()):
+        rect, y0, _top, floors = info[index]
+        face = faces(rect)[side]
+        clearance = {"front": plot.z1 - rect.z1, "back": rect.z0 - plot.z0,
+                     "right": plot.x1 - rect.x1, "left": rect.x0 - plot.x0}[side]
+        depth = min(14.0, clearance - 0.3)
+        if depth < 9.0:
+            print(f"{b.name}: no room for a sky pad on tier {index} {side} ({clearance:.1f} m to the plot edge)")
+            continue
+        floor = floors // 2
+        if floor % every in (0, every - 1, 1):
+            floor += 3
+        kit.sky_pad(b, face, face.length / 2, y0 + floor * storey, 14.0, depth)
+
+
+def _mega_crown(b, rect, y, crown):
+    rng = b.rng
+    if crown == "spire":
+        base = Rect.centred(rect.cx, rect.cz, 9.0, 9.0)
+        b.span(base.x0, base.x1, y, y + 6.0, base.z0, base.z1, "wall", ALL, swatches={"top": "trim"})
+        b.collider(base.x0, base.x1, y, y + 6.0, base.z0, base.z1)
+        height = rng.uniform(60.0, 80.0)
+        start = y + 6.0
+        b.cylinder((rect.cx, start, rect.cz), (rect.cx, start + height, rect.cz), 2.2, "steel", segments=10, at=L01,
+                   end_radius=0.2)
+        for k in (0.3, 0.55):
+            r = 2.2 - 2.0 * k + 0.05
+            b.cylinder((rect.cx, start + height * k, rect.cz), (rect.cx, start + height * k + 0.5, rect.cz), r,
+                       rng.choice(("neon_cyan", "neon_pink")), segments=10, at=L01)
+        for k in (0.2, 0.45, 0.7):
+            r = 2.2 - 2.0 * k
+            b.box((rect.cx, start + height * k, rect.cz + r), (0.4, 0.4, 0.3), "warning", L01)
+        b.box((rect.cx, start + height + 0.1, rect.cz), (0.5, 0.5, 0.5), "warning", L01)
+        b.thin.append((rect.cx, rect.cz, start + height + 1.0, 2.7))
+        return [base.inset(-2.0)]
+    if crown == "antennas":
+        taken = []
+        for _ in range(rng.randint(4, 6)):
+            x = rng.uniform(rect.x0 + 2.5, rect.x1 - 2.5)
+            z = rng.uniform(rect.z0 + 2.5, rect.z1 - 2.5)
+            kit.mast(b, x, z, y, rng.uniform(20.0, 45.0))
+            taken.append(Rect.centred(x, z, 2.0, 2.0))
+        return taken
+    if crown == "pad":
+        size = min(rect.w, rect.d) - 4.0
+        pad = kit.helipad(b, Rect.centred(rect.cx, rect.cz, size, size), y)
+        return [pad.inset(-1.0)]
     return []
 
 

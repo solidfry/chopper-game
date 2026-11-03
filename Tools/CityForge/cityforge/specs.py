@@ -6,6 +6,9 @@ building must fit in; the origin is the plot centre on the ground). The front (s
 
 tower:      podium (ground floor height), tiers [(width share, depth share, floors, x offset share, z offset share)],
             facade (ribbon | grid), crown (pad | antennas | sign | spire)
+mega:       podium, tiers [(width share, depth share, floors, x offset, z offset, ribbon | grid)], crown (spire |
+            antennas | pad), lobby_every (floors between sky-lobby rings), neon (tier indices with neon corners),
+            billboards [(tier, side)], pads [(tier, side)] (landing pads that stand out from the wall)
 block:      floors, shape (rect | L | U), roof (tanks | pad), fire_escape (left | right | None), balconies (0..1)
 slum:       base_floors, stacks (shacks to pile on the base), spread (overhang, m)
 industrial: hall (w, d, h, x, z) or None, chimneys [(x, z, radius, height)], tanks [(x, z, radius, height)],
@@ -22,6 +25,17 @@ BUILDINGS = [
          tiers=[(1.0, 1.0, 16, 0, 0), (0.6, 0.86, 5, -0.18, 0)]),
     dict(name="Tower_Mast", type="tower", seed=104, plot=(26, 26), podium=5.0, facade="grid", crown="antennas",
          tiers=[(1.0, 1.0, 14, 0, 0), (0.72, 0.72, 6, 0.08, 0.08)]),
+    # -- megatowers: the cyberpunk skyline, 300 to 550 m; pads high up the walls ---------------------------------------
+    dict(name="Mega_Arcology", type="mega", seed=501, plot=(64, 64), podium=10.0, crown="spire", lobby_every=20,
+         tiers=[(1.0, 1.0, 24, 0, 0, "ribbon"), (0.86, 0.86, 30, 0, 0, "grid"), (0.72, 0.72, 32, 0, 0, "ribbon"),
+                (0.58, 0.58, 26, 0, 0, "grid"), (0.44, 0.44, 16, 0, 0, "ribbon")],
+         neon=(2, 4), billboards=[(1, "front"), (2, "left")], pads=[(3, "front"), (4, "right")]),
+    dict(name="Mega_Needle", type="mega", seed=502, plot=(52, 52), podium=8.0, crown="antennas", lobby_every=16,
+         tiers=[(0.8, 0.8, 40, 0, 0, "grid"), (0.62, 0.62, 40, 0, 0, "ribbon"), (0.45, 0.45, 24, 0, 0, "grid")],
+         neon=(1, 2), billboards=[(0, "front")], pads=[(2, "left")]),
+    dict(name="Mega_Slab", type="mega", seed=503, plot=(72, 44), podium=9.0, crown="pad", lobby_every=18,
+         tiers=[(1.0, 1.0, 30, 0, 0, "ribbon"), (0.85, 0.7, 30, 0, 0, "grid"), (0.6, 0.45, 20, 0.08, 0, "ribbon")],
+         neon=(0,), billboards=[(1, "front")], pads=[(2, "back")]),
     # -- blocks: mid-rise housing and offices; roofs are fight space ------------------------------------------------
     dict(name="Block_Housing", type="block", seed=201, plot=(36, 24), floors=6, shape="rect", roof="tanks",
          fire_escape="right", balconies=0.35),

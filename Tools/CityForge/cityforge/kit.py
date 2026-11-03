@@ -100,7 +100,7 @@ class Building:
         self.lods = [geo.Builder() for _ in range(LOD_COUNT)]
         self.colliders = []   # (centre, size, yaw): yaw = Unity euler Y in degrees (local +X turns to (cos, 0, -sin))
         self.markers = []     # (kind, index, position, radius)
-        self.thin = []        # (x, z, top): masts and spires allowed above every collider
+        self.thin = []        # (x, z, top[, radius]): masts and spires allowed above every collider
         plot = spec["plot"]
         self.plot = Rect.centred(0.0, 0.0, plot[0], plot[1])
 
@@ -570,3 +570,86 @@ def floodlight(b, x, z, height=10.0, facing=(0.0, 1.0)):
     b.span(hx - 0.6, hx + 0.6, height - 0.2, height + 0.2, hz - 0.35, hz + 0.35, "dark", L01)
     b.span(hx - 0.5, hx + 0.5, height - 0.26, height - 0.2, hz - 0.28, hz + 0.28, "sodium", L01)
     b.thin.append((x, z, height + 0.6))
+
+
+# -- megastructures ---------------------------------------------------------------------------------------------------
+
+def sky_lobby(b, rect, y, colour="sodium"):
+    """A mechanical / sky-lobby floor: a dark ring that stands out from the facade with a light line round it. Seen
+    from far away, these rings count the height of a megatower."""
+    b.span(rect.x0 - 0.6, rect.x1 + 0.6, y, y + 2.6, rect.z0 - 0.6, rect.z1 + 0.6, "dark", L01)
+    b.span(rect.x0 - 0.65, rect.x1 + 0.65, y + 1.1, y + 1.4, rect.z0 - 0.65, rect.z1 + 0.65, colour, L01)
+
+
+def neon_edges(b, rect, y0, y1, colour):
+    """Vertical neon strips on the four corners of a tier."""
+    for x, sx in ((rect.x0, -1), (rect.x1, 1)):
+        for z, sz in ((rect.z0, -1), (rect.z1, 1)):
+            b.span(x + sx * 0.05 - 0.15, x + sx * 0.05 + 0.15, y0, y1, z + sz * 0.05 - 0.15, z + sz * 0.05 + 0.15,
+                   colour, L01)
+
+
+def billboard(b, face, u, y, width, height):
+    """Giant screen on a facade: dark board, neon frame, a few lit content blocks (not one big glowing panel)."""
+    rng = b.rng
+    colour = rng.choice(("neon_pink", "neon_cyan"))
+    b.on_face(face, u, y, 0.28, width, height, 0.6, "dark", L01)
+    for dy in (-height / 2 + 0.3, height / 2 - 0.3):
+        b.on_face(face, u, y + dy, 0.62, width, 0.6, 0.1, colour, L01)
+    for du in (-width / 2 + 0.3, width / 2 - 0.3):
+        b.on_face(face, u + du, y, 0.62, 0.6, height, 0.1, colour, L01)
+    rows = max(2, int(height // 6))
+    for r in range(rows):
+        yy = y - height / 2 + (r + 0.5) * height / rows
+        x = u - width / 2 + 1.5
+        while x < u + width / 2 - 2.5:
+            length = min(rng.uniform(2.0, 7.0), u + width / 2 - 1.5 - x)
+            b.on_face(face, x + length / 2, yy, 0.6, length, height / rows * 0.55, 0.06,
+                      rng.choice(("lit_warm", "lit_cool", colour, "dark")), L01)
+            x += length + rng.uniform(0.8, 2.0)
+
+
+def sky_pad(b, face, u, y, width, depth):
+    """Landing pad that sticks out from a facade: deck, braces to the wall below, yellow edge, H, sodium lights. Adds a
+    RoofPad marker and a collider."""
+    t, n = face.tangent, face.normal
+    deck_top = y + 0.6
+    b.on_face(face, u, y + 0.3, depth / 2 - 0.4, width, 0.6, depth + 0.8, "dark", L01)
+    drop = min(8.0, depth * 0.7)
+    span = width * 0.8 + 0.8
+    for o0, o1, low in ((0.0, depth * 0.55, y - drop), (depth * 0.5, depth, y - drop * 0.5)):
+        c = face.point(u, 0.0, (o0 + o1) / 2)
+        sz = face.size(span, 0.0, o1 - o0)
+        b.collider(c[0] - sz[0] / 2, c[0] + sz[0] / 2, low, y, c[2] - sz[2] / 2, c[2] + sz[2] / 2)  # braces
+    for side in (-0.4, 0.4):
+        foot = Vector(face.point(u + side * width, y - drop, -0.1))
+        tip = Vector(face.point(u + side * width, y, depth - 0.6))
+        b.beam(tuple(foot), tuple(tip), 0.4, "metal", L01)
+        b.on_face(face, u + side * width, y - drop + 0.6, 0.3, 1.2, 1.2, 0.8, "metal")
+    edge = 0.35
+    b.on_face(face, u, deck_top + 0.015, depth - edge / 2, width, 0.03, edge, "hazard")
+    for du in (-width / 2 + edge / 2, width / 2 - edge / 2):
+        b.on_face(face, u + du, deck_top + 0.015, depth / 2, edge, 0.03, depth, "hazard")
+    size = min(width, depth) * 0.4
+    bar = size * 0.2
+    for du in (-size / 2, size / 2):
+        b.on_face(face, u + du, deck_top + 0.015, depth / 2, bar, 0.03, size, "trim", L01)
+    b.on_face(face, u, deck_top + 0.015, depth / 2, size, 0.03, bar, "trim", L01)
+    for k in range(4):
+        du = -width / 2 + 0.2 + k * (width - 0.4) / 3
+        b.on_face(face, u + du, deck_top + 0.08, depth - 0.2, 0.22, 0.16, 0.22, "sodium", L01)
+    centre = face.point(u, deck_top, depth / 2)
+    size3 = face.size(width, 0.6, depth)
+    b.collider(centre[0] - size3[0] / 2, centre[0] + size3[0] / 2, y, deck_top, centre[2] - size3[2] / 2,
+               centre[2] + size3[2] / 2)
+    b.marker("RoofPad", centre, min(width, depth) / 2 - 0.9)  # clear of the sky-lobby rings above
+
+
+def tier_lights(b, rect, y0, y1, step=90.0):
+    """Red obstruction lights on the corners of a tall tier, every `step` metres (aviation rule; a height cue)."""
+    y = y0 + step
+    while y < y1 - 10.0:
+        for x in (rect.x0 - 0.1, rect.x1 + 0.1):
+            for z in (rect.z0 - 0.1, rect.z1 + 0.1):
+                b.box((x, y, z), (0.5, 0.5, 0.5), "warning", L01)
+        y += step

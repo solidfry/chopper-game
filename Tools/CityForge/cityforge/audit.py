@@ -150,7 +150,7 @@ def check(b):
     for p in points:
         if p.y < UNCOVERED:
             continue
-        if any(math.hypot(p.x - x, p.z - z) < 1.3 and p.y <= top for x, z, top in b.thin):
+        if any(math.hypot(p.x - t[0], p.z - t[1]) < (t[3] if len(t) > 3 else 1.3) and p.y <= t[2] for t in b.thin):
             continue
         if not any(_inside(c, p, UNCOVERED, UNCOVERED) for c in b.colliders):
             uncovered.append(p)

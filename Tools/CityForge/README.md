@@ -21,15 +21,16 @@ or a normal Blender install (4.2 or newer):
 
 Options: `--style NAME`, `--kit NAME` (default: the style's kit), `--out DIR` (default
 `Assets/Chopper/Art/City/<kit>`), `--previews DIR` (default `Tools/CityForge/previews/<kit>`), `--only A,B` (some
-buildings), `--no-render`, `--no-sheet` (skip the 13 single-building renders), `--no-blend`, `--samples 32`.
-Build and export: about 3 s. Previews: about 10 min on 4 CPU cores.
+buildings), `--no-render`, `--no-sheet` (skip the single-building renders), `--no-blend`, `--samples 32`.
+Build and export: about 3 s. Previews: about 15 min on 4 CPU cores.
 
 ## What it makes
 
-13 buildings in 4 types (`cityforge/specs.py`). The front faces +Z. The origin is the plot centre on the ground.
+16 buildings in 5 types (`cityforge/specs.py`). The front faces +Z. The origin is the plot centre on the ground.
 
 | Type | Buildings | What |
 |---|---|---|
+| mega | Mega_Arcology, Mega_Needle, Mega_Slab | The cyberpunk skyline: 300 to 550 m (Arcology: 471 m roof, about 550 m spire). Setback tiers, sky-lobby light rings every 16 to 20 floors (they count the height), neon corner strips, giant billboards, landing pads that stand out from the walls high up, tall spire or antenna crown, red lights every 90 m. 8 to 11 k triangles. |
 | tower | Tower_Spire, Tower_Pad, Tower_Slab, Tower_Mast | Podium with shop fronts, tiers that step back, ribbon or grid glass facade, crown (spire, landing pad, billboard, antennas). 60 to 115 m. |
 | block | Block_Housing, Block_Corner, Block_Court | Rect, L or U plan, 5 to 8 floors, punched windows, balconies, fire escape, water tanks or a pad on the roof. |
 | slum | Slum_Stack, Slum_Tower, Slum_Low | Old concrete base with shacks piled on top, overhangs on stilts (found by ray casts), ladders, cables, small neon. |
@@ -40,7 +41,7 @@ Each building has:
   as dark on average as the windows), `LOD2` (one box per mass, 24 to 160 triangles).
 - **Box colliders** (for Unity Physics): main masses, roof huts, tanks, pads, sign boards, pipe runs. Round things
   get 3 boxes (at most 3 % outside the circle).
-- **Markers**: `RoofPad` (landing pad: spawns, Lifter objectives) and `Roof` (a clear circle on a flat roof:
+- **Markers**: `RoofPad` (landing pad on a roof or high on a megatower wall: spawns, Lifter objectives) and `Roof` (a clear circle on a flat roof:
   objective zones). Position = the surface point; radius = the clear circle.
 
 Height and ground cues (test lesson: dark ground and too much glow made height hard to read): a storey line on every
@@ -55,7 +56,9 @@ masts, few lit windows (style `lit` = 14 %).
 | `Textures/City01_Colour.png`, `_Emission.png`, `_MetalSmooth.png` | The palette maps (5 x 5 swatches, point filtering). UV0 = UV1 = the swatch. |
 | `City01.manifest.json` | Per building: type, seed, file, plot, bounds, triangles per LOD, colliders (centre, size, yaw = Unity euler Y), markers (kind, position, radius), audit result. Suggested LOD screen heights. |
 
-Previews (`previews/City01`): `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
+Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityforge/choppers.py`, preview only):
+`scale_pad_*.jpg` (a Gunship on a megatower wall pad), `scale_flyby_*.jpg` (a Scout flying past, seen from below),
+`skyline_*.jpg` (the megatowers from chopper height), `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
 `street_night.jpg` (chopper height, ground cues), `lods.jpg` (LOD0 / LOD1 / LOD2 side by side),
 `buildings_sheet.jpg` (every building alone).
 

@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, kit, specs, styles
+from . import audit, buildings, choppers, kit, specs, styles
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -22,7 +22,7 @@ DISTRICT_COLLECTION = "CityForge: district"
 LODS_COLLECTION = "CityForge: LOD line-up"
 STAGE_COLLECTION = "CityForge: stage"
 STREET = 16.0                 # street width between plots in the district layout (m)
-ROWS = (("slum",), ("block",), ("industrial",), ("tower",))  # front (camera side, +Z) to back
+ROWS = (("slum",), ("block",), ("industrial",), ("tower",), ("mega",))  # front (camera side, +Z) to back
 LOD_LINEUP = ("Tower_Spire", "Block_Corner", "Slum_Stack")
 LOD_LINEUP_Z = -260.0
 LOD_SCREEN_HEIGHTS = (0.30, 0.08, 0.012)  # suggested LOD Group transition heights (share of screen height)
@@ -31,7 +31,8 @@ LOD_SCREEN_HEIGHTS = (0.30, 0.08, 0.012)  # suggested LOD Group transition heigh
 class State:
     def __init__(self, kit_name, style, built, images, problems):
         self.kit, self.style, self.built, self.images, self.problems = kit_name, style, built, images, problems
-        self.district, self.lineup = [], []
+        self.district, self.lineup, self.choppers = [], [], []
+        self.placements = {}  # building name -> Unity position of its plot centre in the district
 
 
 def _collection(scene, name):
@@ -101,6 +102,7 @@ def generate(style, kit_name=None, names=None):
     _ensure_stage(scene)
     _district(scene, state)
     _lod_lineup(scene, state)
+    _place_choppers(state)
     export_collection.hide_render = True
     export_collection.hide_viewport = True
     return state
@@ -136,6 +138,7 @@ def _district(scene, state):
             x += plot.w + STREET
         z -= depth + STREET
     for entry, position in placements:
+        state.placements[entry["building"].name] = position
         source = entry["objects"][0]
         obj = bpy.data.objects.new(f"District_{entry['building'].name}", source.data)
         collection.objects.link(obj)
@@ -162,6 +165,38 @@ def _lod_lineup(scene, state):
             # Unity +X shows on the left of the preview camera, so LOD0 starts on the high-X side.
             obj.location = geo.to_blender((offset - start - level * (w + 10.0), 0.0, LOD_LINEUP_Z))
             state.lineup.append(obj)
+
+
+def _place_choppers(state):
+    """The game's choppers in the district for scale: one on each wall pad of the tallest megatower, one flying past
+    it, one over the street, one at a slum. Only when the PartForge kit is in the project."""
+    if not choppers.available():
+        return
+    library = choppers.Library()
+    state.library = library
+
+    def at(name, offset):
+        base = state.placements.get(name)
+        return None if base is None else tuple(a + b for a, b in zip(base, offset))
+
+    mega = state.built.get("Mega_Arcology")
+    if mega:
+        for kind, index, position, radius in mega["building"].markers:
+            if kind == "RoofPad":
+                spot = at("Mega_Arcology", position)
+                lift = library.ground_offset("Gunship")
+                yaw = math.degrees(math.atan2(position[0], position[2]))
+                state.choppers.append(library.chopper("Gunship", (spot[0], spot[1] + lift, spot[2]), yaw + 180.0,
+                                                      name=f"Chopper_Pad{index}"))
+        plot = mega["building"].plot
+        flyby = at("Mega_Arcology", (-plot.w * 0.25, 140.0, plot.d / 2 + 22.0))
+        state.choppers.append(library.chopper("Scout", flyby, -90.0, name="Chopper_Flyby"))
+    street = at("Block_Corner", (0.0, 45.0, 30.0))
+    if street:
+        state.choppers.append(library.chopper("Lifter", street, 60.0, name="Chopper_Street"))
+    slum = at("Slum_Tower", (12.0, 30.0, 14.0))
+    if slum:
+        state.choppers.append(library.chopper("Gunship", slum, -140.0, name="Chopper_Slum"))
 
 
 # -- export -----------------------------------------------------------------------------------------------------------
@@ -401,7 +436,7 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     # District by day and by night (same camera: a chopper coming in high from the front left).
     _visible(lineup, False)
     _visible(district, True)
-    _frame(camera, aim, district, (-0.55, -1.0, 0.6), lens=35.0, margin=0.72)
+    _frame(camera, aim, district, (-0.5, -1.0, 0.3), lens=35.0, margin=0.5)
     set_time(scene, night=False)
     _render(scene, os.path.join(preview_dir, "district_day.jpg"))
     set_time(scene, night=True)
@@ -416,6 +451,9 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     _render(scene, os.path.join(preview_dir, "street_night.jpg"))
     set_time(scene, night=False)
     _render(scene, os.path.join(preview_dir, "street_day.jpg"))
+    _scale_shots(state, scene, camera, aim, preview_dir)
+    chopper_objects = state.library.objects() if getattr(state, "library", None) else []
+    _visible(chopper_objects, False)
 
     # LOD line-up: LOD0, LOD1, LOD2 of a few buildings, side by side.
     _visible(district, False)
@@ -426,8 +464,44 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
 
     if sheet:
         _building_sheet(state, scene, camera, aim, os.path.join(preview_dir, "buildings_sheet.jpg"), np)
-    _visible(district + lineup, True)
+    _visible(district + lineup + chopper_objects, True)
     _frame(camera, aim, district, (-0.55, -1.0, 0.6), lens=35.0, margin=0.72)
+
+
+def _scale_shots(state, scene, camera, aim, preview_dir):
+    """Choppers against the megatower: one on a wall pad (seen from the air beside it), one flying past (seen from
+    below and behind, the tower going up out of the picture). By day and by night."""
+    by_name = {obj.name: obj for obj in state.choppers}
+    shots = []
+    pad = by_name.get("Chopper_Pad0")
+    if pad is not None:
+        p = Vector(pad.location)
+        out = Vector((p.x - geo.to_blender(state.placements["Mega_Arcology"]).x,
+                      p.y - geo.to_blender(state.placements["Mega_Arcology"]).y, 0.0)).normalized()
+        side = Vector((-out.y, out.x, 0.0))
+        shots.append(("scale_pad", p + out * 30.0 + side * 16.0 + Vector((0, 0, 4.0)),
+                      p + Vector((0, 0, 9.0)) - out * 4.0, 22.0))
+    flyby = by_name.get("Chopper_Flyby")
+    if flyby is not None:
+        p = Vector(flyby.location)
+        tower = geo.to_blender(state.placements["Mega_Arcology"])
+        out = Vector((p.x - tower.x, p.y - tower.y, 0.0)).normalized()
+        side = Vector((-out.y, out.x, 0.0))
+        shots.append(("scale_flyby", p + out * 26.0 + side * 9.0 + Vector((0, 0, -5.0)),
+                      p - out * 10.0 + Vector((0, 0, 16.0)), 20.0))
+    if "Mega_Arcology" in state.placements and "Slum_Low" in state.placements:
+        # Skyline from chopper height at the edge of the district, looking past the low blocks at the megatowers.
+        start = geo.to_blender(state.placements["Slum_Low"])
+        tower = geo.to_blender(state.placements["Mega_Arcology"])
+        shots.append(("skyline", Vector((start.x - 40.0, start.y - 70.0, 38.0)),
+                      Vector((tower.x, tower.y, 170.0)), 22.0))
+    for name, camera_at, aim_at, lens in shots:
+        camera.location, aim.location, camera.data.lens = camera_at, aim_at, lens
+        set_time(scene, night=False)
+        _render(scene, os.path.join(preview_dir, f"{name}_day.jpg"))
+        set_time(scene, night=True)
+        _render(scene, os.path.join(preview_dir, f"{name}_night.jpg"))
+    set_time(scene, night=False)
 
 
 def _building_sheet(state, scene, camera, aim, path, np):
