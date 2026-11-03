@@ -8,6 +8,7 @@ LOD2 is the far mesh: one box per mass, nothing else.
 """
 import math
 import random
+from contextlib import contextmanager
 
 from mathutils import Matrix, Vector
 
@@ -103,11 +104,38 @@ class Building:
         self.thin = []        # (x, z, top[, radius]): masts and spires allowed above every collider
         plot = spec["plot"]
         self.plot = Rect.centred(0.0, 0.0, plot[0], plot[1])
+        self._turn = None     # (cx, cz, degrees, matrix) while inside turned()
+
+    # -- turned frame -----------------------------------------------------------------------------------------------
+    @contextmanager
+    def turned(self, cx, cz, degrees):
+        """Everything added inside is turned `degrees` (Unity euler Y) round the vertical axis through (cx, cz):
+        meshes, colliders (their yaw), markers and thin parts. Facade helpers work unchanged in the turned frame."""
+        previous = self._turn
+        self._turn = (cx, cz, degrees, Matrix.Rotation(math.radians(degrees), 3, "Y"))
+        try:
+            yield
+        finally:
+            self._turn = previous
+
+    def _tp(self, p):
+        if self._turn is None:
+            return tuple(p)
+        cx, cz, _degrees, matrix = self._turn
+        v = matrix @ Vector((p[0] - cx, p[1], p[2] - cz))
+        return (v.x + cx, v.y, v.z + cz)
+
+    def add_thin(self, x, z, top, radius=1.3):
+        tx, _ty, tz = self._tp((x, 0.0, z))
+        self.thin.append((tx, tz, top, radius))
 
     # -- primitives -------------------------------------------------------------------------------------------------
-    def box(self, centre, size, swatch, at=L0, rotation=None, swatches=None):
+    def box(self, centre, size, swatch, at=L0, rotation=None, swatches=None, raw=False):
         if min(size) <= 0:
             return
+        if self._turn is not None and not raw:
+            centre = self._tp(centre)
+            rotation = self._turn[3] @ rotation if rotation is not None else self._turn[3]
         index = sw(swatch)
         sides = {key: sw(value) for key, value in swatches.items()} if swatches else None
         for level in at:
@@ -122,6 +150,7 @@ class Building:
         self.box(face.point(u, y, o), face.size(a, h, d), swatch, at)
 
     def cylinder(self, start, end, radius, swatch, segments=12, at=L0, end_radius=None, cap_end=None):
+        start, end = self._tp(start), self._tp(end)
         for level in at:
             count = segments if level == 0 else max(6, segments // 2)
             self.lods[level].cylinder(tuple(start), tuple(end), radius, sw(swatch), segments=count,
@@ -129,18 +158,23 @@ class Building:
 
     def beam(self, a, b, thickness, swatch, at=L0):
         """A thin square bar from point a to point b (cables, braces, stairs)."""
-        a, b = Vector(a), Vector(b)
+        a, b = Vector(self._tp(a)), Vector(self._tp(b))
         axis = b - a
         if axis.length < 1e-3:
             return
         rotation = axis.to_track_quat("Z", "Y").to_matrix()
-        self.box(tuple((a + b) / 2), (thickness, thickness, axis.length), swatch, at, rotation=rotation)
+        self.box(tuple((a + b) / 2), (thickness, thickness, axis.length), swatch, at, rotation=rotation, raw=True)
+
+    def ico(self, centre, radius, swatch, at=L0, subdivisions=2):
+        centre = self._tp(centre)
+        for level in at:
+            self.lods[level].ico(centre, radius, sw(swatch), subdivisions=subdivisions if level == 0 else 1)
 
     def prism(self, profile, axis, a0, a1, swatches, cap, at=L0):
         """A 2D outline extruded along an axis. axis "z": profile points are (x, y), extruded from z = a0 to a1;
         axis "x": points are (z, y), extruded along x. swatches: one per outline edge (edge i = point i to i+1)."""
         def point(p, y, a):
-            return (p, y, a) if axis == "z" else (a, y, p)
+            return self._tp((p, y, a) if axis == "z" else (a, y, p))
 
         for level in at:
             builder = self.lods[level]
@@ -155,8 +189,9 @@ class Building:
 
     # -- game data --------------------------------------------------------------------------------------------------
     def collider(self, x0, x1, y0, y1, z0, z1, yaw=0.0):
-        self.colliders.append((((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), (abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)),
-                               yaw))
+        centre = self._tp(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2))
+        turn = self._turn[2] if self._turn is not None else 0.0
+        self.colliders.append((centre, (abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)), (yaw + turn + 180.0) % 360.0 - 180.0))
 
     def mass(self, rect, y0, y1, swatch="wall", at=L2, collide=True, top=None):
         """A main volume: its far-LOD box (`at`, default LOD2 only) and its collider."""
@@ -169,12 +204,13 @@ class Building:
         """Three boxes round a cylinder (a square with its corners on the circle and a cross): at most 3 % outside the
         circle, at most 14 % inside it."""
         y, h = (y0 + y1) / 2, y1 - y0
+        cx, _y, cz = self._tp((cx, 0.0, cz))
         for w, d in ((1.414, 1.414), (1.9, 0.8), (0.8, 1.9)):
             self.colliders.append(((cx, y, cz), (w * radius, h, d * radius), 0.0))
 
     def marker(self, kind, position, radius=0.0):
         index = sum(1 for m in self.markers if m[0] == kind)
-        self.markers.append((kind, index, tuple(position), radius))
+        self.markers.append((kind, index, self._tp(position), radius))
 
     def lit_swatch(self, rng=None):
         rng = rng or self.rng
@@ -246,7 +282,7 @@ def punched(b, face, y0, floors, storey, spacing=3.2, win=(1.5, 1.7), sill=0.95,
                 b.on_face(face, u, yf + sill - 0.5, 0.3, 0.9, 0.6, 0.62, "steel")
 
 
-def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0):
+def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0, columns_at=L01):
     """Glass core behind a concrete band on every floor line (strong storey lines), corner columns, a few lit
     stretches of window. Returns the roof height."""
     rng, style = b.rng, b.style
@@ -260,7 +296,7 @@ def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0):
     column = max(0.8, inset * 2)
     for x in (rect.x0 + column / 2, rect.x1 - column / 2):
         for z in (rect.z0 + column / 2, rect.z1 - column / 2):
-            b.span(x - column / 2, x + column / 2, y0, top, z - column / 2, z + column / 2, "wall", L01)
+            b.span(x - column / 2, x + column / 2, y0, top, z - column / 2, z + column / 2, "wall", columns_at)
     _lit_strips(b, rect, y0, floors, storey, inset, band)
     return top
 
@@ -443,8 +479,8 @@ def mast(b, x, z, y, height, lights=True, arms=True):
     if lights:
         b.box((x, y + height + 0.15, z), (0.3, 0.3, 0.3), "warning", L01)
         if height > 10:
-            b.box((x, y + height * 0.5, z + 0.18), (0.24, 0.24, 0.12), "warning", L01)
-    b.thin.append((x, z, y + height + 0.6))
+            b.box((x, y + height * 0.5, z + 0.15), (0.24, 0.24, 0.12), "warning", L01)
+    b.add_thin(x, z, y + height + 0.6)
 
 
 def dish(b, x, z, y):
@@ -569,7 +605,7 @@ def floodlight(b, x, z, height=10.0, facing=(0.0, 1.0)):
     hx, hz = x + facing[0] * 0.6, z + facing[1] * 0.6
     b.span(hx - 0.6, hx + 0.6, height - 0.2, height + 0.2, hz - 0.35, hz + 0.35, "dark", L01)
     b.span(hx - 0.5, hx + 0.5, height - 0.26, height - 0.2, hz - 0.28, hz + 0.28, "sodium", L01)
-    b.thin.append((x, z, height + 0.6))
+    b.add_thin(x, z, height + 0.6)
 
 
 # -- megastructures ---------------------------------------------------------------------------------------------------

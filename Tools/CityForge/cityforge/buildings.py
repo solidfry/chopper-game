@@ -9,7 +9,8 @@ from .kit import ALL, L0, L01, L1, L2, Rect, faces
 
 
 def build(b):
-    {"tower": tower, "mega": mega, "block": block, "slum": slum, "industrial": industrial}[b.type](b)
+    {"tower": tower, "mega": mega, "twins": twins, "twist": twist, "halo": halo, "orb": orb, "block": block,
+     "slum": slum, "industrial": industrial}[b.type](b)
     return b
 
 
@@ -71,7 +72,7 @@ def _crown(b, rect, y, crown):
         for k in (0.35, 0.7):
             b.box((rect.cx, y + 3.0 + height * k, rect.cz + 1.2 * (1 - k) + 0.1), (0.3, 0.3, 0.2), "warning", L01)
         b.box((rect.cx, y + 3.1 + height, rect.cz), (0.35, 0.35, 0.35), "warning", L01)
-        b.thin.append((rect.cx, rect.cz, y + 3.8 + height))
+        b.add_thin(rect.cx, rect.cz, y + 3.8 + height)
         return [base.inset(-1.5)]
     if crown == "antennas":
         taken = []
@@ -93,21 +94,26 @@ def _crown(b, rect, y, crown):
 def mega(b):
     """Megatower (300 to 550 m): podium, many setback tiers with alternating facades, sky-lobby rings every N floors,
     neon corner strips, giant billboards, landing pads that stand out from the walls, a tall crown."""
-    spec, style, rng = b.spec, b.style, b.rng
-    storey = style["storey"]
+    spec = b.spec
     plot = b.plot
-    podium = spec["podium"]
     tiers = [(Rect.centred(plot.w * ox, plot.d * oz, plot.w * sw_, plot.d * sd_), floors, facade)
              for sw_, sd_, floors, ox, oz, facade in spec["tiers"]]
+    info = _megatower(b, tiers, spec["podium"], spec.get("lobby_every", 20), spec.get("neon", ()), spec["crown"])
+    _billboards_and_pads(b, info, spec.get("billboards", ()), spec.get("pads", ()), spec.get("lobby_every", 20))
+
+
+def _megatower(b, tiers, podium, every, neon, crown, street=("front", "left", "right")):
+    """Podium + setback tiers + crown. tiers: [(rect, floors, ribbon | grid)]. Returns [(rect, y0, top, floors)]."""
+    rng, storey = b.rng, b.style["storey"]
     base = tiers[0][0]
     b.span(base.x0, base.x1, 0.0, podium, base.z0, base.z1, "wall", L01)
     sides = faces(base)
-    for name in ("front", "left", "right"):
-        kit.shopfront(b, sides[name], podium)
-        kit.sky_lobby(b, base, podium - 3.2, "neon_cyan")
-    kit.service_side(b, sides["back"], podium)
-
-    every = spec.get("lobby_every", 20)
+    for name, face in sides.items():
+        if name in street:
+            kit.shopfront(b, face, podium)
+        else:
+            kit.service_side(b, face, podium)
+    kit.sky_lobby(b, base, podium - 3.2, "neon_cyan")
     info = []
     y = podium
     for index, (rect, floors, facade) in enumerate(tiers):
@@ -116,7 +122,7 @@ def mega(b):
         b.mass(rect, 0.0 if index == 0 else y, top, swatch="glass", top="tar")
         for f in range(every, floors, every):
             kit.sky_lobby(b, rect, y + f * storey - 1.3)
-        if index in spec.get("neon", ()):
+        if index in neon:
             kit.neon_edges(b, rect, y, top, rng.choice(("neon_cyan", "neon_pink")))
         kit.tier_lights(b, rect, y, top)
         upper = tiers[index + 1][0] if index + 1 < len(tiers) else None
@@ -124,18 +130,22 @@ def mega(b):
         kit.obstruction_lights(b, rect, top + 1.2)
         blocked = [upper.inset(-1.0)] if upper else []
         if upper is None:
-            blocked += _mega_crown(b, rect, top, spec["crown"])
+            blocked += _mega_crown(b, rect, top, crown)
         kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.6)
         info.append((rect, y, top, floors))
         y = top
+    return info
 
-    for index, side in spec.get("billboards", ()):
+
+def _billboards_and_pads(b, info, billboards, pads, every):
+    storey, plot = b.style["storey"], b.plot
+    for index, side in billboards:
         rect, y0, top, _floors = info[index]
         face = faces(rect)[side]
         width = min(face.length * 0.7, 40.0)
         height = min((top - y0) * 0.45, width * 1.3)
         kit.billboard(b, face, face.length / 2, y0 + (top - y0) * 0.55, width, height)
-    for index, side in spec.get("pads", ()):
+    for index, side in pads:
         rect, y0, _top, floors = info[index]
         face = faces(rect)[side]
         clearance = {"front": plot.z1 - rect.z1, "back": rect.z0 - plot.z0,
@@ -148,6 +158,251 @@ def mega(b):
         if floor % every in (0, every - 1, 1):
             floor += 3
         kit.sky_pad(b, face, face.length / 2, y0 + floor * storey, 14.0, depth)
+
+
+# -- twin towers and sky bridges -------------------------------------------------------------------------------------
+
+def twins(b):
+    """Two megatowers on one plot, joined by sky bridges: enclosed glass bridges and an open sky deck with a landing
+    pad. Choppers can fly under and between them."""
+    spec, plot = b.spec, b.plot
+    gap = spec["gap"]
+    width = (plot.w - gap) / 2
+    infos = []
+    for side, (floors_list, crown) in zip((-1, 1), spec["towers"]):
+        cx = side * (gap + width) / 2
+        tiers = []
+        share = 1.0
+        for floors, facade in floors_list:
+            tiers.append((Rect.centred(cx, 0.0, width * share, plot.d * share), floors, facade))
+            share -= 0.14
+        street = ("front", "back", "left" if side < 0 else "right")
+        infos.append(_megatower(b, tiers, spec["podium"], spec.get("lobby_every", 20), spec.get("neon", ()), crown,
+                                street=street))
+    for kind, height, wide in spec["bridges"]:
+        x0, x1 = _inner_walls(infos, height)
+        if x0 is None:
+            print(f"{b.name}: no walls on both sides at {height:.0f} m for a bridge")
+            continue
+        if kind == "deck":
+            _sky_deck(b, x0, x1, height, wide)
+        else:
+            _glass_bridge(b, x0, x1, height, wide)
+
+
+def _inner_walls(infos, height):
+    """x of the left tower's inner wall and the right tower's inner wall at a height (None if a tower is too low)."""
+    walls = []
+    for info, pick in zip(infos, (max, min)):
+        hits = [rect for rect, y0, top, _f in info if y0 - 0.1 <= height <= top - 9.0]
+        if not hits:
+            return None, None
+        walls.append(pick(rect.x1 for rect in hits) if pick is max else pick(rect.x0 for rect in hits))
+    return walls[0], walls[1]
+
+
+def _glass_bridge(b, x0, x1, y, wide):
+    """Enclosed sky bridge: concrete floor beam, glass walls, ribs, roof, neon lines along the bottom edges."""
+    hw = wide / 2
+    height = 6.5
+    b.span(x0 - 0.5, x1 + 0.5, y, y + 1.2, -hw, hw, "concrete", ALL)
+    b.span(x0 - 0.5, x1 + 0.5, y + 1.2, y + height - 0.8, -hw + 0.3, hw - 0.3, "glass", L01)
+    b.span(x0 - 0.5, x1 + 0.5, y + height - 0.8, y + height, -hw, hw, "dark", L01, swatches={"top": "tar"})
+    count = max(2, int((x1 - x0) // 4.0))
+    for i in range(1, count):
+        x = x0 + i * (x1 - x0) / count
+        b.span(x - 0.2, x + 0.2, y + 1.2, y + height - 0.8, -hw, hw, "trim", L01)
+    for z in (-hw - 0.05, hw + 0.05):
+        b.span(x0 - 0.5, x1 + 0.5, y + 0.2, y + 0.45, z - 0.08, z + 0.08, b.rng.choice(("neon_cyan", "neon_pink")), L01)
+    for x in (x0 + (x1 - x0) * 0.3, x0 + (x1 - x0) * 0.7):
+        b.span(x - 1.5, x + 1.5, y + 2.0, y + 4.2, hw - 0.32, hw - 0.28, b.lit_swatch(), L01)
+    b.collider(x0, x1, y, y + height, -hw, hw)
+
+
+def _sky_deck(b, x0, x1, y, wide):
+    """Open bridge deck with a landing pad in the middle, railings and lights; truss under it."""
+    hw = wide / 2
+    b.span(x0 - 0.5, x1 + 0.5, y - 2.5, y, -hw, hw, "dark", ALL, swatches={"top": "concrete"})
+    for z in (-hw + 0.3, hw - 0.3):
+        b.span(x0, x1, y, y + 1.1, z - 0.06, z + 0.06, "metal")
+        for k in range(int((x1 - x0) // 6) + 1):
+            x = x0 + 1.0 + k * 6.0
+            if x < x1 - 0.5:
+                b.box((x, y + 1.18, z), (0.22, 0.2, 0.22), "sodium", L01)
+    span = x1 - x0
+    for k in range(int(span // 8)):
+        xa = x0 + k * 8.0
+        b.beam((xa, y - 2.5, -hw + 0.5), (min(x1, xa + 8.0), y - 7.5, -hw + 0.5), 0.5, "metal")
+        b.beam((xa, y - 2.5, hw - 0.5), (min(x1, xa + 8.0), y - 7.5, hw - 0.5), 0.5, "metal")
+    b.span(x0, x1, y - 8.0, y - 7.0, -hw + 0.2, -hw + 0.8, "metal")
+    b.span(x0, x1, y - 8.0, y - 7.0, hw - 0.8, hw - 0.2, "metal")
+    b.collider(x0, x1, y - 8.0, y, -hw, hw)
+    size = min(span - 3.0, wide - 2.0)
+    kit.helipad(b, Rect.centred((x0 + x1) / 2, 0.0, size, size), y)
+
+
+# -- landmarks: high tech and unusual --------------------------------------------------------------------------------
+
+def twist(b):
+    """A tower that turns as it rises: stacks of floors, each turned a little more (Unity yaw), ribbon facades,
+    neon edges on every few stacks, antennas on top."""
+    spec, rng, storey = b.spec, b.rng, b.style["storey"]
+    size = spec["size"]
+    podium = spec["podium"]
+    base = Rect.centred(0.0, 0.0, size * 1.25, size * 1.25)
+    b.span(base.x0, base.x1, 0.0, podium, base.z0, base.z1, "wall", ALL)
+    b.collider(base.x0, base.x1, 0.0, podium, base.z0, base.z1)
+    for face in faces(base).values():
+        kit.shopfront(b, face, podium)
+    kit.sky_lobby(b, base, podium - 3.0, "neon_pink")
+    kit.parapet(b, base, podium, height=1.0)
+    y = podium
+    stacks = spec["stacks"]
+    turn = spec["turn"]
+    rect = Rect.centred(0.0, 0.0, size, size)
+    colour = rng.choice(("neon_cyan", "neon_pink"))
+    for i in range(stacks):
+        angle = turn * i / max(1, stacks - 1)
+        taper = 1.0 - spec.get("taper", 0.0) * i / stacks
+        r = Rect.centred(0.0, 0.0, size * taper, size * taper)
+        with b.turned(0.0, 0.0, angle):
+            top = kit.ribbon(b, r, y, spec["floors"], storey, inset=0.6, band=1.1, columns_at=L0)
+            b.mass(r, y, top, swatch="glass", top="tar")
+            if i % 3 == 1:
+                kit.neon_edges(b, r, y, top, colour)
+            if i == stacks - 1:
+                kit.parapet(b, r, top, 1.2)
+                kit.obstruction_lights(b, r, top + 1.2)
+                for _ in range(3):
+                    x = rng.uniform(r.x0 + 2.0, r.x1 - 2.0)
+                    z = rng.uniform(r.z0 + 2.0, r.z1 - 2.0)
+                    kit.mast(b, x, z, top, rng.uniform(15.0, 30.0))
+        if top - podium > 0 and int((y - podium) // 90) != int((top - podium) // 90):
+            with b.turned(0.0, 0.0, angle):
+                for x in (r.x0 - 0.1, r.x1 + 0.1):
+                    for z in (r.z0 - 0.1, r.z1 + 0.1):
+                        b.box((x, top - 1.5, z), (0.5, 0.5, 0.5), "warning", L01)
+        y = top
+
+
+def halo(b):
+    """Round glass tower with two giant rings round it, held by spokes; a landing pad on the round roof."""
+    spec, rng, storey = b.spec, b.rng, b.style["storey"]
+    radius = spec["radius"]
+    podium = spec["podium"]
+    base = Rect.centred(0.0, 0.0, radius * 2 + 10.0, radius * 2 + 10.0)
+    b.span(base.x0, base.x1, 0.0, podium, base.z0, base.z1, "wall", ALL)
+    b.collider(base.x0, base.x1, 0.0, podium, base.z0, base.z1)
+    for face in faces(base).values():
+        kit.shopfront(b, face, podium)
+    kit.parapet(b, base, podium, height=1.0)
+    top = podium + spec["floors"] * storey
+    b.cylinder((0, podium, 0), (0, top, 0), radius, "glass", segments=16, at=L01)
+    b.cylinder((0, 0.0, 0), (0, top, 0), radius, "glass", segments=8, at=L2)
+    b.round_collider(0.0, 0.0, radius, podium, top)
+    for f in range(0, spec["floors"] + 1, 2):
+        y = podium + f * storey
+        b.cylinder((0, y, 0), (0, y + 0.8, 0), radius + 0.25, "wall", segments=16, at=L0 if f % 4 else L01)
+    # Lit windows: small panels on the round wall.
+    for f in range(spec["floors"]):
+        for _ in range(3):
+            if rng.random() < b.style["lit"] * 2.0:
+                with b.turned(0.0, 0.0, rng.uniform(0.0, 360.0)):
+                    b.box((0.0, podium + f * storey + 2.0, radius * 0.985), (rng.uniform(2.0, 5.0), 2.0, 0.6),
+                          b.lit_swatch(), L01)
+    # Vertical neon lines.
+    for k in range(4):
+        with b.turned(0.0, 0.0, 45.0 + 90.0 * k):
+            b.span(-0.2, 0.2, podium, top, radius + 0.1, radius + 0.45, "neon_cyan", L01)
+    for ring_y, ring_r in spec["rings"]:
+        _ring(b, ring_y, radius, ring_r)
+    kit.tier_lights(b, Rect.centred(0, 0, radius * 1.42, radius * 1.42), podium, top)
+    # Round roof: parapet ring, obstruction lights, landing pad.
+    b.cylinder((0, top, 0), (0, top + 1.2, 0), radius + 0.3, "wall", segments=16, at=ALL)
+    b.cylinder((0, top + 1.2, 0), (0, top + 1.25, 0), radius - 0.6, "tar", segments=16, at=L01)
+    for k in range(4):
+        with b.turned(0.0, 0.0, 90.0 * k):
+            b.box((0.0, top + 1.4, radius), (0.4, 0.4, 0.4), "warning", L01)
+    pad = radius * 1.2
+    kit.helipad(b, Rect.centred(0.0, 0.0, pad, pad), top + 1.2)
+
+
+def _ring(b, y, core, radius):
+    """A ring walkway round the tower: box segments turned round the axis, neon on the outer edge, 4 spokes."""
+    count = 24
+    width = 7.0
+    length = 2 * radius * math.tan(math.pi / count) + 0.6
+    for i in range(count):
+        with b.turned(0.0, 0.0, 360.0 * i / count):
+            b.span(-length / 2, length / 2, y, y + 4.0, radius - width / 2, radius + width / 2, "dark", L01,
+                   swatches={"top": "concrete"})
+            b.span(-length / 2, length / 2, y + 1.6, y + 2.0, radius + width / 2, radius + width / 2 + 0.15,
+                   "neon_pink", L01)
+            b.span(-length / 2 + 0.3, length / 2 - 0.3, y + 4.0, y + 5.0, radius + width / 2 - 0.25,
+                   radius + width / 2 - 0.1, "metal")
+            b.collider(-length / 2, length / 2, y, y + 4.0, radius - width / 2, radius + width / 2)
+            if i % 6 == 0:
+                b.span(-1.5, 1.5, y + 0.5, y + 3.5, core - 0.5, radius - width / 2 + 0.2, "dark", L01)
+                b.span(-1.0, 1.0, y + 3.5, y + 3.7, core - 0.5, radius - width / 2 + 0.2, "sodium", L01)
+                b.collider(-1.5, 1.5, y + 0.5, y + 3.5, core - 0.5, radius - width / 2 + 0.2)
+            if i % 3 == 0:
+                b.box((0.0, y + 4.2, radius + width / 2 - 0.4), (0.3, 0.3, 0.3), "warning", L01)
+    b.cylinder((0, y, 0), (0, y + 4.0, 0), radius + width / 2, "dark", segments=8, at=L2)
+
+
+def orb(b):
+    """Grid tower holding a wide round deck at the top with a faceted orb set into it (half above, half below);
+    landing pads on the deck round the orb."""
+    spec, storey = b.spec, b.style["storey"]
+    size, podium = spec["size"], spec["podium"]
+    rect = Rect.centred(0.0, 0.0, size, size)
+    b.span(rect.x0 - 3, rect.x1 + 3, 0.0, podium, rect.z0 - 3, rect.z1 + 3, "wall", ALL)
+    b.collider(rect.x0 - 3, rect.x1 + 3, 0.0, podium, rect.z0 - 3, rect.z1 + 3)
+    for face in faces(rect.inset(-3.0)).values():
+        kit.shopfront(b, face, podium)
+    top = kit.grid(b, rect, podium, spec["floors"], storey)
+    b.mass(rect, podium, top, swatch="glass", top="tar")
+    kit.neon_edges(b, rect, podium, top, "neon_cyan")
+    for f in range(20, spec["floors"], 20):
+        kit.sky_lobby(b, rect, podium + f * storey - 1.3)
+    kit.tier_lights(b, rect, podium, top)
+    # Flared neck under the deck.
+    neck = 10.0
+    b.cylinder((0, top - 1.0, 0), (0, top + neck, 0), size * 0.75, "dark", segments=8, at=ALL,
+               end_radius=spec["deck"] * 0.55)
+    b.round_collider(0.0, 0.0, size * 0.6, top, top + neck)
+    deck_y = top + neck
+    deck_r = spec["deck"]
+    b.cylinder((0, deck_y, 0), (0, deck_y + 1.4, 0), deck_r, "dark", segments=16, at=L01, cap_end="concrete")
+    b.cylinder((0, deck_y, 0), (0, deck_y + 1.4, 0), deck_r, "dark", segments=8, at=L2)
+    b.round_collider(0.0, 0.0, deck_r, deck_y, deck_y + 1.4)
+    b.cylinder((0, deck_y + 0.5, 0), (0, deck_y + 0.9, 0), deck_r + 0.1, "neon_pink", segments=16, at=L01)
+    for k in range(16):
+        with b.turned(0.0, 0.0, 22.5 * k):
+            b.box((0.0, deck_y + 1.55, deck_r - 0.4), (0.25, 0.3, 0.25), "sodium", L01)
+    # The orb: centre on the deck top, so the deck is its widest ring and nothing hangs over the pads.
+    r = spec["orb"]
+    centre_y = deck_y + 1.4
+    b.ico((0, centre_y, 0), r, "glass", at=ALL, subdivisions=2)
+    for lat, colour in ((0.0, "neon_cyan"), (0.45, "trim"), (-0.45, "trim")):
+        ring_r = r * math.cos(lat) * 0.985
+        yy = centre_y + r * math.sin(lat)
+        b.cylinder((0, yy - 0.3, 0), (0, yy + 0.3, 0), ring_r + 0.15, colour, segments=20,
+                   at=L01 if colour != "trim" else L0)
+    slices = 5
+    for k in range(slices):
+        a0, a1 = -math.pi / 2 + math.pi * k / slices, -math.pi / 2 + math.pi * (k + 1) / slices
+        # 0.9: the ends of the faceted orb sit a little inside the true sphere.
+        y0, y1 = centre_y + r * 0.9 * math.sin(a0), centre_y + r * 0.9 * math.sin(a1)
+        widest = r if a0 < 0 < a1 else r * max(math.cos(a0), math.cos(a1))
+        b.round_collider(0.0, 0.0, widest * 0.97, y0, y1)
+    kit.mast(b, 0.0, 0.0, centre_y + r - 0.3, 18.0)
+    b.box((0.0, centre_y + r + 0.2, 0.0), (1.4, 1.0, 1.4), "metal", L01)
+    # Landing pads on the deck, round the orb.
+    pad = deck_r - r - 2.0
+    for angle in spec.get("pads", (90.0, 270.0)):
+        with b.turned(0.0, 0.0, angle):
+            kit.helipad(b, Rect.centred(0.0, r + 1.0 + pad / 2, pad, pad), deck_y + 1.4)
 
 
 def _mega_crown(b, rect, y, crown):
@@ -168,7 +423,7 @@ def _mega_crown(b, rect, y, crown):
             r = 2.2 - 2.0 * k
             b.box((rect.cx, start + height * k, rect.cz + r), (0.4, 0.4, 0.3), "warning", L01)
         b.box((rect.cx, start + height + 0.1, rect.cz), (0.5, 0.5, 0.5), "warning", L01)
-        b.thin.append((rect.cx, rect.cz, start + height + 1.0, 2.7))
+        b.add_thin(rect.cx, rect.cz, start + height + 1.0, 2.7)
         return [base.inset(-2.0)]
     if crown == "antennas":
         taken = []

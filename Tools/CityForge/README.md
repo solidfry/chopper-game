@@ -26,11 +26,13 @@ Build and export: about 3 s. Previews: about 15 min on 4 CPU cores.
 
 ## What it makes
 
-16 buildings in 5 types (`cityforge/specs.py`). The front faces +Z. The origin is the plot centre on the ground.
+20 buildings (`cityforge/specs.py`). The front faces +Z. The origin is the plot centre on the ground.
 
 | Type | Buildings | What |
 |---|---|---|
 | mega | Mega_Arcology, Mega_Needle, Mega_Slab | The cyberpunk skyline: 300 to 550 m (Arcology: 471 m roof, about 550 m spire). Setback tiers, sky-lobby light rings every 16 to 20 floors (they count the height), neon corner strips, giant billboards, landing pads that stand out from the walls high up, tall spire or antenna crown, red lights every 90 m. 8 to 11 k triangles. |
+| twins | Mega_Twins | Two megatowers (about 330 and 400 m) on one plot, joined by sky bridges: two enclosed glass bridges (96 m, 180 m) and an open sky deck with a landing pad (262 m). Choppers can fly under and between them. |
+| landmarks | Landmark_Twist, Landmark_Halo, Landmark_Orb | High tech, unusual shapes. Twist: 30 stacks of floors turned 90° from bottom to top (about 335 m). Halo: round glass tower (295 m) with two giant ring walkways on spokes, pad on the round roof. Orb: grid tower with a wide round deck and a faceted orb set into it (about 225 m), pads on the deck. |
 | tower | Tower_Spire, Tower_Pad, Tower_Slab, Tower_Mast | Podium with shop fronts, tiers that step back, ribbon or grid glass facade, crown (spire, landing pad, billboard, antennas). 60 to 115 m. |
 | block | Block_Housing, Block_Corner, Block_Court | Rect, L or U plan, 5 to 8 floors, punched windows, balconies, fire escape, water tanks or a pad on the roof. |
 | slum | Slum_Stack, Slum_Tower, Slum_Low | Old concrete base with shacks piled on top, overhangs on stilts (found by ray casts), ladders, cables, small neon. |
@@ -58,7 +60,8 @@ masts, few lit windows (style `lit` = 14 %).
 
 Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityforge/choppers.py`, preview only):
 `scale_pad_*.jpg` (a Gunship on a megatower wall pad), `scale_flyby_*.jpg` (a Scout flying past, seen from below),
-`skyline_*.jpg` (the megatowers from chopper height), `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
+`skyline_*.jpg` (the megatowers from chopper height), `bridge_*.jpg` (a Gunship under a sky bridge),
+`landmarks_*.jpg`, `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
 `street_night.jpg` (chopper height, ground cues), `lods.jpg` (LOD0 / LOD1 / LOD2 side by side),
 `buildings_sheet.jpg` (every building alone).
 
@@ -76,8 +79,8 @@ Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityfor
 
 - Look: `cityforge/styles.py` (palette colours, lit share, neon, props, obstruction height, budgets).
 - Buildings: `cityforge/specs.py` (one line each: type, seed, plot and shape numbers). New seed = new chance details.
-- Parts: `cityforge/kit.py` (facades, shop fronts, roof props, pads, signs, lights), `cityforge/buildings.py` (the
-  four types).
+- Parts: `cityforge/kit.py` (facades, shop fronts, roof props, pads, signs, lights; `Building.turned()` turns a group
+  of parts, colliders and markers round a vertical axis), `cityforge/buildings.py` (the building types).
 
 ## Next
 

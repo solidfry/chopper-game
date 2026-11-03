@@ -22,7 +22,7 @@ DISTRICT_COLLECTION = "CityForge: district"
 LODS_COLLECTION = "CityForge: LOD line-up"
 STAGE_COLLECTION = "CityForge: stage"
 STREET = 16.0                 # street width between plots in the district layout (m)
-ROWS = (("slum",), ("block",), ("industrial",), ("tower",), ("mega",))  # front (camera side, +Z) to back
+ROWS = (("slum",), ("block",), ("industrial",), ("tower",), ("twist", "halo", "orb"), ("mega", "twins"))  # front (camera side, +Z) to back
 LOD_LINEUP = ("Tower_Spire", "Block_Corner", "Slum_Stack")
 LOD_LINEUP_Z = -260.0
 LOD_SCREEN_HEIGHTS = (0.30, 0.08, 0.012)  # suggested LOD Group transition heights (share of screen height)
@@ -191,6 +191,24 @@ def _place_choppers(state):
         plot = mega["building"].plot
         flyby = at("Mega_Arcology", (-plot.w * 0.25, 140.0, plot.d / 2 + 22.0))
         state.choppers.append(library.chopper("Scout", flyby, -90.0, name="Chopper_Flyby"))
+    twins = state.built.get("Mega_Twins")
+    if twins:
+        for kind, index, position, radius in twins["building"].markers:
+            if kind == "RoofPad":
+                spot = at("Mega_Twins", position)
+                lift = library.ground_offset("Lifter")
+                state.choppers.append(library.chopper("Lifter", (spot[0], spot[1] + lift, spot[2]), 90.0,
+                                                      name="Chopper_Deck"))
+        bridges = [height for kind, height, _w in twins["building"].spec["bridges"] if kind == "glass"]
+        if bridges:
+            state.choppers.append(library.chopper("Gunship", at("Mega_Twins", (2.0, bridges[-1] - 9.0, 6.0)), 15.0,
+                                                  name="Chopper_Bridge"))
+    orb = state.built.get("Landmark_Orb")
+    if orb:
+        for kind, index, position, radius in orb["building"].markers[:1]:
+            spot = at("Landmark_Orb", position)
+            state.choppers.append(library.chopper("Scout", (spot[0], spot[1] + library.ground_offset("Scout"),
+                                                            spot[2]), 135.0, name="Chopper_Orb"))
     street = at("Block_Corner", (0.0, 45.0, 30.0))
     if street:
         state.choppers.append(library.chopper("Lifter", street, 60.0, name="Chopper_Street"))
@@ -495,6 +513,19 @@ def _scale_shots(state, scene, camera, aim, preview_dir):
         tower = geo.to_blender(state.placements["Mega_Arcology"])
         shots.append(("skyline", Vector((start.x - 40.0, start.y - 70.0, 38.0)),
                       Vector((tower.x, tower.y, 170.0)), 22.0))
+    bridge = by_name.get("Chopper_Bridge")
+    if bridge is not None:
+        p = Vector(bridge.location)
+        # Blender -Y = Unity +Z (the plot front): stand in front of the twins, a little below the bridge.
+        shots.append(("bridge", p + Vector((-14.0, -58.0, -6.0)), p + Vector((0.0, 0.0, 10.0)), 24.0))
+    landmarks = [obj for obj in state.district if obj.name.startswith("District_Landmark")]
+    if landmarks:
+        corners = _corners(landmarks)
+        centre = sum(corners, Vector()) / len(corners)
+        low = min(c.y for c in corners)
+        width = max(c.x for c in corners) - min(c.x for c in corners)
+        shots.append(("landmarks", Vector((centre.x - width * 0.25, low - width * 0.75, 110.0)),
+                      Vector((centre.x, centre.y, 150.0)), 24.0))
     for name, camera_at, aim_at, lens in shots:
         camera.location, aim.location, camera.data.lens = camera_at, aim_at, lens
         set_time(scene, night=False)

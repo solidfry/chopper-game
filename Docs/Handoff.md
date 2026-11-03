@@ -205,7 +205,7 @@ Next session: continue with this order (step 1 onward). Newest (29 Oct evening):
    - port the old menus to UI Toolkit and delete `Assets/Scripts` (the options overlay `UI/Options` is the first piece; reuse its style);
    - export the `.blend` models to `.fbx`;
    - delete or rebuild the old scenes.
-   - city building generator (plan section 7a2): **first version built 3 Nov** in `Tools/CityForge` (Blender side, checked with `bpy`; 16 buildings incl. 300–550 m megatowers, LODs, colliders, markers, audit, previews with Kit02 choppers for scale). Not yet in Unity: next is a Setup step that imports `Assets/Chopper/Art/City/City01` (palette material, LOD heights, colliders and markers from the manifest, prefabs).
+   - city building generator (plan section 7a2): **first version built 3 Nov** in `Tools/CityForge` (Blender side, checked with `bpy`; 20 buildings incl. 300–550 m megatowers, twin towers with sky bridges, 3 high-tech landmarks, LODs, colliders, markers, audit, previews with Kit02 choppers for scale). Not yet in Unity: next is a Setup step that imports `Assets/Chopper/Art/City/City01` (palette material, LOD heights, colliders and markers from the manifest, prefabs).
 
 ## 7. Owner preferences
 

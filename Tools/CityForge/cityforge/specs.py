@@ -9,6 +9,11 @@ tower:      podium (ground floor height), tiers [(width share, depth share, floo
 mega:       podium, tiers [(width share, depth share, floors, x offset, z offset, ribbon | grid)], crown (spire |
             antennas | pad), lobby_every (floors between sky-lobby rings), neon (tier indices with neon corners),
             billboards [(tier, side)], pads [(tier, side)] (landing pads that stand out from the wall)
+twins:      gap (m between the towers), towers [([(floors, facade), ...], crown), ...] (left, right; each tier is 14 %
+            smaller), bridges [(glass | deck, height, width)], podium, lobby_every, neon
+twist:      size, podium, stacks, floors (per stack), turn (degrees, bottom to top), taper (0..1)
+halo:       radius, podium, floors, rings [(height, radius)]
+orb:        size, podium, floors, deck (radius), orb (radius), pads (angles)
 block:      floors, shape (rect | L | U), roof (tanks | pad), fire_escape (left | right | None), balconies (0..1)
 slum:       base_floors, stacks (shacks to pile on the base), spread (overhang, m)
 industrial: hall (w, d, h, x, z) or None, chimneys [(x, z, radius, height)], tanks [(x, z, radius, height)],
@@ -36,6 +41,17 @@ BUILDINGS = [
     dict(name="Mega_Slab", type="mega", seed=503, plot=(72, 44), podium=9.0, crown="pad", lobby_every=18,
          tiers=[(1.0, 1.0, 30, 0, 0, "ribbon"), (0.85, 0.7, 30, 0, 0, "grid"), (0.6, 0.45, 20, 0.08, 0, "ribbon")],
          neon=(0,), billboards=[(1, "front")], pads=[(2, "back")]),
+    dict(name="Mega_Twins", type="twins", seed=504, plot=(100, 46), gap=26.0, podium=9.0, lobby_every=18,
+         neon=(1,), towers=[([(36, "grid"), (30, "ribbon"), (24, "grid")], "antennas"),
+                            ([(40, "ribbon"), (36, "grid"), (30, "ribbon")], "spire")],
+         bridges=[("glass", 96.0, 10.0), ("glass", 180.0, 12.0), ("deck", 262.0, 22.0)]),
+    # -- landmarks: high tech, unusual shapes -----------------------------------------------------------------------
+    dict(name="Landmark_Twist", type="twist", seed=601, plot=(52, 52), size=32.0, podium=8.0, stacks=30, floors=3,
+         turn=90.0, taper=0.25),
+    dict(name="Landmark_Halo", type="halo", seed=602, plot=(80, 80), radius=15.0, podium=7.0, floors=80,
+         rings=[(150.0, 34.0), (232.0, 26.0)]),
+    dict(name="Landmark_Orb", type="orb", seed=603, plot=(80, 80), size=26.0, podium=7.0, floors=52, deck=38.0,
+         orb=22.0, pads=(45.0, 225.0)),
     # -- blocks: mid-rise housing and offices; roofs are fight space ------------------------------------------------
     dict(name="Block_Housing", type="block", seed=201, plot=(36, 24), floors=6, shape="rect", roof="tanks",
          fire_escape="right", balconies=0.35),

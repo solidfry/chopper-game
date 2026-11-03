@@ -525,10 +525,11 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 ## 7a2. City building generator (owner TODO, 29 Oct — first version built 3 Nov)
 
 **Built (3 Nov, Blender side only, not yet in Unity):** `Tools/CityForge` (see its README). Uses PartForge's builder
-and palette. 16 buildings (megatowers, towers, blocks, slums, industrial), 3 LODs each, box colliders, `RoofPad` / `Roof`
+and palette. 20 buildings (megatowers, twin towers with sky bridges, landmarks, towers, blocks, slums, industrial), 3 LODs each, box colliders, `RoofPad` / `Roof`
 markers, manifest, audit (floating parts, colliders, clear zones, budgets), previews by day and night.
 Owner (3 Nov): cyberpunk scale, extremely tall skyscrapers → type `mega` (300 to 550 m, wall pads, sky-lobby rings,
-billboards) and previews with the Kit02 choppers for scale. Output in
+billboards) and previews with the Kit02 choppers for scale. Then sky bridges (`Mega_Twins`: glass bridges and a sky
+deck with a pad) and high-tech landmarks (`Landmark_Twist`, `_Halo`, `_Orb`). Output in
 `Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
 
 

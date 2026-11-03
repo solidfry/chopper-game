@@ -46,7 +46,7 @@ STYLES = {
         obstruction_height=30.0,  # tops higher than this get red obstruction lights
         props=1.0,              # roof prop density (vents, units, tanks)
         edge_radius=0.0,        # bevel on hard edges (m); 0 = none (seen from 20 m and more)
-        budgets=dict(lod0=24000, lod1=0.75, lod2=400),  # LOD0 triangles; LOD1 share of LOD0; LOD2 triangles
+        budgets=dict(lod0=24000, lod1=0.8, lod2=400),  # LOD0 triangles; LOD1 share of LOD0; LOD2 triangles
         palette={
             # name: (colour, emission or None, metallic, smoothness). Names are PartForge swatches (see SWATCH).
             "hull": ("#8b8273", None, 0.0, 0.18),         # sand concrete
