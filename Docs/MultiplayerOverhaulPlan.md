@@ -436,6 +436,19 @@ handling and their own ability, in the same role:
   Matchmaking, team limits and balance work by class. Hangar: class tabs, then a variant picker.
 - Art: PartForge gets a body type per variant (own hull, nose, boom, rotor layout) and Setup step 6 builds one
   ghost prefab per variant, as now per chassis.
+- **First variant wanted (owner, 3 Nov): a quad Lifter.** PartForge already builds it: `heavy` body with
+  `rotor_layout: "quad"` (four ducted fans on arms, a ring with a glowing lip; `parts.py` `_heavy_rotors`). The shipped
+  Lifter uses `tandem`. Rule: a different body = a chassis variant; a different part on the same body (e.g. a ducted
+  rotor with a rim) = a module (`parts.py` part + `ModuleDefinition`, `allowedChassis` if it fits only some chassis).
+  Order:
+  1. **Socket scale first (blocker):** the quad hubs have socket scale 0.34 in the kit manifest, but the game uses 1.0
+     (handoff: "next: socket scale"). Read `scale` into `SocketAuthoring` (Setup step 6) and apply it in
+     `ModuleVisualSystem` and `HangarStage`. Without it, full-size blades show through the ducts. It also fixes the
+     extra hubs of the tandem and coaxial layouts.
+  2. `ChassisClass` on `ChassisDefinition`.
+  3. A second Lifter spec in `kits.py` (`rotor_layout: "quad"`, own name and seed); PartForge, then Setup steps 5-6.
+  4. Its own handling row and stats (e.g. faster and better turn, less lift than the tandem Lifter).
+  5. Hangar: chassis cards grouped by class, then a variant picker.
 
 ### Rockets and a rich weapon roster (owner TODO, 29 Oct — design not started)
 - **Rocket lead reticle always on** while a rocket pylon is selected (now it shows only in some cases).
@@ -459,7 +472,7 @@ handling and their own ability, in the same role:
 - **Code:** `HangarController` (state: Overview / SlotFocus / ChassisSelect), `SocketFocusPose` component, `LoadoutPreview` (spawns module meshes on sockets). Data comes from the same SOs as gameplay. Loadout save → Cloud Save.
 - Also show this screen while matchmaking searches (Section 4).
 - **Built 29 Oct (tested in the editor):** hangar scene from Setup step 7. Differences from the design above: no Cinemachine or MK Glow/Shapes (a small camera blend in `HangarStage`, URP bloom, baked feature-line meshes); the focus pose is automatic from the socket position (per-socket poses optional); a "show paint" view for skins; launch starts a local session (`LocalSession`) until Phase 3 matchmaking. Loadout saved in PlayerPrefs (Cloud Save later). Not yet: slide-in animations, scan sweep, matchmaking overlay, way back from the match.
-- [ ] **New layout (owner TODO, 31 Oct):** replace the two side panels and the chassis tabs. References: `Docs/References/hangar-callouts.png` (overview) and `Docs/References/hangar-slot-grid.png` (slot open).
+- [x] **New layout (owner TODO, 31 Oct; built 3 Nov, not yet compiled):** replace the two side panels and the chassis tabs. References: `Docs/References/hangar-callouts.png` (overview) and `Docs/References/hangar-slot-grid.png` (slot open).
   - No tabs at the top: the top bar is kept for the main game navigation (later).
   - Overview (callouts reference): the chopper in the middle; a line from each socket to a small slot card (module icon, name, "+" when empty), drawn in screen space from the socket position each frame.
   - Slots: a grid of slot tiles along the bottom of the screen (the same slots as the callouts; either opens the slot).
@@ -470,6 +483,9 @@ handling and their own ability, in the same role:
   - **Saved builds (presets):** several named builds per chassis; pick, save, rename, delete. Saved locally first (`LoadoutChoiceStore`), Cloud Save later (Phase 5).
   - **3D view:** the rendered (painted) chopper always shows; the green wireframe becomes a subtle overlay on it (no paint / wireframe toggle). Less bloom.
   - `HangarModel` keeps the logic (slots, options, stats, focus) and gains builds; the layout is `Hangar.uxml` / `Hangar.uss` / `HangarView`; the render change is `HangarStage` and the hangar scene's volume.
+  - **Built 3 Nov (not yet compiled):** all points above. Callout cards in two columns beside the chopper (socket left of the centre = card on the left), kept in socket order without overlap, gliding when the chopper turns; lines drawn by `UI/Hangar/CalloutLines.cs`; socket screen points from `HangarStage.TryGetSlotViewportPoint`. Builds per chassis and presets in `LoadoutChoiceStore` (PlayerPrefs keys `Chopper.Hangar.Build.<chassis>` and `Chopper.Hangar.Presets.<chassis>`; `IHangarPrefs` for tests). Overlay material `HangarOverlay` (old `HangarLine`, dimmed under the bloom threshold); `HangarFill` deleted; bloom 1.4 → 0.8. Tests: `HangarModelTests` (builds, presets, preset text, detail).
+  - 3 Nov (owner request, not yet compiled): the idle spin eases to a stop while the mouse is over the chopper or near it (`HangarSettings.spinHoldMargin`, `spinEaseSeconds`), so the callout cards hold still. Slot focus picks the view by the socket's side: left or right of the centre line (Scout pylons) = that side, a little from the front; front or back on the centre line = front or back; the middle = front left. Before, the rotor disc made the chopper "wide", so pylons counted as "middle" and showed from the front left.
+  - Not yet: module icons on tiles and cards (the tile shows a text mark: +, X, EQUIPPED, LOCKED); idea: Setup step 7 renders each module's wireframe to a small texture (`ModuleDefinition` icon field).
 
 ## 6. Account progression
 

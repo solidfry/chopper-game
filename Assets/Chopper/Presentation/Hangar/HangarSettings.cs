@@ -6,8 +6,8 @@ namespace Chopper.Presentation.Hangar
 {
     /// <summary>
     /// The hangar's look and camera (plan section 5, "Customisation UI"). Materials are made by Setup step 7 from the
-    /// style guide palette: Console Green lines on a dark green fill, Cruise Pink for the selected slot, Lightning
-    /// Yellow for an empty socket.
+    /// style guide palette: faint Console Green lines over the painted chopper, Cruise Pink for the selected slot,
+    /// Lightning Yellow for an empty socket.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Hangar/Hangar Settings", fileName = "HangarSettings")]
     public sealed class HangarSettings : ScriptableObject, IValidatedAsset
@@ -19,8 +19,9 @@ namespace Chopper.Presentation.Hangar
         [Header("Wireframe")]
         [SerializeField, Tooltip("Line meshes of every chassis and module model (baked by Setup step 7).")]
         private WireframeLibrary wireframes;
-        [SerializeField, Tooltip("Solid fill under the lines (hides the far side).")] private Material fill;
-        [SerializeField] private Material line;
+        [SerializeField, Tooltip("Wireframe over the painted chopper: keep it dim (under the bloom threshold) so it stays " +
+                                 "subtle. Empty = no overlay.")]
+        private Material overlay;
         [SerializeField, Tooltip("Lines of the module in the selected slot.")] private Material highlight;
         [SerializeField, Tooltip("Marker on an empty socket; it pulses.")] private Material emptySocket;
         [SerializeField, Tooltip("Faces that meet at a bigger angle get a line (used when baking).")]
@@ -36,6 +37,11 @@ namespace Chopper.Presentation.Hangar
         [SerializeField] private float overviewFieldOfView = 40f;
         [SerializeField, Tooltip("Turntable speed in the overview (degrees per second).")]
         private float idleSpin = 12f;
+        [SerializeField, Tooltip("The idle spin stops while the mouse is this close to the chopper on screen (part of the " +
+                                 "screen; it covers the callout cards).")]
+        private float spinHoldMargin = 0.12f;
+        [SerializeField, Tooltip("Seconds for the idle spin to stop or start again (about 95 %).")]
+        private float spinEaseSeconds = 0.35f;
         [SerializeField, Tooltip("Slot focus: camera distance from the socket, in chopper lengths. The camera looks at the " +
                                  "socket from the side it sits on, from above.")]
         private float focusDistance = 0.7f;
@@ -58,8 +64,7 @@ namespace Chopper.Presentation.Hangar
         [SerializeField, Tooltip("Bloom and vignette for the neon lines.")] private UnityEngine.Rendering.VolumeProfile volume;
 
         public WireframeLibrary Wireframes => wireframes;
-        public Material Fill => fill;
-        public Material Line => line;
+        public Material Overlay => overlay;
         public Material Highlight => highlight;
         public Material EmptySocket => emptySocket;
         public float CreaseDegrees => creaseDegrees;
@@ -69,6 +74,8 @@ namespace Chopper.Presentation.Hangar
         public float OverviewFieldOfView => overviewFieldOfView;
         public string MatchQueue => matchQueue;
         public float IdleSpin => idleSpin;
+        public float SpinHoldMargin => spinHoldMargin;
+        public float SpinEaseSeconds => spinEaseSeconds;
         public float FocusDistance => focusDistance;
         public float FocusElevation => focusElevation;
         public float FocusElevationBelow => focusElevationBelow;
@@ -83,18 +90,18 @@ namespace Chopper.Presentation.Hangar
         {
             if (wireframes == null) problems.Add($"{name}: no wireframe library. Press '7. Build hangar'.");
             else wireframes.CollectProblems(problems);
-            if (fill == null || line == null || highlight == null || emptySocket == null)
+            if (overlay == null || highlight == null || emptySocket == null)
                 problems.Add($"{name}: a hangar material is missing. Press '7. Build hangar'.");
             if (focusBlendSeconds <= 0f) problems.Add($"{name}: focus blend time must be above 0.");
+            if (spinEaseSeconds <= 0f) problems.Add($"{name}: spin ease time must be above 0.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
-        public void Initialise(WireframeLibrary library, Material fillMaterial, Material lineMaterial, Material highlightMaterial,
+        public void Initialise(WireframeLibrary library, Material overlayMaterial, Material highlightMaterial,
             Material socketMaterial, UnityEngine.Rendering.VolumeProfile profile)
         {
             wireframes = library;
-            fill = fillMaterial;
-            line = lineMaterial;
+            overlay = overlayMaterial;
             highlight = highlightMaterial;
             emptySocket = socketMaterial;
             volume = profile;

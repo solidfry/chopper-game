@@ -37,10 +37,11 @@ namespace Chopper.Editor.Setup
         private const string UnlitShader = "Universal Render Pipeline/Unlit";
         /// <summary>Lines are drawn brighter than 1 so bloom makes them glow.</summary>
         private const float Glow = 2.5f;
+        /// <summary>The wireframe over the paint: dim, under the bloom threshold, so it does not glow.</summary>
+        private const float OverlayDim = 0.45f;
 
         // Style guide palette (UI/Theme/ChopperTheme.uss).
         private static readonly Color ConsoleGreen = new(0f, 1f, 0.58f);
-        private static readonly Color ConsoleGreenDark = new(0.031f, 0.106f, 0.039f);
         private static readonly Color CruisePink = new(1f, 0.259f, 0.537f);
         private static readonly Color LightningYellow = new(1f, 0.875f, 0.42f);
         private static readonly Color ElectricBlueDark = new(0.027f, 0f, 0.098f);
@@ -98,8 +99,7 @@ namespace Chopper.Editor.Setup
 
             settings.Initialise(
                 settings.Wireframes != null ? settings.Wireframes : library,
-                settings.Fill != null ? settings.Fill : EnsureMaterial("HangarFill", ConsoleGreenDark),
-                settings.Line != null ? settings.Line : EnsureMaterial("HangarLine", ConsoleGreen * Glow),
+                settings.Overlay != null ? settings.Overlay : EnsureMaterial("HangarOverlay", ConsoleGreen * OverlayDim),
                 settings.Highlight != null ? settings.Highlight : EnsureMaterial("HangarHighlight", CruisePink * Glow),
                 settings.EmptySocket != null ? settings.EmptySocket : EnsureMaterial("HangarEmptySocket", LightningYellow * Glow),
                 settings.Volume != null ? settings.Volume : EnsureVolume());
@@ -128,7 +128,7 @@ namespace Chopper.Editor.Setup
 
             var bloom = profile.Add<Bloom>(true);
             bloom.threshold.value = 0.9f;
-            bloom.intensity.value = 1.4f;
+            bloom.intensity.value = 0.8f;
             bloom.scatter.value = 0.65f;
             var vignette = profile.Add<Vignette>(true);
             vignette.intensity.value = 0.35f;
@@ -146,7 +146,16 @@ namespace Chopper.Editor.Setup
         private static void BakeWireframes(HangarSettings settings, LoadoutCatalog catalog)
         {
             var library = settings.Wireframes;
-            var entries = library.Entries.Where(e => e.Source != null && e.Wire != null).ToList();
+            // Keep entries whose model has not changed since the bake; the lines of a changed model (kit reimport: same
+            // mesh asset, new shape) and of a removed one are deleted, and changed ones are baked again below.
+            var entries = new List<WireframeLibrary.Entry>();
+            foreach (var entry in library.Entries)
+            {
+                if (entry.Source != null && entry.Wire != null && entry.SourceStamp == WireframeLibrary.Stamp(entry.Source))
+                    entries.Add(entry);
+                else if (entry.Wire != null)
+                    Object.DestroyImmediate(entry.Wire, true);
+            }
             var known = new HashSet<Mesh>(entries.Select(e => e.Source));
 
             var models = new List<GameObject>();
@@ -169,7 +178,7 @@ namespace Chopper.Editor.Setup
                 wire.SetIndices(lines, MeshTopology.Lines, 0);
                 wire.RecalculateBounds();
                 AssetDatabase.AddObjectToAsset(wire, library);
-                entries.Add(new WireframeLibrary.Entry { Source = mesh, Wire = wire });
+                entries.Add(new WireframeLibrary.Entry { Source = mesh, Wire = wire, SourceStamp = WireframeLibrary.Stamp(mesh) });
                 added++;
             }
 
@@ -247,6 +256,7 @@ namespace Chopper.Editor.Setup
             var view = uiObject.GetComponent<HangarView>();
             if (view == null) view = uiObject.AddComponent<HangarView>();
             view.SetBridge(bridge);
+            view.SetStage(stage);
             var sounds = uiObject.GetComponent<UISoundBinder>();
             if (sounds == null) sounds = uiObject.AddComponent<UISoundBinder>();
             sounds.SetBridge(bridge);

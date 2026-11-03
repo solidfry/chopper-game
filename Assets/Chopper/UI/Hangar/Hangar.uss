@@ -1,5 +1,7 @@
 /* Hangar, terminal style (same family as OptionsMenu.uss). Colours, fonts and control styles come from the shared
-   theme (ChopperTheme.uss). The middle of the screen stays clear for the 3D wireframe chopper. */
+   theme (ChopperTheme.uss). Layout (plan section 5, "New layout"): the chopper in the middle with callout cards,
+   chassis and builds on the left, stats floating on the right, tiles along the bottom. References:
+   Docs/References/hangar-callouts.png and hangar-slot-grid.png. */
 
 .hangar {
   position: absolute;
@@ -9,13 +11,18 @@
   bottom: 0;
 }
 
-/* ---- Top bar with the chassis tabs ---- */
+.hangar--hidden {
+  display: none;
+}
+
+/* ---- Top bar: kept for the main game navigation (later) ---- */
 
 .hangar__bar {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 16px;
+  height: 36px;
+  padding: 0 16px;
   background-color: var(--chopper-terminal);
   border-bottom-width: 1px;
   border-color: var(--chopper-green-dim);
@@ -28,64 +35,48 @@
   padding: 0;
 }
 
-.hangar__tabs {
-  flex-direction: row;
+.hangar__bar-nav {
+  flex-grow: 1;
 }
 
-/* Nav tab: Console Green underline on the active tab (style guide). */
-.hangar-tab {
-  margin: 0 6px;
-  padding: 6px 18px;
-  font-size: 14px;
-  color: var(--chopper-text);
-  background-color: rgba(0, 0, 0, 0);
-  border-width: 0 0 2px 0;
-  border-color: rgba(0, 0, 0, 0);
-  border-radius: 0;
+/* Segment readout next to the title: decoration only. */
+.hangar__bar-deco {
+  margin-left: 14px;
 }
 
-.hangar-tab:hover,
-.hangar-tab:focus {
-  color: var(--chopper-green);
-  background-color: var(--chopper-green-faint);
-}
+/* ---- Main area: left column, the chopper (spacer), right column ---- */
 
-.hangar-tab--active {
-  color: var(--chopper-green);
-  border-color: var(--chopper-green);
-}
-
-/* ---- Side panels ---- */
-
-.hangar__body {
+.hangar__main {
   flex-grow: 1;
   flex-direction: row;
-  padding: 20px;
+  padding: 20px 28px 0 28px;
 }
 
 .hangar__spacer {
   flex-grow: 1;
 }
 
-.hangar__panel {
-  width: 440px;
-  align-self: flex-start;
-  padding: 14px 20px 18px 20px;
+.hangar__column {
+  width: 380px;
+}
+
+.hangar__block {
+  padding: 14px 18px 16px 18px;
   background-color: var(--chopper-panel);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
-  border-radius: 0;
 }
 
 .hangar__title {
-  font-size: 24px;
+  letter-spacing: 4px; /* large Karnivore: more spacing */
+  font-size: 26px;
   color: var(--chopper-green);
   padding: 0;
   margin-bottom: 4px;
 }
 
+/* Size and font come from chopper-body (the theme's long-text font). */
 .hangar__description {
-  font-size: 12px;
   white-space: normal;
   opacity: 0.85;
   padding: 0;
@@ -95,99 +86,315 @@
 .hangar__section {
   font-size: 12px;
   color: var(--chopper-yellow);
-  margin-top: 14px;
-  margin-bottom: 4px;
+  margin-top: 12px;
+  margin-bottom: 6px;
   padding: 0 0 4px 0;
   border-bottom-width: 1px;
   border-color: var(--chopper-green-faint);
 }
 
-.hangar__list {
-  flex-shrink: 1;
-}
-
 .hangar__row {
-  margin: 5px 0;
+  margin: 4px 0;
 }
 
-.hangar__row > .unity-label {
-  min-width: 150px;
-  font-size: 13px;
+/* Fields in a column: a fixed label width and no inner margins, so every input box starts at the same x. */
+.hangar__row > .unity-base-field__label {
+  min-width: 70px;
+  width: 70px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  -unity-text-align: middle-left;
 }
 
-/* A slot or a module: a card row (dark fill, thin accent border, label left, value right). */
-.hangar-item {
+.hangar__row > .unity-base-field__input {
+  flex-grow: 1;
+  margin: 0;
+}
+
+/* ---- Chassis cards: a small 2-column grid ---- */
+
+.hangar__chassis-grid {
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: space-between;
-  margin: 3px 0;
+}
+
+.hangar-chassis {
+  width: 49%;
+  height: 54px;
+  margin: 0 0 6px 0;
   padding: 6px 10px;
-  height: 32px;
+  align-items: flex-start;
+  justify-content: center;
   background-color: rgba(0, 0, 0, 0.4);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-faint);
   border-radius: 0;
 }
 
-.hangar-item:hover,
-.hangar-item:focus {
+.hangar-chassis:hover,
+.hangar-chassis:focus {
   background-color: var(--chopper-green-faint);
   border-color: var(--chopper-green);
 }
 
-.hangar-item__name {
-  font-size: 13px;
+.hangar-chassis__name {
+  font-size: 14px;
   color: var(--chopper-text);
   padding: 0;
-  -unity-text-align: middle-left;
 }
 
-.hangar-item__value {
-  font-size: 12px;
+.hangar-chassis__detail {
+  font-size: 10px;
   color: var(--chopper-green);
+  opacity: 0.8;
   padding: 0;
-  -unity-text-align: middle-right;
 }
 
-/* The slot being edited, or the module fitted now: Cruise Pink (highlight in the style guide). */
-.hangar-item--selected {
+/* The chassis shown now: Cruise Pink (highlight in the style guide). */
+.hangar-chassis--active {
   border-color: var(--chopper-pink);
   background-color: var(--chopper-pink-dark);
 }
 
-.hangar-item--selected .hangar-item__value {
+.hangar-chassis--active .hangar-chassis__name {
   color: var(--chopper-pink);
 }
 
-.hangar-item--empty .hangar-item__value {
+/* ---- Saved builds ---- */
+
+.hangar__preset-buttons {
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.hangar__small-button {
+  margin: 0 0 0 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.4);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hangar__small-button:hover,
+.hangar__small-button:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+.hangar__small-button:disabled {
+  opacity: 0.35;
+}
+
+/* ---- Slot open: title and the module detail ---- */
+
+.hangar__focus-header {
+  flex-direction: row;
+  align-items: center;
+}
+
+.hangar__back {
+  width: 34px;
+  height: 34px;
+  margin: 0 12px 0 0;
+  font-size: 18px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.4);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hangar__back:hover,
+.hangar__back:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+.hangar__focus-title {
+  letter-spacing: 4px; /* large Karnivore: more spacing */
+  font-size: 22px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+/* Detail block: a thin bracket line on the left, as in the reference. */
+.hangar__detail {
+  margin-top: 120px;
+  padding: 10px 0 10px 18px;
+  border-left-width: 1px;
+  border-color: var(--chopper-green-dim);
+}
+
+.hangar__detail-name {
+  letter-spacing: 4px; /* large Karnivore: more spacing */
+  font-size: 30px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.hangar__detail-description {
+  font-size: 14px;
+}
+
+.hangar__detail-tags {
+  flex-direction: row;
+  margin-top: 10px;
+}
+
+.hangar__tag {
+  font-size: 12px;
+  margin-right: 8px;
+  padding: 5px 12px;
+  color: var(--chopper-green);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+}
+
+.hangar__tag--plain {
+  color: var(--chopper-text);
+  border-color: var(--chopper-green-faint);
+}
+
+.hangar__tag--locked {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+/* ---- Callouts: a card per socket, a line to the socket (CalloutLines) ---- */
+
+.hangar__callouts {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.hangar__callout-lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  --line-color: rgba(0, 255, 148, 0.55);
+  --line-highlight: #ff4289;
+}
+
+.hangar-callout {
+  min-width: 110px;
+  margin: 0;
+  padding: 4px 10px;
+  align-items: flex-start;
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.hangar-callout--right {
+  align-items: flex-start;
+}
+
+.hangar-callout:hover,
+.hangar-callout:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+.hangar-callout__slot {
+  font-size: 9px;
+  color: var(--chopper-green);
+  opacity: 0.8;
+  padding: 0;
+}
+
+.hangar-callout__module {
+  font-size: 12px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.hangar-callout--empty {
+  border-color: var(--chopper-yellow);
+}
+
+.hangar-callout--empty .hangar-callout__module {
+  font-size: 18px;
   color: var(--chopper-yellow);
 }
 
-.hangar-item--locked {
-  opacity: 0.45;
+/* ---- Stats: floating next to the chopper (big numbers, then bars) ---- */
+
+.hangar__stats-float {
+  margin-top: 60px;
+  padding: 0 0 0 18px;
+  border-left-width: 1px;
+  border-color: var(--chopper-green-dim);
 }
 
-.hangar-item--locked .hangar-item__value {
+.hangar__headline {
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.hangar-headline {
+  padding: 0;
+}
+
+.hangar-headline__label {
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.8;
+  padding: 0;
+}
+
+.hangar-headline__value {
+  letter-spacing: 4px; /* large Karnivore: more spacing */
+  font-size: 34px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.hangar-headline__value--better {
+  color: var(--chopper-green);
+}
+
+.hangar-headline__value--worse {
   color: var(--chopper-red);
 }
 
-/* ---- Stat bars: now (dim fill) and the hovered module's change (green = better, red = worse) ---- */
+.hangar-headline__unit {
+  font-size: 10px;
+  opacity: 0.7;
+  padding: 0;
+}
 
+/* Stat bars: now (dim fill) and the hovered module's change (green = better, red = worse). */
 .hangar-stat {
   flex-direction: row;
   align-items: center;
-  margin: 4px 0;
+  margin: 5px 0;
 }
 
 .hangar-stat__label {
-  width: 80px;
-  font-size: 12px;
+  width: 70px;
+  font-size: 11px;
   color: var(--chopper-green);
   padding: 0;
 }
 
 .hangar-stat__track {
   flex-grow: 1;
-  height: 10px;
+  height: 8px;
   background-color: rgba(0, 0, 0, 0.5);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-faint);
@@ -217,28 +424,216 @@
 }
 
 .hangar-stat__text {
-  width: 130px;
-  font-size: 12px;
+  width: 110px;
+  font-size: 11px;
   padding: 0 0 0 8px;
   -unity-text-align: middle-right;
 }
 
+/* ---- Paint: skin tiles (swatch, name, one state tag) ---- */
+
+.hangar__skins {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.hangar-skin {
+  width: 32%;
+  height: 76px;
+  margin: 0 0 6px 0;
+  padding: 5px;
+  align-items: stretch;
+  justify-content: space-between;
+  background-color: rgba(8, 27, 10, 0.78);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+}
+
+.hangar-skin:hover,
+.hangar-skin:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+/* The swatch: the skin's main colours side by side. */
+.hangar-skin__swatch {
+  flex-direction: row;
+  height: 18px;
+  border-width: var(--chopper-border-width);
+  border-color: rgba(0, 0, 0, 0.6);
+}
+
+.hangar-skin__band {
+  flex-grow: 1;
+}
+
+.hangar-skin__name {
+  font-size: 10px;
+  -unity-text-align: middle-left;
+  color: var(--chopper-text);
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* State line: the same tag as the module tiles, smaller. Plain = the pattern name, no frame. */
+/* Selectors go through the tile so they win over the module tag rules further down. */
+.hangar-skin > .hangar-skin__state {
+  align-self: flex-start;
+  font-size: 8px;
+  padding: 2px 5px;
+}
+
+.hangar-skin > .hangar-skin__state--plain {
+  color: var(--chopper-green);
+  opacity: 0.7;
+  border-color: rgba(0, 0, 0, 0);
+  padding-left: 0;
+}
+
+/* The skin on the chopper now: same as a fitted module tile. */
+.hangar-skin--selected {
+  border-width: 2px;
+  border-color: var(--chopper-green);
+}
+
+.hangar-skin--locked {
+  opacity: 0.5;
+}
+
+/* ---- Bottom: tiles and the launch buttons ---- */
+
+.hangar__bottom {
+  flex-direction: row;
+  align-items: flex-end;
+  padding: 0 28px 22px 28px;
+}
+
+.hangar__tiles-frame {
+  flex-grow: 1;
+  flex-shrink: 1;
+  margin-right: 28px;
+}
+
+.hangar__tiles-scroll {
+  max-height: 252px;
+}
+
+.hangar__tiles {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+/* A tile: dark square, corner text, a mark in the middle, name at the bottom. */
+.hangar-tile {
+  width: 132px;
+  height: 112px;
+  margin: 0 8px 8px 0;
+  padding: 6px 8px;
+  justify-content: space-between;
+  align-items: stretch;
+  background-color: rgba(8, 27, 10, 0.78);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+}
+
+.hangar-tile:hover,
+.hangar-tile:focus {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+/* Tile number, top right: decoration only (dot font). */
+.hangar-tile__serial {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+}
+
+.hangar-tile__corner {
+  font-size: 10px;
+  color: var(--chopper-green);
+  opacity: 0.85;
+  padding: 0;
+  -unity-text-align: upper-left;
+}
+
+/* State tag: one size and shape for every state (same look as the detail tags); only the colour changes. */
+.hangar-tile__mark {
+  align-self: center;
+  font-size: 10px;
+  padding: 3px 8px;
+  -unity-text-align: middle-center;
+  color: var(--chopper-green);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+}
+
+.hangar-tile__mark--none {
+  visibility: hidden;
+}
+
+/* EQUIPPED: faint fill, full border, bold green text. Not a bright solid fill: the bloom washes thin text out on it. */
+.hangar__tag--equipped,
+.hangar-tile__mark--equipped {
+  color: var(--chopper-green);
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+}
+
+.hangar-tile__mark--locked {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.hangar-tile__mark--empty {
+  color: var(--chopper-yellow);
+  border-color: var(--chopper-yellow);
+}
+
+.hangar-tile__name {
+  font-size: 11px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+  -unity-text-align: lower-left;
+}
+
+/* The fitted module: Console Green frame and tick, as in the reference. */
+.hangar-tile--fitted {
+  border-width: 2px;
+  border-color: var(--chopper-green);
+}
+
+.hangar-tile--locked {
+  opacity: 0.5;
+}
+
 /* ---- Launch ---- */
+
+.hangar__actions {
+  width: 380px;
+}
 
 .hangar__error {
   font-size: 12px;
   color: var(--chopper-red);
   white-space: normal;
-  margin-top: 10px;
+  margin-top: 6px;
   padding: 0;
 }
 
 .hangar__button {
-  margin: 14px 0 0 0;
-  height: 44px;
+  margin: 10px 0 0 0;
+  height: 48px;
   font-size: 18px;
   color: var(--chopper-green);
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.5);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
   border-radius: 0;

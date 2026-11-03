@@ -7,7 +7,7 @@ namespace Chopper.Presentation.Hangar
 {
     /// <summary>
     /// Baked wireframe line meshes (<see cref="WireframeMesh"/>) for every chassis and module model, as sub-assets.
-    /// Setup step 7 adds the missing ones; delete an entry (or the asset) to bake it again.
+    /// Setup step 7 adds the missing ones and bakes again the ones whose model changed (<see cref="Entry.SourceStamp"/>).
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Hangar/Wireframe Library", fileName = "WireframeLibrary")]
     public sealed class WireframeLibrary : ScriptableObject, IValidatedAsset
@@ -17,6 +17,21 @@ namespace Chopper.Presentation.Hangar
         {
             public Mesh Source;
             public Mesh Wire;
+            /// <summary>
+            /// Shape of the source when it was baked (<see cref="Stamp"/>). A kit reimport keeps the same mesh asset with
+            /// a new shape: a different stamp makes Setup step 7 bake the lines again.
+            /// </summary>
+            public int SourceStamp;
+        }
+
+        /// <summary>Vertex and triangle counts and the bounds: changes when the model changes.</summary>
+        public static int Stamp(Mesh mesh)
+        {
+            if (mesh == null) return 0;
+            var bounds = mesh.bounds;
+            return HashCode.Combine(mesh.vertexCount, mesh.triangles.Length,
+                Mathf.RoundToInt(bounds.center.x * 1000f), Mathf.RoundToInt(bounds.center.y * 1000f), Mathf.RoundToInt(bounds.center.z * 1000f),
+                Mathf.RoundToInt(bounds.size.x * 1000f), Mathf.RoundToInt(bounds.size.y * 1000f), Mathf.RoundToInt(bounds.size.z * 1000f));
         }
 
         [SerializeField] private Entry[] entries = Array.Empty<Entry>();

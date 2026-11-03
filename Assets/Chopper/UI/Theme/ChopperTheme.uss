@@ -4,8 +4,12 @@
    Cards in the guide: dark fill + 1px accent border + accent text. Roles: Console Green = UI and friendly,
    Dream Cyan = team A and info, Lightning Yellow = team B, score and caution, Screamer Red = danger and damage,
    Cruise Pink = boost and highlights, Electric Blue = brand accent. Use these tokens; do not add new colours.
-   Fonts are the old game's (Assets/Fonts): Ethnocentric ExtraLight for text (the old HUD and timer),
-   Ethnocentric Bold for titles and alerts (class chopper-title, as the old popups and intro).
+   Fonts: Karnivore (Assets/Fonts/Karnivore, Apostrophic Lab) for headings and UI elements: Lite by default (labels,
+   values, buttons, tiles), Bold for titles and alerts (class chopper-title). Longer text (descriptions, sentences)
+   uses Chakra Petch Regular (Assets/Fonts/ChakraPetch, OFL), class chopper-body, in sentence case: Karnivore is hard
+   to read in long runs and at small sizes (its K looks like H). Two display cuts for small decoration only (serials, index numbers, readouts that carry no
+   information the player needs): chopper-deco-dot (Karnivore Digit, dot matrix) and chopper-deco-seven (Karnivore
+   Seven, segments). Never on titles, buttons, values, states or anything the player must read to play.
    Controls are restyled here (not per screen) because a dropdown's list opens at the panel root,
    outside the screen that owns it. */
 :root {
@@ -44,12 +48,40 @@
   --chopper-border-width: 1px;
   --chopper-radius: 0;
 
-  -unity-font: url("/Assets/Fonts/Ethnocentric-ExtraLight.otf");
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOL.ttf");
+  /* Karnivore sets tight: extra letter spacing everywhere (chopper-body resets it for Chakra Petch). */
+  letter-spacing: 1px;
   color: var(--chopper-text);
 }
 
+/* Karnivore sets tight: extra letter spacing (px; large titles add more in their screen's USS). */
 .chopper-title {
-  -unity-font: url("/Assets/Fonts/Ethnocentric-Bold.otf");
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  letter-spacing: 2px;
+}
+
+/* Longer text: descriptions and sentences (see the header). */
+.chopper-body {
+  -unity-font: url("/Assets/Fonts/ChakraPetch/ChakraPetch-Regular.ttf");
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+/* Decoration only (see the header): small, dim, never information the player needs. */
+.chopper-deco-dot {
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOD.ttf");
+  font-size: 10px;
+  color: var(--chopper-green);
+  opacity: 0.45;
+  padding: 0;
+}
+
+.chopper-deco-seven {
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVSV.ttf");
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.5;
+  padding: 0;
 }
 
 /* ---- Terminal controls ---- */
@@ -60,28 +92,72 @@
   opacity: 0.85;
 }
 
-/* Dropdown: a bracketed terminal field instead of the grey box. */
-.unity-base-popup-field__input {
+/* Dropdown and text field: one terminal box. Every state is set here, so none falls back to the default theme (its
+   :active state is a light grey box, its hover text is pure white: both unreadable on our green).
+
+   State       | Box                                        | Text
+   ------------|--------------------------------------------|----------------
+   rest        | black 50 %, dim green border               | green
+   hover       | faint green fill, green border, 3px bar    | bright (text)
+   focus       | same as hover                              | bright
+   active      | same as hover (pressed, or the list open)  | bright
+   disabled    | rest look at 40 % opacity                  | green
+
+   The accent bar is a 3px left border; the left padding drops by 2px, so the text does not move. Selectors carry the
+   field's own state (:hover:enabled ... on the field), so they win over the default theme's. */
+.unity-base-popup-field > .unity-base-popup-field__input,
+.unity-base-text-field > .unity-base-text-field__input {
   background-color: rgba(0, 0, 0, 0.5);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
   border-radius: 0;
   color: var(--chopper-green);
-  padding: 2px 8px;
+  margin: 0;
+  padding: 2px 8px 2px 10px;
+  height: 24px;
+  --unity-cursor-color: var(--chopper-green);
+  --unity-selection-color: rgba(0, 255, 148, 0.35);
 }
 
-.unity-base-popup-field__input:hover,
-.unity-base-popup-field:focus .unity-base-popup-field__input {
+.unity-base-popup-field:hover:enabled > .unity-base-popup-field__input,
+.unity-base-popup-field:focus:enabled > .unity-base-popup-field__input,
+.unity-base-popup-field:active:enabled > .unity-base-popup-field__input,
+.unity-base-popup-field:checked:enabled > .unity-base-popup-field__input,
+.unity-base-text-field:hover:enabled > .unity-base-text-field__input,
+.unity-base-text-field:focus:enabled > .unity-base-text-field__input,
+.unity-base-text-field:active:enabled > .unity-base-text-field__input {
   border-color: var(--chopper-green);
+  border-left-width: 3px;
+  padding-left: 8px;
   background-color: var(--chopper-green-faint);
+  color: var(--chopper-text);
+}
+
+.unity-base-popup-field:disabled > .unity-base-popup-field__input,
+.unity-base-text-field:disabled > .unity-base-text-field__input {
+  opacity: 0.4;
 }
 
 .unity-base-popup-field__text {
   color: var(--chopper-green);
 }
 
+.unity-base-popup-field:hover:enabled > .unity-base-popup-field__input > .unity-base-popup-field__text,
+.unity-base-popup-field:focus:enabled > .unity-base-popup-field__input > .unity-base-popup-field__text,
+.unity-base-popup-field:active:enabled > .unity-base-popup-field__input > .unity-base-popup-field__text,
+.unity-base-popup-field:checked:enabled > .unity-base-popup-field__input > .unity-base-popup-field__text {
+  color: var(--chopper-text);
+}
+
 .unity-base-popup-field__arrow {
   -unity-background-image-tint-color: var(--chopper-green);
+}
+
+.unity-base-popup-field:hover:enabled > .unity-base-popup-field__input > .unity-base-popup-field__arrow,
+.unity-base-popup-field:focus:enabled > .unity-base-popup-field__input > .unity-base-popup-field__arrow,
+.unity-base-popup-field:active:enabled > .unity-base-popup-field__input > .unity-base-popup-field__arrow,
+.unity-base-popup-field:checked:enabled > .unity-base-popup-field__input > .unity-base-popup-field__arrow {
+  -unity-background-image-tint-color: var(--chopper-text);
 }
 
 /* The open list (drawn at the panel root). */
@@ -92,24 +168,54 @@
   border-radius: 0;
 }
 
+/* List rows, same language as the field:
+   State           | Row                                  | Label
+   ----------------|--------------------------------------|----------------------
+   rest            | clear, transparent 3px bar           | text at 80 %
+   hover / focus   | faint green fill, green bar          | bright (text), 100 %
+   active (press)  | same as hover                        | bright
+   checked (picked)| clear                                | green, check mark
+   checked + hover | faint fill, green bar                | green
+   Labels sit in an item-content element: the selectors go through it, so they win over the default theme. */
 .unity-base-dropdown__item {
   color: var(--chopper-text);
   background-color: rgba(0, 0, 0, 0);
+  border-left-width: 3px;
+  border-color: rgba(0, 0, 0, 0);
+  padding: 3px 8px 3px 4px;
 }
 
-.unity-base-dropdown__item:hover,
-.unity-base-dropdown__item:checked {
+.unity-base-dropdown__item:hover:enabled,
+.unity-base-dropdown__item:focus:enabled,
+.unity-base-dropdown__item:active:enabled {
   background-color: var(--chopper-green-faint);
-  color: var(--chopper-green);
+  border-color: var(--chopper-green);
 }
 
-.unity-base-dropdown__label {
+.unity-base-dropdown__item:checked:enabled {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-base-dropdown__item:checked:hover:enabled {
+  background-color: var(--chopper-green-faint);
+}
+
+.unity-base-dropdown__item > .unity-base-dropdown__item-content > .unity-base-dropdown__label {
   color: var(--chopper-text);
+  opacity: 0.8;
 }
 
-.unity-base-dropdown__item:hover .unity-base-dropdown__label,
-.unity-base-dropdown__item:checked .unity-base-dropdown__label {
+.unity-base-dropdown__item:hover:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label,
+.unity-base-dropdown__item:focus:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label,
+.unity-base-dropdown__item:active:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label {
+  color: var(--chopper-text);
+  opacity: 1;
+}
+
+.unity-base-dropdown__item:checked:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label,
+.unity-base-dropdown__item:checked:hover:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label {
   color: var(--chopper-green);
+  opacity: 1;
 }
 
 .unity-base-dropdown__checkmark {

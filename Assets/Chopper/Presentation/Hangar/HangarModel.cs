@@ -24,33 +24,85 @@ namespace Chopper.Presentation.Hangar
     public readonly struct HangarOptionRow
     {
         public readonly string Name;
+        public readonly string Description;
+        /// <summary>Weight cost for the tile corner ("8"); "0" for empty.</summary>
+        public readonly string Cost;
+        /// <summary>"LEVEL 20" when locked, else the weight ("8 KG").</summary>
         public readonly string Detail;
         public readonly bool Locked;
         public readonly bool Fitted;
+        /// <summary>The "no module" choice.</summary>
+        public readonly bool Empty;
 
-        public HangarOptionRow(string name, string detail, bool locked, bool fitted)
+        public HangarOptionRow(string name, string description, string cost, string detail, bool locked, bool fitted, bool empty)
         {
             Name = name;
+            Description = description;
+            Cost = cost;
             Detail = detail;
             Locked = locked;
             Fitted = fitted;
+            Empty = empty;
         }
     }
 
-    /// <summary>A stat bar: now and, while a module is hovered, with that module fitted. Fractions 0..1.</summary>
+    /// <summary>
+    /// A stat: now and, while a module is hovered, with that module fitted. Fractions 0..1. Headline stats show as big
+    /// numbers next to the chopper; the others as bars.
+    /// </summary>
     public readonly struct HangarStatRow
     {
         public readonly string Label;
         public readonly float Fraction;
         public readonly float PreviewFraction;
-        public readonly string Text;
+        public readonly string Value;
+        public readonly string Unit;
+        public readonly bool Headline;
 
-        public HangarStatRow(string label, float fraction, float previewFraction, string text)
+        public HangarStatRow(string label, float fraction, float previewFraction, string value, string unit, bool headline)
         {
             Label = label;
             Fraction = fraction;
             PreviewFraction = previewFraction;
-            Text = text;
+            Value = value;
+            Unit = unit;
+            Headline = headline;
+        }
+
+        public string Text => $"{Value} {Unit}";
+    }
+
+    /// <summary>A skin tile: name, pattern, its main colours (swatch), lock and whether it is the one picked.</summary>
+    public readonly struct HangarSkinRow
+    {
+        public readonly string Name;
+        public readonly string Pattern;
+        public readonly IReadOnlyList<UnityEngine.Color> Colours;
+        public readonly bool Locked;
+        public readonly int UnlockLevel;
+        public readonly bool Selected;
+
+        public HangarSkinRow(string name, string pattern, IReadOnlyList<UnityEngine.Color> colours, bool locked, int unlockLevel, bool selected)
+        {
+            Name = name;
+            Pattern = pattern;
+            Colours = colours;
+            Locked = locked;
+            UnlockLevel = unlockLevel;
+            Selected = selected;
+        }
+    }
+
+    /// <summary>A chassis card: name and a short line (slots, weight budget).</summary>
+    public readonly struct HangarChassisCard
+    {
+        public readonly string Name;
+        public readonly string Detail;
+
+        public HangarChassisCard(string name, string detail)
+        {
+            Name = name;
+            Detail = detail;
         }
     }
 
@@ -67,8 +119,9 @@ namespace Chopper.Presentation.Hangar
     /// <summary>
     /// The hangar (plan section 5): pick a chassis, focus a slot, fit a module, pick a skin, launch. Uses the same
     /// catalog and <see cref="LoadoutRules"/> as the server, so the stats and errors shown are the ones that apply.
-    /// Each chassis remembers its own modules while you switch. <see cref="Changed"/>: the build, focus or skin changed
-    /// (rebuild lists and the 3D view); <see cref="StatsChanged"/>: only the hover preview changed (stat bars).
+    /// Each chassis keeps its own build (saved, so it stays across sessions) and its named builds (presets).
+    /// <see cref="Changed"/>: the build, focus, skin or presets changed (rebuild lists and the 3D view);
+    /// <see cref="StatsChanged"/>: only the hover preview changed (stats and the module detail).
     /// </summary>
     public sealed class HangarModel
     {
@@ -82,10 +135,14 @@ namespace Chopper.Presentation.Hangar
         private readonly LoadoutChoiceStore _store;
         private readonly IPlayerUnlocks _unlocks;
         private readonly Dictionary<ushort, ModuleDefinition[]> _fitted = new();
+        private readonly Dictionary<ushort, List<LoadoutPreset>> _presets = new();
         /// <summary>Choices for the focused slot; index 0 is "empty" (null).</summary>
         private readonly List<ModuleDefinition> _options = new();
         private readonly List<string> _chassisNames = new();
+        private readonly List<HangarChassisCard> _chassisCards = new();
         private readonly List<string> _skinNames = new();
+        private readonly List<string> _presetNames = new();
+        private readonly List<HangarSkinRow> _skinRows = new();
         private readonly List<HangarSlotRow> _slotRows = new();
         private readonly List<HangarOptionRow> _optionRows = new();
         private readonly List<HangarStatRow> _statRows = new();
@@ -104,13 +161,18 @@ namespace Chopper.Presentation.Hangar
             _store = store;
             _unlocks = unlocks ?? new AllUnlocked();
 
-            foreach (var chassis in _catalog.Chassis) _chassisNames.Add(chassis != null ? chassis.DisplayName.ToUpperInvariant() : "?");
+            foreach (var chassis in _catalog.Chassis)
+            {
+                _chassisNames.Add(chassis != null ? chassis.DisplayName.ToUpperInvariant() : "?");
+                _chassisCards.Add(Card(chassis));
+            }
             if (_skins != null)
                 foreach (var skin in _skins.Skins) _skinNames.Add(skin.DisplayName.ToUpperInvariant());
             _maxHealth = MaxHealth();
             BarScales();
 
             ChassisIndex = 0;
+            RestoreBuilds();
             if (_store != null && _store.TryLoad(out var saved, out var skinId)) Restore(saved, skinId);
             Refresh();
         }
@@ -127,6 +189,7 @@ namespace Chopper.Presentation.Hangar
         public event Action MatchStatusChanged;
 
         public IReadOnlyList<string> ChassisNames => _chassisNames;
+        public IReadOnlyList<HangarChassisCard> ChassisCards => _chassisCards;
         public int ChassisIndex { get; private set; }
         public ChassisDefinition Chassis => ChassisIndex < _catalog.Chassis.Count ? _catalog.Chassis[ChassisIndex] : null;
         public string ChassisDescription => Chassis != null ? Chassis.Description : "";
@@ -137,11 +200,27 @@ namespace Chopper.Presentation.Hangar
         public IReadOnlyList<HangarOptionRow> Options => _optionRows;
         public IReadOnlyList<HangarStatRow> Stats => _statRows;
         public string FocusTitle => FocusedSlot == Overview ? "" : _slotRows[FocusedSlot].Label;
+        /// <summary>The option the detail block shows: the hovered one, else the fitted one; -1 in the overview.</summary>
+        public int DetailOption
+        {
+            get
+            {
+                if (FocusedSlot == Overview) return -1;
+                if (_hovered >= 0) return _hovered;
+                for (var i = 0; i < _optionRows.Count; i++)
+                    if (_optionRows[i].Fitted) return i;
+                return -1;
+            }
+        }
+        /// <summary>Named builds of the current chassis.</summary>
+        public IReadOnlyList<string> PresetNames => _presetNames;
         public float WeightFraction { get; private set; }
         public float PreviewWeightFraction { get; private set; }
         public string WeightText { get; private set; } = "";
         public bool OverWeight { get; private set; }
         public IReadOnlyList<string> SkinNames => _skinNames;
+        /// <summary>One tile per skin (same order as <see cref="SkinNames"/>).</summary>
+        public IReadOnlyList<HangarSkinRow> Skins => _skinRows;
         public int SkinIndex { get; private set; }
         public ushort SkinId => _skins != null && SkinIndex < _skins.Skins.Count ? _skins.Skins[SkinIndex].Id : (ushort)0;
         /// <summary>Why the loadout cannot launch; empty when it can.</summary>
@@ -181,6 +260,7 @@ namespace Chopper.Presentation.Hangar
         {
             if (FocusedSlot == Overview || option < 0 || option >= _options.Count || _optionRows[option].Locked) return;
             FittedFor(Chassis)[FocusedSlot] = _options[option];
+            SaveBuild();
             Refresh();
         }
 
@@ -194,22 +274,73 @@ namespace Chopper.Presentation.Hangar
             StatsChanged?.Invoke();
         }
 
-        /// <summary>Picking a skin shows the paint (it cannot be seen on the wireframe).</summary>
+        /// <summary>Locked skins (player level below the skin's unlock level) cannot be picked.</summary>
         public void SelectSkin(int index)
         {
             if (index < 0 || index >= _skinNames.Count || index == SkinIndex) return;
+            if (_skins.Skins[index].UnlockLevel > _unlocks.Level) return;
             SkinIndex = index;
-            PaintView = true;
             Refresh();
         }
 
-        /// <summary>True: the 3D view shows the real paint and skin; false: the green wireframe.</summary>
-        public bool PaintView { get; private set; }
-
-        public void SetPaintView(bool paint)
+        /// <summary>
+        /// Saves the current build under <paramref name="name"/> (cleaned, see <see cref="LoadoutChoiceStore.CleanName"/>).
+        /// A preset with the same name is replaced. Returns its index, or -1 for an empty name.
+        /// </summary>
+        public int SavePreset(string name)
         {
-            if (paint == PaintView) return;
-            PaintView = paint;
+            name = LoadoutChoiceStore.CleanName(name);
+            if (name.Length == 0 || Chassis == null) return -1;
+            var presets = PresetsFor(Chassis);
+            var preset = new LoadoutPreset(name, Ids(FittedFor(Chassis)));
+            var index = presets.FindIndex(p => p.Name == name);
+            if (index >= 0) presets[index] = preset;
+            else
+            {
+                presets.Add(preset);
+                index = presets.Count - 1;
+            }
+            StorePresets();
+            Refresh();
+            return index;
+        }
+
+        /// <summary>Fits the modules of preset <paramref name="index"/>. Modules no longer in the catalog become empty.</summary>
+        public void ApplyPreset(int index)
+        {
+            if (Chassis == null) return;
+            var presets = PresetsFor(Chassis);
+            if (index < 0 || index >= presets.Count) return;
+            var fitted = FittedFor(Chassis);
+            var modules = presets[index].Modules;
+            for (var slot = 0; slot < fitted.Length; slot++)
+                fitted[slot] = slot < modules.Length ? Module(modules[slot]) : null;
+            SaveBuild();
+            Refresh();
+        }
+
+        /// <summary>False for an empty name or a name that another preset has.</summary>
+        public bool RenamePreset(int index, string name)
+        {
+            name = LoadoutChoiceStore.CleanName(name);
+            if (Chassis == null || name.Length == 0) return false;
+            var presets = PresetsFor(Chassis);
+            if (index < 0 || index >= presets.Count) return false;
+            var other = presets.FindIndex(p => p.Name == name);
+            if (other >= 0 && other != index) return false;
+            presets[index] = new LoadoutPreset(name, presets[index].Modules);
+            StorePresets();
+            Refresh();
+            return true;
+        }
+
+        public void DeletePreset(int index)
+        {
+            if (Chassis == null) return;
+            var presets = PresetsFor(Chassis);
+            if (index < 0 || index >= presets.Count) return;
+            presets.RemoveAt(index);
+            StorePresets();
             Refresh();
         }
 
@@ -256,15 +387,35 @@ namespace Chopper.Presentation.Hangar
             return true;
         }
 
+        /// <summary>Each chassis's saved build and presets (a build that no longer matches the chassis's slots is dropped).</summary>
+        private void RestoreBuilds()
+        {
+            if (_store == null) return;
+            foreach (var chassis in _catalog.Chassis)
+            {
+                if (chassis == null) continue;
+                _presets[chassis.Id] = _store.LoadPresets(chassis.Id);
+                if (!_store.TryLoadBuild(chassis.Id, out var build) || build.Modules.Count != chassis.Slots.Count) continue;
+                var modules = new ModuleDefinition[chassis.Slots.Count];
+                for (var slot = 0; slot < modules.Length; slot++) modules[slot] = Module(build.Modules[slot]);
+                _fitted[chassis.Id] = modules;
+            }
+        }
+
+        /// <summary>The saved choice for the next spawn: its chassis shows first, with its modules, and its skin.</summary>
         private void Restore(in LoadoutSelection saved, ushort skinId)
         {
             for (var i = 0; i < _catalog.Chassis.Count; i++)
             {
                 var chassis = _catalog.Chassis[i];
                 if (chassis == null || chassis.Id != saved.ChassisId || saved.Modules.Count != chassis.Slots.Count) continue;
-                var modules = new ModuleDefinition[chassis.Slots.Count];
-                for (var slot = 0; slot < modules.Length; slot++) modules[slot] = Module(saved.Modules[slot]);
-                _fitted[chassis.Id] = modules;
+                // The chassis's own build is newer when it was changed after the last launch.
+                if (!_fitted.ContainsKey(chassis.Id))
+                {
+                    var modules = new ModuleDefinition[chassis.Slots.Count];
+                    for (var slot = 0; slot < modules.Length; slot++) modules[slot] = Module(saved.Modules[slot]);
+                    _fitted[chassis.Id] = modules;
+                }
                 ChassisIndex = i;
                 break;
             }
@@ -273,6 +424,18 @@ namespace Chopper.Presentation.Hangar
             for (var i = 0; i < _skins.Skins.Count; i++)
                 if (_skins.Skins[i].Id == skinId) SkinIndex = i;
         }
+
+        private void SaveBuild() => _store?.SaveBuild(Selection(FittedFor(Chassis)));
+
+        private List<LoadoutPreset> PresetsFor(ChassisDefinition chassis)
+        {
+            if (_presets.TryGetValue(chassis.Id, out var presets)) return presets;
+            presets = new List<LoadoutPreset>();
+            _presets[chassis.Id] = presets;
+            return presets;
+        }
+
+        private void StorePresets() => _store?.SavePresets(Chassis.Id, PresetsFor(Chassis));
 
         private ModuleDefinition[] FittedFor(ChassisDefinition chassis)
         {
@@ -283,13 +446,43 @@ namespace Chopper.Presentation.Hangar
             return modules;
         }
 
+        private HangarChassisCard Card(ChassisDefinition chassis)
+        {
+            if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec)) return new HangarChassisCard("?", "");
+            return new HangarChassisCard(chassis.DisplayName.ToUpperInvariant(), $"{chassis.Slots.Count} SLOTS / {spec.WeightBudget:0} KG");
+        }
+
         private void Refresh()
         {
             _hovered = -1;
+            BuildPresetNames();
+            BuildSkins();
             BuildSlots();
             BuildOptions();
             RefreshStats();
             Changed?.Invoke();
+        }
+
+        private void BuildSkins()
+        {
+            _skinRows.Clear();
+            if (_skins == null) return;
+            for (var i = 0; i < _skins.Skins.Count; i++)
+            {
+                var skin = _skins.Skins[i];
+                var look = skin.Look;
+                var colours = look != null && look.Colours != null ? look.Colours : Array.Empty<UnityEngine.Color>();
+                var pattern = look != null ? look.Pattern.ToString().ToUpperInvariant() : "";
+                _skinRows.Add(new HangarSkinRow(_skinNames[i], pattern, colours, skin.UnlockLevel > _unlocks.Level, skin.UnlockLevel,
+                    i == SkinIndex));
+            }
+        }
+
+        private void BuildPresetNames()
+        {
+            _presetNames.Clear();
+            if (Chassis == null) return;
+            foreach (var preset in PresetsFor(Chassis)) _presetNames.Add(preset.Name);
         }
 
         private void BuildSlots()
@@ -324,7 +517,7 @@ namespace Chopper.Presentation.Hangar
             var type = Chassis.Slots[FocusedSlot];
             var current = FittedFor(Chassis)[FocusedSlot];
             _options.Add(null);
-            _optionRows.Add(new HangarOptionRow("EMPTY", "SAVES WEIGHT", false, current == null));
+            _optionRows.Add(new HangarOptionRow("EMPTY", "No module in this slot. Saves weight.", "0", "0 KG", false, current == null, true));
 
             var candidates = new List<(ModuleDefinition Module, ModuleSpec Spec)>();
             foreach (var module in _catalog.Modules)
@@ -341,7 +534,8 @@ namespace Chopper.Presentation.Hangar
                 var locked = _unlocks.Level < spec.UnlockLevel || !_unlocks.Owns(module.Id);
                 var detail = locked ? $"LEVEL {spec.UnlockLevel}" : $"{spec.Stats.Weight:0} KG";
                 _options.Add(module);
-                _optionRows.Add(new HangarOptionRow(module.DisplayName.ToUpperInvariant(), detail, locked, module == current));
+                _optionRows.Add(new HangarOptionRow(module.DisplayName.ToUpperInvariant(), module.Description ?? "",
+                    $"{spec.Stats.Weight:0}", detail, locked, module == current, false));
             }
         }
 
@@ -369,19 +563,19 @@ namespace Chopper.Presentation.Hangar
 
             // Real units from the same maths the chopper flies with (FlightEstimate). A longer bar is better everywhere.
             var flight = chassis.Flight;
-            AddStat("HULL", now.Health / _maxHealth, preview.Health / _maxHealth, $"{preview.Health:0}");
+            AddStat("HULL", now.Health / _maxHealth, preview.Health / _maxHealth, $"{preview.Health:0}", "HP", true);
             var speed = FlightEstimate.TopSpeed(flight, preview) * MetresPerSecondToKilometresPerHour;
             AddStat("SPEED", FlightEstimate.TopSpeed(flight, now) / _maxSpeed, FlightEstimate.TopSpeed(flight, preview) / _maxSpeed,
-                $"{speed:0} KM/H");
+                $"{speed:0}", "KM/H", true);
             AddStat("TURN", FlightEstimate.TurnRate(flight, now) / _maxTurn, FlightEstimate.TurnRate(flight, preview) / _maxTurn,
-                $"{FlightEstimate.TurnRate(flight, preview):0} DEG/S");
+                $"{FlightEstimate.TurnRate(flight, preview):0}", "DEG/S", true);
             AddStat("CLIMB", FlightEstimate.Climb(flight, now) / _maxClimb, FlightEstimate.Climb(flight, preview) / _maxClimb,
-                $"{FlightEstimate.Climb(flight, preview):0.0} M/S2");
+                $"{FlightEstimate.Climb(flight, preview):0.0}", "M/S2", false);
             AddStat("BOOST", FlightEstimate.BoostPower(flight, now) / _maxBoost, FlightEstimate.BoostPower(flight, preview) / _maxBoost,
-                $"{FlightEstimate.BoostPower(flight, preview):0} M/S2");
+                $"{FlightEstimate.BoostPower(flight, preview):0}", "M/S2", false);
             // Refill time: shorter is better, so the bar is the fastest refill over this one.
             AddStat("REFILL", _minRefill / FlightEstimate.BoostRefill(flight, now), _minRefill / FlightEstimate.BoostRefill(flight, preview),
-                $"{FlightEstimate.BoostRefill(flight, preview):0.0} S");
+                $"{FlightEstimate.BoostRefill(flight, preview):0.0}", "S", false);
 
             WeightFraction = now.WeightFraction;
             PreviewWeightFraction = preview.WeightFraction;
@@ -392,8 +586,8 @@ namespace Chopper.Presentation.Hangar
             Error = result.IsValid ? "" : Describe(result);
         }
 
-        private void AddStat(string label, float now, float preview, string text) =>
-            _statRows.Add(new HangarStatRow(label, Math.Clamp(now, 0f, 1f), Math.Clamp(preview, 0f, 1f), text));
+        private void AddStat(string label, float now, float preview, string value, string unit, bool headline) =>
+            _statRows.Add(new HangarStatRow(label, Math.Clamp(now, 0f, 1f), Math.Clamp(preview, 0f, 1f), value, unit, headline));
 
         private string Describe(in LoadoutResult result)
         {
@@ -408,11 +602,13 @@ namespace Chopper.Presentation.Hangar
             };
         }
 
-        private LoadoutSelection Selection(ModuleDefinition[] fitted)
+        private LoadoutSelection Selection(ModuleDefinition[] fitted) => new(Chassis.Id, Ids(fitted));
+
+        private static ushort[] Ids(ModuleDefinition[] fitted)
         {
-            var modules = new ushort[fitted.Length];
-            for (var i = 0; i < modules.Length; i++) modules[i] = fitted[i] != null ? fitted[i].Id : LoadoutSelection.EmptySlot;
-            return new LoadoutSelection(Chassis.Id, modules);
+            var ids = new ushort[fitted.Length];
+            for (var i = 0; i < ids.Length; i++) ids[i] = fitted[i] != null ? fitted[i].Id : LoadoutSelection.EmptySlot;
+            return ids;
         }
 
         private ModuleDefinition Module(ushort id)

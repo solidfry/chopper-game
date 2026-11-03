@@ -105,6 +105,13 @@ Parts that stick out from the hull are swept and tapered towards the front, not 
 touch or cut into each other are joined, and any group not joined to the main hull is listed as **floating** (in the
 air, or hidden inside the hull). Sockets further than 0.12 m from the hull are listed too. Keep it at 0 problems.
 
+**Ground clearance (immersion rule).** A landed chopper stands on its gear (wheels, skids) and nothing else. The audit
+lists every chassis piece that is not gear and every module on every socket of its slot that reaches lower than
+0.15 m above the gear's lowest point (`audit.CLEARANCE`; the chassis gives its `ground` and gear faces, `parts.chassis`).
+So: hooks, cables and drop lines are stowed (they pay out in game, not on the model); belly turrets, winches and pods
+stay compact. A new body or module must pass this too. Example fix (3 Nov): the Lifter's belly hooks hung 0.6 m below
+its wheels; now they sit in clips on the lift frame; the winch and the flak turret were made lower.
+
 Builders place add-ons with rays, not fixed numbers: `Builder.hull_x` / `hull_y` (where the hull surface is),
 `Builder.lay` (a thin part laid flat on a surface from any direction: front slits, belly plates, vents on a slope) and
 `on_surface` (side parts). Wing and stub roots, nacelles, engine pods, pipes, clamps, cage stand-offs, retrofits,

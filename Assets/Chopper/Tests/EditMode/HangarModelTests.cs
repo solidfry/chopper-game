@@ -24,6 +24,17 @@ namespace Chopper.Tests
             public bool Owns(ushort moduleId) => true;
         }
 
+        private sealed class MemoryPrefs : IHangarPrefs
+        {
+            private readonly Dictionary<string, string> _strings = new();
+            private readonly Dictionary<string, int> _ints = new();
+            public string GetString(string key, string fallback) => _strings.TryGetValue(key, out var value) ? value : fallback;
+            public int GetInt(string key, int fallback) => _ints.TryGetValue(key, out var value) ? value : fallback;
+            public void SetString(string key, string value) => _strings[key] = value;
+            public void SetInt(string key, int value) => _ints[key] = value;
+            public void Save() { }
+        }
+
         [SetUp]
         public void SetUp()
         {
@@ -213,6 +224,114 @@ namespace Chopper.Tests
             Assert.That(model.Launch(), Is.True);
             model.CancelSearch();
             Assert.That(cancelled, Is.EqualTo(1), "Nothing to cancel when idle.");
+        }
+
+        [Test]
+        public void Builds_EachChassisKeepsItsBuildAcrossSessions()
+        {
+            var prefs = new MemoryPrefs();
+            var model = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            model.FocusSlot(0);
+            model.Fit(0); // Scout: empty nose.
+            model.SelectChassis(1);
+            model.FocusSlot(1);
+            model.Fit(0); // Gunship: empty first rotor.
+
+            var next = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            Assert.That(next.Fitted, Is.EqualTo(new[] { null, _rotor }), "Scout build kept.");
+            next.SelectChassis(1);
+            Assert.That(next.Fitted, Is.EqualTo(new[] { _gun, null, _rotor }), "Gunship build kept.");
+        }
+
+        [Test]
+        public void Builds_LaunchedChassisShowsFirstWithItsNewestBuild()
+        {
+            var prefs = new MemoryPrefs();
+            var model = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            model.SelectChassis(1);
+            Assert.That(model.Launch(), Is.True);
+            model.FocusSlot(0);
+            model.Fit(0); // Changed after the launch.
+
+            var next = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            Assert.That(next.ChassisIndex, Is.EqualTo(1));
+            Assert.That(next.Fitted[0], Is.Null);
+        }
+
+        [Test]
+        public void Presets_SaveApplyRenameDelete()
+        {
+            var prefs = new MemoryPrefs();
+            var model = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            Assert.That(model.SavePreset("  stock "), Is.EqualTo(0));
+            model.FocusSlot(0);
+            model.Fit(0);
+            Assert.That(model.SavePreset("light"), Is.EqualTo(1));
+            Assert.That(model.PresetNames, Is.EqualTo(new[] { "STOCK", "LIGHT" }));
+            Assert.That(model.SavePreset("   "), Is.EqualTo(-1), "No empty names.");
+
+            model.ApplyPreset(0);
+            Assert.That(model.Fitted, Is.EqualTo(new[] { _gun, _rotor }));
+
+            Assert.That(model.RenamePreset(1, "stock"), Is.False, "Names stay unique.");
+            Assert.That(model.RenamePreset(1, "fast"), Is.True);
+            model.DeletePreset(0);
+            Assert.That(model.PresetNames, Is.EqualTo(new[] { "FAST" }));
+
+            var next = new HangarModel(_catalog, null, new LoadoutChoiceStore(prefs), null);
+            Assert.That(next.PresetNames, Is.EqualTo(new[] { "FAST" }), "Presets are saved.");
+            next.SelectChassis(1);
+            Assert.That(next.PresetNames, Is.Empty, "Presets are per chassis.");
+            next.SelectChassis(0);
+            next.ApplyPreset(0);
+            Assert.That(next.Fitted, Is.EqualTo(new[] { null, _rotor }));
+        }
+
+        [Test]
+        public void Presets_SameNameReplaces()
+        {
+            var model = new HangarModel(_catalog, null, null, null);
+            model.SavePreset("A");
+            model.FocusSlot(0);
+            model.Fit(0);
+            Assert.That(model.SavePreset("a"), Is.EqualTo(0));
+            Assert.That(model.PresetNames.Count, Is.EqualTo(1));
+            model.Fit(1);
+            model.ApplyPreset(0);
+            Assert.That(model.Fitted[0], Is.Null);
+        }
+
+        [Test]
+        public void PresetText_RoundTripsAndSkipsBrokenLines()
+        {
+            var presets = new List<LoadoutPreset>
+            {
+                new("Fast\tone", new ushort[] { 10, 0 }),
+                new("", new ushort[] { 1 }),
+                new("Heavy", new ushort[] { 11, 20, 20 }),
+            };
+
+            var text = LoadoutChoiceStore.EncodePresets(presets);
+            var decoded = LoadoutChoiceStore.DecodePresets(text + "\nbroken\nX\t1,y");
+
+            Assert.That(decoded.Count, Is.EqualTo(2));
+            Assert.That(decoded[0].Name, Is.EqualTo("FASTONE"));
+            Assert.That(decoded[0].Modules, Is.EqualTo(new ushort[] { 10, 0 }));
+            Assert.That(decoded[1].Name, Is.EqualTo("HEAVY"));
+            Assert.That(decoded[1].Modules, Is.EqualTo(new ushort[] { 11, 20, 20 }));
+        }
+
+        [Test]
+        public void DetailOption_IsHoveredElseFitted()
+        {
+            var model = new HangarModel(_catalog, null, null, null);
+            Assert.That(model.DetailOption, Is.EqualTo(-1));
+            model.FocusSlot(0);
+            Assert.That(model.DetailOption, Is.EqualTo(1), "The fitted gun.");
+            model.Hover(2);
+            Assert.That(model.DetailOption, Is.EqualTo(2));
+            model.Hover(-1);
+            Assert.That(model.DetailOption, Is.EqualTo(1));
         }
 
         [Test]

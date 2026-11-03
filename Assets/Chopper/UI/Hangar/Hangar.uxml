@@ -1,40 +1,83 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:hangar="Chopper.UI.Hangar" editor-extension-mode="False">
   <Style src="Hangar.uss" />
-  <!-- Hangar (HangarView): chassis tabs, slots, module list, stats, skin, launch. The 3D chopper shows through the
-       middle. Lists are filled from code. Terminal style, like the options overlay. -->
+  <!-- Hangar (HangarView), plan section 5 "New layout". Overview: the chopper in the middle with a callout card per
+       socket, chassis cards and saved builds on the left, stats floating on the right, slot tiles along the bottom.
+       Slot open: "SELECT <SLOT>", the module detail on the left, module tiles along the bottom. Lists and callouts are
+       filled from code. The top bar is kept for the main game navigation (later). -->
   <ui:VisualElement name="hangar" class="hangar" picking-mode="Ignore">
+    <ui:VisualElement name="callouts" class="hangar__callouts" picking-mode="Ignore">
+      <hangar:CalloutLines name="callout-lines" class="hangar__callout-lines" picking-mode="Ignore" />
+    </ui:VisualElement>
+
     <ui:VisualElement class="hangar__bar">
       <ui:Label text="HANGAR//SYS" class="hangar__bar-text chopper-title" />
-      <ui:VisualElement name="chassis-tabs" class="hangar__tabs" />
+      <!-- Decoration only (segment readout): no information. -->
+      <ui:Label text="0451-K7" class="chopper-deco-seven hangar__bar-deco" picking-mode="Ignore" />
+      <ui:VisualElement class="hangar__bar-nav" picking-mode="Ignore" />
       <ui:Label text="ESC = BACK" class="hangar__bar-text" />
     </ui:VisualElement>
 
-    <ui:VisualElement class="hangar__body" picking-mode="Ignore">
-      <ui:VisualElement class="hangar__panel hangar__panel--left">
-        <ui:Label name="chassis-name" text="CHASSIS" class="hangar__title chopper-title" />
-        <ui:Label name="chassis-description" class="hangar__description" />
-        <ui:Label text="// SLOTS" class="hangar__section chopper-title" />
-        <ui:VisualElement name="slots" class="hangar__list" />
-        <ui:Label text="// STATS" class="hangar__section chopper-title" />
-        <ui:VisualElement name="stats" class="hangar__stats" />
-        <ui:VisualElement class="hangar-stat">
-          <ui:Label text="WEIGHT" class="hangar-stat__label" />
-          <ui:VisualElement name="weight-track" class="hangar-stat__track">
-            <ui:VisualElement name="weight-fill" class="hangar-stat__fill" />
-            <ui:VisualElement name="weight-delta" class="hangar-stat__delta" />
+    <ui:VisualElement class="hangar__main" picking-mode="Ignore">
+      <ui:VisualElement class="hangar__column hangar__column--left" picking-mode="Ignore">
+        <ui:VisualElement name="overview-panel" class="hangar__block">
+          <ui:Label name="chassis-name" text="CHASSIS" class="hangar__title chopper-title" />
+          <ui:Label name="chassis-description" class="hangar__description chopper-body" />
+          <ui:Label text="// CHASSIS" class="hangar__section chopper-title" />
+          <ui:VisualElement name="chassis-grid" class="hangar__chassis-grid" />
+          <ui:Label text="// BUILDS" class="hangar__section chopper-title" />
+          <ui:DropdownField name="preset" label="BUILD" class="hangar__row" />
+          <ui:TextField name="preset-name" label="NAME" max-length="24" class="hangar__row hangar__name-field" />
+          <ui:VisualElement class="hangar__preset-buttons">
+            <ui:Button name="preset-save" text="SAVE" class="hangar__small-button" />
+            <ui:Button name="preset-rename" text="RENAME" class="hangar__small-button" />
+            <ui:Button name="preset-delete" text="DELETE" class="hangar__small-button" />
           </ui:VisualElement>
-          <ui:Label name="weight-text" class="hangar-stat__text" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="focus-panel" class="hangar__focus">
+          <ui:VisualElement class="hangar__focus-header">
+            <ui:Button name="back" text="&lt;" class="hangar__back chopper-title" />
+            <ui:Label name="focus-title" text="SELECT" class="hangar__focus-title chopper-title" />
+          </ui:VisualElement>
+          <ui:VisualElement class="hangar__detail">
+            <ui:Label name="detail-name" class="hangar__detail-name chopper-title" />
+            <ui:Label name="detail-description" class="hangar__description hangar__detail-description chopper-body" />
+            <ui:VisualElement class="hangar__detail-tags">
+              <ui:Label name="detail-state" class="hangar__tag" />
+              <ui:Label name="detail-weight" class="hangar__tag hangar__tag--plain" />
+            </ui:VisualElement>
+          </ui:VisualElement>
         </ui:VisualElement>
       </ui:VisualElement>
 
       <ui:VisualElement class="hangar__spacer" picking-mode="Ignore" />
 
-      <ui:VisualElement class="hangar__panel hangar__panel--right">
-        <ui:Label name="focus-title" text="&gt; SELECT A SLOT_" class="hangar__title chopper-title" />
-        <ui:VisualElement name="options" class="hangar__list" />
-        <ui:Label text="// PAINT" class="hangar__section chopper-title" />
-        <ui:DropdownField name="skin" label="SKIN" class="hangar__row" />
-        <ui:Toggle name="paint-view" label="SHOW PAINT" class="hangar__row" />
+      <ui:VisualElement class="hangar__column hangar__column--right" picking-mode="Ignore">
+        <ui:VisualElement class="hangar__stats-float" picking-mode="Ignore">
+          <ui:VisualElement name="stats-headline" class="hangar__headline" picking-mode="Ignore" />
+          <ui:VisualElement name="stats" class="hangar__stats" picking-mode="Ignore" />
+          <ui:VisualElement class="hangar-stat" picking-mode="Ignore">
+            <ui:Label text="WEIGHT" class="hangar-stat__label" />
+            <ui:VisualElement name="weight-track" class="hangar-stat__track">
+              <ui:VisualElement name="weight-fill" class="hangar-stat__fill" />
+              <ui:VisualElement name="weight-delta" class="hangar-stat__delta" />
+            </ui:VisualElement>
+            <ui:Label name="weight-text" class="hangar-stat__text" />
+          </ui:VisualElement>
+          <ui:Label text="// PAINT" class="hangar__section chopper-title" />
+          <ui:VisualElement name="skins" class="hangar__skins" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement class="hangar__bottom" picking-mode="Ignore">
+      <ui:VisualElement class="hangar__tiles-frame" picking-mode="Ignore">
+        <ui:Label name="tiles-title" text="// SLOTS" class="hangar__section chopper-title" />
+        <ui:ScrollView name="tiles-scroll" mode="Vertical" class="hangar__tiles-scroll">
+          <ui:VisualElement name="tiles" class="hangar__tiles" />
+        </ui:ScrollView>
+      </ui:VisualElement>
+      <ui:VisualElement class="hangar__actions">
         <ui:Label name="error" class="hangar__error" />
         <ui:Label name="match-status" class="hangar__error hangar__match-status" />
         <ui:Button name="find-match" text="[ FIND MATCH ]" class="hangar__button chopper-title" />

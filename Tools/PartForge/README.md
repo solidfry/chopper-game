@@ -40,8 +40,8 @@ or a normal Blender install:
 
     blender --background --python Tools/PartForge/generate.py -- [options]
 
-Alignment check only (under a second): `generate.py --audit [--style NAME]` lists floating parts and sockets off the
-hull (see `ART_DIRECTION.md`, "Alignment check").
+Alignment check only (under a second): `generate.py --audit [--style NAME]` lists floating parts, sockets off the
+hull and parts below the gear (ground clearance; see `ART_DIRECTION.md`, "Alignment check").
 
 Options: `--style dystopia|neon` (art direction, see `ART_DIRECTION.md`), `--kit NAME` (default: the style's kit),
 `--out DIR` (default `Assets/Chopper/Art/Kits/<kit>`), `--previews DIR` (default `Tools/PartForge/previews/<kit>`),

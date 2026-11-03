@@ -5,6 +5,9 @@ Alignment check (generate.py --audit): finds parts that do not sit on the model.
   (within TOUCH metres) are joined; every group that is not joined to the main hull floats in the air.
 - Sockets: an attach point must be on the hull (or just under it, for hanging modules). Sockets further than
   SOCKET_GAP from the chassis surface are listed.
+- Ground clearance: on the ground a chopper stands on its gear (wheels, skids). Nothing else may reach lower than
+  CLEARANCE above the gear's lowest point: not a chassis piece (hooks, aerials, plates), and not a module on any
+  socket it can go on (a long cable, a pod, a turret). Such parts would stand in the ground when the chopper lands.
 
 Works on the builder's mesh in Unity space (before the bevel and the surface detail), so positions match parts.py.
 """
@@ -15,6 +18,7 @@ from .palette import SWATCHES
 
 TOUCH = 0.015
 SOCKET_GAP = 0.12
+CLEARANCE = 0.15
 # Sockets that hold a module in free air by design (rotor hubs sit on the mast top, armour is stats only).
 FREE_SLOTS = {"Armour"}
 
@@ -108,14 +112,62 @@ def check(part):
                 problems.append(f"socket    {slot}_{index} at ({position[0]:+.2f}, {position[1]:+.2f}, {position[2]:+.2f}) "
                                 f"is {distance:.2f} m from the hull")
     bm.free()
+    if part.kind == "chassis" and part.ground is not None:
+        problems += _below_gear(part)
+    return problems
+
+
+def _below_gear(part):
+    """Chassis pieces (not the gear) that reach lower than CLEARANCE above the ground."""
+    bm = part.builder.bm
+    bm.faces.ensure_lookup_table()
+    layer = bm.faces.layers.int.get("swatch")
+    limit = part.ground + CLEARANCE
+    problems = []
+    for island in _islands(bm):
+        if part.gear_faces.intersection(island):
+            continue
+        low = min(v.co[1] for i in island for v in bm.faces[i].verts)
+        if low >= limit:
+            continue
+        points = [v.co for i in island for v in bm.faces[i].verts]
+        centre = [(min(p[k] for p in points) + max(p[k] for p in points)) / 2 for k in range(3)]
+        names = sorted({SWATCHES[bm.faces[i][layer]][0] for i in island}) if layer is not None else []
+        problems.append(f"ground    piece at ({centre[0]:+.2f}, {centre[1]:+.2f}, {centre[2]:+.2f}) reaches "
+                        f"{limit - low:.2f} m into the gear clearance  {'/'.join(names)}")
+    return problems
+
+
+def _module_clearance(chassis_parts, module_parts):
+    """Every module on every socket of its slot: its lowest point must stay CLEARANCE above the chassis's ground."""
+    lowest = {}
+    for module in module_parts:
+        verts = module.builder.bm.verts
+        if len(verts):
+            lowest[module.name] = (module.slot, min(v.co[1] for v in verts))
+    problems = {}
+    for chassis in chassis_parts:
+        if chassis.ground is None:
+            continue
+        limit = chassis.ground + CLEARANCE
+        for slot, index, position, scale in chassis.sockets:
+            for name, (module_slot, low) in lowest.items():
+                if module_slot != slot:
+                    continue
+                bottom = position[1] + low * scale
+                if bottom < limit:
+                    problems.setdefault(name, []).append(
+                        f"ground    on {chassis.name} {slot}_{index}: reaches {limit - bottom:.2f} m into the gear clearance")
     return problems
 
 
 def run(parts_list):
     """Prints a report for every part; returns the number of problems."""
     total = 0
+    clearance = _module_clearance([p for p in parts_list if p.kind == "chassis"],
+                                  [p for p in parts_list if p.kind == "module"])
     for part in parts_list:
-        problems = check(part)
+        problems = check(part) + clearance.get(part.name, [])
         total += len(problems)
         print(f"{part.name:<24} {'ok' if not problems else f'{len(problems)} problems'}")
         for line in problems:

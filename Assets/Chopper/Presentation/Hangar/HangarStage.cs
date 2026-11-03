@@ -14,9 +14,9 @@ namespace Chopper.Presentation.Hangar
 {
     /// <summary>
     /// The hangar's 3D view (plan section 5): the chosen chassis on a turntable, built from the same model, sockets and
-    /// module prefabs as the game ("what you see is what flies"). Green wireframe on a dark fill (lines baked in the
-    /// <see cref="WireframeLibrary"/>); the selected slot's module in the highlight colour; empty sockets pulse; or the
-    /// real paint with the chosen skin (<see cref="HangarModel.PaintView"/>). The camera and turntable blend to the
+    /// module prefabs as the game ("what you see is what flies"). The real paint with the chosen skin, and a subtle green
+    /// wireframe over it (lines baked in the <see cref="WireframeLibrary"/>); the selected slot's module lines in the
+    /// highlight colour; empty sockets pulse. Gives the UI each slot's screen point (callouts). The camera and turntable blend to the
     /// selected socket's focus pose (<see cref="SocketAuthoring"/>); the overview turns slowly. Launch starts a local
     /// session (<see cref="LocalSession"/>) and loads the match scene. Set up by Chopper → Setup, step 7.
     /// </summary>
@@ -30,6 +30,11 @@ namespace Chopper.Presentation.Hangar
         private const string WireName = "Wire";
         /// <summary>Exponential blend: e^-3 = 5 % left after the blend time.</summary>
         private const float BlendRate = 3f;
+        /// <summary>A socket this far off the centre line (metres, or this part of the chopper's size) is on a side.</summary>
+        private const float LateralMinimum = 0.2f;
+        private const float LateralFraction = 0.04f;
+        /// <summary>How much of the front (or left) shows with a side (or front) view: 0 = straight on.</summary>
+        private const float FrontBias = 0.35f;
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the hangar model.")] private PresentationBridge bridge;
         [SerializeField] private UnityEngine.Camera viewCamera;
@@ -39,8 +44,6 @@ namespace Chopper.Presentation.Hangar
         private sealed class Part
         {
             public Renderer Renderer;
-            public Material[] Paint;
-            public Material[] Fill;
             public MeshRenderer Wire;
             /// <summary>Loadout slot of the module (-1 = the chassis).</summary>
             public int Slot;
@@ -60,6 +63,8 @@ namespace Chopper.Presentation.Hangar
         private ModuleDefinition[] _builtModules = System.Array.Empty<ModuleDefinition>();
         private float _size = 10f;
         private float _yaw = 150f;
+        /// <summary>Idle spin now (degrees per second); eases between the setting and 0.</summary>
+        private float _spin;
         private MaterialPropertyBlock _block;
         private Mesh _markerMesh;
         private bool _launching;
@@ -68,6 +73,30 @@ namespace Chopper.Presentation.Hangar
 
         /// <summary>Online play: set by the hangar scene's lifetime scope (the root scope's matchmaking service).</summary>
         public void UseMatchmaking(IMatchmakingService matchmaking) => _matchmaking = matchmaking;
+
+        /// <summary>
+        /// Where slot <paramref name="slot"/>'s socket is on screen, in viewport space (0..1, y up). False when the slot
+        /// has no socket or the socket is behind the camera.
+        /// </summary>
+        public bool TryGetSlotViewportPoint(int slot, out Vector2 point)
+        {
+            point = default;
+            if (slot < 0 || slot >= _slotSockets.Count || _slotSockets[slot] == null || viewCamera == null) return false;
+            var viewport = viewCamera.WorldToViewportPoint(_slotSockets[slot].transform.position);
+            point = new Vector2(viewport.x, viewport.y);
+            return viewport.z > 0f;
+        }
+
+        /// <summary>The chopper's centre in viewport space (callout cards sit outward from it).</summary>
+        public Vector2 CentreViewportPoint
+        {
+            get
+            {
+                if (viewCamera == null || turntable == null) return new Vector2(0.5f, 0.5f);
+                var viewport = viewCamera.WorldToViewportPoint(turntable.position);
+                return new Vector2(viewport.x, viewport.y);
+            }
+        }
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Configure(PresentationBridge presentation, UnityEngine.Camera view, Transform table)
@@ -209,16 +238,12 @@ namespace Chopper.Presentation.Hangar
                 _spinners.Add((visual.transform, visual.transform.localRotation, module.VisualSpin * (socket.Index % 2 == 0 ? 1f : -1f)));
         }
 
-        /// <summary>Each mesh keeps its paint (paint view) and gets a fill and its baked line mesh (wireframe view).</summary>
+        /// <summary>Each mesh keeps its paint and gets its baked line mesh (the wireframe overlay).</summary>
         private void AddParts(GameObject root, int slot)
         {
             foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
             {
                 if (filter.name == WireName || !filter.TryGetComponent<Renderer>(out var target)) continue;
-                var paint = target.sharedMaterials;
-                var fill = new Material[paint.Length];
-                for (var i = 0; i < fill.Length; i++) fill[i] = _settings.Fill;
-
                 MeshRenderer wire = null;
                 if (_settings.Wireframes != null && _settings.Wireframes.TryGet(filter.sharedMesh, out var lines))
                 {
@@ -229,7 +254,7 @@ namespace Chopper.Presentation.Hangar
                     wire.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     wire.receiveShadows = false;
                 }
-                _parts.Add(new Part { Renderer = target, Paint = paint, Fill = fill, Wire = wire, Slot = slot });
+                _parts.Add(new Part { Renderer = target, Wire = wire, Slot = slot });
             }
         }
 
@@ -265,21 +290,20 @@ namespace Chopper.Presentation.Hangar
         private void ApplyLook()
         {
             _block ??= new MaterialPropertyBlock();
-            var paint = _model.PaintView;
             var skins = _context.Config.Skins;
             var row = skins != null ? skins.IndexOf(_model.SkinId) : 0;
             foreach (var part in _parts)
             {
                 if (part.Renderer == null) continue;
-                part.Renderer.sharedMaterials = paint ? part.Paint : part.Fill;
                 part.Renderer.GetPropertyBlock(_block);
                 _block.SetFloat(Visuals.SkinLibrary.SkinIndexProperty, row);
                 part.Renderer.SetPropertyBlock(_block);
                 if (part.Wire == null) continue;
-                part.Wire.enabled = !paint;
-                part.Wire.sharedMaterial = part.Slot >= 0 && part.Slot == _model.FocusedSlot ? _settings.Highlight : _settings.Line;
+                // The focused slot's module glows; the rest is a faint overlay on the paint.
+                var focused = part.Slot >= 0 && part.Slot == _model.FocusedSlot;
+                part.Wire.sharedMaterial = focused ? _settings.Highlight : _settings.Overlay;
+                part.Wire.enabled = focused || _settings.Overlay != null;
             }
-            foreach (var (marker, _) in _markers) marker.SetActive(!paint);
         }
 
         private void Update()
@@ -288,9 +312,12 @@ namespace Chopper.Presentation.Hangar
             var blend = 1f - Mathf.Exp(-BlendRate / _settings.FocusBlendSeconds * deltaTime);
             var focus = FocusedSocket();
 
+            // The idle spin eases to a stop while the pointer is near the chopper, so the callout cards hold still.
+            var spinTarget = PointerNearChopper() ? 0f : _settings.IdleSpin;
+            _spin = Mathf.Lerp(_spin, spinTarget, 1f - Mathf.Exp(-BlendRate / _settings.SpinEaseSeconds * deltaTime));
             _yaw = focus != null
                 ? _yaw + Mathf.DeltaAngle(_yaw, FocusYaw(focus)) * blend
-                : _yaw + _settings.IdleSpin * deltaTime;
+                : _yaw + _spin * deltaTime;
             _yaw = Mathf.Repeat(_yaw, 360f);
             turntable.localRotation = Quaternion.Euler(0f, _yaw, 0f);
 
@@ -352,15 +379,64 @@ namespace Chopper.Presentation.Hangar
         private Vector3 SocketOnTurntable(SocketAuthoring socket) =>
             Quaternion.Inverse(turntable.localRotation) * (socket.transform.position - turntable.position);
 
-        /// <summary>Turntable yaw that shows the socket: its side faces the camera. A socket near the middle (rotor
-        /// mast, armour) is shown from the front left.</summary>
+        /// <summary>
+        /// Turntable yaw that turns the socket's side to the camera. Decided by the side the socket is on, not by its
+        /// distance from the centre (the rotor disc makes the chopper wide, so pylons and stub wings are near the
+        /// middle by that measure):
+        /// <list type="bullet">
+        /// <item>left or right of the centre line (pylons, side guns): that side, a little from the front;</item>
+        /// <item>on the centre line, at the front or back (nose, tail): the front or back, a little from the left;</item>
+        /// <item>in the middle (rotor mast, armour): the front left.</item>
+        /// </list>
+        /// </summary>
         private float FocusYaw(SocketAuthoring socket)
         {
             if (_settings.UseSocketPoses) return socket.FocusChopperYaw;
             var local = SocketOnTurntable(socket);
-            var side = new Vector2(local.x, local.z);
-            if (side.magnitude < 0.15f * _size) side = new Vector2(-1f, 0.6f);
+            var lateral = Mathf.Max(LateralMinimum, LateralFraction * _size);
+            Vector2 side;
+            if (Mathf.Abs(local.x) > lateral) side = new Vector2(Mathf.Sign(local.x), FrontBias);
+            else if (Mathf.Abs(local.z) > 0.15f * _size) side = new Vector2(-FrontBias, Mathf.Sign(local.z));
+            else side = new Vector2(-1f, 0.6f);
             return 180f - Mathf.Atan2(side.x, side.y) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>
+        /// True while the mouse is over the chopper on screen, or within <see cref="HangarSettings.SpinHoldMargin"/> of
+        /// it (the callout cards sit there).
+        /// </summary>
+        private bool PointerNearChopper()
+        {
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse == null || _parts.Count == 0) return false;
+            var pointer = viewCamera.ScreenToViewportPoint(mouse.position.ReadValue());
+            if (pointer.x < 0f || pointer.x > 1f || pointer.y < 0f || pointer.y > 1f) return false;
+
+            var bounds = new Bounds();
+            var first = true;
+            foreach (var part in _parts)
+            {
+                if (part.Renderer == null) continue;
+                if (first) bounds = part.Renderer.bounds;
+                else bounds.Encapsulate(part.Renderer.bounds);
+                first = false;
+            }
+            if (first) return false;
+
+            var min = new Vector2(float.MaxValue, float.MaxValue);
+            var max = new Vector2(float.MinValue, float.MinValue);
+            for (var corner = 0; corner < 8; corner++)
+            {
+                var point = bounds.center + Vector3.Scale(bounds.extents,
+                    new Vector3((corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
+                var viewport = viewCamera.WorldToViewportPoint(point);
+                if (viewport.z <= 0f) continue;
+                min = Vector2.Min(min, viewport);
+                max = Vector2.Max(max, viewport);
+            }
+            var margin = _settings.SpinHoldMargin;
+            return pointer.x >= min.x - margin && pointer.x <= max.x + margin &&
+                   pointer.y >= min.y - margin && pointer.y <= max.y + margin;
         }
 
         private void SnapCamera()

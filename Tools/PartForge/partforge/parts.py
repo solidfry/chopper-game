@@ -16,8 +16,12 @@ from .palette import swatch as S
 class Part:
     """One exported model: geometry + sockets (slot, index, Unity position)."""
 
-    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=(), seed=0):
+    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=(), seed=0, ground=None, gear_faces=()):
         self.name = name
+        # Chassis only: the height the gear touches the ground, and the faces of the gear (wheels, struts, skids). The
+        # audit checks that nothing else (chassis or a fitted module) goes lower than the gear (audit.CLEARANCE).
+        self.ground = ground
+        self.gear_faces = set(gear_faces)
         self.seed = seed
         self.kind = kind  # "chassis" or "module"
         self.builder = builder
@@ -72,19 +76,28 @@ def chassis(spec, style):
     ring = _ring_fn(style)
     tail = _boom_rings(ring, style, W, H, boom, tail_z, tall=attack or assault, thick=heavy)
 
+    ground, gear_start, gear_end = None, 0, 0
     if attack:
         rotors = [((0, _attack_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
-        _wheels(b, style, W, H, F, tail_z)
+        gear_start = len(b.bm.faces)
+        ground = _wheels(b, style, W, H, F, tail_z)
+        gear_end = len(b.bm.faces)
     elif assault:
         rotors = [((0, _assault_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
-        _wheels(b, style, W, H, F, tail_z)
+        gear_start = len(b.bm.faces)
+        ground = _wheels(b, style, W, H, F, tail_z)
+        gear_end = len(b.bm.faces)
     elif heavy:
         rotors = _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout)
-        _heavy_gear(b, W, H, F)
+        gear_start = len(b.bm.faces)
+        ground = _heavy_gear(b, W, H, F)
+        gear_end = len(b.bm.faces)
     else:
         rotors = [((0, _utility_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
         if spec.get("skids", True):
-            _skids(b, style, F, W, H)
+            gear_start = len(b.bm.faces)
+            ground = _skids(b, style, F, W, H)
+            gear_end = len(b.bm.faces)
 
     pylon_points = _sponson_pylons(b, spec, W, H) if heavy else _wings_or_stubs(b, spec, style, W, H)
     if layout in ("single", "coaxial"):
@@ -108,7 +121,8 @@ def chassis(spec, style):
         _wear(b, rng, style, W, H, F)
 
     sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body))
-    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"])
+    return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"], ground=ground,
+                gear_faces=range(gear_start, gear_end))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1113,13 +1127,16 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
     b.cylinder((-0.25 * W, top + 0.25, -3.0), (-0.25 * W, top + 0.35, -2.95), 0.32, C("hull_light"), segments=12,
                end_radius=0.08)
 
-    # Belly lift frame with four hanging cables and hooks.
+    # Belly lift frame; its four hooks are stowed in clips on the frame corners (short slings, well above the
+    # wheels: a chopper that lands must not stand on its hooks).
     fy = -top - 0.03
     for dx, dz, sx, sz in ((0, 0.2, 1.4, 0.08), (0, -1.4, 1.4, 0.08), (0.7, -0.6, 0.08, 1.6), (-0.7, -0.6, 0.08, 1.6)):
         b.box((dx, fy, dz), (sx, 0.08, sz), C("gunmetal"))
     for dx, dz in ((0.66, 0.16), (-0.66, 0.16), (0.66, -1.36), (-0.66, -1.36)):
-        b.cylinder((dx, fy, dz), (dx * 0.6, fy - 1.2, dz * 0.8 - 0.3), 0.015, C("steel"), segments=4)
-        b.box((dx * 0.6, fy - 1.26, dz * 0.8 - 0.3), (0.1, 0.12, 0.05), C("hazard"))
+        inward = -0.18 if dz > -0.6 else 0.18
+        b.box((dx, fy - 0.07, dz), (0.12, 0.08, 0.12), C("hull_dark"))                         # clip
+        b.cylinder((dx, fy - 0.1, dz), (dx, fy - 0.26, dz + inward), 0.015, C("steel"), segments=4)
+        b.box((dx, fy - 0.3, dz + inward), (0.1, 0.12, 0.05), C("hazard"))
 
     return _heavy_rotors(b, style, W, H, F, tail_z, layout)
 
@@ -1177,7 +1194,7 @@ def _heavy_rotors(b, style, W, H, F, tail_z, layout):
 
 
 def _heavy_gear(b, W, H, F):
-    """Dual main wheels under the sponsons and a dual nose wheel."""
+    """Dual main wheels under the sponsons and a dual nose wheel. Returns the ground height."""
     ground = -H / 2 - 0.75
     for side in (1, -1):
         x = side * (W / 2 + 0.32)
@@ -1191,6 +1208,7 @@ def _heavy_gear(b, W, H, F):
     b.cylinder((0, -0.45 * H, z), (0, ground + 0.32, z - 0.1), 0.07, C("gunmetal"), segments=6)
     for dx in (-0.13, 0.13):
         b.cylinder((dx - 0.06, ground + 0.32, z - 0.1), (dx + 0.06, ground + 0.32, z - 0.1), 0.32, C("rubber"), segments=12)
+    return ground
 
 
 def _sponson_pylons(b, spec, W, H):
@@ -1231,7 +1249,7 @@ def _tandem_cockpit(b, style, cw, H, F):
 
 
 def _wheels(b, style, W, H, F, tail_z):
-    """Main wheels on struts under the cheek pods and a tail wheel (attack bodies)."""
+    """Main wheels on struts under the cheek pods and a tail wheel (attack bodies). Returns the ground height."""
     ground = -H / 2 - 0.75
     for side in (1, -1):
         x = side * 0.40 * W
@@ -1244,6 +1262,7 @@ def _wheels(b, style, W, H, F, tail_z):
     z = tail_z + 0.7
     b.cylinder((0, 0.12 * H, z), (0, ground + 0.18, z - 0.2), 0.05, C("gunmetal"), segments=6)
     b.cylinder((-0.07, ground + 0.18, z - 0.2), (0.07, ground + 0.18, z - 0.2), 0.18, C("rubber"), segments=10)
+    return ground
 
 
 def _nacelle_x(b, W, H):
@@ -1405,6 +1424,7 @@ def _wings_or_stubs(b, spec, style, W, H):
 
 
 def _skids(b, style, F, W, H):
+    """Skids with cross tubes. Returns the ground height (the skid tubes' underside)."""
     y = -H / 2 - 0.55
     heavy = style["wear"] > 0
     radius = 0.085 if heavy else 0.07
@@ -1419,6 +1439,7 @@ def _skids(b, style, F, W, H):
             b.box((x - side * 0.08, y + radius + 0.005, 0.2), (0.3, 0.03, 0.4), C("bare"))
     if heavy:
         b.cylinder((0.55 * W, y, -1.6), (-0.55 * W, y, -1.6), 0.05, C("gunmetal"), segments=6)
+    return y - radius
 
 
 def _tail(b, style, W, H, tail_z, open_rotor=False, tail_rotor=True):
@@ -1860,21 +1881,24 @@ def emitter(name, ids, glow):
 
 def flak_turret():
     b = Builder()
-    b.cylinder((0, 0, 0), (0, -0.18, 0), 0.36, C("gunmetal"), segments=12)
-    b.ico((0, -0.45, 0), 0.32, C("hull"), subdivisions=1)
-    for x in (-0.1, 0.1):
-        b.cylinder((x, -0.45, 0.2), (x, -0.45, 1.2), 0.04, C("steel"), segments=8)
-        b.cylinder((x, -0.45, 1.05), (x, -0.45, 1.2), 0.06, C("gunmetal"), segments=8)
-    b.box((0, -0.3, 0.29), (0.1, 0.06, 0.04), C("neon_cyan"))
+    # Compact ball (about 0.6 m deep): belly turrets must clear the ground on every chassis (audit).
+    b.cylinder((0, 0, 0), (0, -0.12, 0), 0.36, C("gunmetal"), segments=12)
+    b.ico((0, -0.36, 0), 0.26, C("hull"), subdivisions=1)
+    for x in (-0.09, 0.09):
+        b.cylinder((x, -0.36, 0.16), (x, -0.36, 1.1), 0.04, C("steel"), segments=8)
+        b.cylinder((x, -0.36, 0.95), (x, -0.36, 1.1), 0.06, C("gunmetal"), segments=8)
+    b.box((0, -0.24, 0.23), (0.1, 0.06, 0.04), C("neon_cyan"))
     return Part("Turret_Flak", "module", b, slot="Turret", module_ids=[121])
 
 
 def winch():
     b = Builder()
-    b.box((0, -0.15, 0), (0.6, 0.3, 0.6), C("hull_dark"))
-    b.cylinder((-0.25, -0.45, 0), (0.25, -0.45, 0), 0.18, C("gunmetal"), segments=12)
-    b.cylinder((0, -0.6, 0), (0, -1.4, 0), 0.015, C("steel"), segments=5)
-    b.box((0, -1.45, 0), (0.18, 0.12, 0.06), C("hazard"))
+    # Low profile (about 0.5 m): it hangs under the belly, between the wheels, and must clear the ground (audit).
+    b.box((0, -0.08, 0), (0.6, 0.16, 0.6), C("hull_dark"))
+    b.cylinder((-0.25, -0.27, 0), (0.25, -0.27, 0), 0.12, C("gunmetal"), segments=12)
+    # Hook stowed just under the drum: the cable pays out in game, not on the model.
+    b.cylinder((0, -0.36, 0), (0, -0.45, 0), 0.015, C("steel"), segments=5)
+    b.box((0, -0.48, 0), (0.18, 0.08, 0.06), C("hazard"))
     return Part("Winch_Heavy", "module", b, slot="Winch", module_ids=[141])
 
 
