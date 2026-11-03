@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, specs, styles
+from . import audit, buildings, choppers, kit, specs, styles, terrain
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -22,6 +22,10 @@ DISTRICT_COLLECTION = "CityForge: district"
 LODS_COLLECTION = "CityForge: LOD line-up"
 STAGE_COLLECTION = "CityForge: stage"
 STREET = 16.0                 # street width between plots in the district layout (m)
+CHANNEL_GAP = 84.0            # gap left after the CHANNEL_AFTER row for the storm-drain channel (56 m + roads)
+CHANNEL_AFTER = "industrial"
+TERRAIN_EXPORT = "CityForge: terrain export"
+TERRAIN_COLLECTION = "CityForge: terrain"
 ROWS = (("slum",), ("block",), ("industrial",), ("tower",), ("twist", "halo", "orb"), ("mega", "twins"))  # front (camera side, +Z) to back
 LOD_LINEUP = ("Tower_Spire", "Block_Corner", "Slum_Stack")
 LOD_LINEUP_Z = -260.0
@@ -33,6 +37,8 @@ class State:
         self.kit, self.style, self.built, self.images, self.problems = kit_name, style, built, images, problems
         self.district, self.lineup, self.choppers = [], [], []
         self.placements = {}  # building name -> Unity position of its plot centre in the district
+        self.terrain, self.terrain_chunks, self.terrain_shown = None, [], []
+        self.centre, self.channel_z = (0.0, 0.0, 0.0), None
 
 
 def _collection(scene, name):
@@ -45,7 +51,8 @@ def _collection(scene, name):
 
 
 def clear():
-    for name in (EXPORT_COLLECTION, DISTRICT_COLLECTION, LODS_COLLECTION):
+    for name in (EXPORT_COLLECTION, DISTRICT_COLLECTION, LODS_COLLECTION, TERRAIN_EXPORT, TERRAIN_COLLECTION,
+                 choppers.COLLECTION):
         collection = bpy.data.collections.get(name)
         if collection is None:
             continue
@@ -65,7 +72,7 @@ def make_buildings(style, names=None):
     return [buildings.build(kit.Building(spec, style)) for spec in chosen]
 
 
-def generate(style, kit_name=None, names=None):
+def generate(style, kit_name=None, names=None, with_terrain=True):
     kit_name = kit_name or style["kit"]
     clear()
     scene = bpy.context.scene
@@ -102,6 +109,8 @@ def generate(style, kit_name=None, names=None):
     _ensure_stage(scene)
     _district(scene, state)
     _lod_lineup(scene, state)
+    if with_terrain:
+        _make_terrain(scene, state, material)
     _place_choppers(state)
     export_collection.hide_render = True
     export_collection.hide_viewport = True
@@ -137,6 +146,18 @@ def _district(scene, state):
             placements.append((entry, (x + plot.w / 2, 0.0, z - depth / 2)))
             x += plot.w + STREET
         z -= depth + STREET
+        if row[0]["building"].type == CHANNEL_AFTER:
+            back = z + STREET
+            state.channel_z = back - CHANNEL_GAP / 2
+            z = back - CHANNEL_GAP
+    if placements:
+        rects = [(p[0] - e["building"].plot.w / 2, p[0] + e["building"].plot.w / 2,
+                  p[2] - e["building"].plot.d / 2, p[2] + e["building"].plot.d / 2) for e, p in placements]
+        x0, x1 = min(r[0] for r in rects), max(r[1] for r in rects)
+        z0, z1 = min(r[2] for r in rects), max(r[3] for r in rects)
+        state.centre = ((x0 + x1) / 2, 0.0, (z0 + z1) / 2)
+        state.city_rect = (x0, x1, z0, z1)
+        state.plot_rects = {e["building"].name: r for (e, _p), r in zip(placements, rects)}
     for entry, position in placements:
         state.placements[entry["building"].name] = position
         source = entry["objects"][0]
@@ -165,6 +186,34 @@ def _lod_lineup(scene, state):
             # Unity +X shows on the left of the preview camera, so LOD0 starts on the high-X side.
             obj.location = geo.to_blender((offset - start - level * (w + 10.0), 0.0, LOD_LINEUP_Z))
             state.lineup.append(obj)
+
+
+def _make_terrain(scene, state, material):
+    """Terrain round the district (terrain.py): numpy field, chunk meshes (export copies at the origin = the city
+    centre, preview copies moved onto the district)."""
+    cx, _cy, cz = state.centre
+    x0, x1, z0, z1 = state.city_rect
+    plots = [(name, (r[0] - cx, r[1] - cx, r[2] - cz, r[3] - cz)) for name, r in state.plot_rects.items()]
+    channel_z = (state.channel_z if state.channel_z is not None else z0 - 60.0) - cz
+    t = terrain.Terrain(state.style, (x0 - cx, x1 - cx, z0 - cz, z1 - cz), channel_z, plots)
+    t.make_markers()
+    state.terrain = t
+    state.terrain_problems = t.audit()
+    export_collection = _collection(scene, TERRAIN_EXPORT)
+    state.terrain_chunks = terrain.make_chunks(t, export_collection, material)
+    shown = _collection(scene, TERRAIN_COLLECTION)
+    for _name, objects, _factors in state.terrain_chunks:
+        obj = bpy.data.objects.new(f"Show_{objects[0].name}", objects[0].data)
+        shown.objects.link(obj)
+        obj.location = geo.to_blender(state.centre)
+        state.terrain_shown.append(obj)
+    export_collection.hide_render = True
+    export_collection.hide_viewport = True
+
+
+def _world(state, point):
+    """Terrain point (relative to the city centre) -> district (Unity) position."""
+    return (point[0] + state.centre[0], point[1], point[2] + state.centre[2])
 
 
 def _place_choppers(state):
@@ -209,6 +258,26 @@ def _place_choppers(state):
             spot = at("Landmark_Orb", position)
             state.choppers.append(library.chopper("Scout", (spot[0], spot[1] + library.ground_offset("Scout"),
                                                             spot[2]), 135.0, name="Chopper_Orb"))
+    t = state.terrain
+    if t is not None:
+        # In the canyon, low, flying in towards the city.
+        k = len(t.canyon) // 3
+        (ax, az), (bx, bz) = t.canyon[k], t.canyon[k + 1]
+        floor = float(t.sample(ax, az))
+        yaw = math.degrees(math.atan2(-(bx - ax), -(bz - az)))
+        state.choppers.append(library.chopper("Gunship", _world(state, (ax, floor + 22.0, az)), yaw,
+                                              name="Chopper_Canyon"))
+        # In the storm drain, below street level, through the city.
+        cx = (t.city[0] + t.city[1]) / 2 + 40.0
+        state.choppers.append(library.chopper("Scout", _world(state, (cx, -1.0, t.channel_z)), 90.0,
+                                              name="Chopper_Channel"))
+        # Landed on the mesa top nearest the city.
+        tops = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))
+        if tops:
+            _kind, _i, (mx, my, mz), _r = tops[0]
+            state.choppers.append(library.chopper("Lifter", _world(state, (mx, my + library.ground_offset("Lifter"),
+                                                                           mz)), math.degrees(math.atan2(-mx, -mz)),
+                                                  name="Chopper_Mesa"))
     street = at("Block_Corner", (0.0, 45.0, 30.0))
     if street:
         state.choppers.append(library.chopper("Lifter", street, 60.0, name="Chopper_Street"))
@@ -294,6 +363,52 @@ def _export_fbx(objects, path):
         axis_forward="-Z", axis_up="Y", bake_space_transform=True, apply_scale_options="FBX_SCALE_ALL",
         mesh_smooth_type="EDGE", use_triangles=True, add_leaf_bones=False, bake_anim=False, path_mode="STRIP",
         use_mesh_modifiers=True)
+
+
+def export_terrain(state, out_dir):
+    """Terrain/<chunk>.fbx (LOD0..2 each), a 16-bit RAW height map and <kit>.terrain.json (chunks, height map,
+    markers, paths, the building layout on the terrain). Returns a short summary for the main manifest."""
+    t = state.terrain
+    folder = os.path.join(out_dir, "Terrain")
+    os.makedirs(folder, exist_ok=True)
+    collection = bpy.data.collections[TERRAIN_EXPORT]
+    collection.hide_viewport = False
+    chunks = []
+    try:
+        for name, objects, factors in state.terrain_chunks:
+            _export_fbx(objects, os.path.join(folder, f"{name}.fbx"))
+            chunks.append({"name": name, "file": f"Terrain/{name}.fbx", "stepFactors": list(factors),
+                           "triangles": [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects]})
+    finally:
+        collection.hide_viewport = True
+    raw = f"{state.kit}_Height.raw"
+    low, high = t.write_raw(os.path.join(folder, raw))
+    cx, _cy, cz = state.centre
+    data = {
+        "kit": state.kit,
+        "generator": "Tools/CityForge (terrain.py)",
+        "axes": "Unity space, metres. Origin = the city centre on the ground (city floor y = 0).",
+        "size": t.values["size"], "step": terrain.STEP, "chunkSize": terrain.STEP * terrain.CHUNK_CELLS,
+        "lod": {"levels": len(terrain.LOD_FACTORS), "screenHeights": list(LOD_SCREEN_HEIGHTS),
+                "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). "
+                        "Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."},
+        "uv": "UV0 = palette swatch (the city material).",
+        "collider": "Mesh collider from each chunk's LOD0 mesh.",
+        "heightmap": {"file": f"Terrain/{raw}", "format": "RAW 16-bit little-endian (Unity: Windows byte order)",
+                      "resolution": t.count, "min": round(low, 3), "max": round(high, 3),
+                      "rows": "first row = -Z edge"},
+        "chunks": chunks,
+        "markers": [{"kind": kind, "index": index, "position": _r(position), "radius": radius}
+                    for kind, index, position, radius in t.markers],
+        "paths": {"canyon": [_r(p) for p in t.path_points(t.canyon)],
+                  "channel": [_r(p) for p in t.path_points(t.channel)]},
+        "layout": {name: _r((p[0] - cx, p[1], p[2] - cz)) for name, p in state.placements.items()},
+        "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
+        "audit": state.terrain_problems,
+    }
+    with open(os.path.join(out_dir, f"{state.kit}.terrain.json"), "w") as handle:
+        json.dump(data, handle, indent=2)
+    return {"file": f"{state.kit}.terrain.json", "chunks": len(chunks), "audit": state.terrain_problems}
 
 
 # -- stage and previews -----------------------------------------------------------------------------------------------
@@ -451,6 +566,10 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     camera, aim = bpy.data.objects["CF Camera"], bpy.data.objects["CF Aim"]
     district, lineup = state.district, state.lineup
 
+    ground = bpy.data.objects.get("CF Ground")
+    if state.terrain_shown:
+        _visible(state.terrain_shown, True)
+        ground.hide_render = True
     # District by day and by night (same camera: a chopper coming in high from the front left).
     _visible(lineup, False)
     _visible(district, True)
@@ -473,7 +592,9 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     chopper_objects = state.library.objects() if getattr(state, "library", None) else []
     _visible(chopper_objects, False)
 
-    # LOD line-up: LOD0, LOD1, LOD2 of a few buildings, side by side.
+    # LOD line-up: LOD0, LOD1, LOD2 of a few buildings, side by side (studio floor, no terrain).
+    _visible(state.terrain_shown, False)
+    ground.hide_render = False
     _visible(district, False)
     _visible(lineup, True)
     _frame(camera, aim, lineup, (-0.2, -1.0, 0.3), lens=50.0, margin=0.6)
@@ -484,6 +605,32 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
         _building_sheet(state, scene, camera, aim, os.path.join(preview_dir, "buildings_sheet.jpg"), np)
     _visible(district + lineup + chopper_objects, True)
     _frame(camera, aim, district, (-0.55, -1.0, 0.6), lens=35.0, margin=0.72)
+
+
+def _terrain_shots(state, by_name):
+    """Terrain views (Blender camera, aim, lens): overview from high over the canyon side, a chopper in the canyon,
+    one in the storm drain, one on a mesa top."""
+    t = state.terrain
+    if t is None:
+        return []
+
+    def b(point):
+        return geo.to_blender(_world(state, point))
+
+    shots = [("terrain_overview", b((1150.0, 760.0, 1250.0)), b((60.0, 40.0, -80.0)), 24.0)]
+    if "Chopper_Canyon" in by_name:
+        k = len(t.canyon) // 3
+        ahead, behind = t.canyon[max(0, k - 3)], t.canyon[min(len(t.canyon) - 1, k + 2)]
+        shots.append(("canyon", b((behind[0], float(t.sample(*behind)) + 34.0, behind[1])),
+                      b((ahead[0], float(t.sample(*ahead)) + 14.0, ahead[1])), 22.0))
+    if "Chopper_Channel" in by_name:
+        cx = (t.city[0] + t.city[1]) / 2 + 40.0
+        shots.append(("channel", b((cx - 48.0, 4.0, t.channel_z + 7.0)), b((cx + 40.0, 8.0, t.channel_z)), 22.0))
+    if "Chopper_Mesa" in by_name and t.markers:
+        _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
+        away = Vector((mx, mz)).normalized()
+        shots.append(("mesa", b((mx + away.x * 45.0, my + 14.0, mz + away.y * 45.0)), b((0.0, 160.0, 0.0)), 22.0))
+    return shots
 
 
 def _scale_shots(state, scene, camera, aim, preview_dir):
@@ -526,6 +673,7 @@ def _scale_shots(state, scene, camera, aim, preview_dir):
         width = max(c.x for c in corners) - min(c.x for c in corners)
         shots.append(("landmarks", Vector((centre.x - width * 0.25, low - width * 0.75, 110.0)),
                       Vector((centre.x, centre.y, 150.0)), 24.0))
+    shots += _terrain_shots(state, by_name)
     for name, camera_at, aim_at, lens in shots:
         camera.location, aim.location, camera.data.lens = camera_at, aim_at, lens
         set_time(scene, night=False)
@@ -584,12 +732,16 @@ def save_blend(path):
 # -- command line -----------------------------------------------------------------------------------------------------
 
 def build(out_dir, preview_dir=None, kit_name=None, style_name="dystopia", render=True, samples=32, blend_path=None,
-          names=None, sheet=True):
+          names=None, sheet=True, with_terrain=True):
     style = styles.get(style_name)
     if bpy.app.background:
         bpy.ops.wm.read_factory_settings(use_empty=True)
-    state = generate(style, kit_name, names)
+    state = generate(style, kit_name, names, with_terrain=with_terrain)
     manifest = export(state, out_dir)
+    if state.terrain is not None:
+        manifest["terrain"] = export_terrain(state, out_dir)
+        with open(os.path.join(out_dir, f"{state.kit}.manifest.json"), "w") as handle:
+            json.dump(manifest, handle, indent=2)
     if render and preview_dir:
         render_previews(state, preview_dir, samples, sheet=sheet)
     if blend_path:

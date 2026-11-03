@@ -31,6 +31,9 @@ SWATCH = {
     "rubber": "rubber",
     "hazard": "hazard_faded",
     "bare": "bare",
+    "sand": "hazard",          # terrain: desert sand (the city never uses the bright hazard paint)
+    "rock": "warhead",         # terrain: red sandstone
+    "rock_dark": "exhaust",    # terrain: dark strata
 }
 
 STYLES = {
@@ -57,6 +60,9 @@ STYLES = {
             "spare": ("#d9b77a", "#8a6a3a", 0.0, 0.5),    # lit warm window (dimmer than the sodium lights)
             "missile": ("#cfe3ea", "#5f8590", 0.0, 0.5),  # lit cool window
             "carbon": ("#262624", None, 0.0, 0.2),        # roof membrane
+            "hazard": ("#b39b78", None, 0.0, 0.12),       # sand (terrain)
+            "warhead": ("#8e6a52", None, 0.0, 0.15),      # sandstone (terrain)
+            "exhaust": ("#5b4536", None, 0.0, 0.15),      # dark strata (terrain); no glow
         },
     ),
 }

@@ -50,6 +50,25 @@ Height and ground cues (test lesson: dark ground and too much glow made height h
 floor, a lit band of shop fronts and sodium strips at street level, red obstruction lights on tops above 30 m and on
 masts, few lit windows (style `lit` = 14 %).
 
+## Terrain
+
+`cityforge/terrain.py` (on by default; `--no-terrain` skips it). A 3 km desert basin round the district (numpy
+height field, 6 m grid, style key `terrain` overrides `terrain.DEFAULTS`):
+- the city stands on an exactly flat concrete floor (y = 0); a 84 m street gap is left in the layout for the channel;
+- a **storm-drain channel** (56 m wide, 8 m deep concrete trapezoid, wet strip in the middle) runs through the city
+  and out into the canyon: low, fast routes under street level;
+- a **canyon** (72 to 110 m wide, floor falling to -40 m) winds east from the basin out through the rim;
+- 14 **mesas** on a ring 0.8 to 1.2 km out: flat tops (MesaTop markers: landing, objectives), terraced sandstone
+  cliffs, talus aprons; a ragged **plateau rim** round the basin.
+
+Export: `Terrain/Terrain_<row>_<col>.fbx` (64 chunks of 384 m, LOD0..2 each; edge chunks half the detail; 10 m skirts
+so LOD seams show no cracks; mesh collider = LOD0), `Terrain/City01_Height.raw` (16-bit height map, 513 x 513, for a
+Unity Terrain if wanted) and `City01.terrain.json` (chunks, height range, MesaTop markers, canyon and channel paths for
+bot routes, the building layout on the terrain, suggested flight bounds, audit). About 14 MB.
+
+Terrain audit: city floor flat, no plot touches the channel, every plot on flat ground, the canyon at least 50 m wide
+30 m above its floor all the way, every mesa top flat within its marker circle.
+
 ## Output
 
 | File | What |
@@ -61,7 +80,8 @@ masts, few lit windows (style `lit` = 14 %).
 Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityforge/choppers.py`, preview only):
 `scale_pad_*.jpg` (a Gunship on a megatower wall pad), `scale_flyby_*.jpg` (a Scout flying past, seen from below),
 `skyline_*.jpg` (the megatowers from chopper height), `bridge_*.jpg` (a Gunship under a sky bridge),
-`landmarks_*.jpg`, `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
+`landmarks_*.jpg`, `terrain_overview_*.jpg`, `canyon_*.jpg` (a Gunship in the canyon), `channel_*.jpg` (a Scout in
+the storm drain), `mesa_*.jpg` (a Lifter on a mesa top), `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
 `street_night.jpg` (chopper height, ground cues), `lods.jpg` (LOD0 / LOD1 / LOD2 side by side),
 `buildings_sheet.jpg` (every building alone).
 
@@ -88,4 +108,5 @@ Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityfor
   screen heights, box colliders and markers from the manifest, one prefab per building) and a validator check.
 - Blender panel (N > CityForge) with Rebuild and sliders, like PartForge.
 - Wear and grime: the PartForge bake and runtime skin path (texture sets per building).
-- A district / map layout generator (streets, plots, spawn and objective placement from the markers).
+- A district / map layout generator (streets, plots, spawn and objective placement from the markers). The terrain
+  already places the district (`layout` in the terrain manifest); bridges over the channel are still missing.

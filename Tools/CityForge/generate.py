@@ -41,6 +41,7 @@ def main():
     parser.add_argument("--no-render", action="store_true")
     parser.add_argument("--no-sheet", action="store_true", help="Skip the per-building sheet (13 renders).")
     parser.add_argument("--no-blend", action="store_true")
+    parser.add_argument("--no-terrain", action="store_true", help="Buildings only (no terrain, no layout).")
     parser.add_argument("--samples", type=int, default=32)
     parser.add_argument("--audit", action="store_true", help="Check the buildings only; exit 1 on problems.")
     args = parser.parse_args(argv)
@@ -58,12 +59,16 @@ def main():
     blend = None if args.no_blend else os.path.join(HERE, "blend", f"{kit}.blend")
     state, manifest = build.build(out, os.path.join(args.previews, kit), kit_name=kit, style_name=args.style,
                                   render=not args.no_render, samples=args.samples, blend_path=blend, names=names,
-                                  sheet=not args.no_sheet)
+                                  sheet=not args.no_sheet, with_terrain=not args.no_terrain)
     for entry in manifest["buildings"]:
         tris = entry["triangles"]
         flag = f"  {len(entry['audit'])} audit problems" if entry["audit"] else ""
         print(f"{entry['name']:<14} {entry['type']:<10} tris {tris[0]:>6} / {tris[1]:>5} / {tris[2]:>4}  "
               f"colliders {len(entry['colliders']):>2}  markers {len(entry['markers'])}{flag}")
+    if "terrain" in manifest:
+        summary = manifest["terrain"]
+        flag = f"  {len(summary['audit'])} audit problems: {summary['audit']}" if summary["audit"] else "  audit ok"
+        print(f"Terrain: {summary['chunks']} chunks{flag}")
     print(f"Wrote {len(manifest['buildings'])} buildings to {out}" + (f"; Blender file {blend}" if blend else ""))
 
 
