@@ -70,6 +70,19 @@ namespace Chopper.Editor.Setup
                 yield return ("No hangar scene. Press '7. Build hangar'.", null);
                 yield break;
             }
+            var settings = AssetDatabase.LoadAssetAtPath<HangarSettings>(SettingsPath);
+            var catalog = AssetDatabase.FindAssets("t:LoadoutCatalog").Select(g => AssetDatabase.LoadAssetAtPath<LoadoutCatalog>(AssetDatabase.GUIDToAssetPath(g)))
+                .FirstOrDefault(c => c != null);
+            if (settings != null && settings.Wireframes != null && catalog != null)
+                foreach (var chassis in catalog.Chassis)
+                {
+                    var model = chassis != null && chassis.Prefab != null ? chassis.Prefab.transform.Find(HangarStage.ModelName) : null;
+                    if (model == null) continue;
+                    if (model.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null && !settings.Wireframes.TryGetBody(f.sharedMesh, out _)))
+                        yield return ($"{chassis.name}: no readable copy in the wireframe library (hangar views can look through the body). " +
+                                      "Press '7. Build hangar'.", settings.Wireframes);
+                }
+
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (!scenes.Contains(ScenePath)) yield return ("The hangar scene is not in the build settings. Press '7. Build hangar'.", null);
             if (!scenes.Any(p => Path.GetFileNameWithoutExtension(p) == ChopperBootstrap.TrainingRangeScene))
@@ -143,28 +156,33 @@ namespace Chopper.Editor.Setup
             return profile;
         }
 
-        /// <summary>Line meshes for every chassis model and module visual that has none yet (sub-assets of the library).</summary>
+        /// <summary>Line meshes and readable copies for every chassis model and module visual that has none yet (sub-assets of the library).</summary>
         private static void BakeWireframes(HangarSettings settings, LoadoutCatalog catalog)
         {
             var library = settings.Wireframes;
-            // Keep entries whose model has not changed since the bake; the lines of a changed model (kit reimport: same
-            // mesh asset, new shape) and of a removed one are deleted, and changed ones are baked again below.
-            var entries = new List<WireframeLibrary.Entry>();
-            foreach (var entry in library.Entries)
-            {
-                if (entry.Source != null && entry.Wire != null && entry.SourceStamp == WireframeLibrary.Stamp(entry.Source))
-                    entries.Add(entry);
-                else if (entry.Wire != null)
-                    Object.DestroyImmediate(entry.Wire, true);
-            }
-            var known = new HashSet<Mesh>(entries.Select(e => e.Source));
-
             var models = new List<GameObject>();
             foreach (var chassis in catalog.Chassis)
             {
                 var model = chassis != null && chassis.Prefab != null ? chassis.Prefab.transform.Find(HangarStage.ModelName) : null;
                 if (model != null) models.Add(model.gameObject);
             }
+            // Keep entries whose model has not changed since the bake (and that have their body copy); the meshes of a
+            // changed model (kit reimport: same mesh asset, new shape) and of a removed one are deleted, and changed
+            // ones are baked again below.
+            var entries = new List<WireframeLibrary.Entry>();
+            foreach (var entry in library.Entries)
+            {
+                if (entry.Source != null && entry.Wire != null && entry.Body != null &&
+                    entry.SourceStamp == WireframeLibrary.Stamp(entry.Source))
+                    entries.Add(entry);
+                else
+                {
+                    if (entry.Wire != null) Object.DestroyImmediate(entry.Wire, true);
+                    if (entry.Body != null) Object.DestroyImmediate(entry.Body, true);
+                }
+            }
+            var known = new HashSet<Mesh>(entries.Select(e => e.Source));
+
             models.AddRange(catalog.Modules.Where(m => m != null && m.Visual != null).Select(m => m.Visual));
 
             var added = 0;
@@ -179,7 +197,14 @@ namespace Chopper.Editor.Setup
                 wire.SetIndices(lines, MeshTopology.Lines, 0);
                 wire.RecalculateBounds();
                 AssetDatabase.AddObjectToAsset(wire, library);
-                entries.Add(new WireframeLibrary.Entry { Source = mesh, Wire = wire, SourceStamp = WireframeLibrary.Stamp(mesh) });
+                // A readable copy for the hangar's view test (the kit models are not readable in a build).
+                var body = new Mesh { name = $"Body_{mesh.name}" };
+                if (mesh.vertexCount > 65535) body.indexFormat = IndexFormat.UInt32;
+                body.SetVertices(mesh.vertices);
+                body.SetTriangles(mesh.triangles, 0);
+                body.RecalculateBounds();
+                AssetDatabase.AddObjectToAsset(body, library);
+                entries.Add(new WireframeLibrary.Entry { Source = mesh, Wire = wire, Body = body, SourceStamp = WireframeLibrary.Stamp(mesh) });
                 added++;
             }
 

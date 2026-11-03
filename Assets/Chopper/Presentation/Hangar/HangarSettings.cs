@@ -44,14 +44,29 @@ namespace Chopper.Presentation.Hangar
         private float spinHoldMargin = 0.12f;
         [SerializeField, Tooltip("Seconds for the idle spin to stop or start again (about 95 %).")]
         private float spinEaseSeconds = 0.35f;
-        [SerializeField, Tooltip("Slot focus: camera distance from the socket, in chopper lengths. The camera looks at the " +
-                                 "socket from the side it sits on, from above.")]
-        private float focusDistance = 0.7f;
+        [SerializeField, Tooltip("Where the chopper (overview) or the module (slot) shows on screen (viewport, y up): the " +
+                                 "middle of the gap between the hangar panels.")]
+        private Vector2 viewCentre = new(0.47f, 0.47f);
+        [SerializeField, Tooltip("Slot focus: part of the view height the module fills. The camera looks at the module " +
+                                 "from the side it sits on.")]
+        private float focusFill = 0.45f;
+        [SerializeField, Tooltip("Slot focus: a module counts as at least this big (metres, radius), so small parts keep " +
+                                 "some chopper round them.")]
+        private float focusMinRadius = 0.9f;
+        [SerializeField, Tooltip("Slot focus: ... or this part of the chopper's length if that is bigger (big chassis).")]
+        private float focusMinRadiusFraction = 0.08f;
+        [SerializeField, Tooltip("Slot focus: nearest camera distance (metres).")]
+        private float focusMinDistance = 3f;
+        [SerializeField, Tooltip("Slot focus: farthest camera distance, in chopper lengths.")]
+        private float focusDistance = 1.1f;
         [SerializeField, Tooltip("Slot focus: degrees the camera looks down at a socket in the top half of the chopper.")]
         private float focusElevation = 25f;
         [SerializeField, Tooltip("Slot focus: degrees for a socket in the bottom half (below 0 = from below, so wings do " +
                                  "not hide pylons).")]
         private float focusElevationBelow = -12f;
+        [SerializeField, Tooltip("Rotor slot: part of the view width the rotor disc spans. The camera keeps the overview " +
+                                 "angle and only moves back until the disc fits.")]
+        private float rotorFill = 0.55f;
         [SerializeField, Tooltip("Slot focus: field of view.")] private float focusFieldOfView = 35f;
         [SerializeField, Tooltip("Use each socket's own focus pose (SocketAuthoring: offset, field of view, yaw) instead of " +
                                  "the automatic one. For hand-tuned chassis.")]
@@ -108,6 +123,12 @@ namespace Chopper.Presentation.Hangar
         public float FocusDistance => focusDistance;
         public float FocusElevation => focusElevation;
         public float FocusElevationBelow => focusElevationBelow;
+        public float RotorFill => rotorFill;
+        public Vector2 ViewCentre => viewCentre;
+        public float FocusFill => focusFill;
+        public float FocusMinRadius => focusMinRadius;
+        public float FocusMinRadiusFraction => focusMinRadiusFraction;
+        public float FocusMinDistance => focusMinDistance;
         public float FocusFieldOfView => focusFieldOfView;
         public bool UseSocketPoses => useSocketPoses;
         public float FocusBlendSeconds => focusBlendSeconds;
@@ -134,6 +155,8 @@ namespace Chopper.Presentation.Hangar
             if (focusBlendSeconds <= 0f) problems.Add($"{name}: focus blend time must be above 0.");
             if (spinEaseSeconds <= 0f) problems.Add($"{name}: spin ease time must be above 0.");
             if (flingDamping <= 0f) problems.Add($"{name}: fling damping must be above 0.");
+            if (focusFill <= 0f) problems.Add($"{name}: focus fill must be above 0.");
+            if (rotorFill <= 0f) problems.Add($"{name}: rotor fill must be above 0.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>

@@ -36,8 +36,12 @@ namespace Chopper.Presentation.Hangar
         /// <summary>A socket this far off the centre line (metres, or this part of the chopper's size) is on a side.</summary>
         private const float LateralMinimum = 0.2f;
         private const float LateralFraction = 0.04f;
-        /// <summary>How much of the front (or left) shows with a side (or front) view: 0 = straight on.</summary>
+        /// <summary>How much of the front shows with a side view: 0 = straight on.</summary>
         private const float FrontBias = 0.35f;
+        /// <summary>How much of the side shows with a front or back view (nose, tail): 1 = a 3/4 view.</summary>
+        private const float SideBias = 0.8f;
+        /// <summary>A module this high (part of the chopper's half height above the centre) is on top: rotor.</summary>
+        private const float TopFraction = 0.5f;
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the hangar model.")] private PresentationBridge bridge;
         [SerializeField] private UnityEngine.Camera viewCamera;
@@ -94,6 +98,36 @@ namespace Chopper.Presentation.Hangar
         private ChassisDefinition _builtChassis;
         private ModuleDefinition[] _builtModules = System.Array.Empty<ModuleDefinition>();
         private float _size = 10f;
+        /// <summary>Half the chopper's height (metres), measured on the turntable.</summary>
+        private float _halfHeight = 1f;
+        /// <summary>
+        /// Per slot, what the camera frames when the slot is open: the module's bounds (else the socket and the marker
+        /// size), in turntable space at yaw 0.
+        /// </summary>
+        private readonly List<(Vector3 Centre, float Radius)> _slotTargets = new();
+        /// <summary>Per slot: the turntable yaw that shows its module with no other module in the way.</summary>
+        private readonly List<float> _slotYaws = new();
+        /// <summary>Per slot: degrees the camera looks down at its module (below 0 = from below).</summary>
+        private readonly List<float> _slotElevations = new();
+        /// <summary>When no side shows a module under the chopper, look from this far below (degrees).</summary>
+        private const float SteepBelow = -40f;
+        /// <summary>Per slot: its module's bounds in turntable space (null when empty); used to find a clear view.</summary>
+        private readonly List<Bounds?> _slotBounds = new();
+        /// <summary>Mesh colliders of the chopper's parts and their slots (-1 = body), only while <see cref="MeasureSlots"/> runs.</summary>
+        private readonly Dictionary<MeshCollider, int> _bodyColliders = new();
+        private readonly RaycastHit[] _hits = new RaycastHit[16];
+        /// <summary>Reused: points on a module the camera should see.</summary>
+        private readonly List<Vector3> _lookPoints = new();
+        /// <summary>Reused: views tried for a slot, best first.</summary>
+        private readonly List<Vector2> _sides = new();
+        /// <summary>Armour covers the body: frame this part of the chopper's length at least.</summary>
+        private const float ArmourFraction = 0.3f;
+        /// <summary>Metres the camera stays under the rotor disc when it looks at a module below it.</summary>
+        private const float RotorClearance = 0.25f;
+        /// <summary>A middle module this far behind the centre (metres) is seen from behind.</summary>
+        private const float BackOffset = 0.5f;
+        /// <summary>Lowest point of the rotor modules (turntable space); null when no rotor is fitted.</summary>
+        private float? _rotorBottom;
         private float _yaw = 150f;
         /// <summary>Idle spin now (degrees per second); eases between the setting and 0.</summary>
         private float _spin;
@@ -112,6 +146,8 @@ namespace Chopper.Presentation.Hangar
         /// <summary>Seconds left before the idle spin starts again after the player turned the chopper.</summary>
         private float _spinWait;
         private int _lastFocus = HangarModel.Overview;
+        /// <summary>Turntable yaw when a top slot (rotor) opened: the chopper does not turn for it.</summary>
+        private float _topYaw;
         /// <summary>Unscaled time the last scan or slide ends: parts get their look each frame until then.</summary>
         private float _animationEnd;
         private bool _built;
@@ -228,6 +264,7 @@ namespace Chopper.Presentation.Hangar
             if (_model.FocusedSlot != _lastFocus)
             {
                 _lastFocus = _model.FocusedSlot;
+                _topYaw = _yaw;
                 _focusTurn = 0f;
                 _turnVelocity = 0f;
                 Play(_context.Sounds != null ? _context.Sounds.SlotFocus : null);
@@ -449,6 +486,225 @@ namespace Chopper.Presentation.Hangar
             var centre = turntable.InverseTransformPoint(bounds.center);
             _chopper.transform.localPosition -= centre;
             _size = Mathf.Max(1f, Mathf.Max(bounds.size.x, bounds.size.z));
+            _halfHeight = Mathf.Max(0.5f, bounds.extents.y);
+            MeasureSlots();
+        }
+
+        /// <summary>
+        /// Each slot's focus target in turntable space (so it does not change as the turntable turns): the bounds of
+        /// its module's meshes, or the socket with the marker's size when it is empty.
+        /// </summary>
+        private void MeasureSlots()
+        {
+            _slotTargets.Clear();
+            _slotBounds.Clear();
+            _slotYaws.Clear();
+            _slotElevations.Clear();
+            for (var slot = 0; slot < _slotSockets.Count; slot++)
+            {
+                var socket = _slotSockets[slot];
+                var empty = socket != null ? turntable.InverseTransformPoint(socket.transform.position) : Vector3.zero;
+                var bounds = new Bounds(empty, Vector3.one * _settings.SocketMarkerSize);
+                var found = false;
+                foreach (var part in _parts)
+                {
+                    if (part.Slot != slot || part.Renderer == null || !part.Renderer.TryGetComponent<MeshFilter>(out var filter) ||
+                        filter.sharedMesh == null) continue;
+                    var local = filter.sharedMesh.bounds;
+                    for (var corner = 0; corner < 8; corner++)
+                    {
+                        var point = local.center + Vector3.Scale(local.extents,
+                            new Vector3((corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
+                        point = turntable.InverseTransformPoint(part.Renderer.transform.TransformPoint(point));
+                        if (!found) bounds = new Bounds(point, Vector3.zero);
+                        else bounds.Encapsulate(point);
+                        found = true;
+                    }
+                }
+                var radius = Mathf.Max(bounds.extents.magnitude, MinRadius);
+                if (socket != null && socket.Slot == SlotType.Armour) radius = Mathf.Max(radius, ArmourFraction * _size);
+                _slotTargets.Add((bounds.center, radius));
+                _slotBounds.Add(found ? bounds : null);
+            }
+            _rotorBottom = null;
+            foreach (var bounds in _slotBounds)
+                if (bounds is Bounds rotor && IsTop(rotor.center))
+                    _rotorBottom = Mathf.Min(_rotorBottom ?? float.MaxValue, rotor.min.y);
+            // Mesh colliders on the body and the modules while the views are measured, then removed. They use the
+            // library's readable copies (Setup step 7): the kit meshes are not readable in a build. Rotors do not count
+            // (thin blades that turn).
+            _bodyColliders.Clear();
+            foreach (var part in _parts)
+            {
+                if (part.Renderer == null || !part.Renderer.TryGetComponent<MeshFilter>(out var filter) ||
+                    _settings.Wireframes == null || !_settings.Wireframes.TryGetBody(filter.sharedMesh, out var body)) continue;
+                if (part.Slot >= 0 && part.Slot < _slotBounds.Count && _slotBounds[part.Slot] is Bounds module && IsTop(module.center)) continue;
+                var collider = part.Renderer.gameObject.AddComponent<MeshCollider>();
+                collider.sharedMesh = body;
+                _bodyColliders.Add(collider, part.Slot);
+            }
+            Physics.SyncTransforms();
+            for (var slot = 0; slot < _slotTargets.Count; slot++)
+            {
+                var (yaw, elevation) = ClearView(slot);
+                _slotYaws.Add(yaw);
+                _slotElevations.Add(elevation);
+            }
+            foreach (var collider in _bodyColliders.Keys) Destroy(collider);
+            _bodyColliders.Clear();
+        }
+
+        /// <summary>
+        /// The view of a slot (turntable yaw and camera elevation): the first of <see cref="Sides"/> where the camera
+        /// sees the module (its centre and four points round it) past the body and the other modules (a rocket pod or
+        /// an armour tank in front of the flare dispenser); then the same from steeply below (modules under the
+        /// chopper); else the view that sees the most of it. Rotors do not count (thin blades that turn).
+        /// </summary>
+        private (float Yaw, float Elevation) ClearView(int slot)
+        {
+            var (target, radius) = _slotTargets[slot];
+            LookPoints(slot, target);
+            Sides(target);
+            var elevation = FocusElevationFor(target, radius);
+            var best = (YawOf(_sides[0]), elevation);
+            var fewest = int.MaxValue;
+            for (var pass = 0; pass < 2 && fewest > 0; pass++)
+            {
+                if (pass == 1)
+                {
+                    // Only modules in the bottom half get the view from below.
+                    if (target.y >= 0f) break;
+                    elevation = SteepBelow;
+                }
+                var offset = FocusOffset(radius, elevation);
+                foreach (var side in _sides)
+                {
+                    var yaw = YawOf(side);
+                    // Camera position on the turntable (yaw 0) when the turntable is at this yaw.
+                    var camera = target + Quaternion.Euler(0f, -yaw, 0f) * offset;
+                    var blocked = 0;
+                    foreach (var point in _lookPoints)
+                        if (Blocked(slot, camera, point)) blocked++;
+                    if (blocked >= fewest) continue;
+                    fewest = blocked;
+                    best = (yaw, elevation);
+                    if (blocked == 0) break;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>The module's centre and four points round it (half way to its sides), turntable space.</summary>
+        private void LookPoints(int slot, Vector3 target)
+        {
+            _lookPoints.Clear();
+            _lookPoints.Add(target);
+            if (_slotBounds[slot] is not Bounds bounds) return;
+            var extents = bounds.extents * 0.5f;
+            _lookPoints.Add(target + new Vector3(extents.x, 0f, 0f));
+            _lookPoints.Add(target - new Vector3(extents.x, 0f, 0f));
+            _lookPoints.Add(target + new Vector3(0f, 0f, extents.z));
+            _lookPoints.Add(target - new Vector3(0f, 0f, extents.z));
+        }
+
+        /// <summary>True when the body or another module is on the line from the camera to the point (turntable space).</summary>
+        private bool Blocked(int slot, Vector3 camera, Vector3 point)
+        {
+            const float Slack = 0.15f;
+            if (_bodyColliders.Count == 0) return false;
+            var from = turntable.TransformPoint(camera);
+            var to = turntable.TransformPoint(point);
+            var direction = to - from;
+            var reach = direction.magnitude - Slack;
+            if (reach <= 0f) return false;
+            var count = Physics.RaycastNonAlloc(from, direction.normalized, _hits, reach, ~0, QueryTriggerInteraction.Ignore);
+            for (var i = 0; i < count; i++)
+                if (_hits[i].collider is MeshCollider mesh && _bodyColliders.TryGetValue(mesh, out var owner) && owner != slot)
+                    return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Views to try for a module at <paramref name="local"/> (x = which side, y = how much of the front: a
+        /// direction on the ground, turntable space), best first. Decided by the side its centre is on, not by its
+        /// distance from the centre (the rotor disc makes the chopper wide, so pylons and stub wings are near the
+        /// middle by that measure):
+        /// <list type="bullet">
+        /// <item>left or right of the centre line (pylons, side guns): that side, a little from the front; then from
+        /// a little behind, more from the front, more from behind, straight on;</item>
+        /// <item>on the centre line, at the front or back (nose, tail): a 3/4 view from the front or back, left side
+        /// first;</item>
+        /// <item>in the middle (rotor mast, armour, engine): the front left (back left when the module sits behind the
+        /// centre: engines), then the other corners.</item>
+        /// </list>
+        /// </summary>
+        private void Sides(Vector3 local)
+        {
+            _sides.Clear();
+            var lateral = Mathf.Max(LateralMinimum, LateralFraction * _size);
+            if (Mathf.Abs(local.x) > lateral)
+            {
+                var x = Mathf.Sign(local.x);
+                _sides.Add(new Vector2(x, FrontBias));
+                _sides.Add(new Vector2(x, -FrontBias));
+                _sides.Add(new Vector2(x, 1f));
+                _sides.Add(new Vector2(x, -1f));
+                _sides.Add(new Vector2(x, 0f));
+            }
+            else if (Mathf.Abs(local.z) > 0.15f * _size)
+            {
+                var z = Mathf.Sign(local.z);
+                _sides.Add(new Vector2(-SideBias, z));
+                _sides.Add(new Vector2(SideBias, z));
+                _sides.Add(new Vector2(-0.3f, z));
+            }
+            else
+            {
+                // The corner on the module's own end first: engines sit behind the mast, so from behind.
+                var z = local.z < -BackOffset ? -0.6f : 0.6f;
+                _sides.Add(new Vector2(-1f, z));
+                _sides.Add(new Vector2(1f, z));
+                _sides.Add(new Vector2(-1f, -z));
+                _sides.Add(new Vector2(1f, -z));
+            }
+        }
+
+        /// <summary>Turntable yaw that turns the side <paramref name="side"/> (x, z on the turntable) to the camera (-z).</summary>
+        private static float YawOf(Vector2 side) => 180f - Mathf.Atan2(side.x, side.y) * Mathf.Rad2Deg;
+
+        /// <summary>On top of the chopper (rotor): seen from high above.</summary>
+        private bool IsTop(Vector3 local) => local.y > TopFraction * _halfHeight;
+
+        /// <summary>
+        /// Degrees the camera looks down at a module: from above in the top half and from a little below in the bottom
+        /// half. Below the rotor the camera stays under the rotor disc, so the blades do not cover the module (engine).
+        /// The rotor itself does not use this (<see cref="CameraTarget"/>).
+        /// </summary>
+        private float FocusElevationFor(Vector3 target, float radius)
+        {
+            var elevation = target.y < 0f ? _settings.FocusElevationBelow : _settings.FocusElevation;
+            if (!IsTop(target) && _rotorBottom is float bottom)
+            {
+                var distance = FocusDistanceFor(radius);
+                var highest = Mathf.Asin(Mathf.Clamp((bottom - RotorClearance - target.y) / distance, -1f, 1f)) * Mathf.Rad2Deg;
+                elevation = Mathf.Max(Mathf.Min(elevation, highest), _settings.FocusElevationBelow);
+            }
+            return elevation;
+        }
+
+        /// <summary>Camera position from the module (turntable space, before the yaw).</summary>
+        private Vector3 FocusOffset(float radius, float elevation)
+        {
+            elevation *= Mathf.Deg2Rad;
+            return new Vector3(0f, Mathf.Sin(elevation), -Mathf.Cos(elevation)) * FocusDistanceFor(radius);
+        }
+
+        /// <summary>Camera distance at which a module of this radius fills <see cref="HangarSettings.FocusFill"/> of the view.</summary>
+        private float FocusDistanceFor(float radius)
+        {
+            var halfView = Mathf.Tan(0.5f * _settings.FocusFieldOfView * Mathf.Deg2Rad);
+            return Mathf.Clamp(radius / (_settings.FocusFill * halfView),
+                _settings.FocusMinDistance, Mathf.Max(_settings.FocusMinDistance, _size * _settings.FocusDistance));
         }
 
         private void ApplyLook()
@@ -560,10 +816,10 @@ namespace Chopper.Presentation.Hangar
             _yaw = Mathf.Repeat(_yaw, 360f);
             turntable.localRotation = Quaternion.Euler(0f, _yaw, 0f);
 
-            CameraTarget(focus, out var position, out var lookAt, out var fieldOfView);
+            CameraTarget(focus, out var position, out var rotation, out var fieldOfView);
             var view = viewCamera.transform;
             view.position = Vector3.Lerp(view.position, position, blend);
-            view.rotation = Quaternion.Slerp(view.rotation, Quaternion.LookRotation(lookAt - position), blend);
+            view.rotation = Quaternion.Slerp(view.rotation, rotation, blend);
             viewCamera.fieldOfView = Mathf.Lerp(viewCamera.fieldOfView, fieldOfView, blend);
 
             var time = Time.unscaledTime;
@@ -575,8 +831,8 @@ namespace Chopper.Presentation.Hangar
             foreach (var spinner in _spinners)
             {
                 if (spinner.Visual == null) continue;
-                // Still while it builds or while its slot is open; ramps down and up over the spin-up time.
-                var hold = time < spinner.HoldUntil || spinner.Slot == _model.FocusedSlot;
+                // Still while it builds or while any slot is open (the zoomed view stays calm); ramps down and up over the spin-up time.
+                var hold = time < spinner.HoldUntil || _model.FocusedSlot != HangarModel.Overview;
                 var ramp = _settings.RotorSpinUpSeconds > 0f ? deltaTime / _settings.RotorSpinUpSeconds : 1f;
                 spinner.Speed = Mathf.MoveTowards(spinner.Speed, hold ? 0f : 1f, ramp);
                 spinner.Phase = (spinner.Phase + Mathf.SmoothStep(0f, 1f, spinner.Speed) * deltaTime) % 3600f;
@@ -597,60 +853,103 @@ namespace Chopper.Presentation.Hangar
             return slot >= 0 && slot < _slotSockets.Count ? _slotSockets[slot] : null;
         }
 
-        /// <summary>Overview: in front, a little above, the whole chopper in view. Slot: the socket's focus pose, taken
-        /// with the turntable already at the focus yaw, so the camera does not chase the turning model.</summary>
-        private void CameraTarget(SocketAuthoring focus, out Vector3 position, out Vector3 lookAt, out float fieldOfView)
+        /// <summary>
+        /// Overview: in front, a little above, the whole chopper in view. Slot: the camera looks at the slot's module
+        /// from the side it is on (<see cref="FocusYaw"/>), from above (or a little below for the bottom half), at a
+        /// distance that makes the module fill <see cref="HangarSettings.FocusFill"/> of the view. A rotor keeps the
+        /// overview angle and the chopper does not turn: the camera only moves back until the disc fits
+        /// (<see cref="HangarSettings.RotorFill"/>). The pose is taken with the turntable already at the focus yaw, so the camera does not chase the
+        /// turning model. Both put their target at <see cref="HangarSettings.ViewCentre"/>: the middle of the gap
+        /// between the hangar panels, not the middle of the screen.
+        /// </summary>
+        private void CameraTarget(SocketAuthoring focus, out Vector3 position, out Quaternion rotation, out float fieldOfView)
         {
             var centre = turntable.position;
+            Vector3 lookAt;
             if (focus == null)
             {
                 lookAt = centre;
                 position = centre + new Vector3(0f, _size * _settings.OverviewHeight, -_size * _settings.OverviewDistance);
                 fieldOfView = _settings.OverviewFieldOfView;
+                rotation = Frame(Quaternion.LookRotation(lookAt - position), fieldOfView);
                 return;
             }
 
-            lookAt = centre + Quaternion.Euler(0f, FocusYaw(focus) + _focusTurn, 0f) * SocketOnTurntable(focus);
+            var (target, radius) = FocusTarget(focus);
+            lookAt = centre + Quaternion.Euler(0f, FocusYaw(focus) + _focusTurn, 0f) * target;
             if (_settings.UseSocketPoses)
             {
                 position = lookAt + focus.FocusCameraOffset;
                 fieldOfView = focus.FocusFieldOfView;
+                rotation = Frame(Quaternion.LookRotation(lookAt - position), fieldOfView);
                 return;
             }
 
-            // The turntable turns the socket's side to the camera (-z); look at it from there: from above for the top
-            // half, from a little below for the bottom half.
-            var below = SocketOnTurntable(focus).y < 0f;
-            var elevation = (below ? _settings.FocusElevationBelow : _settings.FocusElevation) * Mathf.Deg2Rad;
-            var distance = _size * _settings.FocusDistance;
-            position = lookAt + new Vector3(0f, Mathf.Sin(elevation), -Mathf.Cos(elevation)) * distance;
             fieldOfView = _settings.FocusFieldOfView;
+            if (IsTop(target))
+            {
+                // Rotor: no turn and no new angle; the overview camera aims between the chopper's centre and the rotor
+                // and moves back until the whole disc and the body fit.
+                var middle = 0.5f * target.y;
+                lookAt = centre + Vector3.up * middle;
+                var halfWidth = Mathf.Tan(0.5f * fieldOfView * Mathf.Deg2Rad) * viewCamera.aspect;
+                var fit = (radius + middle) / (_settings.RotorFill * halfWidth);
+                var overview = new Vector3(0f, _settings.OverviewHeight, -_settings.OverviewDistance).normalized;
+                position = lookAt + overview * Mathf.Max(fit, _settings.FocusMinDistance);
+                rotation = Frame(Quaternion.LookRotation(lookAt - position), fieldOfView);
+                return;
+            }
+
+            // The turntable turns the module's side to the camera (-z).
+            var slot = _slotSockets.IndexOf(focus);
+            var elevation = slot >= 0 && slot < _slotElevations.Count ? _slotElevations[slot] : FocusElevationFor(target, radius);
+            position = lookAt + FocusOffset(radius, elevation);
+            rotation = Frame(Quaternion.LookRotation(lookAt - position), fieldOfView);
+        }
+
+        /// <summary>
+        /// Turns a camera that looks straight at its target so the target shows at <see cref="HangarSettings.ViewCentre"/>
+        /// (viewport, y up) instead of the screen centre.
+        /// </summary>
+        private Quaternion Frame(Quaternion look, float fieldOfView)
+        {
+            var point = _settings.ViewCentre;
+            var halfV = Mathf.Tan(0.5f * fieldOfView * Mathf.Deg2Rad);
+            var halfH = halfV * viewCamera.aspect;
+            // Left of centre = turn right; below centre = pitch up (negative x).
+            var yaw = -Mathf.Atan((point.x - 0.5f) * 2f * halfH) * Mathf.Rad2Deg;
+            var pitch = Mathf.Atan((point.y - 0.5f) * 2f * halfV) * Mathf.Rad2Deg;
+            return look * Quaternion.Euler(pitch, yaw, 0f);
+        }
+
+        /// <summary>
+        /// Smallest radius a module counts as: <see cref="HangarSettings.FocusMinRadius"/>, or a part of the chopper's
+        /// length for big chassis (Lifter), so small parts keep some chopper round them.
+        /// </summary>
+        private float MinRadius => Mathf.Max(_settings.FocusMinRadius, _settings.FocusMinRadiusFraction * _size);
+
+        /// <summary>The slot's focus target (turntable space at yaw 0) and its radius.</summary>
+        private (Vector3 Centre, float Radius) FocusTarget(SocketAuthoring socket)
+        {
+            var slot = _slotSockets.IndexOf(socket);
+            return slot >= 0 && slot < _slotTargets.Count
+                ? _slotTargets[slot]
+                : (SocketOnTurntable(socket), MinRadius);
         }
 
         /// <summary>Socket position on the turntable with the turntable at yaw 0.</summary>
         private Vector3 SocketOnTurntable(SocketAuthoring socket) =>
             Quaternion.Inverse(turntable.localRotation) * (socket.transform.position - turntable.position);
 
-        /// <summary>
-        /// Turntable yaw that turns the socket's side to the camera. Decided by the side the socket is on, not by its
-        /// distance from the centre (the rotor disc makes the chopper wide, so pylons and stub wings are near the
-        /// middle by that measure):
-        /// <list type="bullet">
-        /// <item>left or right of the centre line (pylons, side guns): that side, a little from the front;</item>
-        /// <item>on the centre line, at the front or back (nose, tail): the front or back, a little from the left;</item>
-        /// <item>in the middle (rotor mast, armour): the front left.</item>
-        /// </list>
-        /// </summary>
+        /// <summary>Turntable yaw that shows the slot's module (<see cref="ClearView"/>, measured when the chopper is built).</summary>
         private float FocusYaw(SocketAuthoring socket)
         {
             if (_settings.UseSocketPoses) return socket.FocusChopperYaw;
-            var local = SocketOnTurntable(socket);
-            var lateral = Mathf.Max(LateralMinimum, LateralFraction * _size);
-            Vector2 side;
-            if (Mathf.Abs(local.x) > lateral) side = new Vector2(Mathf.Sign(local.x), FrontBias);
-            else if (Mathf.Abs(local.z) > 0.15f * _size) side = new Vector2(-FrontBias, Mathf.Sign(local.z));
-            else side = new Vector2(-1f, 0.6f);
-            return 180f - Mathf.Atan2(side.x, side.y) * Mathf.Rad2Deg;
+            if (IsTop(FocusTarget(socket).Centre)) return _topYaw;
+            var slot = _slotSockets.IndexOf(socket);
+            if (slot >= 0 && slot < _slotYaws.Count) return _slotYaws[slot];
+            Sides(SocketOnTurntable(socket));
+            return YawOf(_sides[0]);
         }
 
         /// <summary>
@@ -693,8 +992,8 @@ namespace Chopper.Presentation.Hangar
 
         private void SnapCamera()
         {
-            CameraTarget(null, out var position, out var lookAt, out var fieldOfView);
-            viewCamera.transform.SetPositionAndRotation(position, Quaternion.LookRotation(lookAt - position));
+            CameraTarget(null, out var position, out var rotation, out var fieldOfView);
+            viewCamera.transform.SetPositionAndRotation(position, rotation);
             viewCamera.fieldOfView = fieldOfView;
         }
 

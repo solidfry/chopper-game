@@ -120,7 +120,8 @@ def chassis(spec, style):
     if style["wear"] > 0:
         _wear(b, rng, style, W, H, F)
 
-    sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body))
+    sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body,
+                                        engine_points=getattr(b, "engine_points", None)))
     return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"], ground=ground,
                 gear_faces=range(gear_start, gear_end))
 
@@ -1085,9 +1086,12 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
                   rotation=rot_x(k * 35))
 
     # Engine pods on the upper sides (seated on the shoulder: the inner half of the pod floor sinks into the hull):
-    # glowing intake ring, dot-grid vents, chevrons, exhaust.
+    # glowing intake ring, dot-grid vents, chevrons. No exhaust of their own: the Engine module mounts on the flange
+    # at each pod's back (b.engine_points, read by _sockets), so the fitted engine is the pods' exhaust.
     pod_x = W / 2 - 0.15
     ey = min(b.hull_y(pod_x - 0.42, z, default=top) for z in (1.2, 0.0, -1.2)) + 0.475 - 0.08
+    # Engine sockets: the flange at the back of each pod (right first); read by _sockets.
+    b.engine_points = [(pod_x, ey, -1.86), (-pod_x, ey, -1.86)]
     for side in (1, -1):
         x = side * pod_x
         b.loft([chamfer_ring(1.6, 0.90, 0.80, 0.50, y=ey, x=x), chamfer_ring(1.2, 1.05, 0.95, 0.45, y=ey, x=x),
@@ -1098,8 +1102,7 @@ def _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout):
         for k in range(6):
             turn = rot_z(30 * k)
             b.box((x, ey, 1.79), (0.05, 0.7, 0.02), C("gunmetal"), rotation=turn)
-        b.cylinder((x, ey, -1.75), (x, ey, -2.2), 0.32, C("gunmetal"), segments=12, end_radius=0.27,
-                   cap_end=C("exhaust"))
+        b.cylinder((x, ey, -1.78), (x, ey, -1.86), 0.36, C("gunmetal"), segments=12, cap_end=C("hull_dark"))
         for row in range(3):
             for col in range(5):
                 b.box((x + side * 0.53, ey - 0.15 + row * 0.13, 0.5 - col * 0.17), (0.03, 0.06, 0.06), C("hull_dark"))
@@ -1653,8 +1656,10 @@ def _seat_sockets(b, sockets):
     return seated
 
 
-def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
-    """One socket per slot in the chassis' slot list, indexed per type (game order): (slot, index, point, scale)."""
+def _sockets(spec, W, H, F, rotors, pylon_points, body="utility", engine_points=None):
+    """One socket per slot in the chassis' slot list, indexed per type (game order): (slot, index, point, scale).
+    engine_points: engine sockets of bodies with engine pods (heavy: one per pod); extra ones beyond the game's one
+    Engine slot repeat the fitted engine, like extra rotor hubs."""
     positions = {
         "Nose": [(0, -0.30 * H, F - 0.9)],
         "Pylon": pylon_points,
@@ -1672,7 +1677,7 @@ def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
             "Nose": [(0, -0.40 * H, F - 0.6)],
             "Utility": [(W / 2 + 0.32, y_sponson, -1.9), (-(W / 2 + 0.32), y_sponson, -1.9)],
             "Winch": [(0, -H / 2 - 0.12, -0.6)],
-            "Engine": [(0, H / 2 + 0.45, -1.9)],
+            "Engine": engine_points or [(0, H / 2 + 0.45, -1.9)],
         })
     if body == "assault":
         # Chin gun under the snout; belly turret between the side blocks; utilities on the side block backs.
@@ -1703,6 +1708,10 @@ def _sockets(spec, W, H, F, rotors, pylon_points, body="utility"):
     for index in range(counts.get("Rotor", 0), len(rotors)):
         point, scale = rotors[index]
         sockets.append(("Rotor", index, tuple(round(v, 4) for v in point), scale))
+    # Extra engine sockets (one per engine pod): the engine module shows on each.
+    engines = positions["Engine"]
+    for index in range(counts.get("Engine", 0), len(engines) if "Engine" in counts else 0):
+        sockets.append(("Engine", index, tuple(round(v, 4) for v in engines[index]), 1.0))
     return sockets
 
 

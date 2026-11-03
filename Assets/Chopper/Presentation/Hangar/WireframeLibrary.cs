@@ -8,6 +8,8 @@ namespace Chopper.Presentation.Hangar
     /// <summary>
     /// Baked wireframe line meshes (<see cref="WireframeMesh"/>) for every chassis and module model, as sub-assets.
     /// Setup step 7 adds the missing ones and bakes again the ones whose model changed (<see cref="Entry.SourceStamp"/>).
+    /// Each mesh also gets a readable copy (<see cref="Entry.Body"/>): the hangar tests its camera views against the
+    /// chopper with them (the kit models are not readable in a build).
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Hangar/Wireframe Library", fileName = "WireframeLibrary")]
     public sealed class WireframeLibrary : ScriptableObject, IValidatedAsset
@@ -17,6 +19,8 @@ namespace Chopper.Presentation.Hangar
         {
             public Mesh Source;
             public Mesh Wire;
+            /// <summary>A readable copy of the source, for mesh colliders.</summary>
+            public Mesh Body;
             /// <summary>
             /// Shape of the source when it was baked (<see cref="Stamp"/>). A kit reimport keeps the same mesh asset with
             /// a new shape: a different stamp makes Setup step 7 bake the lines again.
@@ -37,6 +41,7 @@ namespace Chopper.Presentation.Hangar
         [SerializeField] private Entry[] entries = Array.Empty<Entry>();
 
         private Dictionary<Mesh, Mesh> _lookup;
+        private Dictionary<Mesh, Mesh> _bodies;
 
         public IReadOnlyList<Entry> Entries => entries;
 
@@ -53,6 +58,20 @@ namespace Chopper.Presentation.Hangar
             return _lookup.TryGetValue(source, out wire);
         }
 
+        /// <summary>The readable copy of a mesh (for view tests).</summary>
+        public bool TryGetBody(Mesh source, out Mesh body)
+        {
+            body = null;
+            if (source == null) return false;
+            if (_bodies == null)
+            {
+                _bodies = new Dictionary<Mesh, Mesh>();
+                foreach (var entry in entries)
+                    if (entry.Source != null && entry.Body != null) _bodies[entry.Source] = entry.Body;
+            }
+            return _bodies.TryGetValue(source, out body);
+        }
+
         public void CollectProblems(List<string> problems)
         {
             foreach (var entry in entries)
@@ -64,8 +83,13 @@ namespace Chopper.Presentation.Hangar
         {
             entries = value;
             _lookup = null;
+            _bodies = null;
         }
 
-        private void OnValidate() => _lookup = null;
+        private void OnValidate()
+        {
+            _lookup = null;
+            _bodies = null;
+        }
     }
 }
