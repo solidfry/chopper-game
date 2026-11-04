@@ -130,6 +130,19 @@ channel corridor, every building on flat ground, road colliders cover the decks.
   the suggested numbers for the game are in the terrain manifest (`atmosphere`). Cloud ceiling and sandstorm wall
   are for the Unity step.
 
+## Building surfaces
+
+Shader work on top of the wear (BuildingWear.hlsl in the game, `wear._surfaces` in the previews):
+- Fake rooms behind windows (interior mapping): the palette's metal-smooth map has G = 1 on the window swatches
+  (`kit.mark_windows`: glass, lit warm, lit cool). A ray from the camera into a grid of 4 x 4 x 3.4 m rooms in the
+  building's own space finds wall, floor or ceiling; lit windows show a lamp-lit room (bright ceiling, darker deep
+  corners, furniture bands), glass a dim room under the reflection.
+- Per copy: a hash of the object position (Blender: Object Info random) shifts colour a few per cent, the dirt
+  amount and which rooms are brighter, so repeated buildings do not match.
+- Panel seams on rough walls (1.5 m across, 3 m up, building space) with stains under some joints.
+- Puddles in wet biomes on flat roofs and ground (buildings, and made ground in TerrainBiome.hlsl): dark,
+  mirror-smooth, flat normal. Reflections need reflection probes in the scene.
+
 ## Wear and grime (buildings)
 
 `cityforge/wear.py` bakes per-vertex masks from each finished building mesh (ray casts on its own BVH, about 0.2 s

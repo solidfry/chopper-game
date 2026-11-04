@@ -27,6 +27,25 @@ def sw(name):
     return palette.swatch(SWATCH.get(name, name))
 
 
+WINDOW_SWATCHES = ("glass", "lit_warm", "lit_cool")
+
+
+def mark_windows(metal_smooth):
+    """Sets G = 1 in the palette's metal-smooth map (a Blender image) for the window swatches: the building shader
+    (BuildingWear.hlsl, wear.add_preview_nodes) puts fake rooms behind those faces. G is unused otherwise."""
+    grid, cell = palette.GRID, palette.CELL
+    size = grid * cell
+    windows = {sw(name) for name in WINDOW_SWATCHES}
+    pixels = list(metal_smooth.pixels)
+    for y in range(size):
+        row = (size - 1 - y) // cell           # as palette._fill: image rows go up from the bottom
+        for x in range(size):
+            if row * grid + x // cell in windows:
+                pixels[(y * size + x) * 4 + 1] = 1.0
+    metal_smooth.pixels = pixels
+    metal_smooth.update()
+
+
 class Rect:
     """Axis rectangle on the ground plane (x0..x1, z0..z1)."""
 

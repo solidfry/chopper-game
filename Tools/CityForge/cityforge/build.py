@@ -88,6 +88,7 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     scene = bpy.context.scene
     export_collection = _collection(scene, EXPORT_COLLECTION)
     images = palette.make_images(kit_name, style.get("palette"))
+    kit.mark_windows(images[2])                 # the MetalSmooth map: G = 1 on window swatches (fake rooms)
     material = palette.make_material(kit_name, images)
     biome = terrain_biomes.BIOMES[style.get("biome", "desert")]
     wear.add_preview_nodes(material, dust=biome["cover"] or biome["ground"][0], wear=style.get("wear", 1.0),

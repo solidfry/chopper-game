@@ -228,4 +228,130 @@ def add_preview_nodes(material, dust, grime="#3b342b", wear=1.0, rain=0.0):
     base = mix(base, colour(dust), masked(math_node("MULTIPLY", math_node("MULTIPLY", upward, sky), fine.outputs["Fac"]), 0.8))
     if rain > 0:
         base = mix(base, (1.0 - 0.4 * rain,) * 3 + (1.0,), 1.0, "MULTIPLY")
+    base = _surfaces(nodes, links, bsdf, metal, base, source, new, math_node, mix, wear, rain, colour(grime))
     links.new(base, bsdf.inputs["Base Color"])
+
+
+def _surfaces(nodes, links, bsdf, metal, base, source, new, math_node, mix, wear, rain, grime):
+    """Building surfaces in the preview (the rules of BuildingWear.hlsl, roughly): per-copy tint (Object Info random),
+    panel seams on rough walls, puddles in wet biomes, fake rooms behind windows (metal-smooth G = 1). Returns the new
+    base colour socket; sets the emission to the room-lit glow."""
+    if metal is None:
+        return base
+    split = new("ShaderNodeSeparateColor")
+    links.new(metal.outputs["Color"], split.inputs[0])
+    window = split.outputs["Green"]
+    solid = math_node("SUBTRACT", 1.0, window)
+    rough = math_node("MULTIPLY", math_node("SUBTRACT", math_node("SUBTRACT", 1.0, metal.outputs["Alpha"]), 0.25), 1.6)
+    info = new("ShaderNodeObjectInfo")
+    seed = info.outputs["Random"]
+    coords = new("ShaderNodeTexCoord")
+    local = new("ShaderNodeSeparateXYZ")
+    links.new(coords.outputs["Object"], local.inputs[0])
+    geometry = new("ShaderNodeNewGeometry")
+    n = new("ShaderNodeSeparateXYZ")
+    links.new(geometry.outputs["Normal"], n.inputs[0])
+    vertical = math_node("SUBTRACT", 1.0, math_node("ABSOLUTE", n.outputs["Z"]))
+
+    def grey(value):
+        node = new("ShaderNodeCombineColor")
+        for k in range(3):
+            links.new(value, node.inputs[k])
+        return node.outputs[0]
+
+    # Per copy: up to 6 % lighter or darker (not on windows).
+    tint = math_node("ADD", math_node("MULTIPLY", math_node("SUBTRACT", seed, 0.5), 0.12, clamp=False), 1.0, clamp=False)
+    base = mix(base, grey(math_node("ADD", math_node("MULTIPLY", math_node("SUBTRACT", tint, 1.0, clamp=False), solid,
+                                                     clamp=False), 1.0, clamp=False)), 1.0, "MULTIPLY")
+    # Panel seams: 1.5 m across, 3 m up, in object space.
+    across = new("ShaderNodeMix")
+    across.data_type = "FLOAT"
+    links.new(math_node("GREATER_THAN", math_node("ABSOLUTE", n.outputs["X"]), math_node("ABSOLUTE", n.outputs["Y"])),
+              across.inputs[0])
+    links.new(local.outputs["X"], across.inputs[2])
+    links.new(local.outputs["Y"], across.inputs[3])
+
+    def joint(value, every, lo, hi):
+        f = math_node("ABSOLUTE", math_node("SUBTRACT", math_node("FRACT", math_node("DIVIDE", value, every, clamp=False),
+                                                                    clamp=False), 0.5, clamp=False))
+        ramp = new("ShaderNodeMapRange")
+        ramp.interpolation_type = "SMOOTHSTEP"
+        ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = lo, hi
+        links.new(f, ramp.inputs["Value"])
+        return ramp.outputs["Result"]
+
+    seam = math_node("ADD", joint(across.outputs[0], 1.5, 0.47, 0.495), joint(local.outputs["Z"], 3.0, 0.475, 0.497))
+    seam = math_node("MULTIPLY", math_node("MULTIPLY", math_node("MULTIPLY", seam, vertical), rough), solid)
+    base = mix(base, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", seam, 0.22))
+    # Puddles on flat ground in wet biomes.
+    if rain > 0.02:
+        noise = new("ShaderNodeTexNoise", Scale=1.0 / 6.0, Detail=3.0)
+        links.new(geometry.outputs["Position"], noise.inputs["Vector"])
+        ramp = new("ShaderNodeMapRange")
+        ramp.interpolation_type = "SMOOTHSTEP"
+        ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 1.0 - rain * 0.9, 1.05 - rain * 0.9
+        links.new(noise.outputs["Fac"], ramp.inputs["Value"])
+        flat = math_node("MULTIPLY", math_node("SUBTRACT", n.outputs["Z"], 0.6), 2.5)
+        puddle = math_node("MULTIPLY", ramp.outputs["Result"], flat)
+        base = mix(base, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", puddle, 0.65))
+        rough_in = bsdf.inputs["Roughness"].links[0].from_socket if bsdf.inputs["Roughness"].links else None
+        if rough_in is not None:
+            wet = new("ShaderNodeMix")
+            wet.data_type = "FLOAT"
+            links.new(puddle, wet.inputs[0])
+            links.new(rough_in, wet.inputs[2])
+            wet.inputs[3].default_value = 0.04
+            links.new(wet.outputs[0], bsdf.inputs["Roughness"])
+    # Fake rooms: a ray from the camera into a grid of rooms (4 x 4 x 3.4 m, object space).
+    incoming = new("ShaderNodeVectorTransform")
+    incoming.vector_type = "VECTOR"
+    incoming.convert_from, incoming.convert_to = "WORLD", "OBJECT"
+    links.new(geometry.outputs["Incoming"], incoming.inputs[0])
+    d = new("ShaderNodeSeparateXYZ")
+    links.new(incoming.outputs[0], d.inputs[0])
+    size = {"X": 4.0, "Y": 4.0, "Z": 3.4}
+    t = {}
+    hit = {}
+    for axis in ("X", "Y", "Z"):
+        q = math_node("DIVIDE", local.outputs[axis], size[axis], clamp=False)
+        frac = math_node("FRACT", q, clamp=False)
+        dd = math_node("DIVIDE", math_node("MULTIPLY", d.outputs[axis], -1.0, clamp=False), size[axis], clamp=False)
+        dd = math_node("ADD", dd, 1e-5, clamp=False)
+        far = math_node("GREATER_THAN", dd, 0.0)
+        t[axis] = math_node("DIVIDE", math_node("SUBTRACT", far, frac, clamp=False), dd, clamp=False)
+        hit[axis] = (frac, dd)
+    t_min = math_node("MINIMUM", t["X"], math_node("MINIMUM", t["Y"], t["Z"]))
+    on_floor = math_node("LESS_THAN", math_node("SUBTRACT", t["Z"], t_min, clamp=False), 1e-4)
+    up = math_node("GREATER_THAN", hit["Z"][1], 0.0)
+    ceiling = math_node("MULTIPLY", on_floor, up)
+    floor = math_node("MULTIPLY", on_floor, math_node("SUBTRACT", 1.0, up))
+    cell = new("ShaderNodeVectorMath")
+    cell.operation = "FLOOR"
+    scale = new("ShaderNodeVectorMath")
+    scale.operation = "DIVIDE"
+    links.new(coords.outputs["Object"], scale.inputs[0])
+    scale.inputs[1].default_value = (4.0, 4.0, 3.4)
+    links.new(scale.outputs[0], cell.inputs[0])
+    room_noise = new("ShaderNodeTexWhiteNoise")
+    room_noise.noise_dimensions = "4D"
+    links.new(cell.outputs[0], room_noise.inputs["Vector"])
+    links.new(seed, room_noise.inputs["W"])
+    room = room_noise.outputs["Value"]
+    wall = math_node("ADD", 0.55, math_node("MULTIPLY", room, 0.3), clamp=False)
+    shade = math_node("ADD", math_node("ADD", math_node("MULTIPLY", ceiling, 1.2, clamp=False),
+                                       math_node("MULTIPLY", floor, 0.35, clamp=False), clamp=False),
+                      math_node("MULTIPLY", math_node("SUBTRACT", 1.0, on_floor), wall, clamp=False), clamp=False)
+    shade = math_node("MULTIPLY", shade, math_node("ADD", 0.55, math_node("MULTIPLY", room, 0.45), clamp=False), clamp=False)
+    shade = math_node("DIVIDE", shade, math_node("ADD", 1.0, math_node("MULTIPLY", t_min, 0.35, clamp=False), clamp=False),
+                      clamp=False)
+    # Glow: the window's emission times the room shade; glass: a dim room under the reflection.
+    glow_in = bsdf.inputs["Emission Color"].links[0].from_socket if bsdf.inputs["Emission Color"].links else None
+    if glow_in is not None:
+        lit = new("ShaderNodeMix")
+        lit.data_type = "FLOAT"
+        links.new(window, lit.inputs[0])
+        lit.inputs[2].default_value = 1.0
+        links.new(shade, lit.inputs[3])
+        links.new(mix(glow_in, grey(lit.outputs[0]), 1.0, "MULTIPLY"), bsdf.inputs["Emission Color"])
+    roomy = mix(base, mix(base, grey(math_node("MULTIPLY", shade, 0.5, clamp=False)), 1.0, "MULTIPLY"), 0.6)
+    return mix(base, roomy, window)

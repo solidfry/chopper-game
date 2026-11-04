@@ -7,6 +7,14 @@
 // dust on exposed ledges and roofs in the biome's dust colour (the biome table: cover colour, else ground colour),
 // rain wetness from the biome. Glass and lit surfaces (smooth or glowing swatches) stay clean.
 //
+// Building surfaces (4 Nov): windows (PaletteMetalSmooth G = 1: glass and lit-window swatches) look into fake rooms
+// ("interior mapping", after Joost van Dongen 2008): a ray from the camera into a grid of rooms in the building's own
+// space (so rooms line up with its facades whatever its yaw) finds a wall, the floor or the ceiling; lit windows show
+// a lamp-lit room with darker corners and furniture shapes, glass shows a dim room behind the reflection. Every copy
+// of a building differs a little (colour, dirt, which rooms are bright): a hash of the object's position. Rough
+// walls get panel seams (1.5 m x 3 m, building space) with stains below them. Flat ground and roofs get puddles in
+// wet biomes (smooth, dark, flat).
+//
 // Written without the editor (4 Nov 2026): compile and check in Unity. BuildingWear.shadergraph wraps it
 // (Tools/CityForge/make_city_graphs.py writes the graph). Same rules as the Blender preview (wear.add_preview_nodes).
 
@@ -88,6 +96,36 @@ float4 BW_BiomeTexel(UnityTexture2D table, float row, float rows, int texel)
     return SAMPLE_TEXTURE2D_LOD(table.tex, building_wear_point_clamp_sampler, uv, 0);
 }
 
+// Fake room behind a window. p: building-space position, dir: building-space view ray (camera to point), seed: per
+// copy. Returns (shade 0..1.3 for the room light, depth in rooms); furniture is dark, the ceiling lamp bright.
+float2 BW_Room(float3 p, float3 dir, float seed)
+{
+    const float3 size = float3(4.0, 3.4, 4.0);
+    float3 q = p / size;
+    float3 cell = floor(q - dir * 1e-3);
+    float3 local = q - cell;
+    float3 d = dir / size;
+    d += 1e-5 * (1.0 - step(1e-5, abs(d)));          // no division by zero
+    float3 t3 = (step(0.0, d) - local) / d;          // ray length to the far plane on each axis
+    float t = min(t3.x, min(t3.y, t3.z));
+    float3 hit = local + d * t;
+    float room = BW_Hash(cell.xz + cell.y * 7.31 + seed);
+    float shade;
+    if (t3.y <= t3.x && t3.y <= t3.z)
+        shade = d.y > 0.0 ? 1.1 + 0.2 * (1.0 - length(hit.xz - 0.5) * 2.0) : 0.35;   // ceiling (lamp) / floor
+    else
+    {
+        float2 wall = t3.x < t3.z ? hit.zy : hit.xy;   // across the wall, up
+        shade = 0.55 + 0.3 * room;
+        // Furniture: a desk or sofa band low on the wall, a cupboard on one side, by the room's hash.
+        float desk = step(wall.y, 0.32) * step(abs(wall.x - frac(room * 7.0) * 0.6 - 0.2), 0.22);
+        float cupboard = step(wall.y, 0.7) * step(frac(room * 13.0), 0.5) * step(abs(wall.x - 0.85), 0.1);
+        shade *= 1.0 - 0.7 * saturate(desk + cupboard);
+    }
+    shade *= 0.55 + 0.45 * room;                    // some rooms brighter than others
+    return float2(shade / (1.0 + 0.35 * t), t);
+}
+
 void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Masks,
     UnityTexture2D PaletteColour, UnityTexture2D PaletteEmission, UnityTexture2D PaletteMetalSmooth,
     UnityTexture2D BiomeTable, float BiomeIndex, float Wear, float EmissionStrength,
@@ -98,6 +136,13 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     float3 base = SAMPLE_TEXTURE2D(PaletteColour.tex, building_wear_point_clamp_sampler, UV).rgb;
     float3 glow = SAMPLE_TEXTURE2D(PaletteEmission.tex, building_wear_point_clamp_sampler, UV).rgb;
     float4 metalSmooth = SAMPLE_TEXTURE2D(PaletteMetalSmooth.tex, building_wear_point_clamp_sampler, UV);
+    float window = step(0.5, metalSmooth.g);
+
+    // Per copy: a hash of the object's position (0..1), and building space for rooms and panels.
+    float3 origin = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
+    float seed = BW_Hash(origin.xz * 0.013 + 0.37);
+    float3 positionOS = TransformWorldToObject(PositionWS);
+    float3 normalOS = normalize(TransformWorldToObjectDir(NormalWS));
 
     float rows = max(1.0, round(1.0 / BiomeTable.texelSize.y));
     float row = clamp(round(BiomeIndex), 0.0, rows - 1.0);
@@ -112,6 +157,7 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     float vertical = 1.0 - abs(n.y);
     float upward = saturate((n.y - 0.6) * 2.5);
     float dirty = saturate((1.0 - metalSmooth.a - 0.25) * 1.6) * (1.0 - saturate(dot(glow, 1.0) * 4.0)) * Wear;
+    dirty *= 0.7 + 0.6 * seed;                       // some copies dirtier than others
 
     float streakNoise = BW_Fbm(float2((PositionWS.x + PositionWS.z) * 1.2, PositionWS.y * 0.04), 2);
     float streaks = vertical * (drip * 0.8 + 0.2) * saturate((streakNoise - 0.45) * 3.0) * sky;
@@ -130,17 +176,42 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     float detailF = lerp(1.0, detailRaw, 0.6 * rough);
 
     float3 colour = base * detailF;
+    // Per-copy tint: up to 6 % lighter or darker, a little warmer or cooler (not on windows).
+    float3 tint = 1.0 + (seed - 0.5) * float3(0.14, 0.12, 0.08) + (BW_Hash(float2(seed, 3.1)) - 0.5) * float3(0.04, 0.0, -0.04);
+    colour *= lerp(tint, 1.0, window);
+
+    // Panel seams on rough vertical walls: joints every 1.5 m across and 3 m up (building space), a stain below each
+    // horizontal joint.
+    float across = abs(normalOS.x) > abs(normalOS.z) ? positionOS.z : positionOS.x;
+    float2 panel = float2(across / 1.5, positionOS.y / 3.0);
+    float2 joint = abs(frac(panel) - 0.5);
+    float seam = (smoothstep(0.47, 0.495, joint.x) + smoothstep(0.475, 0.497, joint.y)) * vertical;
+    float stain = vertical * smoothstep(0.0, 0.35, frac(panel.y)) * (1.0 - smoothstep(0.35, 0.5, frac(panel.y)))
+                * step(0.5, BW_Hash(floor(panel) + seed));
+    colour *= 1.0 - saturate(seam) * 0.22 * rough * (1.0 - window);
+    colour = lerp(colour, grime, stain * 0.12 * rough * (1.0 - window) * Wear);
     colour *= lerp(1.0, 0.6, saturate(occlusion - 0.25) * 0.6 * dirty);
     colour = lerp(colour, grime, saturate(splash * 0.6 * dirty));
     colour = lerp(colour, grime, saturate(streaks * 0.75 * dirty));
     colour = lerp(colour, dust, saturate(upward * sky * fine * 0.8 * dirty));
     colour *= 1.0 - 0.4 * rain * sky;
 
-    Albedo = colour;
+    // Puddles: on flat open ground and roofs in wet biomes; dark, mirror-smooth, flat.
+    float puddle = upward * sky * smoothstep(1.0 - rain * 0.9, 1.05 - rain * 0.9, BW_Fbm(PositionWS.xz / 6.0, 3))
+                 * step(0.02, rain);
+
+    // Fake rooms behind the windows.
+    float3 cameraOS = TransformWorldToObject(_WorldSpaceCameraPos);
+    float3 viewOS = normalize(positionOS - cameraOS);
+    float2 room = BW_Room(positionOS - normalOS * 0.02, viewOS, seed * 17.0);
+    float3 roomGlow = glow * room.x;
+    colour = lerp(colour, lerp(colour, base * room.x * 0.5, 0.6), window);
+
+    Albedo = lerp(colour, colour * 0.35, puddle);
     Metallic = metalSmooth.r;
-    Smoothness = saturate(metalSmooth.a + rain * sky * 0.4 * (1.0 - metalSmooth.a));
-    NormalOut = normalize(lerp(n, BW_TriNormal(ConcreteNormal, PositionWS, n, blend, 1.0 / 3.0), 0.6 * rough));
-    Emission = glow * EmissionStrength;
+    Smoothness = saturate(lerp(metalSmooth.a + rain * sky * 0.4 * (1.0 - metalSmooth.a), 0.96, puddle));
+    NormalOut = normalize(lerp(n, BW_TriNormal(ConcreteNormal, PositionWS, n, blend, 1.0 / 3.0), 0.6 * rough * (1.0 - puddle)));
+    Emission = lerp(glow, roomGlow, window) * EmissionStrength;
     AmbientOcclusion = 1.0 - 0.5 * occlusion;
 }
 

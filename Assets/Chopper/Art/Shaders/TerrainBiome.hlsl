@@ -228,15 +228,20 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskM
     glowMask *= 0.25 + 0.75 * smoothstep(0.35, 0.65, TB_Fbm(xz / 14.0, 3));
     Emission = TB_Linear(glow.rgb) * glow.a * 10.0 * glowMask;
 
+    // Puddles in wet biomes: on flat made ground and in hollows; dark, mirror-smooth, flat (as BuildingWear).
+    float puddle = smoothstep(1.0 - wetBase * 0.9, 1.05 - wetBase * 0.9, TB_Fbm(xz / 6.0, 3))
+                 * saturate(made + hollow) * (1.0 - smoothstep(0.02, 0.08, slope)) * step(0.02, wetBase);
+    colour *= 1.0 - 0.65 * puddle;
+
     Albedo = colour;
     Metallic = 0.0;
-    Smoothness = 1.0 - saturate(roughness - wet * 0.55);
+    Smoothness = lerp(1.0 - saturate(roughness - wet * 0.55), 0.96, puddle);
     // Detail normals: sand from above on open ground, rock on three axes on cliffs; none on made ground.
     float3 sandN = UnpackNormal(SAMPLE_TEXTURE2D(SandNormal.tex, SandNormal.samplerstate, xz / 4.0));
     sandN = normalize(float3(sandN.x + n.x, abs(sandN.z) * n.y, sandN.y + n.z));
     float3 rockN = TB_TriNormal(RockNormal, PositionWS, n, blend, 1.0 / 8.0);
     float3 detailN = normalize(lerp(sandN, rockN, cliff));
-    NormalOut = normalize(lerp(n, detailN, DetailStrength * 0.8 * (1.0 - smoothstep(0.3, 0.7, made))));
+    NormalOut = normalize(lerp(n, detailN, DetailStrength * 0.8 * (1.0 - smoothstep(0.3, 0.7, made)) * (1.0 - puddle)));
     AmbientOcclusion = 1.0 - 0.35 * hollow;
 }
 

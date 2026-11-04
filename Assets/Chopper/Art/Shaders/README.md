@@ -122,6 +122,9 @@ Editor steps (until a Setup step does them):
 
 Written without the editor (4 Nov 2026): open it once in Unity and check it compiles.
 
+- `BuildingWear.hlsl` also draws fake rooms behind windows (palette metal-smooth G = 1), per-copy tint (object
+  position hash), panel seams and puddles; it uses `TransformObjectToWorld`, `TransformWorldToObject` and
+  `_WorldSpaceCameraPos` from the URP library (check these compile in the custom function).
 - `BuildingWear.hlsl`: palette colours (UV0, the kit's 5 x 5 swatch maps) graded with the per-vertex wear masks the
   CityForge building FBX carries (vertex colour, linear: R occlusion, G splash near the surface below, B drip under
   sills and ledges, A sky exposure), plus rain streaks, fine noise, dust on exposed ledges and roofs (the biome's

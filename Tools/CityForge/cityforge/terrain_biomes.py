@@ -422,6 +422,15 @@ def make_material(biome, name="CF Terrain", surface=None):
     edge = math_node("MULTIPLY", math_node("SUBTRACT", 1.0, ramp(made, 0.75, 0.98)), ramp(noise(5.0), 0.4, 0.6))
     concrete = mix(concrete, ground, math_node("MULTIPLY", edge, 0.8))
     result = mix(shaded.outputs[2], concrete, ramp(made, 0.3, 0.7))
+    puddle = None
+    if b["wet"] > 0.02:
+        # Puddles on flat made ground and in hollows (as TerrainBiome.hlsl).
+        wet_noise = noise(6.0, 3.0)
+        puddle = ramp(wet_noise, 1.0 - b["wet"] * 0.9, 1.05 - b["wet"] * 0.9)
+        flat_ground = math_node("SUBTRACT", 1.0, ramp(slope, 0.02, 0.08))
+        puddle = math_node("MULTIPLY", math_node("MULTIPLY", puddle, math_node("ADD", made, hollow, clamp=True)),
+                           flat_ground)
+        result = mix(result, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", puddle, 0.65))
     bsdf = new("ShaderNodeBsdfPrincipled")
     link(result, bsdf.inputs["Base Color"])
     if rock_detail and sand_detail:
@@ -439,6 +448,8 @@ def make_material(biome, name="CF Terrain", surface=None):
     else:
         link(normal, bsdf.inputs["Normal"])
     roughness = math_node("SUBTRACT", b["roughness"], math_node("MULTIPLY", wet, 0.55), clamp=True)
+    if puddle is not None:
+        roughness = math_node("SUBTRACT", roughness, math_node("MULTIPLY", puddle, roughness), clamp=True)
     link(roughness, bsdf.inputs["Roughness"])
     if b["glow"]:
         glow = ramp(flow, b["glow_flow"], b["glow_flow"] + 0.15)
