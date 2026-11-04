@@ -302,7 +302,19 @@ def _surfaces(nodes, links, bsdf, metal, base, source, new, math_node, mix, wear
             links.new(rough_in, wet.inputs[2])
             wet.inputs[3].default_value = 0.04
             links.new(wet.outputs[0], bsdf.inputs["Roughness"])
-    # Fake rooms: a ray from the camera into a grid of rooms (4 x 4 x 3.4 m, object space).
+    # Fake rooms: a ray from the camera into a grid of rooms (4 x 4 x 3.4 m, object space), from 5 cm inside the
+    # surface (a facade on a room boundary would otherwise end the ray at once).
+    inward = new("ShaderNodeVectorTransform")
+    inward.vector_type = "NORMAL"
+    inward.convert_from, inward.convert_to = "WORLD", "OBJECT"
+    links.new(geometry.outputs["Normal"], inward.inputs[0])
+    inside = new("ShaderNodeVectorMath")
+    inside.operation = "MULTIPLY_ADD"
+    links.new(inward.outputs[0], inside.inputs[0])
+    inside.inputs[1].default_value = (-0.05, -0.05, -0.05)
+    links.new(coords.outputs["Object"], inside.inputs[2])
+    room_at = new("ShaderNodeSeparateXYZ")
+    links.new(inside.outputs[0], room_at.inputs[0])
     incoming = new("ShaderNodeVectorTransform")
     incoming.vector_type = "VECTOR"
     incoming.convert_from, incoming.convert_to = "WORLD", "OBJECT"
@@ -313,7 +325,7 @@ def _surfaces(nodes, links, bsdf, metal, base, source, new, math_node, mix, wear
     t = {}
     hit = {}
     for axis in ("X", "Y", "Z"):
-        q = math_node("DIVIDE", local.outputs[axis], size[axis], clamp=False)
+        q = math_node("DIVIDE", room_at.outputs[axis], size[axis], clamp=False)
         frac = math_node("FRACT", q, clamp=False)
         dd = math_node("DIVIDE", math_node("MULTIPLY", d.outputs[axis], -1.0, clamp=False), size[axis], clamp=False)
         dd = math_node("ADD", dd, 1e-5, clamp=False)
@@ -329,7 +341,7 @@ def _surfaces(nodes, links, bsdf, metal, base, source, new, math_node, mix, wear
     cell.operation = "FLOOR"
     scale = new("ShaderNodeVectorMath")
     scale.operation = "DIVIDE"
-    links.new(coords.outputs["Object"], scale.inputs[0])
+    links.new(inside.outputs[0], scale.inputs[0])
     scale.inputs[1].default_value = (4.0, 4.0, 3.4)
     links.new(scale.outputs[0], cell.inputs[0])
     room_noise = new("ShaderNodeTexWhiteNoise")
