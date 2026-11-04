@@ -518,7 +518,7 @@ def _rack(b, coords):
         length = math.hypot(x1 - x0, z1 - z0)
         if length > 0.5:
             yaw = math.degrees(math.atan2(x1 - x0, z1 - z0))
-            b.colliders.append((((x0 + x1) / 2, y + 1.0, (z0 + z1) / 2), (2.4, 2.4, length), yaw))
+            b.colliders.append((((x0 + x1) / 2, y + 0.85, (z0 + z1) / 2), (2.2, 1.9, length), yaw))
     d = 0.0
     while d <= line.length:
         p = line.interpolate(d)
@@ -658,3 +658,7 @@ def _cable(b, a, c, sag=3.5, pieces=6):
                        a[2] + (c[2] - a[2]) * t))
     for p0, p1 in zip(points, points[1:]):
         b.beam(p0, p1, 0.08, "dark", L01)
+        # Wires are solid: a chopper that flies into them hits them.
+        dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+        b.colliders.append((((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2),
+                            (0.4, 0.4 + abs(dy), math.hypot(dx, dz)), math.degrees(math.atan2(dx, dz))))
