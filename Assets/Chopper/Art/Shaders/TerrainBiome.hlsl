@@ -10,7 +10,7 @@
 // 1000, glow flow), 13 (wet, flow wet, roughness, has cover).
 //
 // Written without the editor (4 Nov 2026): compile and check in Unity. TerrainBiome.shadergraph wraps it
-// (Tools/CityForge/make_terrain_graph.py writes the graph).
+// (Tools/CityForge/make_city_graphs.py writes the graph).
 
 #ifndef TERRAIN_BIOME_INCLUDED
 #define TERRAIN_BIOME_INCLUDED

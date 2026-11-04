@@ -1,12 +1,13 @@
 """
-Writes Assets/Chopper/Art/Shaders/TerrainBiome.shadergraph: a URP Lit Shader Graph around the TerrainBiome.hlsl custom
-function (procedural terrain ground for every biome). Run it again when the function's inputs or outputs change.
+Writes the CityForge Shader Graphs (URP Lit, one custom function each) into Assets/Chopper/Art/Shaders:
+    TerrainBiome.shadergraph   TerrainBiome.hlsl: procedural terrain ground for every biome
+    BuildingWear.shadergraph   BuildingWear.hlsl: palette colours graded with wear and grime
+Run it again when a function's inputs or outputs change:
 
-    python Tools/CityForge/make_terrain_graph.py
+    python Tools/CityForge/make_city_graphs.py
 
 Uses the JSON helpers of Tools/PartForge/make_skin_graph.py (the same Shader Graph file format, tested in the editor
-with the ChopperSkin graph). Inputs: world position, world normal, vertex colour (the biome masks), _BiomeTable,
-_BiomeIndex. Written without the editor (4 Nov 2026): open the graph in Unity once and check it compiles.
+with the ChopperSkin graph). Written without the editor (4 Nov 2026): open the graphs in Unity once and check them.
 """
 import json
 import os
@@ -20,13 +21,6 @@ import make_skin_graph as sg  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 FOLDER = os.path.join(ROOT, "Assets", "Chopper", "Art", "Shaders")
-HLSL_META = os.path.join(FOLDER, "TerrainBiome.hlsl.meta")
-OUT = os.path.join(FOLDER, "TerrainBiome.shadergraph")
-OUT_META = OUT + ".meta"
-
-PROPERTIES = [("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0)]
-INPUTS = [("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"), ("Masks", "vec4", "colour"),
-          ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex")]
 OUTPUTS = [("Albedo", "vec3", "SurfaceDescription.BaseColor"), ("Metallic", "float", "SurfaceDescription.Metallic"),
            ("Smoothness", "float", "SurfaceDescription.Smoothness"), ("NormalTS", "vec3", "SurfaceDescription.NormalTS"),
            ("Emission", "vec3", "SurfaceDescription.Emission"), ("AmbientOcclusion", "float", "SurfaceDescription.Occlusion")]
@@ -34,7 +28,33 @@ KIND = {"float": "Vector1MaterialSlot", "vec2": "Vector2MaterialSlot", "vec3": "
         "vec4": "Vector4MaterialSlot"}
 
 
+GRAPHS = {
+    "TerrainBiome": dict(
+        properties=[("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0)],
+        inputs=[("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"), ("Masks", "vec4", "colour"),
+                ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex")]),
+    "BuildingWear": dict(
+        properties=[("_PaletteColour", "Palette Colour", "tex", 0), ("_PaletteEmission", "Palette Emission", "tex", 1),
+                    ("_PaletteMetalSmooth", "Palette Metal Smooth", "tex", 1), ("_BiomeTable", "Biome Table", "tex", 1),
+                    ("_BiomeIndex", "Biome Index", "float", 0.0), ("_Wear", "Wear", "float", 1.0),
+                    ("_EmissionStrength", "Emission Strength", "float", 4.0)],
+        inputs=[("UV", "vec2", "uv"), ("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"),
+                ("Masks", "vec4", "colour"), ("PaletteColour", "tex", "_PaletteColour"),
+                ("PaletteEmission", "tex", "_PaletteEmission"), ("PaletteMetalSmooth", "tex", "_PaletteMetalSmooth"),
+                ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex"), ("Wear", "float", "_Wear"),
+                ("EmissionStrength", "float", "_EmissionStrength")]),
+}
+
+
 def main():
+    for name, spec in GRAPHS.items():
+        write_graph(name, spec["properties"], spec["inputs"])
+
+
+def write_graph(name, PROPERTIES, INPUTS):
+    HLSL_META = os.path.join(FOLDER, f"{name}.hlsl.meta")
+    OUT = os.path.join(FOLDER, f"{name}.shadergraph")
+    OUT_META = OUT + ".meta"
     sg.objects.clear()
     sg.edges.clear()
     with open(HLSL_META) as handle:
@@ -73,7 +93,8 @@ def main():
     normal = sg.node("NormalVectorNode", "Normal Vector", [sg.slot("Vector3MaterialSlot", 0, "Out", 1)], -1100, -440,
                      m_Space=2)                                                  # world space
     colour = sg.node("VertexColorNode", "Vertex Color", [sg.slot("Vector4MaterialSlot", 0, "Out", 1)], -1100, -320)
-    sources = {"position": position, "normal": normal, "colour": colour}
+    uv = sg.node("UVNode", "UV", [sg.slot("Vector4MaterialSlot", 0, "Out", 1)], -1100, -260, m_OutputChannel=0)
+    sources = {"position": position, "normal": normal, "colour": colour, "uv": uv}
 
     function_slots = []
     for slot_id, (name, kind, _source) in enumerate(INPUTS):
@@ -85,8 +106,8 @@ def main():
             function_slots.append(sg.slot(KIND[kind], slot_id, name, 0))
     for offset, (name, kind, _block) in enumerate(OUTPUTS):
         function_slots.append(sg.slot(KIND[kind], len(INPUTS) + offset, name, 1))
-    function = sg.node("CustomFunctionNode", "TerrainBiome (Custom Function)", function_slots, -600, -300,
-                       m_SGVersion=1, synonyms=["code", "HLSL"], m_SourceType=0, m_FunctionName="TerrainBiome",
+    function = sg.node("CustomFunctionNode", f"{name} (Custom Function)", function_slots, -600, -300,
+                       m_SGVersion=1, synonyms=["code", "HLSL"], m_SourceType=0, m_FunctionName=name,
                        m_FunctionSource=hlsl_guid, m_FunctionBody="")
     for slot_id, (_name, _kind, source) in enumerate(INPUTS):
         sg.connect(sources.get(source) or property_nodes[source], 0, function, slot_id)

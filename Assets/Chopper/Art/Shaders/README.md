@@ -94,7 +94,7 @@ Written without the editor (4 Nov 2026): open it once in Unity and check it comp
 
 - `TerrainBiome.hlsl`: the custom function. Inputs: world position, world normal, vertex colour (the biome masks the
   CityForge terrain FBX carries: R flow, G hollow, B made ground, A scree), `_BiomeTable`, `_BiomeIndex`.
-- `TerrainBiome.shadergraph`: URP Lit graph around it, written by `Tools/CityForge/make_terrain_graph.py` (run it
+- `TerrainBiome.shadergraph`: URP Lit graph around it, written by `Tools/CityForge/make_city_graphs.py` (run it
   again when the function's inputs change).
 - The biome table (`Assets/Chopper/Art/City/<kit>/Terrain/<kit>_BiomeTable.png`, one row of 16 pixels per biome:
   desert, rain_desert, arctic, jungle, volcanic, toxic) comes from `Tools/CityForge/cityforge/terrain_biomes.py`. The
@@ -108,3 +108,21 @@ Editor steps (until a Setup step does them):
 3. Terrain chunk FBX (`Terrain/Terrain_*.fbx`): Model import, keep vertex colours on; remap the `City01_Terrain`
    material to the new material.
 4. Check: flow lines darker and wet in the gullies, strata bands on cliffs, concrete on the city floor and roads.
+
+
+# BuildingWear shader graph (city buildings: palette + wear and grime)
+
+Written without the editor (4 Nov 2026): open it once in Unity and check it compiles.
+
+- `BuildingWear.hlsl`: palette colours (UV0, the kit's 5 x 5 swatch maps) graded with the per-vertex wear masks the
+  CityForge building FBX carries (vertex colour, linear: R occlusion, G splash near the surface below, B drip under
+  sills and ledges, A sky exposure), plus rain streaks, fine noise, dust on exposed ledges and roofs (the biome's
+  dust: cover colour, else ground colour, from the biome table) and rain wetness (biome). Glass and glowing swatches
+  stay clean.
+- `BuildingWear.shadergraph`: written by `Tools/CityForge/make_city_graphs.py`.
+- Properties: `_PaletteColour` (sRGB), `_PaletteEmission` (sRGB), `_PaletteMetalSmooth` (linear), `_BiomeTable`,
+  `_BiomeIndex`, `_Wear` (0 clean .. 1 full), `_EmissionStrength`.
+
+Editor steps (until the city Setup step does them): palette maps from `Assets/Chopper/Art/City/<kit>/Textures`
+(Point filter, no mipmaps, no compression; MetalSmooth with sRGB off); one material with this shader; remap
+`City01_Kit` on the building FBX files to it; keep vertex colours on in the model import.

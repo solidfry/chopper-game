@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain, terrain_biomes
+from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain, terrain_biomes, wear
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -83,6 +83,9 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     export_collection = _collection(scene, EXPORT_COLLECTION)
     images = palette.make_images(kit_name, style.get("palette"))
     material = palette.make_material(kit_name, images)
+    biome = terrain_biomes.BIOMES[style.get("biome", "desert")]
+    wear.add_preview_nodes(material, dust=biome["cover"] or biome["ground"][0], wear=style.get("wear", 1.0),
+                           rain=biome["wet"])
     city = None
     if with_terrain and not names:
         made = make_buildings(style, with_variants=True)
@@ -123,6 +126,9 @@ def _building_objects(b, export_collection, material, style):
         for polygon in obj.data.polygons:
             polygon.material_index = 0
         objects.append(obj)
+    if b.type != "props":
+        for obj in objects:
+            wear.bake(obj)
     # Marker names repeat across buildings, so they carry the building name here; export() strips it.
     for kind, index, position, radius in b.markers:
         empty = bpy.data.objects.new(f"{b.name}:MARKER_{kind}_{index}", None)
@@ -421,7 +427,7 @@ def export(state, out_dir):
             for child in objects[0].children:
                 child.name = child.name[len(prefix):] if child.name.startswith(prefix) else child.name
             file_name = f"{name}.fbx"
-            _export_fbx(objects, os.path.join(models_dir, file_name))
+            _export_fbx(objects, os.path.join(models_dir, file_name), colours="LINEAR")
             for child in objects[0].children:
                 child.name = prefix + child.name
             low, high = _unity_bounds(objects[0])

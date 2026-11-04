@@ -90,6 +90,16 @@ channel corridor, every building on flat ground, road colliders cover the decks.
   the suggested numbers for the game are in the terrain manifest (`atmosphere`). Cloud ceiling and sandstorm wall
   are for the Unity step.
 
+## Wear and grime (buildings)
+
+`cityforge/wear.py` bakes per-vertex masks from each finished building mesh (ray casts on its own BVH, about 0.2 s
+per building): R occlusion, G splash grime near the surface below, B drip under sills and ledges, A sky exposure.
+Stored as the vertex colour "Wear" (linear) in the building FBX. The grading is a shader (Unity:
+`Assets/Chopper/Art/Shaders/BuildingWear.hlsl`; previews: `wear.add_preview_nodes` on the palette material): rain
+streaks down vertical faces from drip spots, splash grime at the foot of walls and props, dust on exposed ledges and
+roofs in the biome's dust colour (sand, snow, ash...), rain wetness from the biome; glass and glowing swatches stay
+clean. Style `wear` scales it.
+
 ## Terrain biomes (procedural ground)
 
 One ground shader for every biome. The terrain bakes biome-free facts into the chunk vertex colours (linear): R flow
@@ -101,7 +111,7 @@ glow in strong flow lines (lava, toxic runs), concrete. Biomes: `desert` (defaul
 `volcanic`, `toxic`; `--biome NAME` picks the preview biome; `biomes_sheet.jpg` shows all of them.
 
 The game: `Assets/Chopper/Art/Shaders/TerrainBiome.hlsl` (same rules) in `TerrainBiome.shadergraph` (written by
-`make_terrain_graph.py`), with `Terrain/City01_BiomeTable.png` (one row of 16 pixels per biome) and `_BiomeIndex`.
+`make_city_graphs.py`), with `Terrain/City01_BiomeTable.png` (one row of 16 pixels per biome) and `_BiomeIndex`.
 See the Shaders README for the editor steps.
 
 ## Terrain
