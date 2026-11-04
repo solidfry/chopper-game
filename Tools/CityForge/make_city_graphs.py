@@ -22,7 +22,7 @@ import make_skin_graph as sg  # noqa: E402
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 FOLDER = os.path.join(ROOT, "Assets", "Chopper", "Art", "Shaders")
 OUTPUTS = [("Albedo", "vec3", "SurfaceDescription.BaseColor"), ("Metallic", "float", "SurfaceDescription.Metallic"),
-           ("Smoothness", "float", "SurfaceDescription.Smoothness"), ("NormalTS", "vec3", "SurfaceDescription.NormalTS"),
+           ("Smoothness", "float", "SurfaceDescription.Smoothness"), ("NormalOut", "vec3", "SurfaceDescription.NormalWS"),
            ("Emission", "vec3", "SurfaceDescription.Emission"), ("AmbientOcclusion", "float", "SurfaceDescription.Occlusion")]
 KIND = {"float": "Vector1MaterialSlot", "vec2": "Vector2MaterialSlot", "vec3": "Vector3MaterialSlot",
         "vec4": "Vector4MaterialSlot"}
@@ -30,19 +30,29 @@ KIND = {"float": "Vector1MaterialSlot", "vec2": "Vector2MaterialSlot", "vec3": "
 
 GRAPHS = {
     "TerrainBiome": dict(
-        properties=[("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0)],
+        properties=[("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0),
+                    ("_RockColour", "Rock Colour", "tex", 0), ("_RockNormal", "Rock Normal", "normal", 3),
+                    ("_SandColour", "Sand Colour", "tex", 0), ("_SandNormal", "Sand Normal", "normal", 3),
+                    ("_MudColour", "Mud Colour", "tex", 0), ("_CoverColour", "Cover Colour", "tex", 0),
+                    ("_DetailStrength", "Detail Strength", "float", 1.0)],
         inputs=[("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"), ("Masks", "vec4", "colour"),
-                ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex")]),
+                ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex"),
+                ("RockColour", "tex", "_RockColour"), ("RockNormal", "tex", "_RockNormal"),
+                ("SandColour", "tex", "_SandColour"), ("SandNormal", "tex", "_SandNormal"),
+                ("MudColour", "tex", "_MudColour"), ("CoverColour", "tex", "_CoverColour"),
+                ("DetailStrength", "float", "_DetailStrength")]),
     "BuildingWear": dict(
         properties=[("_PaletteColour", "Palette Colour", "tex", 0), ("_PaletteEmission", "Palette Emission", "tex", 1),
                     ("_PaletteMetalSmooth", "Palette Metal Smooth", "tex", 1), ("_BiomeTable", "Biome Table", "tex", 1),
                     ("_BiomeIndex", "Biome Index", "float", 0.0), ("_Wear", "Wear", "float", 1.0),
-                    ("_EmissionStrength", "Emission Strength", "float", 4.0)],
+                    ("_EmissionStrength", "Emission Strength", "float", 4.0),
+                    ("_ConcreteColour", "Concrete Colour", "tex", 0), ("_ConcreteNormal", "Concrete Normal", "normal", 3)],
         inputs=[("UV", "vec2", "uv"), ("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"),
                 ("Masks", "vec4", "colour"), ("PaletteColour", "tex", "_PaletteColour"),
                 ("PaletteEmission", "tex", "_PaletteEmission"), ("PaletteMetalSmooth", "tex", "_PaletteMetalSmooth"),
                 ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex"), ("Wear", "float", "_Wear"),
-                ("EmissionStrength", "float", "_EmissionStrength")]),
+                ("EmissionStrength", "float", "_EmissionStrength"), ("ConcreteColour", "tex", "_ConcreteColour"),
+                ("ConcreteNormal", "tex", "_ConcreteNormal")]),
 }
 
 
@@ -68,7 +78,7 @@ def write_graph(name, PROPERTIES, INPUTS):
                 "m_GeneratePropertyBlock": True, "m_UseCustomSlotLabel": False, "m_CustomSlotLabel": "",
                 "m_DismissedVersion": 0, "m_Precision": 0, "overrideHLSLDeclaration": False,
                 "hlslDeclarationOverride": 0, "m_Hidden": False}
-        if kind == "tex":
+        if kind in ("tex", "normal"):
             base.update({"m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DShaderProperty",
                          "m_Value": {"m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}", "m_Guid": ""},
                          "isMainTexture": False, "useTilingAndOffset": False, "m_Modifiable": True,
@@ -82,8 +92,8 @@ def write_graph(name, PROPERTIES, INPUTS):
 
     property_nodes = {}
     for index, (reference, (property_id, kind, display)) in enumerate(properties.items()):
-        slot_kind = "Texture2DMaterialSlot" if kind == "tex" else "Vector1MaterialSlot"
-        extra = {"m_BareResource": False} if kind == "tex" else {}
+        slot_kind = "Texture2DMaterialSlot" if kind in ("tex", "normal") else "Vector1MaterialSlot"
+        extra = {"m_BareResource": False} if kind in ("tex", "normal") else {}
         out = sg.slot(slot_kind, 0, display, 1, output_name="Out", **extra)
         property_nodes[reference] = sg.node("PropertyNode", "Property", [out], -1100, -200 + index * 60,
                                             m_Property=sg.ref(property_id))
@@ -129,8 +139,8 @@ def write_graph(name, PROPERTIES, INPUTS):
                          m_DefaultColor={"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0})
     block_slots = {
         "SurfaceDescription.BaseColor": ("ColorRGBMaterialSlot", "Base Color", "BaseColor", colour_slot),
-        "SurfaceDescription.NormalTS": ("NormalMaterialSlot", "Normal (Tangent Space)", "NormalTS",
-                                        dict(m_Value=zero, m_DefaultValue=zero, m_Labels=[], m_Space=3)),
+        "SurfaceDescription.NormalWS": ("NormalMaterialSlot", "Normal (World Space)", "NormalWS",
+                                        dict(m_Value=zero, m_DefaultValue=zero, m_Labels=[], m_Space=2)),
         "SurfaceDescription.Metallic": ("Vector1MaterialSlot", "Metallic", "Metallic", {}),
         "SurfaceDescription.Smoothness": ("Vector1MaterialSlot", "Smoothness", "Smoothness", {}),
         "SurfaceDescription.Emission": ("ColorRGBMaterialSlot", "Emission", "Emission", emission_slot),
@@ -149,7 +159,7 @@ def write_graph(name, PROPERTIES, INPUTS):
     fragment_blocks.append(block("SurfaceDescription.Alpha", alpha_slot))
 
     sub_target = sg.add({"m_SGVersion": 2, "m_Type": "UnityEditor.Rendering.Universal.ShaderGraph.UniversalLitSubTarget",
-                         "m_ObjectId": sg.new_id(), "m_WorkflowMode": 1, "m_NormalDropOffSpace": 0, "m_ClearCoat": False,
+                         "m_ObjectId": sg.new_id(), "m_WorkflowMode": 1, "m_NormalDropOffSpace": 2, "m_ClearCoat": False,
                          "m_BlendModePreserveSpecular": True})
     target = sg.add({"m_SGVersion": 1, "m_Type": "UnityEditor.Rendering.Universal.ShaderGraph.UniversalTarget",
                      "m_ObjectId": sg.new_id(), "m_Datas": [], "m_ActiveSubTarget": sg.ref(sub_target),

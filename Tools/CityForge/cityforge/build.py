@@ -126,9 +126,11 @@ def _building_objects(b, export_collection, material, style):
         for polygon in obj.data.polygons:
             polygon.material_index = 0
         objects.append(obj)
-    if b.type != "props":
-        for obj in objects:
+    for obj in objects:
+        if b.type != "props":
             wear.bake(obj)
+        else:
+            wear.clear(obj)   # zero masks: Unity reads a missing vertex colour as white (full grime)
     # Marker names repeat across buildings, so they carry the building name here; export() strips it.
     for kind, index, position, radius in b.markers:
         empty = bpy.data.objects.new(f"{b.name}:MARKER_{kind}_{index}", None)

@@ -107,7 +107,13 @@ Editor steps (until a Setup step does them):
    the biome row (0 desert ... 5 toxic).
 3. Terrain chunk FBX (`Terrain/Terrain_*.fbx`): Model import, keep vertex colours on; remap the `City01_Terrain`
    material to the new material.
-4. Check: flow lines darker and wet in the gullies, strata bands on cliffs, concrete on the city floor and roads.
+4. Detail maps (CC0, `Assets/Chopper/Art/ThirdParty/CC0`): `_RockColour` RockFace_Colour, `_RockNormal`
+   RockFace_Normal, `_SandColour` GravellySand_Colour, `_SandNormal` GravellySand_Normal, `_MudColour`
+   DryMud_Colour, `_CoverColour` WindSnow_Colour; `_DetailStrength` 1. Import the `_Normal` files as **Normal map**,
+   the `_Colour` files as sRGB; Wrap Repeat, mipmaps on.
+5. The graph outputs a **world-space** normal (Graph Settings: Fragment Normal Space World).
+6. Check: flow lines darker and wet in the gullies, strata bands on cliffs, concrete on the city floor and roads,
+   rock grain on cliffs, sand grain on flat ground.
 
 
 # BuildingWear shader graph (city buildings: palette + wear and grime)
@@ -121,7 +127,8 @@ Written without the editor (4 Nov 2026): open it once in Unity and check it comp
   stay clean.
 - `BuildingWear.shadergraph`: written by `Tools/CityForge/make_city_graphs.py`.
 - Properties: `_PaletteColour` (sRGB), `_PaletteEmission` (sRGB), `_PaletteMetalSmooth` (linear), `_BiomeTable`,
-  `_BiomeIndex`, `_Wear` (0 clean .. 1 full), `_EmissionStrength`.
+  `_BiomeIndex`, `_Wear` (0 clean .. 1 full), `_EmissionStrength`, `_ConcreteColour` / `_ConcreteNormal` (CC0
+  ConcreteWall maps: three-axis concrete grain and normal detail on rough surfaces). World-space normal output.
 
 Editor steps (until the city Setup step does them): palette maps from `Assets/Chopper/Art/City/<kit>/Textures`
 (Point filter, no mipmaps, no compression; MetalSmooth with sRGB off); one material with this shader; remap

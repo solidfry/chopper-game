@@ -82,6 +82,15 @@ def bake(obj):
     return out
 
 
+def clear(obj):
+    """Zero wear masks (roads and other props: no grime, no dust)."""
+    mesh = obj.data
+    if "Wear" in mesh.color_attributes:
+        mesh.color_attributes.remove(mesh.color_attributes["Wear"])
+    layer = mesh.color_attributes.new("Wear", "FLOAT_COLOR", "POINT")
+    layer.data.foreach_set("color", np.zeros(len(mesh.vertices) * 4, dtype=np.float32))
+
+
 # -- Blender preview -----------------------------------------------------------------------------------------------------
 
 def add_preview_nodes(material, dust, grime="#3b342b", wear=1.0, rain=0.0):
@@ -140,7 +149,9 @@ def add_preview_nodes(material, dust, grime="#3b342b", wear=1.0, rain=0.0):
     split = new("ShaderNodeSeparateColor")
     links.new(attribute.outputs["Color"], split.inputs[0])
     occlusion, splash, drip = split.outputs[0], split.outputs[1], split.outputs[2]
-    sky = attribute.outputs["Alpha"]
+    # Blender reads a missing attribute as alpha 1: only count the sky where the masks exist (R + G + B > 0).
+    present = math_node("GREATER_THAN", math_node("ADD", math_node("ADD", occlusion, splash), drip), 0.0001)
+    sky = math_node("MULTIPLY", attribute.outputs["Alpha"], present)
     # No grime on smooth surfaces (glass, lit windows): the palette's smoothness (metal-smooth map alpha).
     metal = next((n for n in nodes if n.type == "TEX_IMAGE" and n.image and "MetalSmooth" in n.image.name), None)
     rough = math_node("SUBTRACT", 1.0, metal.outputs["Alpha"]) if metal else None
@@ -166,6 +177,30 @@ def add_preview_nodes(material, dust, grime="#3b342b", wear=1.0, rain=0.0):
         return math_node("MULTIPLY", value, dirty) if rough else value
 
     base = source
+    # CC0 concrete detail (if fetched): three-axis projection in object space (3 m), rough surfaces only.
+    from .terrain_biomes import detail_image, detail_nodes
+    concrete = detail_image("ConcreteWall")
+    if concrete is not None:
+        coords = new("ShaderNodeTexCoord")
+        mapping = new("ShaderNodeMapping")
+        mapping.inputs["Scale"].default_value = (1.0 / 3.0,) * 3
+        links.new(coords.outputs["Object"], mapping.inputs["Vector"])
+        factor, height = detail_nodes(nodes, links, concrete, mapping.outputs["Vector"])
+        strength = math_node("MULTIPLY", dirty, 0.6) if rough else 0.6
+        soft = new("ShaderNodeMix")
+        soft.data_type = "FLOAT"
+        links.new(strength, soft.inputs[0]) if not isinstance(strength, float) else None
+        soft.inputs[2].default_value = 1.0
+        links.new(factor, soft.inputs[3])
+        grey = new("ShaderNodeCombineColor")
+        for k in range(3):
+            links.new(soft.outputs[0], grey.inputs[k])
+        base = mix(base, grey.outputs[0], 1.0, "MULTIPLY")
+        bump = new("ShaderNodeBump")
+        bump.inputs["Distance"].default_value = 0.2
+        links.new(strength, bump.inputs["Strength"]) if not isinstance(strength, float) else None
+        links.new(height, bump.inputs["Height"])
+        links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     base = mix(base, (0.6, 0.6, 0.6, 1.0), masked(math_node("SUBTRACT", occlusion, 0.25), 0.6), "MULTIPLY")
     base = mix(base, colour(grime), masked(splash, 0.6))
     base = mix(base, colour(grime), masked(streaks, 0.75))

@@ -100,6 +100,14 @@ streaks down vertical faces from drip spots, splash grime at the foot of walls a
 roofs in the biome's dust colour (sand, snow, ash...), rain wetness from the biome; glass and glowing swatches stay
 clean. Style `wear` scales it.
 
+## CC0 detail textures
+
+`fetch_cc0.py` downloads 1k colour and normal maps into `Assets/Chopper/Art/ThirdParty/CC0` (9.5 MB, `LICENSES.md`
+there): Poly Haven rock_face_03 (cliffs), gravelly_sand (flat ground), brown_mud_dry (hollows), concrete_wall_003
+(buildings), ambientCG Snow009A (the cover layer: snow, moss, ash). The shaders use them as detail only: luminance
+shading round 1 and normal detail, tinted by the biome or the palette (three-axis projection on cliffs and
+buildings, top-down on flat ground). Previews use them too when they are present. Only CC0 sources.
+
 ## Terrain biomes (procedural ground)
 
 One ground shader for every biome. The terrain bakes biome-free facts into the chunk vertex colours (linear): R flow

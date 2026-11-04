@@ -21,6 +21,42 @@ import struct
 import zlib
 
 TABLE_WIDTH = 16
+CC0 = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "Assets", "Chopper",
+                                    "Art", "ThirdParty", "CC0"))
+
+
+def detail_image(name, suffix="Colour"):
+    """A CC0 detail map (Tools/CityForge/fetch_cc0.py), or None when it was not fetched."""
+    import bpy
+
+    path = os.path.join(CC0, name, f"{name}_{suffix}.jpg")
+    if not os.path.exists(path):
+        return None
+    image = bpy.data.images.load(path, check_existing=True)
+    image.colorspace_settings.name = "sRGB" if suffix == "Colour" else "Non-Color"
+    return image
+
+
+def detail_nodes(nodes, links, image, vector, box=True):
+    """Image detail as a luminance factor around 1 (0.55..1.45) and a height for bump: (factor socket, height socket)."""
+    node = nodes.new("ShaderNodeTexImage")
+    node.image = image
+    if box:
+        node.projection = "BOX"
+        node.projection_blend = 0.25
+    links.new(vector, node.inputs["Vector"])
+    grey = nodes.new("ShaderNodeRGBToBW")
+    links.new(node.outputs["Color"], grey.inputs[0])
+    scale = nodes.new("ShaderNodeMath")
+    scale.operation = "MULTIPLY_ADD"
+    links.new(grey.outputs[0], scale.inputs[0])
+    scale.inputs[1].default_value = 2.0
+    scale.inputs[2].default_value = 0.2
+    clamp = nodes.new("ShaderNodeClamp")
+    clamp.inputs["Min"].default_value = 0.55
+    clamp.inputs["Max"].default_value = 1.45
+    links.new(scale.outputs[0], clamp.inputs["Value"])
+    return clamp.outputs[0], grey.outputs[0]
 
 BIOMES = {
     # The default: the city's desert. Dry sand, red sandstone strata, a little damp in the gullies.
@@ -194,8 +230,31 @@ def make_material(biome, name="CF Terrain"):
 
     macro, detail = noise(180.0), noise(9.0, 4.0)
     shade = math_node("ADD", math_node("MULTIPLY", detail, 0.3), 0.85)       # 0.85..1.15
+    # CC0 detail maps (if fetched): rock on three axes (8 m), sand and mud from above (4 m).
+    def scaled(metres):
+        mapping = new("ShaderNodeMapping")
+        mapping.inputs["Scale"].default_value = (1.0 / metres,) * 3
+        link(position, mapping.inputs["Vector"])
+        return mapping.outputs["Vector"]
+
+    rock_image, sand_image, mud_image = detail_image("RockFace"), detail_image("GravellySand"), detail_image("DryMud")
+    rock_detail = detail_nodes(nodes, links, rock_image, scaled(8.0)) if rock_image else None
+    sand_detail = detail_nodes(nodes, links, sand_image, scaled(4.0), box=False) if sand_image else None
+    mud_detail = detail_nodes(nodes, links, mud_image, scaled(5.0), box=False) if mud_image else None
+    cover_image = detail_image("WindSnow")
+    cover_detail = detail_nodes(nodes, links, cover_image, scaled(6.0), box=False) if cover_image else None
+
+    def detailed(colour_socket, pair):
+        if pair is None:
+            return colour_socket
+        grey = new("ShaderNodeCombineColor")
+        for k in range(3):
+            link(pair[0], grey.inputs[k])
+        return mix(colour_socket, grey.outputs[0], 1.0, "MULTIPLY")
+
     ground = mix(colour(b["ground"][0]), colour(b["ground"][1]), ramp(macro, 0.35, 0.65))
     ground = mix(ground, shade, 1.0, "MULTIPLY")
+    ground = detailed(ground, sand_detail)
     # Strata: height bands (warped), 4 colours, constant steps.
     warp = math_node("MULTIPLY", noise(90.0), 6.0)
     band = math_node("DIVIDE", math_node("ADD", height, warp), b["band"] * 4.0)
@@ -209,19 +268,21 @@ def make_material(biome, name="CF Terrain"):
         element.color = colour(b["rock"][k])
     link(math_node("FRACT", band), strata.inputs["Fac"])
     rock = mix(strata.outputs["Color"], shade, 1.0, "MULTIPLY")
+    rock = detailed(rock, rock_detail)
     cliff = ramp(slope, 0.30, 0.55)
     rock = mix(rock, colour(b["cliff"]), ramp(slope, 0.7, 0.95))
     result = mix(ground, rock, cliff)
     open_ground = math_node("SUBTRACT", 1.0, cliff)
     result = mix(result, colour(b["scree"]), math_node("MULTIPLY", scree, open_ground))
     deposit = math_node("ADD", math_node("MULTIPLY", hollow, 0.8), math_node("MULTIPLY", flow, 0.6), clamp=True)
-    result = mix(result, colour(b["sediment"]), math_node("MULTIPLY", deposit, open_ground))
+    sediment = detailed(colour(b["sediment"]), mud_detail)
+    result = mix(result, sediment, math_node("MULTIPLY", deposit, open_ground))
     if b["cover"]:
         flat = math_node("SUBTRACT", 1.0, ramp(slope, b["cover_slope"] - 0.08, b["cover_slope"] + 0.02))
         high = ramp(height, b["cover_height"] - 10.0, b["cover_height"] + 10.0)
         breakup = ramp(noise(25.0, 3.0), 0.35, 0.6)
         cover = math_node("MULTIPLY", math_node("MULTIPLY", flat, high), math_node("MULTIPLY", breakup, b["cover_amount"]))
-        result = mix(result, colour(b["cover"]), cover)
+        result = mix(result, detailed(colour(b["cover"]), cover_detail), cover)
     wet = math_node("ADD", b["wet"], math_node("MULTIPLY", flow, b["flow_wet"]), clamp=True)
     darker = math_node("SUBTRACT", 1.0, math_node("MULTIPLY", wet, 0.45))
     shaded = new("ShaderNodeMix")
@@ -236,6 +297,17 @@ def make_material(biome, name="CF Terrain"):
     result = mix(shaded.outputs[2], colour(b["concrete"]), ramp(made, 0.3, 0.7))
     bsdf = new("ShaderNodeBsdfPrincipled")
     link(result, bsdf.inputs["Base Color"])
+    if rock_detail and sand_detail:
+        height = new("ShaderNodeMix")
+        height.data_type = "FLOAT"
+        link(cliff, height.inputs[0])
+        link(sand_detail[1], height.inputs[2])
+        link(rock_detail[1], height.inputs[3])
+        bump = new("ShaderNodeBump")
+        bump.inputs["Strength"].default_value = 0.35
+        bump.inputs["Distance"].default_value = 0.5
+        link(height.outputs[0], bump.inputs["Height"])
+        link(bump.outputs["Normal"], bsdf.inputs["Normal"])
     roughness = math_node("SUBTRACT", b["roughness"], math_node("MULTIPLY", wet, 0.55), clamp=True)
     link(roughness, bsdf.inputs["Roughness"])
     if b["glow"]:
