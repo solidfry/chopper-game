@@ -174,19 +174,31 @@ def _make_roads(scene, state, city, export_collection, material):
 
 
 def _wall_hit(state, city):
-    """hit(k, origin, direction, distance): where a ray (Unity, city space) first meets the mesh of layout instance k
-    (LOD0, in the instance's place and yaw), as (x, y, z), or None."""
+    """hit(k, origin, direction, distance): where a ray (Unity, city space) first meets the LOD0 mesh of layout
+    instance k (in its place and yaw), as (x, y, z), or None. Uses the finished Blender mesh (one BVH per building)."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+
+    trees = {}
+
+    def tree(name):
+        if name not in trees:
+            mesh = state.built[name]["objects"][0].data
+            trees[name] = BVHTree.FromPolygons([v.co.copy() for v in mesh.vertices],
+                                               [tuple(p.vertices) for p in mesh.polygons])
+        return trees[name]
+
     def hit(k, origin, direction, distance):
         name, (px, _py, pz), yaw = city.instances[k]
-        builder = state.built[name]["building"].lods[0]
         c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
         dx, dz = origin[0] - px, origin[2] - pz
-        local_origin = (dx * c - dz * s_, origin[1], dx * s_ + dz * c)
-        local_dir = (direction[0] * c - direction[2] * s_, direction[1], direction[0] * s_ + direction[2] * c)
-        point, _normal = builder.hit(local_origin, local_dir, everything=True, distance=distance)
+        lx, ly, lz = dx * c - dz * s_, origin[1], dx * s_ + dz * c                      # Unity, building space
+        vx, vy, vz = direction[0] * c - direction[2] * s_, direction[1], direction[0] * s_ + direction[2] * c
+        point, _normal, _index, _d = tree(name).ray_cast(Vector((-lx, -lz, ly)), Vector((-vx, -vz, vy)), distance)
         if point is None:
             return None
-        return (px + point.x * c + point.z * s_, point.y, pz - point.x * s_ + point.z * c)
+        ux, uy, uz = -point.x, point.z, -point.y                                         # Blender -> Unity
+        return (px + ux * c + uz * s_, uy, pz - ux * s_ + uz * c)
     return hit
 
 
