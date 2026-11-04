@@ -650,7 +650,14 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 - ~~Pin `com.coplaydev.unity-mcp`~~ — pinned to the commit it was already locked to (`81542a7`). Move to a release tag (v10.3.0 is latest) when you want to update.
 - Old scenes (`Multiplayer`, `Training`, `FreeForAll`, `TeamDeathMatch`, `SampleScene`) have missing legacy scripts; delete or rebuild during later phases.
 
-## 7c2. Rotor downwash (owner TODO, 4 Nov 2026 — not started)
+## 7c2. Rotor downwash (owner TODO, 4 Nov 2026 — first version written, not yet run)
+
+Status (4 Nov): `DownwashEffectsSystem` (client, presentation): ray down from each chopper (not itself), strength =
+(1 - height / 25 m)² x (0.7 + 0.3 x collective), smoothed; one world-space particle ring per chopper made in code
+(circle on the surface, radius 9 → 4 m as it gets lower, puffs move out fast then hang, rise, grow and fade); camera
+shake for the own chopper. Settings and material slot in `CombatEffectsSettings` (one dust colour for now: desert sand).
+Not yet: surface types from the hit (terrain masks, water, roofs), biome dust colour from the city, decal, grass,
+sound change.
 
 When a chopper is close to the ground with its rotors running, dust, dirt, grass, snow and so on blow up from the
 ground, realistically. Design notes:

@@ -45,6 +45,25 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("BulletRed has an explosion sound per bullet. Off: the gun fire sound comes from the Sound Library instead.")]
         private bool gunBulletAudio;
 
+        [Header("Rotor downwash (dust blown up under low choppers)")]
+        [SerializeField, Tooltip("Particle material for the dust (URP Particles Unlit, transparent, soft round texture). " +
+                                 "Empty: no downwash.")]
+        private Material downwashMaterial;
+        [SerializeField, Tooltip("Height above the surface (m) where the downwash starts; full strength at the surface.")]
+        private float downwashHeight = 25f;
+        [SerializeField, Tooltip("Dust ring radius (m) at the top of the downwash height and at the surface.")]
+        private Vector2 downwashRadius = new(9f, 4f);
+        [SerializeField, Tooltip("Dust puffs per second at full strength.")]
+        private float downwashRate = 80f;
+        [SerializeField, Tooltip("Outward speed of the dust at full strength, m/s.")]
+        private float downwashSpeed = 16f;
+        [SerializeField, Tooltip("Dust puff size (m) when it starts; it grows as it moves out.")]
+        private float downwashSize = 3.5f;
+        [SerializeField, Tooltip("Dust colour (the biome's dust: sand, snow, ash...). Alpha = thickness.")]
+        private Color downwashColour = new(0.70f, 0.61f, 0.47f, 0.45f);
+        [SerializeField, Tooltip("Camera shake per second for the own chopper at full strength (0..1 trauma).")]
+        private float downwashShake = 0.15f;
+
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
         private float oneShotLifetime = 3f;
@@ -66,6 +85,14 @@ namespace Chopper.Presentation.Effects
         public float FlareLifetime => flareLifetime;
         public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
         public bool GunBulletAudio => gunBulletAudio;
+        public Material DownwashMaterial => downwashMaterial;
+        public float DownwashHeight => downwashHeight;
+        public Vector2 DownwashRadius => downwashRadius;
+        public float DownwashRate => downwashRate;
+        public float DownwashSpeed => downwashSpeed;
+        public float DownwashSize => downwashSize;
+        public Color DownwashColour => downwashColour;
+        public float DownwashShake => downwashShake;
 
         public void CollectProblems(List<string> problems)
         {
@@ -75,6 +102,7 @@ namespace Chopper.Presentation.Effects
             if (rocketImpact == null) problems.Add($"{name}: no rocket impact prefab.");
             if (missile == null) problems.Add($"{name}: no missile prefab (rockets' visual is used).");
             if (flare == null) problems.Add($"{name}: no flare prefab, so flares are invisible.");
+            if (downwashMaterial == null) problems.Add($"{name}: no downwash material, so low choppers blow up no dust.");
             if (effectsMixerGroup == null) problems.Add($"{name}: no effects mixer group, so prefab sounds skip the volume setting.");
         }
 
@@ -96,6 +124,12 @@ namespace Chopper.Presentation.Effects
             if (missile == null) missile = missileVisual;
             if (missileImpact == null) missileImpact = missileHit;
             if (flare == null) flare = flareVisual;
+        }
+
+        /// <summary>Editor only: fills an empty downwash material slot.</summary>
+        public void FillDownwash(Material material)
+        {
+            if (downwashMaterial == null) downwashMaterial = material;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

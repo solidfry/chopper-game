@@ -31,6 +31,7 @@ namespace Chopper.Editor.Setup
             {
                 // Repair: fill slots added after the asset was made (guided missiles, flares).
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
+                settings.FillDownwash(EnsureDownwashMaterial());
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
                 if (settings.EffectsMixerGroup == null && mixer != null)
@@ -44,12 +45,46 @@ namespace Chopper.Editor.Setup
             settings = ScriptableObject.CreateInstance<CombatEffectsSettings>();
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
+            settings.FillDownwash(EnsureDownwashMaterial());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
             AssetDatabase.CreateAsset(settings, SettingsPath);
             AssetDatabase.SaveAssets();
             return settings;
+        }
+
+        private const string DownwashMaterialPath = "Assets/Chopper/Data/Effects/DownwashDust.mat";
+
+        /// <summary>Rotor downwash dust: URP Particles Unlit, transparent alpha blend, Unity's soft round particle texture,
+        /// colour from the particles (the settings' dust colour). Made once.</summary>
+        private static Material EnsureDownwashMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(DownwashMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null)
+            {
+                Debug.LogWarning("Combat effects: URP Particles/Unlit shader not found; no downwash material.");
+                return null;
+            }
+            material = new Material(shader) { name = "DownwashDust" };
+            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetColor("_BaseColor", Color.white);
+            // Transparent, alpha blend, no depth write, soft particles (no hard line where dust meets the ground).
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SoftParticlesEnabled", 1f);
+            material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 1.5f, 0f, 0f));
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(DownwashMaterialPath));
+            AssetDatabase.CreateAsset(material, DownwashMaterialPath);
+            return material;
         }
 
         private static GameObject Load(string path)
