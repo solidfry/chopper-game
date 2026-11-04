@@ -744,10 +744,10 @@ def vehicle(b, kind, x, z, yaw):
                 for side in (-1, 1):
                     b.cylinder((x + side * 1.0, 0.5, zz), (x + side * 1.3, 0.5, zz), 0.5, "rubber", segments=8, at=L01)
             if kind == "tanker":
-                b.cylinder((x, 2.4, z - 5.4), (x, 2.4, z + 2.5), 1.25, rng.choice(("steel", "trim")), segments=12, at=L01)
+                b.cylinder((x, 2.3, z - 5.4), (x, 2.3, z + 2.5), 1.25, rng.choice(("steel", "trim")), segments=12, at=L01)
             else:
                 b.span(x - 1.3, x + 1.3, 1.1, 4.0, z - 5.6, z + 2.6, rng.choice(VEHICLE_COLOURS), L01)
-            b.span(x - 1.2, x + 1.2, 3.62, 3.7, z + 3.2, z + 4.6, "sodium", L0)
+            b.span(x - 1.2, x + 1.2, 3.55, 3.7, z + 3.2, z + 4.6, "sodium", L0)          # roof light bar, on the cab
             b.collider(x - 1.3, x + 1.3, 0.0, 4.0, z - 5.6, z + 5.0)
         elif kind == "van":
             b.span(x - 1.0, x + 1.0, 0.4, 2.5, z - 2.6, z + 2.6, colour, L01)
