@@ -531,7 +531,10 @@ Owner (3 Nov): cyberpunk scale, extremely tall skyscrapers → type `mega` (300 
 billboards) and previews with the Kit02 choppers for scale. Then sky bridges (`Mega_Twins`: glass bridges and a sky
 deck with a pad) and high-tech landmarks (`Landmark_Twist`, `_Halo`, `_Orb`). Then terrain (`cityforge/terrain.py`):
 3 km desert basin, flat city floor, storm-drain channel through the city into a canyon out through the rim, 14
-mesas with flat tops (MesaTop markers), plateau rim; 64 chunk FBX with LODs, 16-bit RAW height map, terrain manifest. Output in
+mesas with flat tops (MesaTop markers), plateau rim; 64 chunk FBX with LODs, 16-bit RAW height map, terrain manifest.
+Then map edges (rim wall up to about 400 m, far backdrop to 20 km, distant skyline, haze in the previews) and the city
+layout (`layout.py`: about 220 buildings in zones on a 1000 x 800 m floor, 21 building variants, bridges over the
+channel). For the Unity step: fog, a cloud ceiling at 600 to 800 m, a sandstorm wall at the flight bounds. Output in
 `Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
 
 

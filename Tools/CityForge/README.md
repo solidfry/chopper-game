@@ -26,7 +26,8 @@ Build and export: about 3 s. Previews: about 15 min on 4 CPU cores.
 
 ## What it makes
 
-20 buildings (`cityforge/specs.py`). The front faces +Z. The origin is the plot centre on the ground.
+20 base buildings (`cityforge/specs.py`) and 21 variants (`cityforge/layout.py`: new seeds and numbers for towers,
+blocks, slums and industrial). The front faces +Z. The origin is the plot centre on the ground.
 
 | Type | Buildings | What |
 |---|---|---|
@@ -50,21 +51,42 @@ Height and ground cues (test lesson: dark ground and too much glow made height h
 floor, a lit band of shop fronts and sodium strips at street level, red obstruction lights on tops above 30 m and on
 masts, few lit windows (style `lit` = 14 %).
 
+## City layout
+
+`cityforge/layout.py` (with the terrain): fills a 1000 x 800 m city floor with about 220 buildings (instances of the
+41 building FBX files). Zones by distance from the core: megatowers and landmarks in the core, towers round it, blocks,
+slums at the edge, industrial on the canyon side. Rows of plots with 16 m streets; an 84 m corridor for the storm drain
+with 7 road bridges over it (`City_Bridges`, a building with colliders). The layout (building, position, yaw) goes into
+`City01.terrain.json`; the audit checks for overlaps, plots in the corridor and plots on flat ground.
+
+## Map edges
+
+- **Rim**: two cliff steps round the basin (165 m, then a wall up to about 400 m), so from low and mid height you see
+  rock, not the end of the map.
+- **Backdrop** (`Terrain/Backdrop.fbx`, no colliders): mountains out to 20 km, the map edge height blended into them;
+  the canyon goes on past the edge and bends away.
+- **Skyline** (`Terrain/Skyline.fbx`, no colliders): 260 simple towers 5 to 11 km out to the west, with lit bands: the
+  megacity goes on beyond the walls.
+- **Haze**: the previews add distance fog (a one-sample depth render + numpy, because the compositor needs a GPU);
+  the suggested numbers for the game are in the terrain manifest (`atmosphere`). Cloud ceiling and sandstorm wall
+  are for the Unity step.
+
 ## Terrain
 
 `cityforge/terrain.py` (on by default; `--no-terrain` skips it). A 3 km desert basin round the district (numpy
 height field, 6 m grid, style key `terrain` overrides `terrain.DEFAULTS`):
-- the city stands on an exactly flat concrete floor (y = 0); a 84 m street gap is left in the layout for the channel;
+- the city stands on an exactly flat concrete floor (y = 0); the layout leaves an 84 m corridor for the channel;
 - a **storm-drain channel** (56 m wide, 8 m deep concrete trapezoid, wet strip in the middle) runs through the city
   and out into the canyon: low, fast routes under street level;
 - a **canyon** (72 to 110 m wide, floor falling to -40 m) winds east from the basin out through the rim;
 - 14 **mesas** on a ring 0.8 to 1.2 km out: flat tops (MesaTop markers: landing, objectives), terraced sandstone
-  cliffs, talus aprons; a ragged **plateau rim** round the basin.
+  cliffs, talus aprons, kept clear of the city floor; the tall **rim** (see "Map edges").
 
 Export: `Terrain/Terrain_<row>_<col>.fbx` (64 chunks of 384 m, LOD0..2 each; edge chunks half the detail; 10 m skirts
 so LOD seams show no cracks; mesh collider = LOD0), `Terrain/City01_Height.raw` (16-bit height map, 513 x 513, for a
 Unity Terrain if wanted) and `City01.terrain.json` (chunks, height range, MesaTop markers, canyon and channel paths for
-bot routes, the building layout on the terrain, suggested flight bounds, audit). About 14 MB.
+bot routes, the building layout on the terrain, suggested flight bounds and fog, audit). About 15 MB with the
+backdrop.
 
 Terrain audit: city floor flat, no plot touches the channel, every plot on flat ground, the canyon at least 50 m wide
 30 m above its floor all the way, every mesa top flat within its marker circle.

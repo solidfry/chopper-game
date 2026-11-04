@@ -19,13 +19,17 @@ CHUNK_CELLS = 64         # LOD0 cells per chunk side (384 m)
 LOD_FACTORS = (1, 2, 4)
 OUTER_FACTORS = (2, 4, 8)  # chunks on the map edge (mostly outside the flight bounds): half the detail
 SKIRT = 10.0             # skirt depth on chunk edges (m)
+EDGE_SKIRT = 60.0        # skirt depth on the map edge (hides the seam to the far backdrop)
+BACKDROP_RADIUS = 20000.0
 CITY_FLAT = 40.0         # flat concrete margin round the city plots (m)
 
 DEFAULTS = dict(
     size=3072.0, seed=7,
     rise=26.0,                    # basin floor rises this much towards the rim
     dunes=5.0,                    # dune noise outside the city (m)
-    plateau=dict(radius=1290.0, width=80.0, height=118.0, warp=150.0),
+    # Rim: a first cliff step at `radius`, a second wall `wall` m higher further out (hides the map edge from low and
+    # mid height), a ragged crest.
+    plateau=dict(radius=1240.0, width=70.0, height=165.0, warp=150.0, wall=200.0, wall_at=170.0, crest=35.0),
     mesas=dict(count=14, ring=(780.0, 1160.0), radius=(45.0, 150.0), height=(55.0, 140.0), cliff=10.0, talus=45.0),
     strata=11.0,                  # cliff terrace height (m)
     canyon=dict(width=(72.0, 110.0), wall=24.0, floor=(-8.0, -40.0), wiggle=110.0, start=40.0),
@@ -151,6 +155,10 @@ class Terrain:
             if canyon_gap[0] < radius + m["talus"] + v["canyon"]["width"][1] / 2 + 60.0:
                 continue
             stretch = rng.uniform(0.65, 1.0)
+            gap_x = max(x0 - cx, 0.0, cx - x1)
+            gap_z = max(z0 - cz, 0.0, cz - z1)
+            if math.hypot(gap_x, gap_z) < radius / stretch + m["talus"] + CITY_FLAT + 60.0:
+                continue
             if any(math.hypot(cx - o[0], cz - o[1]) < radius / stretch + o[2] / o[5] + 60.0 for o in self.mesas):
                 continue
             if abs(cx) + radius / stretch > size / 2 - 60 or abs(cz) + radius / stretch > size / 2 - 60:
@@ -174,8 +182,12 @@ class Terrain:
         p = v["plateau"]
         cx, cz = (self.city[0] + self.city[1]) / 2, (self.city[2] + self.city[3]) / 2
         r = np.hypot(x - cx, z - cz) + p["warp"] * fbm(seed + 1, x, z, 420.0)
-        rock = np.maximum(rock, p["height"] * smoothstep(p["radius"] - p["width"] / 2, p["radius"] + p["width"] / 2, r)
-                          + 14.0 * fbm(seed + 2, x, z, 260.0) * smoothstep(p["radius"], p["radius"] + 200.0, r))
+        r2 = np.hypot(x - cx, z - cz) + p["warp"] * 0.7 * fbm(seed + 4, x, z, 300.0)
+        wall_at = p["radius"] + p["wall_at"]
+        rim = (p["height"] * smoothstep(p["radius"] - p["width"] / 2, p["radius"] + p["width"] / 2, r)
+               + p["wall"] * smoothstep(wall_at - p["width"] / 2, wall_at + p["width"] / 2, r2)
+               + p["crest"] * (1.0 - np.abs(fbm(seed + 2, x, z, 240.0))) * smoothstep(wall_at, wall_at + 120.0, r2))
+        rock = np.maximum(rock, rim)
         # Mesas: flat top, a cliff, a talus apron.
         m = v["mesas"]
         for k, (mx, mz, radius, height, turn, stretch) in enumerate(self.mesas):
@@ -227,11 +239,10 @@ class Terrain:
         city = self._city_distance(xc, zc) <= CITY_FLAT
         ch = self.values["channel"]
         names = np.full(hc.shape, "sand", dtype=object)
+        # Rock by steepness: the steepest faces (terrace risers) dark, the rest red sandstone. Colour that follows the
+        # geometry reads as strata; height bands thinner than the grid would zig-zag.
         names[slope >= 16.0] = "rock"
-        strata = (np.floor(hc / self.values["strata"]) % 2).astype(int)
-        cliff = slope >= 40.0
-        names[cliff & (strata == 0)] = "rock"
-        names[cliff & (strata == 1)] = "rock_dark"
+        names[slope >= 58.0] = "rock_dark"
         names[city] = "concrete"
         in_channel = dch < ch["top"] / 2
         names[in_channel] = "trim"
@@ -377,12 +388,15 @@ def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
     centre = np.array([-(t.x[0, x0] + t.x[0, x1]) / 2, -(t.z[z0, 0] + t.z[z1, 0]) / 2])
     from .kit import sw
     skirt_swatch = sw("rock_dark")
-    for edge in (grid[0, :], grid[-1, :], grid[:, 0], grid[:, -1]):
+    last = t.count - 1
+    for edge, on_map_edge in ((grid[0, :], z0 == 0), (grid[-1, :], z1 == last), (grid[:, 0], x0 == 0),
+                              (grid[:, -1], x1 == last)):
+        depth = EDGE_SKIRT if on_map_edge else SKIRT
         bottom = []
         for v in edge:
             x, y, h = verts[v]
             bottom.append(len(verts))
-            verts.append([x, y, h - SKIRT])
+            verts.append([x, y, h - depth])
         for k in range(len(edge) - 1):
             a, b, c, d = int(edge[k]), int(edge[k + 1]), bottom[k + 1], bottom[k]
             pa, pb, pc = np.array(verts[a]), np.array(verts[b]), np.array(verts[c])
@@ -404,4 +418,114 @@ def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
     mesh.materials.append(material)
     mesh.shade_smooth()
     mesh.set_sharp_from_angle(angle=math.radians(40.0))
+    return obj
+
+
+# -- far backdrop (no colliders) -----------------------------------------------------------------------------------------
+
+def backdrop_heights(t, x, z):
+    """Far scenery round the map: under the terrain inside the map, the map edge height blended into ridged
+    mountains outside it, sinking towards the horizon; the canyon carries on past the edge and bends away."""
+    v = t.values
+    half = v["size"] / 2
+    seed = v["seed"]
+    inside = (np.abs(x) < half - 1.0) & (np.abs(z) < half - 1.0)
+    cx, cz = np.clip(x, -half, half), np.clip(z, -half, half)
+    edge = t.sample(cx, cz)
+    d_out = np.hypot(x - cx, z - cz)
+    r = np.hypot(x, z)
+    ridges = 1.0 - np.abs(fbm(seed + 20, x, z, 5200.0, 5))
+    mountains = (380.0 + 820.0 * ridges ** 2 * smoothstep(1500.0, 7000.0, r)) * (1.0 - 0.85 * smoothstep(11000.0, BACKDROP_RADIUS, r))
+    h = np.where(inside, t.sample(np.clip(x, -half, half), np.clip(z, -half, half)) - 40.0,
+                 edge + (mountains - edge) * smoothstep(0.0, 1400.0, d_out))
+    # The canyon goes on outside the map and turns north, rising into the mountains (out of sight round the bend).
+    (ax, az), (bx, bz) = t.canyon[-3], t.canyon[-1]
+    path = [t.canyon[-4], t.canyon[-3], (bx, bz), (bx + 900.0, bz - 150.0), (bx + 1600.0, bz - 900.0),
+            (bx + 1900.0, bz - 2200.0)]
+    dc, along, total = polyline_distance(x, z, path)
+    floor = v["canyon"]["floor"][1] + 520.0 * smoothstep(0.35, 1.0, along / total)
+    wall = smoothstep(0.0, 1.0, (dc - 45.0) / 40.0)
+    carved = floor + (h - floor) * wall
+    outside = ~inside
+    h = np.where(outside & (h > floor), carved, h)
+    return h
+
+
+def make_backdrop(t, collection, material, rings=44, segments=160):
+    """Polar mesh from just inside the map edge out to BACKDROP_RADIUS (one LOD, no collider)."""
+    import bpy
+
+    from .kit import sw
+    from .pf import palette
+
+    half = t.values["size"] / 2
+    radii = (half * 0.85) * (BACKDROP_RADIUS / (half * 0.85)) ** (np.arange(rings + 1) / rings)
+    angles = np.linspace(0.0, math.tau, segments, endpoint=False)
+    rr, aa = np.meshgrid(radii, angles, indexing="ij")
+    x, z = rr * np.cos(aa), rr * np.sin(aa)
+    h = backdrop_heights(t, x, z)
+    verts = np.stack([-x, -z, h], axis=-1).reshape(-1, 3).tolist()
+    index = np.arange((rings + 1) * segments).reshape(rings + 1, segments)
+    faces, swatches = [], []
+    for i in range(rings):
+        for j in range(segments):
+            k = (j + 1) % segments
+            quad = [int(index[i, j]), int(index[i + 1, j]), int(index[i + 1, k]), int(index[i, k])]
+            pa, pb, pc = (np.array(verts[q]) for q in quad[:3])
+            if np.cross(pb - pa, pc - pb)[2] < 0:
+                quad.reverse()
+            faces.append(quad)
+            rise = abs(h[i + 1, j] - h[i, j]) / max(1.0, radii[i + 1] - radii[i])
+            swatches.append(sw("rock_dark" if rise > 0.5 else "rock" if rise > 0.15 else "sand"))
+    mesh = bpy.data.meshes.new("Backdrop")
+    mesh.from_pydata(verts, [], faces)
+    mesh.attributes.new("swatch", "INT", "FACE").data.foreach_set("value", swatches)
+    obj = bpy.data.objects.new("Backdrop", mesh)
+    collection.objects.link(obj)
+    palette.apply_uvs(obj, palette_only=True)
+    mesh.uv_layers.remove(mesh.uv_layers["UVMap"])
+    mesh.materials.append(material)
+    mesh.shade_smooth()
+    mesh.set_sharp_from_angle(angle=math.radians(40.0))
+    return obj
+
+
+def make_skyline(t, collection, material, count=260):
+    """The megacity beyond the walls: simple towers far out in two arcs (west, north-west and south-west; the canyon
+    side stays open desert), dark glass with lit bands and a few neon rings. No colliders."""
+    import bpy
+
+    from .kit import Building
+    from .pf import palette
+
+    rng = np.random.default_rng(t.values["seed"] + 99)
+    holder = Building(dict(name="Skyline", type="skyline", seed=int(t.values["seed"]) + 99, plot=(1, 1)),
+                      dict(lit_cool=0.35))
+    for _ in range(count):
+        angle = math.radians(rng.uniform(110.0, 250.0))   # around -X (west), Unity yaw-free angles
+        radius = rng.uniform(5200.0, 11500.0)
+        x, z = math.cos(angle) * radius, math.sin(angle) * radius
+        ground = float(backdrop_heights(t, np.array([x]), np.array([z]))[0])
+        height = rng.uniform(140.0, 420.0) * (1.6 if rng.random() < 0.15 else 1.0) * (1.25 - radius / 23000.0)
+        w, d = rng.uniform(40.0, 110.0), rng.uniform(40.0, 110.0)
+        y0 = ground - 30.0
+        holder.span(x - w / 2, x + w / 2, y0, ground + height, z - d / 2, z + d / 2, "glass", (0,),
+                    swatches={"bottom": "glass"})
+        for k in range(int(rng.integers(1, 4))):
+            yy = ground + height * rng.uniform(0.25, 0.95)
+            colour = ["lit_warm", "lit_cool", "neon_pink", "neon_cyan", "sodium"][int(rng.integers(0, 5))]
+            holder.span(x - w / 2 - 1.5, x + w / 2 + 1.5, yy, yy + rng.uniform(2.0, 6.0), z - d / 2 - 1.5, z + d / 2 + 1.5,
+                        colour, (0,))
+        if rng.random() < 0.5:
+            holder.box((x, ground + height + 0.5, z), (3.0, 3.0, 3.0), "warning", (0,))
+    obj = holder.lods[0].to_object("Skyline", collection, bevel_width=0.0)
+    palette.apply_uvs(obj, palette_only=True)
+    for name in ("UVMap",):
+        obj.data.uv_layers.remove(obj.data.uv_layers[name])
+    if "screen" in obj.data.attributes:
+        obj.data.attributes.remove(obj.data.attributes["screen"])
+    if obj.data.uv_layers.get("Screen") is not None:
+        obj.data.uv_layers.remove(obj.data.uv_layers["Screen"])
+    obj.data.materials.clear()
+    obj.data.materials.append(material)
     return obj

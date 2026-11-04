@@ -105,6 +105,7 @@ class Building:
         plot = spec["plot"]
         self.plot = Rect.centred(0.0, 0.0, plot[0], plot[1])
         self._turn = None     # (cx, cz, degrees, matrix) while inside turned()
+        self.ground_level = 0.0  # lowest point allowed (the audit); bridges reach down into the channel
 
     # -- turned frame -----------------------------------------------------------------------------------------------
     @contextmanager

@@ -125,8 +125,8 @@ def check(b):
 
     points = [v.co.copy() for v in bm.verts]
     low = min(p.y for p in points)
-    if low < -0.01:
-        problems.append(f"below      ground by {-low:.2f} m")
+    if low < b.ground_level - 0.01:
+        problems.append(f"below      ground by {b.ground_level - low:.2f} m")
     plot = b.plot
     over = max(max(plot.x0 - p.x, p.x - plot.x1, plot.z0 - p.z, p.z - plot.z1) for p in points)
     if over > OVERHANG:

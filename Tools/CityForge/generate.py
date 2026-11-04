@@ -51,7 +51,7 @@ def main():
     names = args.only.split(",") if args.only else None
 
     if args.audit:
-        problems = audit.run(build.make_buildings(style, names))
+        problems = audit.run(build.make_buildings(style, names, with_variants=not names))
         print(f"{problems} problems")
         sys.exit(1 if problems else 0)
 

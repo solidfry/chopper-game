@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, specs, styles, terrain
+from . import audit, buildings, choppers, kit, layout, specs, styles, terrain
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -64,11 +64,15 @@ def clear():
             bpy.data.meshes.remove(mesh)
 
 
-def make_buildings(style, names=None):
+def all_specs(with_variants=True):
+    return specs.BUILDINGS + (layout.variant_specs() if with_variants else [])
+
+
+def make_buildings(style, names=None, with_variants=False):
     """The Building objects (meshes still in the builders), for the audit and for generate()."""
     form = dict(kit.CITY_FORM, edge_radius=style.get("edge_radius", 0.0))
     geo.configure({"form": form})
-    chosen = [spec for spec in specs.BUILDINGS if not names or spec["name"] in names]
+    chosen = [spec for spec in all_specs(with_variants) if not names or spec["name"] in names]
     return [buildings.build(kit.Building(spec, style)) for spec in chosen]
 
 
@@ -79,8 +83,16 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     export_collection = _collection(scene, EXPORT_COLLECTION)
     images = palette.make_images(kit_name, style.get("palette"))
     material = palette.make_material(kit_name, images)
-    made = make_buildings(style, names)
+    city = None
+    if with_terrain and not names:
+        made = make_buildings(style, with_variants=True)
+        city = layout.Layout(all_specs(True))
+        made.append(layout.bridges(city, style))
+    else:
+        made = make_buildings(style, names)
     problems = {b.name: audit.check(b) for b in made}
+    if city is not None:
+        problems["City_Bridges"] = problems.get("City_Bridges", []) + city.audit()
     built = {}
     for b in made:
         triangles = [audit.triangles(level.bm) for level in b.lods]
@@ -106,8 +118,12 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
             empty.rotation_euler = (math.radians(90), 0, 0) if radius > 0 else (0, 0, 0)  # circle lies flat
         built[b.name] = dict(building=b, objects=objects, triangles=triangles)
     state = State(kit_name, style, built, images, problems)
+    state.layout = city
     _ensure_stage(scene)
-    _district(scene, state)
+    if city is not None:
+        _city(scene, state, city)
+    else:
+        _district(scene, state)
     _lod_lineup(scene, state)
     if with_terrain:
         _make_terrain(scene, state, material)
@@ -167,6 +183,26 @@ def _district(scene, state):
         state.district.append(obj)
 
 
+def _city(scene, state, city):
+    """The generated city (layout.py): an instance of a building's LOD0 per plot (shared mesh), turned by its yaw,
+    and the bridges over the channel. Origin = the city centre = the terrain origin."""
+    collection = _collection(scene, DISTRICT_COLLECTION)
+    state.centre = (0.0, 0.0, 0.0)
+    state.city_rect = city.city_rect()
+    state.channel_z = city.channel_z
+    state.plot_rects = {}
+    instances = list(city.instances) + [("City_Bridges", (0.0, 0.0, 0.0), 0.0)]
+    for k, (name, position, yaw) in enumerate(instances):
+        obj = bpy.data.objects.new(f"District_{name}_{k:03d}", state.built[name]["objects"][0].data)
+        collection.objects.link(obj)
+        obj.location = geo.to_blender(position)
+        obj.rotation_euler = (0.0, 0.0, math.radians(-yaw))
+        state.district.append(obj)
+        state.placements.setdefault(name, position)
+    for k, (name, rect) in enumerate(city.plots):
+        state.plot_rects[f"{name}#{k}"] = (rect.x0, rect.x1, rect.z0, rect.z1)
+
+
 def _lod_lineup(scene, state):
     collection = _collection(scene, LODS_COLLECTION)
     names = [name for name in LOD_LINEUP if name in state.built]
@@ -193,7 +229,7 @@ def _make_terrain(scene, state, material):
     centre, preview copies moved onto the district)."""
     cx, _cy, cz = state.centre
     x0, x1, z0, z1 = state.city_rect
-    plots = [(name, (r[0] - cx, r[1] - cx, r[2] - cz, r[3] - cz)) for name, r in state.plot_rects.items()]
+    plots = [(name.split("#")[0], (r[0] - cx, r[1] - cx, r[2] - cz, r[3] - cz)) for name, r in state.plot_rects.items()]
     channel_z = (state.channel_z if state.channel_z is not None else z0 - 60.0) - cz
     t = terrain.Terrain(state.style, (x0 - cx, x1 - cx, z0 - cz, z1 - cz), channel_z, plots)
     t.make_markers()
@@ -201,9 +237,11 @@ def _make_terrain(scene, state, material):
     state.terrain_problems = t.audit()
     export_collection = _collection(scene, TERRAIN_EXPORT)
     state.terrain_chunks = terrain.make_chunks(t, export_collection, material)
+    state.backdrop = [terrain.make_backdrop(t, export_collection, material),
+                      terrain.make_skyline(t, export_collection, material)]
     shown = _collection(scene, TERRAIN_COLLECTION)
-    for _name, objects, _factors in state.terrain_chunks:
-        obj = bpy.data.objects.new(f"Show_{objects[0].name}", objects[0].data)
+    for source in [objects[0] for _name, objects, _factors in state.terrain_chunks] + state.backdrop:
+        obj = bpy.data.objects.new(f"Show_{source.name}", source.data)
         shown.objects.link(obj)
         obj.location = geo.to_blender(state.centre)
         state.terrain_shown.append(obj)
@@ -268,7 +306,7 @@ def _place_choppers(state):
         state.choppers.append(library.chopper("Gunship", _world(state, (ax, floor + 22.0, az)), yaw,
                                               name="Chopper_Canyon"))
         # In the storm drain, below street level, through the city.
-        cx = (t.city[0] + t.city[1]) / 2 + 40.0
+        cx = (t.city[0] + t.city[1]) / 2 + 72.0  # between two bridges
         state.choppers.append(library.chopper("Scout", _world(state, (cx, -1.0, t.channel_z)), 90.0,
                                               name="Chopper_Channel"))
         # Landed on the mesa top nearest the city.
@@ -379,6 +417,11 @@ def export_terrain(state, out_dir):
             _export_fbx(objects, os.path.join(folder, f"{name}.fbx"))
             chunks.append({"name": name, "file": f"Terrain/{name}.fbx", "stepFactors": list(factors),
                            "triangles": [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects]})
+        backdrop = []
+        for obj in state.backdrop:
+            _export_fbx([obj], os.path.join(folder, f"{obj.name}.fbx"))
+            backdrop.append({"name": obj.name, "file": f"Terrain/{obj.name}.fbx",
+                             "triangles": sum(len(p.vertices) - 2 for p in obj.data.polygons)})
     finally:
         collection.hide_viewport = True
     raw = f"{state.kit}_Height.raw"
@@ -398,11 +441,21 @@ def export_terrain(state, out_dir):
                       "resolution": t.count, "min": round(low, 3), "max": round(high, 3),
                       "rows": "first row = -Z edge"},
         "chunks": chunks,
+        "backdrop": {"parts": backdrop,
+                     "note": "Far scenery out to 20 km (mountains, the canyon bending away, the megacity skyline beyond "
+                             "the walls). No colliders; outside the flight bounds. Hide its far edge with fog."},
+        "atmosphere": {"fogStart": 300.0, "fogScale": 3000.0,
+                       "note": "Suggested exponential distance fog (the previews use the same numbers): "
+                               "factor = 1 - exp(-(distance - start) / scale)."},
         "markers": [{"kind": kind, "index": index, "position": _r(position), "radius": radius}
                     for kind, index, position, radius in t.markers],
         "paths": {"canyon": [_r(p) for p in t.path_points(t.canyon)],
                   "channel": [_r(p) for p in t.path_points(t.channel)]},
-        "layout": {name: _r((p[0] - cx, p[1], p[2] - cz)) for name, p in state.placements.items()},
+        "layout": ([{"building": name, "position": _r(p), "yaw": yaw} for name, p, yaw in state.layout.instances]
+                   + [{"building": "City_Bridges", "position": [0.0, 0.0, 0.0], "yaw": 0.0}]
+                   if state.layout is not None else
+                   [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
+                    for name, p in state.placements.items()]),
         "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
         "audit": state.terrain_problems,
     }
@@ -527,6 +580,89 @@ def set_time(scene, night):
     scene.view_settings.exposure = 0.0 if night else 0.3
 
 
+HAZE = {False: (300.0, 3000.0, 0.85), True: (200.0, 2200.0, 0.9)}  # night: (start, scale, max)
+
+
+def _depth_material():
+    material = bpy.data.materials.get("CF Depth")
+    if material is None:
+        material = bpy.data.materials.new("CF Depth")
+        material.use_nodes = True
+        nodes, links = material.node_tree.nodes, material.node_tree.links
+        nodes.clear()
+        camera = nodes.new("ShaderNodeCameraData")
+        emission = nodes.new("ShaderNodeEmission")
+        emission.inputs["Color"].default_value = (1, 1, 1, 1)
+        output = nodes.new("ShaderNodeOutputMaterial")
+        links.new(camera.outputs["View Distance"], emission.inputs["Strength"])
+        links.new(emission.outputs[0], output.inputs["Surface"])
+    return material
+
+
+def _render_view(state, scene, path, night):
+    """A preview render; with terrain shown, distance haze too: a second, one-sample render writes the camera
+    distance of every pixel (material override), and numpy blends the picture towards the sky colour at the horizon
+    (the Blender compositor needs a GPU here)."""
+    _render(scene, path)
+    if not state.terrain_shown:
+        return
+    import numpy as np
+
+    layer = scene.view_layers[0]
+    world_before = scene.world
+    saved = (scene.cycles.samples, scene.cycles.use_denoising, scene.render.image_settings.file_format,
+             scene.view_settings.view_transform, scene.view_settings.look, scene.view_settings.exposure,
+             scene.render.filter_size)
+    depth_world = bpy.data.worlds.get("CF Depth World") or bpy.data.worlds.new("CF Depth World")
+    depth_world.use_nodes = True
+    depth_world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.0
+    depth_path = os.path.join(os.path.dirname(path), ".depth.exr")
+    try:
+        layer.material_override = _depth_material()
+        scene.world = depth_world
+        scene.cycles.samples, scene.cycles.use_denoising = 1, False
+        scene.render.image_settings.file_format = "OPEN_EXR"
+        scene.view_settings.view_transform = "Standard"
+        scene.view_settings.look = "None"
+        scene.view_settings.exposure = 0.0
+        scene.render.filter_size = 0.01
+        _render(scene, depth_path)
+    finally:
+        layer.material_override = None
+        scene.world = world_before
+        (scene.cycles.samples, scene.cycles.use_denoising, scene.render.image_settings.file_format,
+         scene.view_settings.view_transform, scene.view_settings.look, scene.view_settings.exposure,
+         scene.render.filter_size) = saved
+
+    def load(file_path):
+        image = bpy.data.images.load(file_path)
+        pixels = np.empty(len(image.pixels), dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        shape = (image.size[1], image.size[0], 4)
+        bpy.data.images.remove(image)
+        return pixels.reshape(shape)
+
+    picture, depth = load(path), load(depth_path)[:, :, 0]
+    os.remove(depth_path)
+    sky = depth <= 0.0
+    start, scale, most = HAZE[night]
+    factor = np.clip(1.0 - np.exp(-np.maximum(depth - start, 0.0) / scale), 0.0, most)
+    factor[sky] = 0.0
+    # Fog colour = the sky just above the horizon (rows go up from the bottom).
+    colour = np.array([0.42, 0.42, 0.42]) if not night else np.array([0.02, 0.025, 0.035])
+    if sky.any():
+        rows = np.where(sky.any(axis=1))[0]
+        band = sky[rows[0]: rows[0] + 25]
+        colour = picture[rows[0]: rows[0] + 25][band][:, :3].mean(axis=0)
+    picture[:, :, :3] = picture[:, :, :3] * (1.0 - factor[..., None]) + colour * factor[..., None]
+    out = bpy.data.images.new("CF Haze", picture.shape[1], picture.shape[0])
+    out.pixels.foreach_set(picture.ravel())
+    out.filepath_raw = path
+    out.file_format = "JPEG"
+    out.save()
+    bpy.data.images.remove(out)
+
+
 def _render(scene, path):
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
@@ -575,19 +711,25 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     _visible(district, True)
     _frame(camera, aim, district, (-0.5, -1.0, 0.3), lens=35.0, margin=0.5)
     set_time(scene, night=False)
-    _render(scene, os.path.join(preview_dir, "district_day.jpg"))
+    _render_view(state, scene, os.path.join(preview_dir, "district_day.jpg"), False)
     set_time(scene, night=True)
-    _render(scene, os.path.join(preview_dir, "district_night.jpg"))
-    # Street view at chopper height: low over the street between the block row and the industrial row.
-    street = [obj for obj in district if obj.name.startswith(("District_Block", "District_Ind", "District_Tower"))]
-    corners = _corners(street)
-    low_y = min(c.y for c in _corners([o for o in district if o.name.startswith("District_Block")]))
-    aim.location = Vector((min(c.x for c in corners) + 40.0, low_y - STREET / 2 + 4.0, 22.0))
-    camera.location = Vector((max(c.x for c in corners) + 30.0, low_y - STREET / 2 - 6.0, 26.0))
+    _render_view(state, scene, os.path.join(preview_dir, "district_night.jpg"), True)
+    # Street view at chopper height.
+    if state.layout is not None:
+        # From the front edge of the city, low, looking in towards the core.
+        half_d = state.layout.depth / 2
+        camera.location = geo.to_blender((-70.0, 32.0, half_d + 45.0))
+        aim.location = geo.to_blender((10.0, 70.0, 60.0))
+    else:
+        street = [obj for obj in district if obj.name.startswith(("District_Block", "District_Ind", "District_Tower"))]
+        corners = _corners(street)
+        low_y = min(c.y for c in _corners([o for o in district if o.name.startswith("District_Block")]))
+        aim.location = Vector((min(c.x for c in corners) + 40.0, low_y - STREET / 2 + 4.0, 22.0))
+        camera.location = Vector((max(c.x for c in corners) + 30.0, low_y - STREET / 2 - 6.0, 26.0))
     camera.data.lens = 28.0
-    _render(scene, os.path.join(preview_dir, "street_night.jpg"))
+    _render_view(state, scene, os.path.join(preview_dir, "street_night.jpg"), True)
     set_time(scene, night=False)
-    _render(scene, os.path.join(preview_dir, "street_day.jpg"))
+    _render_view(state, scene, os.path.join(preview_dir, "street_day.jpg"), False)
     _scale_shots(state, scene, camera, aim, preview_dir)
     chopper_objects = state.library.objects() if getattr(state, "library", None) else []
     _visible(chopper_objects, False)
@@ -617,15 +759,17 @@ def _terrain_shots(state, by_name):
     def b(point):
         return geo.to_blender(_world(state, point))
 
-    shots = [("terrain_overview", b((1150.0, 760.0, 1250.0)), b((60.0, 40.0, -80.0)), 24.0)]
+    shots = [("terrain_overview", b((1150.0, 760.0, 1250.0)), b((60.0, 40.0, -80.0)), 24.0),
+             # From mid height over the city, looking out at the rim: the wall should hide the map edge.
+             ("rim", b((0.0, 220.0, 260.0)), b((-400.0, 230.0, 2400.0)), 24.0)]
     if "Chopper_Canyon" in by_name:
         k = len(t.canyon) // 3
         ahead, behind = t.canyon[max(0, k - 3)], t.canyon[min(len(t.canyon) - 1, k + 2)]
         shots.append(("canyon", b((behind[0], float(t.sample(*behind)) + 34.0, behind[1])),
                       b((ahead[0], float(t.sample(*ahead)) + 14.0, ahead[1])), 22.0))
     if "Chopper_Channel" in by_name:
-        cx = (t.city[0] + t.city[1]) / 2 + 40.0
-        shots.append(("channel", b((cx - 48.0, 4.0, t.channel_z + 7.0)), b((cx + 40.0, 8.0, t.channel_z)), 22.0))
+        cx = (t.city[0] + t.city[1]) / 2 + 72.0
+        shots.append(("channel", b((cx - 46.0, 3.0, t.channel_z + 6.0)), b((cx + 40.0, 7.0, t.channel_z)), 22.0))
     if "Chopper_Mesa" in by_name and t.markers:
         _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
         away = Vector((mx, mz)).normalized()
@@ -677,9 +821,9 @@ def _scale_shots(state, scene, camera, aim, preview_dir):
     for name, camera_at, aim_at, lens in shots:
         camera.location, aim.location, camera.data.lens = camera_at, aim_at, lens
         set_time(scene, night=False)
-        _render(scene, os.path.join(preview_dir, f"{name}_day.jpg"))
+        _render_view(state, scene, os.path.join(preview_dir, f"{name}_day.jpg"), False)
         set_time(scene, night=True)
-        _render(scene, os.path.join(preview_dir, f"{name}_night.jpg"))
+        _render_view(state, scene, os.path.join(preview_dir, f"{name}_night.jpg"), True)
     set_time(scene, night=False)
 
 
@@ -688,10 +832,14 @@ def _building_sheet(state, scene, camera, aim, path, np):
     width, height = scene.render.resolution_x, scene.render.resolution_y
     scene.render.resolution_x, scene.render.resolution_y = width // 2, height // 2
     tiles = []
+    stage = bpy.data.collections[STAGE_COLLECTION]
+    base = [entry for name, entry in state.built.items()
+            if "variantOf" not in entry["building"].spec and entry["building"].type != "props"]
+    _visible(state.district, False)
     try:
-        for obj in state.district:
-            for other in state.district:
-                other.hide_render = other is not obj
+        for entry in base:
+            obj = bpy.data.objects.new("Sheet_Tile", entry["objects"][0].data)
+            stage.objects.link(obj)
             _frame(camera, aim, [obj], (-0.75, -1.0, 0.45), lens=40.0, margin=0.95)
             tile = os.path.join(os.path.dirname(path), ".tile.jpg")
             _render(scene, tile)
@@ -701,10 +849,9 @@ def _building_sheet(state, scene, camera, aim, path, np):
             tiles.append(pixels.reshape(image.size[1], image.size[0], 4))
             bpy.data.images.remove(image)
             os.remove(tile)
+            bpy.data.objects.remove(obj, do_unlink=True)
     finally:
         scene.render.resolution_x, scene.render.resolution_y = width, height
-        for obj in state.district:
-            obj.hide_render = True
     columns = 4
     while len(tiles) % columns:
         tiles.append(np.zeros_like(tiles[0]))
