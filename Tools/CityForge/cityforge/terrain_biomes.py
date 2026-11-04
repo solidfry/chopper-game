@@ -88,8 +88,8 @@ BIOMES = {
     "volcanic": dict(
         # Ash flats, then wall bands: dark basalt, rusty oxidised cinder, buff tuff, grey ash.
         ground=("#4a443e", "#3a342f"), sediment="#2c2724", rock=("#2a2725", "#5a3b2c", "#6e6151", "#403a35"),
-        band=8.0, cliff="#221f1d", scree="#3b3430", cover="#7c766c", cover_slope=0.3, cover_height=120.0,
-        cover_amount=0.6, wet=0.0, flow_wet=0.0, glow="#ff3a0a", glow_strength=3.0, glow_flow=0.55,
+        band=8.0, cliff="#221f1d", scree="#3b3430", cover="#5e5952", cover_slope=0.3, cover_height=120.0,
+        cover_amount=0.35, wet=0.0, flow_wet=0.0, glow="#ff3a0a", glow_strength=3.0, glow_flow=0.55,
         concrete="#55524f", roughness=0.95),
     # Poisoned waste: sick yellow-green ground, crusted rock, glowing runs.
     "toxic": dict(

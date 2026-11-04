@@ -242,7 +242,7 @@ def _portal(b, portal, terrain):
 
 # -- City_Freeway -------------------------------------------------------------------------------------------------------
 
-FREEWAY = dict(height=16.0, width=26.0, thick=1.8, pier=40.0)
+FREEWAY = dict(height=16.0, width=layout_module.FREEWAY_WIDTH, thick=1.8, pier=40.0)
 
 
 def freeway(city, terrain, style):

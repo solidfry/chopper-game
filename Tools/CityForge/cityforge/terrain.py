@@ -380,29 +380,47 @@ class Terrain:
             k = max(0, k - 2)
             return (float(xs[k]), float(zs[k]))
 
+        # The freeway ramps land on the freeway line at x = -ramp and x = +ramp. The ground roads out of the city run
+        # beside the ramp (a frontage road, away from the channel) and join the freeway line past the landing, so the
+        # ramp comes down onto the road instead of rising out of the middle of it. Same width as the deck there.
+        ramp, wide = e["ramp"], e.get("freeway_width", 26.0)
+        side = fz + wide + 4.0
+
+        def joined(start_x, direction):
+            land = direction * ramp
+            return [(start_x, side), (land - direction * 70.0, side), (land + direction * 50.0, fz)]
+
         west = portal((x0, fz), (-1.0, 0.0))
-        self.roads.append(dict(name="West", points=[(x0, fz), west], heights=[0.0, 0.0], width=24.0))
-        self.portals.append(dict(name="West", position=west, yaw=90.0, width=24.0))
+        self.roads.append(dict(name="West", points=joined(x0, -1.0) + [west], heights=[0.0] * 4, width=wide))
+        self.portals.append(dict(name="West", position=west, yaw=90.0, width=wide))
         north = portal((e["north_x"], z0), (0.0, -1.0))
         self.roads.append(dict(name="North", points=[(e["north_x"], z0), north], heights=[0.0, 0.0], width=20.0))
         self.portals.append(dict(name="North", position=north, yaw=0.0, width=20.0))
-        # Canyon road: along the freeway line to the canyon mouth, then along the canyon floor (left bank).
+        # Canyon road: beside the freeway ramp, then on the freeway line to the canyon mouth, then along the canyon
+        # floor (left bank).
         from shapely.geometry import LineString
         mouth_x = self.channel[-1][0]
         bank = LineString(self.canyon).offset_curve(18.0)
         coords = [(px, pz) for px, pz in bank.coords if px > mouth_x - 10.0 and abs(px) < half + 300.0]
-        points = [(x1, fz), (mouth_x - 70.0, fz)] + coords[1:]
+        points = joined(x1, 1.0)
+        if mouth_x - 70.0 > points[-1][0] + 10.0:
+            points.append((mouth_x - 70.0, fz))
+        flat = len(points)          # flat to here (the city floor), then down into the canyon
+        for p in coords[1:]:        # onto the canyon bank: no points back towards the city, no tiny steps (kinks)
+            if p[0] > points[-1][0] + 1.0 and math.hypot(p[0] - points[-1][0], p[1] - points[-1][1]) > 40.0:
+                points.append(p)
         c = self.values["canyon"]
         total = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(self.canyon, self.canyon[1:]))
         heights, run = [], 0.0
+        start_run = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(points[:flat], points[1:flat]))
         for k, (px, pz) in enumerate(points):
             if k:
                 run += math.hypot(px - points[k - 1][0], pz - points[k - 1][1])
-            t = max(0.0, run - (mouth_x - 70.0 - x1))
+            t = max(0.0, run - start_run)
             floor = c["floor"][0] + (c["floor"][1] - c["floor"][0]) * min(1.0, t / total)
             blend = float(smoothstep(0.0, 160.0, np.array(t)))
             heights.append(floor * blend)
-        self.roads.append(dict(name="Canyon", points=points, heights=heights, width=24.0))
+        self.roads.append(dict(name="Canyon", points=points, heights=heights, width=wide))
 
     def _flatten_roads(self, x, z, h):
         for road in self.roads:

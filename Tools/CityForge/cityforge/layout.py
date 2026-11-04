@@ -33,6 +33,7 @@ CHANNEL_SHARE = 0.22          # storm-drain corridor at z = this share of the ci
 CORRIDOR = 84.0               # channel (56 m) + a frontage road on each side
 CHANNEL_TOP = 56.0
 FREEWAY_OFFSET = 35.0         # freeway centre line: channel z + this (above the north frontage road)
+FREEWAY_WIDTH = 26.0          # freeway deck width; the roads out of the city take it over where its ramps land
 RING = dict(cx=0.0, cz=-60.0, rx=270.0, rz=180.0)
 WIDTH = dict(ring=24.0, radial=20.0, boulevard=26.0, perimeter=16.0, frontage=12.0, street=12.0)
 RADIAL_ANGLES = (30, 70, 110, 150, 200, 240, 290, 330)   # degrees in the (x, z) plane; 0 = +X (the spiral is there)
@@ -466,7 +467,7 @@ class Layout:
     def exterior(self):
         """What the terrain needs for the roads out of the city: freeway line, boulevard x, ramp ends."""
         return dict(freeway_z=self.freeway_z, north_x=BOULEVARD_X, ramp=self.width / 2 + 200.0,
-                    city=self.city_rect())
+                    freeway_width=FREEWAY_WIDTH, city=self.city_rect())
 
     def audit(self):
         problems = []
