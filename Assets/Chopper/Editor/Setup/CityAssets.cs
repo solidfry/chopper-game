@@ -107,6 +107,7 @@ namespace Chopper.Editor.Setup
         {
             public string kit;
             public BiomeInfo biomes;
+            public SurfaceInfo surface;
             public ChunkInfo[] chunks;
             public BackdropInfo backdrop;
             public AtmosphereInfo atmosphere;
@@ -150,6 +151,16 @@ namespace Chopper.Editor.Setup
             public int index;
             public float[] position;
             public float radius;
+        }
+
+        /// <summary>Map-wide surface textures for the terrain shader (CityForge terrain.Terrain.surface).</summary>
+        [Serializable]
+        internal sealed class SurfaceInfo
+        {
+            public string masks;
+            public string normal;
+            public float size;
+            public int resolution;
         }
 
         [Serializable]
@@ -223,7 +234,7 @@ namespace Chopper.Editor.Setup
             var biomeIndex = terrain?.biomes?.biomes != null ? Mathf.Max(0, Array.IndexOf(terrain.biomes.biomes, terrain.biomes.current)) : 0;
 
             var buildingMaterial = EnsureBuildingMaterial(folder, manifest, table, biomeIndex);
-            var terrainMaterial = terrain != null ? EnsureTerrainMaterial(folder, manifest.kit, table, biomeIndex) : null;
+            var terrainMaterial = terrain != null ? EnsureTerrainMaterial(folder, manifest.kit, table, biomeIndex, terrain.surface) : null;
 
             foreach (var building in manifest.buildings)
                 Remap($"{folder}/{building.file}", buildingMaterial, manifest.palette.material, null, null);
@@ -270,6 +281,33 @@ namespace Chopper.Editor.Setup
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (texture == null) Debug.LogWarning($"Setup: city texture {path} not found.");
             return texture;
+        }
+
+        /// <summary>Map-wide surface maps (masks, world normals): linear, bilinear, mipmaps, clamp, high-quality
+        /// compression, full size.</summary>
+        private static Texture2D SurfaceTexture(string path, int resolution)
+        {
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer)
+            {
+                Debug.LogWarning($"Setup: terrain surface map {path} not found. Export the city again from CityForge.");
+                return null;
+            }
+            var size = Mathf.Max(2048, Mathf.NextPowerOfTwo(Mathf.Max(1, resolution)));
+            if (importer.sRGBTexture || !importer.mipmapEnabled || importer.wrapMode != TextureWrapMode.Clamp ||
+                importer.filterMode != FilterMode.Bilinear || importer.maxTextureSize < size ||
+                importer.textureCompression != TextureImporterCompression.CompressedHQ)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = false;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.maxTextureSize = size;
+                importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         /// <summary>CC0 detail maps (Tools/CityForge/fetch_cc0.py): repeat, mipmaps; normal maps as normal maps. Null if not fetched.</summary>
@@ -361,7 +399,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>Terrain chunks and the backdrop: the TerrainBiome graph (URP Lit in sand colour until it exists).</summary>
-        private static Material EnsureTerrainMaterial(string folder, string kit, Texture2D table, int biomeIndex)
+        private static Material EnsureTerrainMaterial(string folder, string kit, Texture2D table, int biomeIndex, SurfaceInfo surface)
         {
             var graph = Shader.Find(TerrainShader);
             var shader = graph != null ? graph : Shader.Find("Universal Render Pipeline/Lit");
@@ -375,6 +413,12 @@ namespace Chopper.Editor.Setup
             {
                 material.SetTexture("_BiomeTable", table);
                 material.SetFloat("_BiomeIndex", biomeIndex);
+                var masks = surface != null && !string.IsNullOrEmpty(surface.masks) ? SurfaceTexture($"{folder}/{surface.masks}", surface.resolution) : null;
+                var normals = surface != null && !string.IsNullOrEmpty(surface.normal) ? SurfaceTexture($"{folder}/{surface.normal}", surface.resolution) : null;
+                material.SetTexture("_MaskMap", masks);
+                material.SetTexture("_SurfaceNormal", normals);
+                // Map size 0 = no surface maps: the shader uses the mesh normal and no masks.
+                material.SetFloat("_MapSize", masks != null && normals != null ? surface.size : 0f);
                 material.SetTexture("_RockColour", DetailTexture("RockFace", false));
                 material.SetTexture("_RockNormal", DetailTexture("RockFace", true));
                 material.SetTexture("_SandColour", DetailTexture("GravellySand", false));

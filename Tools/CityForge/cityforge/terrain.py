@@ -40,11 +40,12 @@ DEFAULTS = dict(
     # Far backdrop mesh (polar): rings and segments. edge_smooth: fade the rim crest out over the last metres inside the
     # map edge, so the coarse backdrop meets the terrain edge without gaps (needed for a high, jagged crest).
     backdrop=dict(rings=44, segments=160, edge_smooth=0.0),
-    # Optional hydraulic erosion (erosion.py settings, e.g. droplets per cell); None = off.
-    erosion=None,
-    # Optional boulders on the scree below cliffs: chance per scree cell, size range (m), most in the map. In the
-    # chunk meshes (LOD0; LOD1 the big ones), so the mesh colliders have them too. None = off.
-    boulders=None,
+    # Gullies down steep rock, in the mesh: (cell m, depth m) per octave (gully_noise). Smaller ones only in the
+    # surface normal map (see surface).
+    gullies=((90.0, 12.0), (45.0, 5.0)),
+    # Surface textures for the shader (see surface): texels per side over the whole map, the gully octaves only in the
+    # normal map, how strong the hollow mask reads curvature.
+    surface=dict(resolution=2048, gullies=((24.0, 3.5), (12.0, 1.6), (6.0, 0.7), (3.0, 0.3)), hollow=6.0),
 )
 
 
@@ -110,6 +111,96 @@ def polyline_distance(x, z, points):
         along = np.where(closer, run + t * length, along)
         run += length
     return best, along, run
+
+
+def _hash(ix, iz, seed):
+    """0..1 per integer cell (numpy int arrays)."""
+    h = (ix * 73856093) ^ (iz * 19349663) ^ (seed * 83492791)
+    h = (h ^ (h >> 13)) * 1274126177
+    return ((h ^ (h >> 16)) & 0xFFFFFF) / float(0xFFFFFF)
+
+
+def gully_noise(x, z, down_x, down_z, cell, seed):
+    """Gullies: in every cell of a jittered grid, a wave that runs down the fall line (down_x, down_z: unit downhill
+    direction per point) and goes up and down across it, faded with the distance from the cell centre; the 3 x 3 cells
+    round each point are summed. Ridges and grooves line up with the slope, and where cells meet they join and branch.
+    (The idea of slope-aligned waves per cell is from published "erosion noise" shaders; this is a plain version.)
+    Returns (height -1..1, d/dx, d/dz): the slope of the pattern, so the next octave can follow it."""
+    gx, gz = np.floor(x / cell).astype(np.int64), np.floor(z / cell).astype(np.int64)
+    across_x, across_z = -down_z, down_x
+    total = np.zeros_like(x)
+    dx = np.zeros_like(x)
+    dz = np.zeros_like(x)
+    weights = np.zeros_like(x)
+    k = math.tau / cell
+    for oz in (-1, 0, 1):
+        for ox in (-1, 0, 1):
+            cx_, cz_ = gx + ox, gz + oz
+            px = x - (cx_ + 0.15 + 0.7 * _hash(cx_, cz_, seed)) * cell
+            pz = z - (cz_ + 0.15 + 0.7 * _hash(cx_, cz_, seed + 1)) * cell
+            w = np.maximum(0.0, 1.0 - (px * px + pz * pz) / (1.5 * cell) ** 2) ** 2
+            phase = (px * across_x + pz * across_z) * k + math.tau * _hash(cx_, cz_, seed + 2)
+            total += np.cos(phase) * w
+            slope = -np.sin(phase) * k * w
+            dx += slope * across_x
+            dz += slope * across_z
+            weights += w
+    weights = np.maximum(weights, 1e-6)
+    return total / weights, dx / weights, dz / weights
+
+
+def gullies(h, step, octaves, seed, x, z, mask=None):
+    """Height field `h` (grid step `step` m) with gully octaves [(cell m, depth m), ...] cut into its steep parts.
+    Each octave follows the slope of the field plus the octaves before it, so small gullies run into big ones."""
+    gz0, gx0 = np.gradient(h, step)
+    out = h.copy()
+    ax, az = np.zeros_like(h), np.zeros_like(h)
+    steep = np.hypot(gx0, gz0)
+    fade = smoothstep(0.25, 0.9, steep) * (1.0 if mask is None else mask)
+    for k, (cell, depth) in enumerate(octaves):
+        sx, sz = gx0 + ax, gz0 + az
+        length = np.maximum(np.hypot(sx, sz), 1e-6)
+        n, nx, nz = gully_noise(x, z, -sx / length, -sz / length, cell, seed + 10 * k)
+        # Sharp grooves, round ridges: fold the wave (0 at the ridge top, -1 in the groove).
+        groove = -(1.0 - 0.5 * (n + 1.0)) ** 1.6
+        slope = -1.6 * (1.0 - 0.5 * (n + 1.0)) ** 0.6 * -0.5
+        out += depth * fade * groove
+        ax += depth * fade * slope * nx
+        az += depth * fade * slope * nz
+    return out
+
+
+def resample(a, step, size, coords):
+    """Catmull-Rom (smooth, through the samples) value of grid `a` (step m, centred square of side `size`) at the
+    regular axis `coords` (m) on both axes: shape (len(coords), len(coords))."""
+    u = (np.asarray(coords) + size / 2) / step
+    i = np.floor(u).astype(np.int64)
+    t = (u - i)[:, None]
+    w = np.concatenate([((-t + 2) * t - 1) * t / 2, ((3 * t - 5) * t * t + 2) / 2, ((-3 * t + 4) * t + 1) * t / 2,
+                        (t - 1) * t * t / 2], axis=1)
+    last = a.shape[0] - 1
+    index = [np.clip(i + o, 0, last) for o in (-1, 0, 1, 2)]
+    rows = sum(a[:, index[k]] * w[:, k] for k in range(4))          # along x: (count, n)
+    return sum(rows[index[k], :] * w[:, k][:, None] for k in range(4))
+
+
+def write_png(path, data):
+    """8-bit PNG from a (height, width, channels) uint8 array (1, 3 or 4 channels), first row at the top."""
+    import struct
+    import zlib
+
+    height, width, channels = data.shape
+    kind = {1: 0, 3: 2, 4: 6}[channels]
+    raw = np.concatenate([np.zeros((height, 1), np.uint8), data.reshape(height, width * channels)], axis=1)
+
+    def chunk(tag, payload):
+        return struct.pack(">I", len(payload)) + tag + payload + struct.pack(">I", zlib.crc32(tag + payload))
+
+    with open(path, "wb") as handle:
+        handle.write(b"\x89PNG\r\n\x1a\n")
+        handle.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, kind, 0, 0, 0)))
+        handle.write(chunk(b"IDAT", zlib.compress(raw.tobytes(), 6)))
+        handle.write(chunk(b"IEND", b""))
 
 
 # -- the field ---------------------------------------------------------------------------------------------------------
@@ -331,6 +422,7 @@ class Terrain:
         d = self._city_distance(x, z)
         h = v["rise"] * smoothstep(CITY_FLAT, 900.0, d) + v["dunes"] * fbm(seed, x, z, 180.0) * smoothstep(CITY_FLAT, 300.0, d)
         rock = np.maximum(np.zeros_like(h), self._rim(x, z))
+        rim = rock.copy()
         # Mesas: flat top, a cliff, a talus apron.
         m = v["mesas"]
         cone = m.get("shape") == "cone"
@@ -345,23 +437,24 @@ class Terrain:
                 cliff = np.clip((radius - dm) / m["cliff"], 0.0, 1.0)
             talus = np.clip((radius + m["talus"] - dm) / m["talus"], 0.0, 1.0) ** 2 * 0.28
             rock = np.maximum(rock, height * np.maximum(cliff, talus))
+        # Big gullies down the steep rock (the small ones are only in the surface normal map).
+        if v.get("gullies"):
+            keep = smoothstep(6.0, 30.0, rock)
+            top_share = m.get("top", 0.38) if cone else 0.0
+            for mx, mz, radius, _height, _turn, _stretch in self.mesas:
+                top = radius * top_share if cone else radius * 0.65   # the noisy edge comes in to ~0.65 r
+                keep = keep * smoothstep(top + 4.0, top + 24.0, np.hypot(x - mx, z - mz))   # flat tops stay flat
+            rock = gullies(rock, STEP, v["gullies"], seed + 60, x, z, keep)
         # Terraces on rock (strata), only where the rock stands above the ground.
         s = v["strata"]
         level = rock / s
         terraced = s * (np.floor(level) + smoothstep(0.62, 1.0, level - np.floor(level)))
-        rock = np.where(rock > 6.0, terraced, rock)
+        # Mesas: everywhere (flat tops). The rim: only on steep rock; on its gentle top the steps read as contour lines.
+        gz_, gx_ = np.gradient(rock, STEP)
+        steep = np.where(rock > rim + 0.01, 1.0, smoothstep(0.5, 1.2, np.hypot(gx_, gz_))) * (rock > 6.0)
+        rock = rock + (terraced - rock) * steep
         h = np.maximum(h, rock)
         self.rock = rock
-        # Erosion: gullies down the slopes and cliffs, sediment fans below; not on the city floor or the mesa tops.
-        if v.get("erosion"):
-            from . import erosion
-            keep = smoothstep(CITY_FLAT + 20.0, CITY_FLAT + 90.0, d)
-            top_share = m.get("top", 0.38) if cone else 0.5
-            for mx, mz, radius, height, _turn, stretch in self.mesas:
-                dm = np.hypot(x - mx, z - mz)
-                keep = keep * smoothstep(radius * top_share * 0.9, radius * top_share * 0.9 + 12.0, dm)
-            settings = dict(v["erosion"])
-            h = erosion.hydraulic(h, STEP, keep, seed=seed + 50, **settings)
         # City floor: exactly flat.
         h = np.where(d <= CITY_FLAT, 0.0, h)
         # Canyon: carve a winding trench to a floor that falls away from the basin.
@@ -379,11 +472,6 @@ class Terrain:
             dl = self.lava_distance(x, z)
             trench = (1.0 - smoothstep(-2.0, 4.0, dl)) * smoothstep(CITY_FLAT + 10.0, CITY_FLAT + 40.0, d)
             h = h - lava["depth"] * trench
-            # Cooled lava fields: lumpy ropes of old flows along the lava (not in the trench, not in the city).
-            near = (1.0 - smoothstep(0.0, lava.get("field", 70.0), dl)) * (dl > 0) * smoothstep(
-                CITY_FLAT + 10.0, CITY_FLAT + 60.0, d)
-            ropes = (1.0 - np.abs(fbm(seed + 31, x, z, 22.0, 3))) ** 3
-            h = h + lava.get("field_height", 1.8) * ropes * near
         h = self._flatten_roads(x, z, h)
         # Storm drain: a trapezoid concrete channel; open water strip in the middle.
         ch = v["channel"]
@@ -473,30 +561,6 @@ class Terrain:
         names[in_channel & (dch < 2.5)] = "glass"
         return names
 
-    def boulders(self):
-        """[(x, y, z, size, seed)] on loose rock below the cliffs (the scree mask), away from the city and roads."""
-        if getattr(self, "_boulders", None) is not None:
-            return self._boulders
-        b = self.values.get("boulders")
-        self._boulders = []
-        if not b:
-            return self._boulders
-        rng = np.random.default_rng(self.values["seed"] + 77)
-        masks = self.masks()
-        scree, made = masks[..., 3], masks[..., 2]
-        gz, gx = np.gradient(self.h, STEP)
-        slope = np.degrees(np.arctan(np.hypot(gx, gz)))
-        chance = b["chance"] * scree * (slope < 38.0) * (made < 0.01)
-        picks = np.argwhere(rng.random(chance.shape) < chance)
-        rng.shuffle(picks)
-        low, high = b["size"]
-        for iz, ix in picks[: b["most"]]:
-            x = float(self.x[iz, ix] + rng.uniform(-STEP / 2, STEP / 2))
-            z = float(self.z[iz, ix] + rng.uniform(-STEP / 2, STEP / 2))
-            size = float(low + (high - low) * rng.random() ** 2.5)     # many small, few big
-            self._boulders.append((x, float(self.sample(x, z)), z, size, int(rng.integers(1 << 30))))
-        return self._boulders
-
     # -- markers ---------------------------------------------------------------------------------------------------
     def make_markers(self):
         """MesaTop markers (landing / objective circles on flat tops), canyon and channel paths (bot route hints)."""
@@ -582,23 +646,62 @@ class Terrain:
         return problems
 
     # -- export data -----------------------------------------------------------------------------------------------
-    def write_masks(self, path):
-        """The same masks as an RGBA PNG (rows from -Z, like the RAW height map), for a Unity Terrain."""
-        import struct
-        import zlib
+    def surface(self):
+        """Textures for the biome shader over the whole map (resolution x resolution texels, rows from +Z at the top,
+        texel centres at ((i + 0.5) * size / resolution - size / 2)), so the ground does not depend on the mesh:
+            masks  RGBA 0..1: R flow, G hollow, B made, A scree (see masks), sharp at texel size: lava, roads and the
+                   city edge are worked out again here, the rest is the masks smoothly resampled
+            normal RGB = Unity world normal * 0.5 + 0.5, A = 1: the height field (smooth resample) with small gullies
+                   on the steep parts. Lighting detail the mesh does not have; the same on every LOD.
+        Returns (masks, normal) float32 arrays, first row = -Z (flip for an image)."""
+        if getattr(self, "_surface", None) is not None:
+            return self._surface
+        v = self.values
+        sv = v["surface"]
+        size, res = v["size"], sv["resolution"]
+        step = size / res
+        axis = (np.arange(res) + 0.5) * step - size / 2
+        x, z = np.meshgrid(axis, axis)
+        h = resample(self.h, STEP, size, axis)
+        made = resample(self.masks()[..., 2], STEP, size, axis)
+        steep_rock = smoothstep(4.0, 20.0, resample(self.rock, STEP, size, axis)) * (made < 0.01)
+        h = gullies(h, step, sv["gullies"], v["seed"] + 90, x, z, steep_rock)
+        gz, gx = np.gradient(h, step)
+        normal = np.stack([-gx, np.ones_like(h), -gz], axis=-1)
+        normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
 
-        data = np.clip(np.round(self.masks()[::-1] * 255.0), 0, 255).astype(np.uint8)
-        height, width = data.shape[:2]
-        raw = np.concatenate([np.zeros((height, 1), np.uint8), data.reshape(height, width * 4)], axis=1)
+        masks = np.stack([np.clip(resample(self.masks()[..., c], STEP, size, axis), 0.0, 1.0) for c in range(4)], -1)
+        # Hollow: curvature of the detailed surface (gully floors, cliff feet), a little blurred.
+        lap = (np.roll(h, 1, 0) + np.roll(h, -1, 0) + np.roll(h, 1, 1) + np.roll(h, -1, 1) - 4 * h) / (step * step)
+        lap = (np.roll(lap, 1, 0) + np.roll(lap, -1, 0) + np.roll(lap, 1, 1) + np.roll(lap, -1, 1) + 4 * lap) / 8
+        masks[..., 1] = np.clip(np.maximum(masks[..., 1], lap * sv["hollow"]), 0.0, 1.0)
+        # Flow: a little in the gully floors too (wet streaks, sediment); kept under 0.4, below every biome's glow.
+        masks[..., 0] = np.maximum(masks[..., 0], np.clip(lap * sv["hollow"] * 0.5, 0.0, 0.4) * steep_rock)
+        # Made ground and lava, sharp at texel size: distances (smooth fields) on the 6 m grid, resampled, then cut.
+        def fine(distance):
+            return resample(np.minimum(distance, 500.0), STEP, size, axis)
 
-        def chunk(kind, payload):
-            return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload))
+        made = smoothstep(CITY_FLAT + step, CITY_FLAT - step, self._city_distance(x, z))
+        made = np.maximum(made, smoothstep(step, -step, fine(self.channel_distance - v["channel"]["top"] / 2)))
+        roads = np.full(self.h.shape, np.inf)
+        for road in getattr(self, "roads", []):
+            dr, _a, _t = polyline_distance(self.x, self.z, road["points"])
+            roads = np.minimum(roads, dr - road["width"] / 2)
+        made = np.maximum(made, smoothstep(4.0, 0.0, fine(roads)))
+        masks[..., 2] = made
+        if getattr(self, "lava", None):
+            lava = fine(self.lava_distance(self.x, self.z))
+            masks[..., 0] = np.maximum(masks[..., 0], 1.0 - smoothstep(-3.0, 1.0, lava))
+        masks[..., 3] *= 1.0 - made
+        self._surface = (masks.astype(np.float32), normal.astype(np.float32))
+        return self._surface
 
-        with open(path, "wb") as handle:
-            handle.write(b"\x89PNG\r\n\x1a\n")
-            handle.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)))
-            handle.write(chunk(b"IDAT", zlib.compress(raw.tobytes(), 7)))
-            handle.write(chunk(b"IEND", b""))
+    def write_surface(self, masks_path, normal_path):
+        """The surface textures as 8-bit PNGs (linear data, first row = +Z)."""
+        masks, normal = self.surface()
+        write_png(masks_path, np.clip(np.round(masks[::-1] * 255.0), 0, 255).astype(np.uint8))
+        encoded = np.concatenate([normal * 0.5 + 0.5, np.ones(normal.shape[:2] + (1,), np.float32)], axis=-1)
+        write_png(normal_path, np.clip(np.round(encoded[::-1] * 255.0), 0, 255).astype(np.uint8))
 
     def write_raw(self, path):
         """16-bit little-endian RAW (Unity Terrain import: Mac/Windows byte order = Windows), rows from -Z to +Z."""
@@ -630,8 +733,7 @@ def make_chunks(t, collection, material):
         for cj, (x0, x1) in enumerate(ranges):
             name = f"Terrain_{ci:02d}_{cj:02d}"
             factors = OUTER_FACTORS if ci in (0, last) or cj in (0, last) else LOD_FACTORS
-            objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material,
-                                   level)
+            objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material)
                        for level, factor in enumerate(factors)]
             chunks.append((name, objects, factors))
     return chunks
@@ -644,37 +746,7 @@ def _steps(a, b, factor):
     return np.array(values)
 
 
-_ICO = None
-
-
-def _boulder(x, y, z, size, seed):
-    """A rough rock: an icosahedron with jittered corners, squashed and turned, sunk a third into the ground.
-    Returns (Blender verts, faces) with local indices."""
-    global _ICO
-    if _ICO is None:
-        p = (1 + 5 ** 0.5) / 2
-        corners = [(-1, p, 0), (1, p, 0), (-1, -p, 0), (1, -p, 0), (0, -1, p), (0, 1, p), (0, -1, -p), (0, 1, -p),
-                   (p, 0, -1), (p, 0, 1), (-p, 0, -1), (-p, 0, 1)]
-        faces = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2),
-                 (10, 7, 6), (7, 1, 8), (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11),
-                 (6, 2, 10), (8, 6, 7), (9, 8, 1)]
-        _ICO = (np.array(corners, float) / math.sqrt(1 + p * p), faces)
-    corners, faces = _ICO
-    rng = np.random.default_rng(seed)
-    local = corners * rng.uniform(0.75, 1.15, (12, 1)) * np.array([1.0, rng.uniform(0.55, 0.85), rng.uniform(0.8, 1.2)])
-    a = rng.uniform(0, math.tau)
-    c, s_ = math.cos(a), math.sin(a)
-    ux = local[:, 0] * c - local[:, 2] * s_
-    uz = local[:, 0] * s_ + local[:, 2] * c
-    uy = local[:, 1]
-    half = size / 2
-    centre_y = y - 0.35 * (uy.max() - uy.min()) * half - uy.min() * half    # a third of its height in the ground
-    verts = np.stack([-(x + ux * half), -(z + uz * half), centre_y + uy * half], axis=-1)   # Unity -> Blender
-    # Unity -> Blender mirrors, so the winding turns round: reverse it to keep the faces pointing out.
-    return verts, [tuple(reversed(face)) for face in faces]
-
-
-def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material, level=0):
+def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
     import bpy
 
     from .pf import palette
@@ -712,34 +784,11 @@ def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material, le
                 a, b, c, d = b, a, d, c
             faces.append([a, b, c, d])
             swatches.append(skirt_swatch)
-    # Boulders in this chunk: all in LOD0, the big ones in LOD1, none further out.
-    terrain_verts = len(verts)
-    if level < 2:
-        xa, xb = t.x[0, x0], t.x[0, x1]
-        za, zb = t.z[z0, 0], t.z[z1, 0]
-        rock = sw("rock")
-        for bx, by, bz, size, seed in t.boulders():
-            if not (xa <= bx < xb and za <= bz < zb) or (level == 1 and size < 3.5):
-                continue
-            bverts, bfaces = _boulder(bx, by, bz, size, seed)
-            base = len(verts)
-            verts.extend(bverts.tolist())
-            for face in bfaces:
-                faces.append([base + i for i in face])
-                swatches.append(rock)
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(verts, [], faces)
     attribute = mesh.attributes.new("swatch", "INT", "FACE")
     attribute.data.foreach_set("value", swatches)
-    # Biome masks as vertex colour (point domain; skirt vertices copy their edge vertex; boulders = scree).
-    masks = t.masks()[np.ix_(iz, ix)].reshape(-1, 4)
-    skirt_count = terrain_verts - masks.shape[0]
-    edge_rows = np.concatenate([grid[0, :], grid[-1, :], grid[:, 0], grid[:, -1]])
-    colours = np.concatenate([masks, masks[edge_rows[:skirt_count]]]) if skirt_count else masks
-    if len(verts) > terrain_verts:
-        colours = np.concatenate([colours, np.tile([0.0, 0.0, 0.0, 1.0], (len(verts) - terrain_verts, 1))])
-    layer = mesh.color_attributes.new("Masks", "FLOAT_COLOR", "POINT")
-    layer.data.foreach_set("color", colours.astype(np.float32).ravel())
+    # No vertex colours: the biome shader reads the masks and the normals from the surface textures (Terrain.surface).
     obj = bpy.data.objects.new(name, mesh)
     collection.objects.link(obj)
     palette.apply_uvs(obj, palette_only=True)
@@ -818,9 +867,6 @@ def make_backdrop(t, collection, material, rings=None, segments=None):
     mesh = bpy.data.meshes.new("Backdrop")
     mesh.from_pydata(verts, [], faces)
     mesh.attributes.new("swatch", "INT", "FACE").data.foreach_set("value", swatches)
-    # Zero biome masks (no flow, hollow, made ground or scree): without them Unity reads white (all masks on).
-    mesh.color_attributes.new("Masks", "FLOAT_COLOR", "POINT").data.foreach_set(
-        "color", np.zeros(len(verts) * 4, dtype=np.float32))
     obj = bpy.data.objects.new("Backdrop", mesh)
     collection.objects.link(obj)
     palette.apply_uvs(obj, palette_only=True)

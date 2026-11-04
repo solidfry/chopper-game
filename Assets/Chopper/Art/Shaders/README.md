@@ -92,8 +92,9 @@ Reference names must be exactly these (the Name can be anything).
 
 Written without the editor (4 Nov 2026): open it once in Unity and check it compiles.
 
-- `TerrainBiome.hlsl`: the custom function. Inputs: world position, world normal, vertex colour (the biome masks the
-  CityForge terrain FBX carries: R flow, G hollow, B made ground, A scree), `_BiomeTable`, `_BiomeIndex`.
+- `TerrainBiome.hlsl`: the custom function. Inputs: world position, world normal, `_MaskMap` (map-wide biome masks:
+  R flow, G hollow, B made ground, A scree), `_SurfaceNormal` (map-wide world normal map), `_MapSize` (m; 0 = no
+  maps), `_BiomeTable`, `_BiomeIndex`. Setup step 8 sets all of them from `<kit>.terrain.json` ("surface").
 - `TerrainBiome.shadergraph`: URP Lit graph around it, written by `Tools/CityForge/make_city_graphs.py` (run it
   again when the function's inputs change).
 - The biome table (`Assets/Chopper/Art/City/<kit>/Terrain/<kit>_BiomeTable.png`, one row of 16 pixels per biome:
@@ -105,8 +106,9 @@ Editor steps (until a Setup step does them):
    Wrap Clamp.
 2. Material: Create → Material, shader `Shader Graphs/TerrainBiome`; set `_BiomeTable` to the table, `_BiomeIndex` to
    the biome row (0 desert ... 5 toxic).
-3. Terrain chunk FBX (`Terrain/Terrain_*.fbx`): Model import, keep vertex colours on; remap the `City01_Terrain`
-   material to the new material.
+3. Terrain chunk FBX (`Terrain/Terrain_*.fbx`): remap the `<kit>_Terrain` material to the new material. Surface maps
+   (`Terrain/<kit>_TerrainMasks.png`, `<kit>_TerrainNormal.png`): **sRGB off**, Bilinear, mipmaps on, Clamp, max size
+   2048, compression High Quality; `_MapSize` = the terrain size in the JSON.
 4. Detail maps (CC0, `Assets/Chopper/Art/ThirdParty/CC0`): `_RockColour` RockFace_Colour, `_RockNormal`
    RockFace_Normal, `_SandColour` GravellySand_Colour, `_SandNormal` GravellySand_Normal, `_MudColour`
    DryMud_Colour, `_CoverColour` WindSnow_Colour; `_DetailStrength` 1. Import the `_Normal` files as **Normal map**,

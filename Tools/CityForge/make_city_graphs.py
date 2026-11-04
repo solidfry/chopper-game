@@ -30,12 +30,15 @@ KIND = {"float": "Vector1MaterialSlot", "vec2": "Vector2MaterialSlot", "vec3": "
 
 GRAPHS = {
     "TerrainBiome": dict(
-        properties=[("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0),
+        properties=[("_MaskMap", "Mask Map", "tex", 1), ("_SurfaceNormal", "Surface Normal", "tex", 2),
+                    ("_MapSize", "Map Size", "float", 0.0),
+                    ("_BiomeTable", "Biome Table", "tex", 1), ("_BiomeIndex", "Biome Index", "float", 0.0),
                     ("_RockColour", "Rock Colour", "tex", 0), ("_RockNormal", "Rock Normal", "normal", 3),
                     ("_SandColour", "Sand Colour", "tex", 0), ("_SandNormal", "Sand Normal", "normal", 3),
                     ("_MudColour", "Mud Colour", "tex", 0), ("_CoverColour", "Cover Colour", "tex", 0),
                     ("_DetailStrength", "Detail Strength", "float", 1.0)],
-        inputs=[("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"), ("Masks", "vec4", "colour"),
+        inputs=[("PositionWS", "vec3", "position"), ("NormalWS", "vec3", "normal"),
+                ("MaskMap", "tex", "_MaskMap"), ("SurfaceNormal", "tex", "_SurfaceNormal"), ("MapSize", "float", "_MapSize"),
                 ("BiomeTable", "tex", "_BiomeTable"), ("BiomeIndex", "float", "_BiomeIndex"),
                 ("RockColour", "tex", "_RockColour"), ("RockNormal", "tex", "_RockNormal"),
                 ("SandColour", "tex", "_SandColour"), ("SandNormal", "tex", "_SandNormal"),

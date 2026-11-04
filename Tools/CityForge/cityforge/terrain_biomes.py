@@ -1,6 +1,7 @@
 """
-Terrain biomes: one procedural ground shader, many looks. The terrain bakes biome-free facts into its vertex colours
-(terrain.Terrain.masks: R flow, G hollow, B made ground, A scree); a biome is only numbers and colours. The same rules
+Terrain biomes: one procedural ground shader, many looks. The terrain bakes biome-free facts into two map-wide textures
+(terrain.Terrain.surface): masks (R flow, G hollow, B made ground, A scree) and a world normal map with the small
+gullies; a biome is only numbers and colours. The same rules
 run in three places:
     Assets/Chopper/Art/Shaders/TerrainBiome.hlsl   the game (URP Shader Graph custom function, reads the biome table)
     make_material() below                          Blender previews (Cycles node tree)
@@ -17,6 +18,8 @@ Rules (per pixel; slope = 1 - normal.y; world position p):
 """
 import math
 import os
+
+import numpy as np
 import struct
 import zlib
 
@@ -83,8 +86,9 @@ BIOMES = {
         roughness=0.8),
     # Black basalt and ash; lava glows in the strongest flow lines.
     "volcanic": dict(
-        ground=("#2f2b28", "#3b3430"), sediment="#1f1c1a", rock=("#1e1c1b", "#2d2926", "#3a2a22", "#262321"),
-        band=8.0, cliff="#141312", scree="#4a4440", cover="#5a5450", cover_slope=0.3, cover_height=120.0,
+        # Ash flats, then wall bands: dark basalt, rusty oxidised cinder, buff tuff, grey ash.
+        ground=("#4a443e", "#3a342f"), sediment="#2c2724", rock=("#2a2725", "#5a3b2c", "#6e6151", "#403a35"),
+        band=8.0, cliff="#221f1d", scree="#3b3430", cover="#7c766c", cover_slope=0.3, cover_height=120.0,
         cover_amount=0.6, wet=0.0, flow_wet=0.0, glow="#ff3a0a", glow_strength=3.0, glow_flow=0.55,
         concrete="#55524f", roughness=0.95),
     # Poisoned waste: sick yellow-green ground, crusted rock, glowing runs.
@@ -144,8 +148,31 @@ def write_table(path):
 
 # -- Blender preview material ------------------------------------------------------------------------------------------
 
-def make_material(biome, name="CF Terrain"):
-    """Cycles node tree with the same rules (approximately: Blender noise, not the shader's hash noise)."""
+def surface_images(t, kit):
+    """Blender images of the terrain surface textures (terrain.Terrain.surface): (masks, normal, map size m)."""
+    import bpy
+
+    out = []
+    for suffix, data in zip(("SurfaceMasks", "SurfaceNormal"), t.surface()):
+        if suffix == "SurfaceNormal":
+            data = np.concatenate([data * 0.5 + 0.5, np.ones(data.shape[:2] + (1,), np.float32)], axis=-1)
+        name = f"{kit}_{suffix}"
+        image = bpy.data.images.get(name)
+        if image is not None:
+            bpy.data.images.remove(image)
+        res = data.shape[0]
+        image = bpy.data.images.new(name, res, res, alpha=True, float_buffer=True, is_data=True)
+        image.colorspace_settings.name = "Non-Color"
+        image.alpha_mode = "CHANNEL_PACKED"
+        image.pixels.foreach_set(np.ascontiguousarray(data, np.float32).ravel())   # row 0 = -Z = bottom
+        image.pack()
+        out.append(image)
+    return out[0], out[1], float(t.values["size"])
+
+
+def make_material(biome, name="CF Terrain", surface=None):
+    """Cycles node tree with the same rules (approximately: Blender noise, not the shader's hash noise). surface:
+    surface_images(); without it the ground has no masks and only the mesh normals."""
     import bpy
 
     b = BIOMES[biome]
@@ -207,18 +234,57 @@ def make_material(biome, name="CF Terrain"):
 
     geometry = new("ShaderNodeNewGeometry")
     position, normal = geometry.outputs["Position"], geometry.outputs["Normal"]
+    if surface is not None:
+        # Map UV from the object position (relative to the city centre): Blender (-x, -z, y) = Unity (x, y, z), so
+        # u = x / size + 0.5 = -bx / size + 0.5, v = -by / size + 0.5. Outside the map: clip (alpha 0).
+        mask_image, normal_image, size = surface
+        coords = new("ShaderNodeTexCoord")
+        mapping = new("ShaderNodeMapping")
+        mapping.inputs["Scale"].default_value = (-1.0 / size, -1.0 / size, 1.0)
+        mapping.inputs["Location"].default_value = (0.5, 0.5, 0.0)
+        link(coords.outputs["Object"], mapping.inputs["Vector"])
+
+        def image_node(image):
+            node = new("ShaderNodeTexImage")
+            node.image = image
+            node.interpolation = "Cubic"
+            node.extension = "CLIP"
+            link(mapping.outputs["Vector"], node.inputs["Vector"])
+            return node
+
+        mask_node, normal_node = image_node(mask_image), image_node(normal_image)
+        masks = new("ShaderNodeSeparateColor")
+        link(mask_node.outputs["Color"], masks.inputs[0])
+        flow, hollow, made = masks.outputs[0], masks.outputs[1], masks.outputs[2]
+        scree = mask_node.outputs["Alpha"]
+        unpack = new("ShaderNodeVectorMath")
+        unpack.operation = "MULTIPLY_ADD"
+        link(normal_node.outputs["Color"], unpack.inputs[0])
+        unpack.inputs[1].default_value = (2.0, 2.0, 2.0)
+        unpack.inputs[2].default_value = (-1.0, -1.0, -1.0)
+        parts = new("ShaderNodeSeparateXYZ")
+        link(unpack.outputs[0], parts.inputs[0])
+        blender_n = new("ShaderNodeCombineXYZ")
+        link(math_node("MULTIPLY", parts.outputs["X"], -1.0), blender_n.inputs["X"])
+        link(math_node("MULTIPLY", parts.outputs["Z"], -1.0), blender_n.inputs["Y"])
+        link(parts.outputs["Y"], blender_n.inputs["Z"])
+        pick = new("ShaderNodeMix")
+        pick.data_type = "VECTOR"
+        link(normal_node.outputs["Alpha"], pick.inputs[0])
+        link(normal, pick.inputs[4])
+        link(blender_n.outputs[0], pick.inputs[5])
+        tidy = new("ShaderNodeVectorMath")
+        tidy.operation = "NORMALIZE"
+        link(pick.outputs[1], tidy.inputs[0])
+        normal = tidy.outputs[0]
+    else:
+        flow = hollow = made = scree = new("ShaderNodeValue").outputs[0]
     split_n = new("ShaderNodeSeparateXYZ")
     link(normal, split_n.inputs[0])
     split_p = new("ShaderNodeSeparateXYZ")
     link(position, split_p.inputs[0])
     height = split_p.outputs["Z"]
     slope = math_node("SUBTRACT", 1.0, split_n.outputs["Z"])
-    attribute = new("ShaderNodeAttribute")
-    attribute.attribute_name = "Masks"
-    masks = new("ShaderNodeSeparateColor")
-    link(attribute.outputs["Color"], masks.inputs[0])
-    flow, hollow, made = masks.outputs[0], masks.outputs[1], masks.outputs[2]
-    scree = attribute.outputs["Alpha"]
 
     def noise(scale_m, detail=2.0):
         node = new("ShaderNodeTexNoise")
@@ -277,6 +343,20 @@ def make_material(biome, name="CF Terrain"):
     rock = detailed(rock, rock_detail)
     cliff = ramp(slope, 0.30, 0.55)
     rock = mix(rock, colour(b["cliff"]), ramp(slope, 0.7, 0.95))
+    # Rock varnish: dark streaks down the walls (3D noise stretched 9x in height), and darker gully floors.
+    def streaks(across, down):
+        mapping = new("ShaderNodeMapping")
+        mapping.inputs["Scale"].default_value = (1.0 / across, 1.0 / across, 1.0 / down)
+        link(position, mapping.inputs["Vector"])
+        node = new("ShaderNodeTexNoise")
+        node.noise_dimensions = "3D"
+        node.inputs["Detail"].default_value = 1.0
+        link(mapping.outputs["Vector"], node.inputs["Vector"])
+        return node.outputs["Fac"]
+
+    streak = math_node("ADD", math_node("MULTIPLY", streaks(5.0, 45.0), 0.6), math_node("MULTIPLY", streaks(2.0, 18.0), 0.4))
+    rock = mix(rock, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", ramp(streak, 0.45, 0.7), 0.45))
+    rock = mix(rock, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", hollow, 0.4))
     result = mix(ground, rock, cliff)
     open_ground = math_node("SUBTRACT", 1.0, cliff)
     result = mix(result, colour(b["scree"]), math_node("MULTIPLY", scree, open_ground))
@@ -332,7 +412,10 @@ def make_material(biome, name="CF Terrain"):
         bump.inputs["Strength"].default_value = 0.35
         bump.inputs["Distance"].default_value = 0.5
         link(height.outputs[0], bump.inputs["Height"])
+        link(normal, bump.inputs["Normal"])
         link(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    else:
+        link(normal, bsdf.inputs["Normal"])
     roughness = math_node("SUBTRACT", b["roughness"], math_node("MULTIPLY", wet, 0.55), clamp=True)
     link(roughness, bsdf.inputs["Roughness"])
     if b["glow"]:

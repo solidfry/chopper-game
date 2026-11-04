@@ -1,7 +1,10 @@
 // TerrainBiome: procedural ground for CityForge terrain chunks, one shader for every biome.
 //
-// The terrain FBX carries biome-free facts in its vertex colour (linear): R flow (gullies, river beds), G hollow
-// (concave ground), B made ground (city floor, roads, channel), A scree (loose rock below cliffs). A biome is one row
+// Biome-free facts come from two map-wide textures (CityForge terrain.Terrain.surface, 1.5 m per texel; uv = xz /
+// MapSize + 0.5, the map centred on the origin): MaskMap RGBA = R flow (gullies, river beds), G hollow (concave
+// ground), B made ground (city floor, roads, channel), A scree (loose rock below cliffs); SurfaceNormal RGB = world
+// normal * 0.5 + 0.5 with small gullies the mesh does not have (so every LOD lights the same). Outside the map (the
+// backdrop) or with MapSize 0: no masks, mesh normal. A biome is one row
 // of 16 pixels in _BiomeTable (Tools/CityForge/cityforge/terrain_biomes.py writes it; the same rules make the Blender
 // previews). Colours come from world position and noise; CC0 detail maps (rock on three axes, sand and mud from
 // above) only shade them and add normal detail, so cliffs do not stretch. Output normal: world space.
@@ -35,6 +38,26 @@ float TB_Noise(float2 p)
     float c = TB_Hash(i + float2(0.0, 1.0));
     float d = TB_Hash(i + float2(1.0, 1.0));
     return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
+}
+
+float TB_Hash3(float3 p)
+{
+    p = frac(p * float3(123.34, 456.21, 789.53));
+    p += dot(p, p.yzx + 45.32);
+    return frac((p.x + p.y) * p.z);
+}
+
+// 3D value noise 0..1: works on any face (no projection), so a stretched scale gives streaks down every wall.
+float TB_Noise3(float3 p)
+{
+    float3 i = floor(p);
+    float3 f = frac(p);
+    float3 u = f * f * (3.0 - 2.0 * f);
+    float a = lerp(TB_Hash3(i), TB_Hash3(i + float3(1, 0, 0)), u.x);
+    float b = lerp(TB_Hash3(i + float3(0, 1, 0)), TB_Hash3(i + float3(1, 1, 0)), u.x);
+    float c = lerp(TB_Hash3(i + float3(0, 0, 1)), TB_Hash3(i + float3(1, 0, 1)), u.x);
+    float d = lerp(TB_Hash3(i + float3(0, 1, 1)), TB_Hash3(i + float3(1, 1, 1)), u.x);
+    return lerp(lerp(a, b, u.y), lerp(c, d, u.y), u.z);
 }
 
 float TB_Fbm(float2 p, int octaves)
@@ -102,7 +125,24 @@ float3 TB_Colour(UnityTexture2D table, float row, float rows, int texel)
     return TB_Linear(TB_Row(table, row, rows, texel).rgb);
 }
 
-void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityTexture2D BiomeTable, float BiomeIndex,
+// Masks and surface normal at a world position; inside = 1 on the map, 0 outside (fades over the last texels).
+void TB_Surface(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal, float MapSize,
+    out float4 masks, out float3 normal)
+{
+    // No early return: texture samples need derivatives, so they stay out of branches.
+    float size = max(MapSize, 1.0);
+    float2 uv = PositionWS.xz / size + 0.5;
+    float2 edge = min(uv, 1.0 - uv) * size;             // metres to the map edge
+    float inside = saturate(min(edge.x, edge.y) / 6.0) * step(1.0, MapSize);
+    normal = normalize(NormalWS);
+    masks = SAMPLE_TEXTURE2D(MaskMap.tex, MaskMap.samplerstate, uv) * inside;
+    float3 baked = SAMPLE_TEXTURE2D(SurfaceNormal.tex, SurfaceNormal.samplerstate, uv).xyz * 2.0 - 1.0;
+    baked = dot(baked, baked) > 0.01 ? normalize(baked) : normal;   // a grey default map would be a zero vector
+    normal = normalize(lerp(normal, baked, inside));
+}
+
+void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal,
+    float MapSize, UnityTexture2D BiomeTable, float BiomeIndex,
     UnityTexture2D RockColour, UnityTexture2D RockNormal, UnityTexture2D SandColour, UnityTexture2D SandNormal,
     UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
@@ -118,14 +158,16 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityT
     float glowFlow = p12.w;
     float wetBase = p13.x, flowWet = p13.y, roughness = p13.z, hasCover = p13.w;
 
+    float4 Masks;
+    float3 n;
+    TB_Surface(PositionWS, NormalWS, MaskMap, SurfaceNormal, MapSize, Masks, n);
     float flow = Masks.r, hollow = Masks.g, made = Masks.b, scree = Masks.a;
-    float slope = 1.0 - saturate(normalize(NormalWS).y);
+    float slope = 1.0 - saturate(n.y);
     float2 xz = PositionWS.xz;
     float macro = TB_Fbm(xz / 180.0, 3);
     float detail = TB_Fbm(xz / 9.0, 4);
     float shade = 0.85 + 0.3 * detail;
 
-    float3 n = normalize(NormalWS);
     float3 blend = TB_Blend(n);
     float sandF = lerp(1.0, TB_Detail(SAMPLE_TEXTURE2D(SandColour.tex, SandColour.samplerstate, xz / 4.0).rgb), DetailStrength);
     float mudF = lerp(1.0, TB_Detail(SAMPLE_TEXTURE2D(MudColour.tex, MudColour.samplerstate, xz / 5.0).rgb), DetailStrength);
@@ -137,6 +179,10 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityT
     int strata = (int)floor(frac((PositionWS.y + warp) / (band * 4.0)) * 4.0);
     float3 rock = TB_Colour(BiomeTable, row, rows, 3 + clamp(strata, 0, 3)) * shade * rockF;
     rock = lerp(rock, TB_Colour(BiomeTable, row, rows, 7), smoothstep(0.7, 0.95, slope));
+    // Rock varnish: dark streaks down the walls (noise stretched 9x in height), and darker gully floors.
+    float streak = 0.6 * TB_Noise3(PositionWS / float3(5.0, 45.0, 5.0)) + 0.4 * TB_Noise3(PositionWS / float3(2.0, 18.0, 2.0));
+    rock *= 1.0 - 0.45 * smoothstep(0.45, 0.7, streak);
+    rock *= 1.0 - 0.4 * hollow;
     float cliff = smoothstep(0.30, 0.55, slope);
     float3 colour = lerp(ground, rock, cliff);
     float open = 1.0 - cliff;
@@ -184,13 +230,14 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityT
     AmbientOcclusion = 1.0 - 0.35 * hollow;
 }
 
-void TerrainBiome_half(float3 PositionWS, float3 NormalWS, float4 Masks, UnityTexture2D BiomeTable, float BiomeIndex,
+void TerrainBiome_half(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal,
+    float MapSize, UnityTexture2D BiomeTable, float BiomeIndex,
     UnityTexture2D RockColour, UnityTexture2D RockNormal, UnityTexture2D SandColour, UnityTexture2D SandNormal,
     UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
     out float AmbientOcclusion)
 {
-    TerrainBiome_float(PositionWS, NormalWS, Masks, BiomeTable, BiomeIndex, RockColour, RockNormal, SandColour,
+    TerrainBiome_float(PositionWS, NormalWS, MaskMap, SurfaceNormal, MapSize, BiomeTable, BiomeIndex, RockColour, RockNormal, SandColour,
                        SandNormal, MudColour, CoverColour, DetailStrength, Albedo, Metallic, Smoothness, NormalOut, Emission,
                        AmbientOcclusion);
 }

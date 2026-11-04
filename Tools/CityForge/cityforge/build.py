@@ -38,6 +38,7 @@ class State:
         self.district, self.lineup, self.choppers = [], [], []
         self.placements = {}  # building name -> Unity position of its plot centre in the district
         self.terrain, self.terrain_chunks, self.terrain_shown = None, [], []
+        self.surface = None
         self.centre, self.channel_z = (0.0, 0.0, 0.0), None
 
 
@@ -289,7 +290,8 @@ def _make_terrain(scene, state, material):
     export_collection = _collection(scene, TERRAIN_EXPORT)
     # Ground material: the biome shader's preview (terrain_biomes.py); the game uses TerrainBiome.shadergraph.
     state.biome = state.style.get("biome", "desert")
-    ground = terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain")
+    state.surface = terrain_biomes.surface_images(t, state.kit)
+    ground = terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain", state.surface)
     state.terrain_chunks = terrain.make_chunks(t, export_collection, ground)
     state.backdrop = [terrain.make_backdrop(t, export_collection, ground),
                       terrain.make_skyline(t, export_collection, material)]
@@ -501,8 +503,8 @@ def export_terrain(state, out_dir):
                              "triangles": sum(len(p.vertices) - 2 for p in obj.data.polygons)})
     finally:
         collection.hide_viewport = True
-    masks = f"{state.kit}_TerrainMasks.png"
-    t.write_masks(os.path.join(folder, masks))
+    masks, normals = f"{state.kit}_TerrainMasks.png", f"{state.kit}_TerrainNormal.png"
+    t.write_surface(os.path.join(folder, masks), os.path.join(folder, normals))
     table = terrain_biomes.write_table(os.path.join(folder, f"{state.kit}_BiomeTable.png"))
     raw = f"{state.kit}_Height.raw"
     low, high = t.write_raw(os.path.join(folder, raw))
@@ -515,9 +517,14 @@ def export_terrain(state, out_dir):
         "lod": {"levels": len(terrain.LOD_FACTORS), "screenHeights": list(LOD_SCREEN_HEIGHTS),
                 "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). "
                         "Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."},
-        "uv": "UV0 = palette swatch (fallback). Vertex colour (linear) = biome masks: R flow, G hollow, B made ground "
-              "(city, roads, channel), A scree. Material: TerrainBiome shader graph.",
-        "biomes": dict(table, current=state.biome, masks=f"Terrain/{masks}",
+        "uv": "UV0 = palette swatch (fallback). No vertex colours: the TerrainBiome shader graph reads the surface "
+              "textures by world position.",
+        "surface": {"masks": f"Terrain/{masks}", "normal": f"Terrain/{normals}", "size": t.values["size"],
+                    "resolution": t.values["surface"]["resolution"],
+                    "note": "Whole map, centred on the origin; first image row = +Z edge. uv = xz / size + 0.5. Both "
+                            "linear (sRGB off), bilinear, clamp. Masks RGBA: R flow, G hollow, B made ground (city, "
+                            "roads, channel), A scree. Normal RGB = world normal * 0.5 + 0.5 (Unity axes)."},
+        "biomes": dict(table, current=state.biome,
                        note="Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, "
                             "no mipmaps, no compression. _BiomeIndex = row."),
         "collider": "Mesh collider from each chunk's LOD0 mesh.",
@@ -963,7 +970,7 @@ def _biome_sheet(state, scene, camera, aim, path):
     set_time(scene, night=False)
     try:
         for biome in terrain_biomes.NAMES:
-            terrain_biomes.make_material(biome, f"{state.kit}_Terrain")
+            terrain_biomes.make_material(biome, f"{state.kit}_Terrain", state.surface)
             tile = os.path.join(os.path.dirname(path), ".biome.jpg")
             _render_view(state, scene, tile, False)
             image = bpy.data.images.load(tile)
@@ -974,7 +981,7 @@ def _biome_sheet(state, scene, camera, aim, path):
             os.remove(tile)
     finally:
         scene.render.resolution_x, scene.render.resolution_y = width, height
-        terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain")
+        terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain", state.surface)
     columns = 3
     rows = [np.concatenate(tiles[i:i + columns], axis=1) for i in range(0, len(tiles), columns)]
     sheet = np.concatenate(rows[::-1], axis=0)

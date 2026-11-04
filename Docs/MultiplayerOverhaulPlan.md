@@ -548,7 +548,9 @@ the editor): materials, building prefabs, city scene `Assets/Scenes/City01.unity
 and fix compile errors in the editor, a match scene with the city, Blender panel.
 Then (4 Nov) map styles: a style sets biome, terrain shape, building mix; second map City04 (`crater`: volcanic
 crater, lava moat, refinery). More map ideas in `Tools/CityForge/README.md`.
-Realism plan (owner order, 4 Nov): 1. terrain (erosion, boulders, cooled lava fields, ground marks); 2. connecting
+Realism plan (owner order, 4 Nov): 1. terrain (ground marks; droplet erosion, boulders and lava lumps in the mesh
+were tried and removed: they looked broken. Now: map-wide surface textures, masks and a normal map with gullies,
+1.5 m per texel, read by the shader; big gullies in the mesh); 2. connecting
 detail (refinery pipe network, stairs and walkways, cables, yard vehicles, street props, more footprints); 3. building
 surfaces (interior-mapped windows, per-copy variation, panel detail, wet roads); 4. light and air (steam and smoke VFX,
 heat haze, height fog, SSAO, reflection probes, local and animated lights); 5. life (traffic, drones) last.

@@ -41,10 +41,12 @@ What a style can set:
   hugging the edges of the free space). Defaults in `layout.DEFAULTS`.
 - `terrain`: any `terrain.DEFAULTS` value; `mesas.shape = "cone"` (with `top`, the flat share) makes cinder cones;
   `lava` (moat size, streams, width, depth) adds lava (full flow in the masks, so the biome's glow shows on it).
-- `terrain.erosion` (water droplets cut gullies, `cityforge/erosion.py`), `terrain.boulders` (rocks on the scree in
-  the chunk meshes, so the colliders have them), `lava.field` (lumpy cooled lava beside the lava). City04 uses all;
-  City01 not yet. Made ground (city floor, roads) gets concrete slabs, oil stains, cracks and edge dirt in the
-  terrain shader and the preview.
+- `terrain.gullies`: big gullies cut down steep rock in the mesh, `[(cell m, depth m), ...]` (slope-aligned waves,
+  `terrain.gully_noise`). `terrain.surface`: the surface textures (resolution, the small gully octaves that are only
+  in the normal map, hollow strength). Strata terraces only on steep rock. Made ground (city floor, roads) gets
+  concrete slabs, oil stains, cracks and edge dirt in the terrain shader and the preview.
+- Tried and removed (4 Nov): droplet erosion on the 6 m mesh, boulders and cooled-lava lumps in the mesh. At this
+  mesh size they looked broken, so detail now goes into the surface textures and the shader instead.
 - Buildings with `only=(style, ...)` in `specs.py` belong to those styles (the refinery set: `Ind_Refinery`,
   `Ind_Cooling`, `Ind_Spheres`; industrial parts: distillation columns, cooling towers, gas spheres, flare stacks,
   pipe racks).
@@ -138,9 +140,12 @@ buildings, top-down on flat ground). Previews use them too when they are present
 
 ## Terrain biomes (procedural ground)
 
-One ground shader for every biome. The terrain bakes biome-free facts into the chunk vertex colours (linear): R flow
-(D8 flow accumulation: gullies, river beds), G hollow (concave ground), B made ground (city, roads, channel), A scree
-(below cliffs); the same masks go out as `Terrain/City01_TerrainMasks.png`. A biome (`cityforge/terrain_biomes.py`)
+One ground shader for every biome. The terrain bakes biome-free facts into two map-wide textures (`Terrain.surface`,
+2048² over the 3072 m map = 1.5 m per texel, first row = +Z, uv = xz / size + 0.5): `Terrain/<kit>_TerrainMasks.png`
+RGBA = R flow (D8 flow accumulation: gullies, river beds; lava forced to 1), G hollow (concave ground: curvature of
+the detailed surface), B made ground (city, roads, channel), A scree (below cliffs); `Terrain/<kit>_TerrainNormal.png`
+RGB = world normal * 0.5 + 0.5: the height field resampled smoothly, plus small gullies on steep rock. The mesh has no
+vertex colours; lava, roads and the city edge are sharp at texel size, and every LOD lights the same. A biome (`cityforge/terrain_biomes.py`)
 is only colours and numbers: ground (two colours mixed by large noise), sediment, 4 rock strata colours by height
 band, cliff, scree, a cover layer (snow, moss, ash) on gentle slopes above a height, wetness (rain and flow lines),
 glow in strong flow lines (lava, toxic runs), concrete. Biomes: `desert` (default), `rain_desert`, `arctic`, `jungle`,
