@@ -161,7 +161,8 @@ def surface_images(t, kit):
         if image is not None:
             bpy.data.images.remove(image)
         res = data.shape[0]
-        image = bpy.data.images.new(name, res, res, alpha=True, float_buffer=True, is_data=True)
+        # 8-bit (the data is 8-bit in the game too): packed into the .blend as PNG, not as a big float image.
+        image = bpy.data.images.new(name, res, res, alpha=True, float_buffer=False, is_data=True)
         image.colorspace_settings.name = "Non-Color"
         image.alpha_mode = "CHANNEL_PACKED"
         image.pixels.foreach_set(np.ascontiguousarray(data, np.float32).ravel())   # row 0 = -Z = bottom
