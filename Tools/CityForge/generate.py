@@ -43,11 +43,14 @@ def main():
     parser.add_argument("--no-blend", action="store_true")
     parser.add_argument("--no-terrain", action="store_true", help="Buildings only (no terrain, no layout).")
     parser.add_argument("--samples", type=int, default=32)
+    parser.add_argument("--biome", default=None, help="Terrain biome (cityforge/terrain_biomes.py); default: style's.")
     parser.add_argument("--audit", action="store_true", help="Check the buildings only; exit 1 on problems.")
     args = parser.parse_args(argv)
 
     style = styles.get(args.style)
     kit = args.kit or style["kit"]
+    if args.biome:
+        styles.STYLES[args.style]["biome"] = args.biome
     names = args.only.split(",") if args.only else None
 
     if args.audit:

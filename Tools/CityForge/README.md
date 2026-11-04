@@ -90,6 +90,20 @@ channel corridor, every building on flat ground, road colliders cover the decks.
   the suggested numbers for the game are in the terrain manifest (`atmosphere`). Cloud ceiling and sandstorm wall
   are for the Unity step.
 
+## Terrain biomes (procedural ground)
+
+One ground shader for every biome. The terrain bakes biome-free facts into the chunk vertex colours (linear): R flow
+(D8 flow accumulation: gullies, river beds), G hollow (concave ground), B made ground (city, roads, channel), A scree
+(below cliffs); the same masks go out as `Terrain/City01_TerrainMasks.png`. A biome (`cityforge/terrain_biomes.py`)
+is only colours and numbers: ground (two colours mixed by large noise), sediment, 4 rock strata colours by height
+band, cliff, scree, a cover layer (snow, moss, ash) on gentle slopes above a height, wetness (rain and flow lines),
+glow in strong flow lines (lava, toxic runs), concrete. Biomes: `desert` (default), `rain_desert`, `arctic`, `jungle`,
+`volcanic`, `toxic`; `--biome NAME` picks the preview biome; `biomes_sheet.jpg` shows all of them.
+
+The game: `Assets/Chopper/Art/Shaders/TerrainBiome.hlsl` (same rules) in `TerrainBiome.shadergraph` (written by
+`make_terrain_graph.py`), with `Terrain/City01_BiomeTable.png` (one row of 16 pixels per biome) and `_BiomeIndex`.
+See the Shaders README for the editor steps.
+
 ## Terrain
 
 `cityforge/terrain.py` (on by default; `--no-terrain` skips it). A 3 km desert basin round the district (numpy
@@ -122,7 +136,7 @@ Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityfor
 `scale_pad_*.jpg` (a Gunship on a megatower wall pad), `scale_flyby_*.jpg` (a Scout flying past, seen from below),
 `skyline_*.jpg` (the megatowers from chopper height), `bridge_*.jpg` (a Gunship under a sky bridge),
 `landmarks_*.jpg`, `freeway_*.jpg`, `tunnel_*.jpg` (the west tunnel portal), `skyloop_*.jpg`, `spiral_*.jpg`,
-`rim_*.jpg`, `terrain_overview_*.jpg`, `canyon_*.jpg` (a Gunship in the canyon), `channel_*.jpg` (a Scout in
+`rim_*.jpg`, `biomes_sheet.jpg` (the same view in every biome), `terrain_overview_*.jpg`, `canyon_*.jpg` (a Gunship in the canyon), `channel_*.jpg` (a Scout in
 the storm drain), `mesa_*.jpg` (a Lifter on a mesa top), `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
 `street_night.jpg` (chopper height, ground cues), `lods.jpg` (LOD0 / LOD1 / LOD2 side by side),
 `buildings_sheet.jpg` (every building alone).

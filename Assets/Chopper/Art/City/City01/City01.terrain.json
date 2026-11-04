@@ -14,7 +14,22 @@
     ],
     "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."
   },
-  "uv": "UV0 = palette swatch (the city material).",
+  "uv": "UV0 = palette swatch (fallback). Vertex colour (linear) = biome masks: R flow, G hollow, B made ground (city, roads, channel), A scree. Material: TerrainBiome shader graph.",
+  "biomes": {
+    "file": "City01_BiomeTable.png",
+    "width": 16,
+    "biomes": [
+      "desert",
+      "rain_desert",
+      "arctic",
+      "jungle",
+      "volcanic",
+      "toxic"
+    ],
+    "current": "desert",
+    "masks": "Terrain/City01_TerrainMasks.png",
+    "note": "Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, no mipmaps, no compression. _BiomeIndex = row."
+  },
   "collider": "Mesh collider from each chunk's LOD0 mesh.",
   "heightmap": {
     "file": "Terrain/City01_Height.raw",

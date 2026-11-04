@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain
+from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain, terrain_biomes
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -274,8 +274,11 @@ def _make_terrain(scene, state, material):
     state.terrain = t
     state.terrain_problems = t.audit()
     export_collection = _collection(scene, TERRAIN_EXPORT)
-    state.terrain_chunks = terrain.make_chunks(t, export_collection, material)
-    state.backdrop = [terrain.make_backdrop(t, export_collection, material),
+    # Ground material: the biome shader's preview (terrain_biomes.py); the game uses TerrainBiome.shadergraph.
+    state.biome = state.style.get("biome", "desert")
+    ground = terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain")
+    state.terrain_chunks = terrain.make_chunks(t, export_collection, ground)
+    state.backdrop = [terrain.make_backdrop(t, export_collection, ground),
                       terrain.make_skyline(t, export_collection, material)]
     shown = _collection(scene, TERRAIN_COLLECTION)
     for source in [objects[0] for _name, objects, _factors in state.terrain_chunks] + state.backdrop:
@@ -450,7 +453,7 @@ def _unity_bounds(obj):
     return ([min(p[k] for p in points) for k in range(3)], [max(p[k] for p in points) for k in range(3)])
 
 
-def _export_fbx(objects, path):
+def _export_fbx(objects, path, colours="NONE"):
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objects:
         obj.select_set(True)
@@ -461,7 +464,7 @@ def _export_fbx(objects, path):
         filepath=path, use_selection=True, object_types={"MESH", "EMPTY"},
         axis_forward="-Z", axis_up="Y", bake_space_transform=True, apply_scale_options="FBX_SCALE_ALL",
         mesh_smooth_type="EDGE", use_triangles=True, add_leaf_bones=False, bake_anim=False, path_mode="STRIP",
-        use_mesh_modifiers=True)
+        use_mesh_modifiers=True, colors_type=colours)
 
 
 def export_terrain(state, out_dir):
@@ -475,7 +478,7 @@ def export_terrain(state, out_dir):
     chunks = []
     try:
         for name, objects, factors in state.terrain_chunks:
-            _export_fbx(objects, os.path.join(folder, f"{name}.fbx"))
+            _export_fbx(objects, os.path.join(folder, f"{name}.fbx"), colours="LINEAR")
             chunks.append({"name": name, "file": f"Terrain/{name}.fbx", "stepFactors": list(factors),
                            "triangles": [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects]})
         backdrop = []
@@ -485,6 +488,9 @@ def export_terrain(state, out_dir):
                              "triangles": sum(len(p.vertices) - 2 for p in obj.data.polygons)})
     finally:
         collection.hide_viewport = True
+    masks = f"{state.kit}_TerrainMasks.png"
+    t.write_masks(os.path.join(folder, masks))
+    table = terrain_biomes.write_table(os.path.join(folder, f"{state.kit}_BiomeTable.png"))
     raw = f"{state.kit}_Height.raw"
     low, high = t.write_raw(os.path.join(folder, raw))
     cx, _cy, cz = state.centre
@@ -496,7 +502,11 @@ def export_terrain(state, out_dir):
         "lod": {"levels": len(terrain.LOD_FACTORS), "screenHeights": list(LOD_SCREEN_HEIGHTS),
                 "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). "
                         "Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."},
-        "uv": "UV0 = palette swatch (the city material).",
+        "uv": "UV0 = palette swatch (fallback). Vertex colour (linear) = biome masks: R flow, G hollow, B made ground "
+              "(city, roads, channel), A scree. Material: TerrainBiome shader graph.",
+        "biomes": dict(table, current=state.biome, masks=f"Terrain/{masks}",
+                       note="Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, "
+                            "no mipmaps, no compression. _BiomeIndex = row."),
         "collider": "Mesh collider from each chunk's LOD0 mesh.",
         "heightmap": {"file": f"Terrain/{raw}", "format": "RAW 16-bit little-endian (Unity: Windows byte order)",
                       "resolution": t.count, "min": round(low, 3), "max": round(high, 3),
@@ -793,6 +803,8 @@ def render_previews(state, preview_dir, samples=32, sheet=True):
     set_time(scene, night=False)
     _render_view(state, scene, os.path.join(preview_dir, "street_day.jpg"), False)
     _scale_shots(state, scene, camera, aim, preview_dir)
+    if state.terrain_shown:
+        _biome_sheet(state, scene, camera, aim, os.path.join(preview_dir, "biomes_sheet.jpg"))
     chopper_objects = state.library.objects() if getattr(state, "library", None) else []
     _visible(chopper_objects, False)
 
@@ -904,6 +916,45 @@ def _scale_shots(state, scene, camera, aim, preview_dir):
         set_time(scene, night=True)
         _render_view(state, scene, os.path.join(preview_dir, f"{name}_night.jpg"), True)
     set_time(scene, night=False)
+
+
+def _biome_sheet(state, scene, camera, aim, path):
+    """The same terrain view in every biome (terrain_biomes.NAMES order, 3 per row, by day, with haze)."""
+    import numpy as np
+
+    t = state.terrain
+    by_name = {obj.name: obj for obj in state.choppers}
+    shots = {name: (c, a, lens) for name, c, a, lens in _terrain_shots(state, by_name)}
+    view = shots.get("mesa") or shots["terrain_overview"]
+    camera.location, aim.location, camera.data.lens = view
+    width, height = scene.render.resolution_x, scene.render.resolution_y
+    scene.render.resolution_x, scene.render.resolution_y = width // 2, height // 2
+    tiles = []
+    set_time(scene, night=False)
+    try:
+        for biome in terrain_biomes.NAMES:
+            terrain_biomes.make_material(biome, f"{state.kit}_Terrain")
+            tile = os.path.join(os.path.dirname(path), ".biome.jpg")
+            _render_view(state, scene, tile, False)
+            image = bpy.data.images.load(tile)
+            pixels = np.empty(len(image.pixels), dtype=np.float32)
+            image.pixels.foreach_get(pixels)
+            tiles.append(pixels.reshape(image.size[1], image.size[0], 4))
+            bpy.data.images.remove(image)
+            os.remove(tile)
+    finally:
+        scene.render.resolution_x, scene.render.resolution_y = width, height
+        terrain_biomes.make_material(state.biome, f"{state.kit}_Terrain")
+    columns = 3
+    rows = [np.concatenate(tiles[i:i + columns], axis=1) for i in range(0, len(tiles), columns)]
+    sheet = np.concatenate(rows[::-1], axis=0)
+    out = bpy.data.images.new("CF Biomes", sheet.shape[1], sheet.shape[0])
+    out.pixels.foreach_set(sheet.ravel())
+    out.filepath_raw = path
+    out.file_format = "JPEG"
+    out.save()
+    bpy.data.images.remove(out)
+    del t
 
 
 def _building_sheet(state, scene, camera, aim, path, np):

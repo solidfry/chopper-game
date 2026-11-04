@@ -86,3 +86,25 @@ Reference names must be exactly these (the Name can be anything).
   them the same. PartForge uses the Python copy to render `previews/<kit>/skins_sheet.jpg`.
 - Table layout: `runtime.encode` (Python) = `SkinTable.Encode` (C#); the edit-mode test `SkinTableTests` checks they
   agree on the Kit02 manifest.
+
+
+# TerrainBiome shader graph (procedural terrain ground, every biome)
+
+Written without the editor (4 Nov 2026): open it once in Unity and check it compiles.
+
+- `TerrainBiome.hlsl`: the custom function. Inputs: world position, world normal, vertex colour (the biome masks the
+  CityForge terrain FBX carries: R flow, G hollow, B made ground, A scree), `_BiomeTable`, `_BiomeIndex`.
+- `TerrainBiome.shadergraph`: URP Lit graph around it, written by `Tools/CityForge/make_terrain_graph.py` (run it
+  again when the function's inputs change).
+- The biome table (`Assets/Chopper/Art/City/<kit>/Terrain/<kit>_BiomeTable.png`, one row of 16 pixels per biome:
+  desert, rain_desert, arctic, jungle, volcanic, toxic) comes from `Tools/CityForge/cityforge/terrain_biomes.py`. The
+  same rules make the Blender previews (`Tools/CityForge/previews/<kit>/biomes_sheet.jpg`).
+
+Editor steps (until a Setup step does them):
+1. Biome table texture: Texture Type Default, **sRGB off**, Filter **Point**, **no mipmaps**, Compression **None**,
+   Wrap Clamp.
+2. Material: Create → Material, shader `Shader Graphs/TerrainBiome`; set `_BiomeTable` to the table, `_BiomeIndex` to
+   the biome row (0 desert ... 5 toxic).
+3. Terrain chunk FBX (`Terrain/Terrain_*.fbx`): Model import, keep vertex colours on; remap the `City01_Terrain`
+   material to the new material.
+4. Check: flow lines darker and wet in the gullies, strata bands on cliffs, concrete on the city floor and roads.

@@ -292,6 +292,57 @@ class Terrain:
         return h
 
     # -- surface types ---------------------------------------------------------------------------------------------
+    def masks(self):
+        """Terrain facts for the biome shader, per height-field sample, 0..1 (RGBA = vertex colour, linear):
+        R flow   water flow (D8 flow accumulation, log scale): gullies, wet streaks, river beds, lava or toxic runs
+        G hollow concave ground (minus the Laplacian of a smoothed height): sediment, dirt, puddles
+        B made   city floor, roads, channel (no biome ground there)
+        A scree  loose rock spilled below cliffs (cliff mask blurred, minus the cliff itself)
+        The biome decides what each fact looks like (terrain_biomes.py, TerrainBiome.hlsl)."""
+        if getattr(self, "_masks", None) is not None:
+            return self._masks
+        h = self.h
+        n = self.count
+        # Flow: every sample passes its water to its lowest neighbour, highest samples first.
+        padded = np.pad(h, 1, mode="edge")
+        offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        drops = np.stack([(h - padded[1 + dz:1 + dz + n, 1 + dx:1 + dx + n]) / math.hypot(dz, dx)
+                          for dz, dx in offsets])
+        best = np.argmax(drops, axis=0)
+        has = drops.max(axis=0) > 1e-3
+        iz, ix = np.indices((n, n))
+        rz = np.clip(iz + np.array([o[0] for o in offsets])[best], 0, n - 1)
+        rx = np.clip(ix + np.array([o[1] for o in offsets])[best], 0, n - 1)
+        receiver = np.where(has, rz * n + rx, -1).ravel()
+        flow = np.ones(n * n)
+        for i in np.argsort(-h.ravel(), kind="stable"):
+            r = receiver[i]
+            if r >= 0:
+                flow[r] += flow[i]
+        flow = np.clip((np.log(flow.reshape(n, n)) - math.log(6.0)) / math.log(600.0), 0.0, 1.0)
+
+        def blur(a, passes):
+            for _ in range(passes):
+                a = (np.roll(a, 1, 0) + np.roll(a, -1, 0) + np.roll(a, 1, 1) + np.roll(a, -1, 1) + 4 * a) / 8
+            return a
+
+        smooth = blur(h, 2)
+        laplace = (np.roll(smooth, 1, 0) + np.roll(smooth, -1, 0) + np.roll(smooth, 1, 1) + np.roll(smooth, -1, 1)
+                   - 4 * smooth) / (STEP * STEP)
+        hollow = np.clip(laplace * 18.0, 0.0, 1.0)
+        gz, gx = np.gradient(h, STEP)
+        slope = np.degrees(np.arctan(np.hypot(gx, gz)))
+        cliff = (slope > 42.0).astype(float)
+        scree = np.clip(blur(cliff, 4) * 2.2 - cliff, 0.0, 1.0) * (slope < 40.0)
+        d = self._city_distance(self.x, self.z)
+        made = (d <= CITY_FLAT).astype(float)
+        made = np.maximum(made, (self.channel_distance < self.values["channel"]["top"] / 2).astype(float))
+        for road in getattr(self, "roads", []):
+            dr, _a, _t = polyline_distance(self.x, self.z, road["points"])
+            made = np.maximum(made, smoothstep(road["width"] / 2 + 4.0, road["width"] / 2, dr))
+        self._masks = np.stack([flow, hollow, made, scree], axis=-1)
+        return self._masks
+
     def cell_swatches(self):
         """City swatch name index per LOD0 cell: channel, city concrete, cliff strata, talus rock, sand."""
         h = self.h
@@ -394,6 +445,24 @@ class Terrain:
         return problems
 
     # -- export data -----------------------------------------------------------------------------------------------
+    def write_masks(self, path):
+        """The same masks as an RGBA PNG (rows from -Z, like the RAW height map), for a Unity Terrain."""
+        import struct
+        import zlib
+
+        data = np.clip(np.round(self.masks()[::-1] * 255.0), 0, 255).astype(np.uint8)
+        height, width = data.shape[:2]
+        raw = np.concatenate([np.zeros((height, 1), np.uint8), data.reshape(height, width * 4)], axis=1)
+
+        def chunk(kind, payload):
+            return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload))
+
+        with open(path, "wb") as handle:
+            handle.write(b"\x89PNG\r\n\x1a\n")
+            handle.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)))
+            handle.write(chunk(b"IDAT", zlib.compress(raw.tobytes(), 7)))
+            handle.write(chunk(b"IEND", b""))
+
     def write_raw(self, path):
         """16-bit little-endian RAW (Unity Terrain import: Mac/Windows byte order = Windows), rows from -Z to +Z."""
         low, high = float(self.h.min()), float(self.h.max())
@@ -479,6 +548,13 @@ def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
     mesh.from_pydata(verts, [], faces)
     attribute = mesh.attributes.new("swatch", "INT", "FACE")
     attribute.data.foreach_set("value", swatches)
+    # Biome masks as vertex colour (point domain; skirt vertices copy their edge vertex).
+    masks = t.masks()[np.ix_(iz, ix)].reshape(-1, 4)
+    skirt_count = len(verts) - masks.shape[0]
+    edge_rows = np.concatenate([grid[0, :], grid[-1, :], grid[:, 0], grid[:, -1]])
+    colours = np.concatenate([masks, masks[edge_rows[:skirt_count]]]) if skirt_count else masks
+    layer = mesh.color_attributes.new("Masks", "FLOAT_COLOR", "POINT")
+    layer.data.foreach_set("color", colours.astype(np.float32).ravel())
     obj = bpy.data.objects.new(name, mesh)
     collection.objects.link(obj)
     palette.apply_uvs(obj, palette_only=True)

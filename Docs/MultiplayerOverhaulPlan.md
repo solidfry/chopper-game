@@ -537,7 +537,10 @@ layout (`layout.py`: about 220 buildings in zones on a 1000 x 800 m floor, 21 bu
 channel). For the Unity step: fog, a cloud ceiling at 600 to 800 m, a sandstorm wall at the flight bounds.
 Then a road-first layout (main roads, local street grids turned per area, lot splits; `RESEARCH.md`), road meshes
 (streets, lights, bridges, roads out to tunnel portals in the rim and into the canyon), an elevated freeway along the
-storm drain, a sky road loop round the core and a spiral ramp. Output in
+storm drain, a sky road loop round the core and a spiral ramp.
+Then biome terrain shading: biome-free masks in the terrain vertex colours (flow, hollow, made ground, scree), 6 biome
+presets (desert, rain desert, arctic, jungle, volcanic, toxic) as a biome table, `TerrainBiome.hlsl` +
+`TerrainBiome.shadergraph` (not yet compiled), the same rules in the Blender previews. Output in
 `Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
 
 
