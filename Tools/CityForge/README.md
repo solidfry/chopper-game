@@ -4,8 +4,8 @@ Generates the city buildings for the game maps (plan section 7a2). Same idea as 
 numbers, so a change is a re-run, not a re-model. CityForge uses PartForge's geometry builder and palette material
 (`cityforge/pf.py`), so buildings and choppers share one pipeline and one look.
 
-Status: first version (3 Nov 2026). Built and checked with `bpy` in a cloud session; **not yet imported in Unity**
-(no Setup step yet, see "Next").
+Status: first version (3 Nov 2026), second map City04 (4 Nov). Built and checked with `bpy` in a cloud session; the
+Unity Setup step is written but not yet run in the editor (see "Unity import").
 
 ## Run
 
@@ -23,6 +23,28 @@ Options: `--style NAME`, `--kit NAME` (default: the style's kit), `--out DIR` (d
 `Assets/Chopper/Art/City/<kit>`), `--previews DIR` (default `Tools/CityForge/previews/<kit>`), `--only A,B` (some
 buildings), `--no-render`, `--no-sheet` (skip the single-building renders), `--no-blend`, `--samples 32`.
 Build and export: about 3 s. Previews: about 15 min on 4 CPU cores.
+
+## Maps (styles)
+
+One style in `cityforge/styles.py` = one map: kit name, biome, palette, building mix (`layout`), terrain shape
+(`terrain`). Run one with `--style NAME`. Names are working names until the world building names them.
+
+| Style | Kit | Biome | Map |
+|---|---|---|---|
+| `dystopia` | City01 | desert | Desert basin: mesas, a canyon out through the rim, a storm drain, 7 megatowers and landmarks. |
+| `crater` | City04 | volcanic | Refinery town on a crater floor: cinder cones (flat tops), a breach in the crater wall, a lava moat round the city and lava streams down the wall; 3 corporate towers in the core, refinery round it, a worker slum belt. |
+
+What a style can set:
+- `layout`: `unique` (megatowers and landmarks it places), `variants` (count per type), `zones` (zone limit, lot
+  target, kind shares), `spacing` (street spacing: core, mid, outer, edge). Defaults in `layout.DEFAULTS`.
+- `terrain`: any `terrain.DEFAULTS` value; `mesas.shape = "cone"` (with `top`, the flat share) makes cinder cones;
+  `lava` (moat size, streams, width, depth) adds lava (full flow in the masks, so the biome's glow shows on it).
+- Buildings with `only=(style, ...)` in `specs.py` belong to those styles (the refinery set: `Ind_Refinery`,
+  `Ind_Cooling`, `Ind_Spheres`; industrial parts: distillation columns, cooling towers, gas spheres, flare stacks,
+  pipe racks).
+
+Ideas for later maps (see the chat of 4 Nov): frozen fjord port (arctic, needs water), river delta stacks (jungle,
+needs water), dead lake sprawl (toxic), canyon city (rain desert).
 
 ## What it makes
 

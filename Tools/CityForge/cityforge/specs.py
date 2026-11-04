@@ -17,7 +17,11 @@ orb:        size, podium, floors, deck (radius), orb (radius), pads (angles)
 block:      floors, shape (rect | L | U), roof (tanks | pad), fire_escape (left | right | None), balconies (0..1)
 slum:       base_floors, stacks (shacks to pile on the base), spread (overhang, m)
 industrial: hall (w, d, h, x, z) or None, chimneys [(x, z, radius, height)], tanks [(x, z, radius, height)],
-            office (w, d, floors, x, z) or None (x, z = centre)
+            office (w, d, floors, x, z) or None (x, z = centre); refinery parts: columns [(x, z, radius, height)],
+            cooling [(x, z, radius, height)] (cooling towers), spheres [(x, z, radius)] (gas spheres on legs),
+            flares [(x, z, height)] (flare stacks, guy braces 5 m out), racks [((x, z), (x, z), height)] (pipe racks)
+
+only: style names that use the building (default: every style).
 """
 
 BUILDINGS = [
@@ -70,4 +74,21 @@ BUILDINGS = [
          chimneys=[], tanks=[(-11, 6, 6.0, 13), (5, 8, 6.0, 13), (-1, -9, 4.5, 10), (12, -8, 3.5, 8)], office=None),
     dict(name="Ind_Stacks", type="industrial", seed=403, plot=(40, 32), hall=(26, 20, 18, 0, 2),
          chimneys=[(-9, -12, 2.4, 52), (0, -12, 2.4, 52)], tanks=[(16.5, -10, 3.0, 9)], office=None),
+    # -- refinery (crater style): columns, cooling towers, gas spheres, flare stacks --------------------------------
+    dict(name="Ind_Refinery", type="industrial", seed=411, plot=(52, 40), only=("crater",),
+         hall=(14, 9, 6, -17, -13), chimneys=[], tanks=[(-18, 11, 3.5, 8)], office=None,
+         columns=[(-4, -7, 2.2, 38), (4, -7, 1.8, 30), (12, -7, 2.6, 44), (-4, 7, 1.6, 24)],
+         flares=[(17, 12, 48)], racks=[((-23, 0), (22, 0), 7.0)]),
+    dict(name="Ind_Cooling", type="industrial", seed=412, plot=(64, 60), only=("crater",),
+         hall=(16, 10, 8, 18, -21), chimneys=[], tanks=[], office=None,
+         cooling=[(-12, -8, 15, 46), (15, 8, 12, 38)], racks=[((3, -21), (3, -28), 4.0)]),
+    dict(name="Ind_Spheres", type="industrial", seed=413, plot=(48, 40), only=("crater",),
+         hall=None, chimneys=[], tanks=[(16, -12, 4.0, 9)], office=None,
+         spheres=[(-14, -8, 7.0), (2, -8, 7.0), (-14, 10, 6.0)], columns=[(14, 7, 2.0, 32)],
+         racks=[((-22, 1.5), (22, 1.5), 5.0)]),
 ]
+
+
+def for_style(style_name):
+    """The base buildings a style uses (specs with `only` are kept to their styles)."""
+    return [spec for spec in BUILDINGS if style_name in spec.get("only", (style_name,))]

@@ -37,16 +37,29 @@ BOULEVARD_X = 20.0
 SPIRAL = dict(x=385.0, z=-60.0, radius=78.0)              # plaza kept free for the sky-road spiral
 UNIQUE = ("Mega_Arcology", "Mega_Twins", "Landmark_Halo", "Mega_Needle", "Landmark_Orb", "Mega_Slab", "Landmark_Twist")
 VARIANTS = {"tower": 6, "block": 6, "slum": 6, "industrial": 3}
+# A style's "layout" entry overrides these (styles.py). zones: None = the default mix (_kind, _target); else a list of
+# (zone limit 0..1, lot area target m², ((kind, share), ...)), the first zone whose limit is above the lot's zone wins.
+# spacing: local street spacing (m) in the core, then by zone (< 0.55, < 0.9, the edge).
+DEFAULTS = dict(city=CITY, unique=UNIQUE, variants=VARIANTS, zones=None, spacing=(118.0, 112.0, 98.0, 84.0))
 
 
-def variant_specs(seed=11):
+def settings(style):
+    values = json.loads(json.dumps(DEFAULTS))
+    values.update(json.loads(json.dumps(style.get("layout") or {})))
+    return values
+
+
+def variant_specs(base_specs=None, variants=None, seed=11):
     """New specs from the base buildings: same type, new seed and new numbers (floors, shape, crown...)."""
     rng = random.Random(seed)
     bases = {}
-    for spec in spec_list.BUILDINGS:
-        bases.setdefault(spec["type"], []).append(spec)
+    for spec in base_specs if base_specs is not None else spec_list.BUILDINGS:
+        if spec["type"] in ("tower", "block", "slum", "industrial"):
+            bases.setdefault(spec["type"], []).append(spec)
     out = []
-    for kind, count in VARIANTS.items():
+    for kind, count in (variants or VARIANTS).items():
+        if kind not in bases:
+            continue
         for k in range(count):
             base = bases[kind][k % len(bases[kind])]
             spec = json.loads(json.dumps(base))
@@ -68,6 +81,13 @@ def variant_specs(seed=11):
             elif kind == "slum":
                 spec["base_floors"] = rng.randint(2, 5)
                 spec["stacks"] = rng.randint(6, 13)
+            elif kind == "industrial":
+                # Refinery parts get new heights (the older industrial keys stay as they are).
+                for key in ("columns", "cooling"):
+                    if key in spec:
+                        spec[key] = [[x, z, r, round(h * rng.uniform(0.8, 1.2), 1)] for x, z, r, h in spec[key]]
+                if "flares" in spec:
+                    spec["flares"] = [[x, z, round(h * rng.uniform(0.85, 1.2), 1)] for x, z, h in spec["flares"]]
             out.append(spec)
     return out
 
@@ -100,9 +120,11 @@ def _parts(geometry):
 
 
 class Layout:
-    def __init__(self, building_specs, seed=5):
+    def __init__(self, building_specs, values=None, seed=5):
         self.rng = random.Random(seed)
-        self.width, self.depth = CITY
+        self.values = values or settings({})
+        self.unique = tuple(self.values["unique"])
+        self.width, self.depth = self.values["city"]
         self.rect = box(-self.width / 2, -self.depth / 2, self.width / 2, self.depth / 2)
         self.channel_z = self.depth * CHANNEL_SHARE
         self.freeway_z = self.channel_z + FREEWAY_OFFSET
@@ -112,7 +134,7 @@ class Layout:
         self.specs = {spec["name"]: spec for spec in building_specs}
         self.pools = {}
         for spec in building_specs:
-            if spec["name"] not in UNIQUE:
+            if spec["name"] not in self.unique:
                 self.pools.setdefault(spec["type"], []).append(spec)
         self.roads, self.instances, self.footprints, self.plazas, self.bridges = [], [], [], [], []
         self._main_roads()
@@ -164,12 +186,13 @@ class Layout:
         for area in self.superblocks:
             c = area.centroid
             core = self.ring_area.contains(c)
+            gaps = self.values["spacing"]
             if core:
-                angle, spacing = 0.0, 118.0
+                angle, spacing = 0.0, gaps[0]
             else:
                 angle = math.degrees(math.atan2(c.y - RING["cz"], c.x - RING["cx"]))
                 r = self._zone(c.x, c.y)
-                spacing = 112.0 if r < 0.55 else 98.0 if r < 0.9 else 84.0
+                spacing = gaps[1] if r < 0.55 else gaps[2] if r < 0.9 else gaps[3]
             # Grid lines in the area's own frame, then turned into place and cut by the area.
             local = affinity.rotate(area, -angle, origin=c)
             x0, z0, x1, z1 = local.bounds
@@ -238,10 +261,17 @@ class Layout:
         self.instances.append((spec["name"], (centre[0], 0.0, centre[1]), yaw))
         self.footprints.append((spec["name"], shape))
 
+    def _style_zone(self, x, z):
+        r = self._zone(x, z)
+        zones = self.values["zones"]
+        return next((zone for zone in zones if r < zone[0]), zones[-1])
+
     def _kind(self, x, z):
         rng = self.rng
         r = self._zone(x, z)
-        if r < 0.35:
+        if self.values["zones"]:
+            kinds = self._style_zone(x, z)[2]
+        elif r < 0.35:
             kinds = (("tower", 1.0),)
         elif r < 0.6:
             kinds = (("tower", 0.6), ("block", 0.4))
@@ -261,6 +291,8 @@ class Layout:
     def _target(self, x, z, core):
         if core:
             return 5200.0
+        if self.values["zones"]:
+            return self._style_zone(x, z)[1]
         r = self._zone(x, z)
         if r < 0.6:
             return 3600.0
@@ -272,7 +304,7 @@ class Layout:
         rng = self.rng
         blocks = sorted(self.blocks, key=lambda p: p.centroid.distance(Point(RING["cx"], RING["cz"])))
         # 1. Unique buildings into whole core blocks, biggest first, nearest the centre.
-        uniques = sorted([self.specs[n] for n in UNIQUE if n in self.specs], key=lambda s: -s["plot"][0] * s["plot"][1])
+        uniques = sorted([self.specs[n] for n in self.unique if n in self.specs], key=lambda s: -s["plot"][0] * s["plot"][1])
         self.missing = []
         for spec in uniques:
             placed = False

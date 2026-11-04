@@ -1,0 +1,2297 @@
+{
+  "kit": "City04",
+  "generator": "Tools/CityForge (terrain.py)",
+  "axes": "Unity space, metres. Origin = the city centre on the ground (city floor y = 0).",
+  "size": 3072.0,
+  "step": 6.0,
+  "chunkSize": 384.0,
+  "lod": {
+    "levels": 3,
+    "screenHeights": [
+      0.3,
+      0.08,
+      0.012
+    ],
+    "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."
+  },
+  "uv": "UV0 = palette swatch (fallback). Vertex colour (linear) = biome masks: R flow, G hollow, B made ground (city, roads, channel), A scree. Material: TerrainBiome shader graph.",
+  "biomes": {
+    "file": "City04_BiomeTable.png",
+    "width": 16,
+    "biomes": [
+      "desert",
+      "rain_desert",
+      "arctic",
+      "jungle",
+      "volcanic",
+      "toxic"
+    ],
+    "current": "volcanic",
+    "masks": "Terrain/City04_TerrainMasks.png",
+    "note": "Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, no mipmaps, no compression. _BiomeIndex = row."
+  },
+  "collider": "Mesh collider from each chunk's LOD0 mesh.",
+  "heightmap": {
+    "file": "Terrain/City04_Height.raw",
+    "format": "RAW 16-bit little-endian (Unity: Windows byte order)",
+    "resolution": 513,
+    "min": -42.984,
+    "max": 455.0,
+    "rows": "first row = -Z edge"
+  },
+  "chunks": [
+    {
+      "name": "Terrain_00_00",
+      "file": "Terrain/Terrain_00_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_01",
+      "file": "Terrain/Terrain_00_01.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_02",
+      "file": "Terrain/Terrain_00_02.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_03",
+      "file": "Terrain/Terrain_00_03.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_04",
+      "file": "Terrain/Terrain_00_04.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_05",
+      "file": "Terrain/Terrain_00_05.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_06",
+      "file": "Terrain/Terrain_00_06.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_00_07",
+      "file": "Terrain/Terrain_00_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_01_00",
+      "file": "Terrain/Terrain_01_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_01_01",
+      "file": "Terrain/Terrain_01_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_02",
+      "file": "Terrain/Terrain_01_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_03",
+      "file": "Terrain/Terrain_01_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_04",
+      "file": "Terrain/Terrain_01_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_05",
+      "file": "Terrain/Terrain_01_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_06",
+      "file": "Terrain/Terrain_01_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_01_07",
+      "file": "Terrain/Terrain_01_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_02_00",
+      "file": "Terrain/Terrain_02_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_02_01",
+      "file": "Terrain/Terrain_02_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_02",
+      "file": "Terrain/Terrain_02_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_03",
+      "file": "Terrain/Terrain_02_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_04",
+      "file": "Terrain/Terrain_02_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_05",
+      "file": "Terrain/Terrain_02_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_06",
+      "file": "Terrain/Terrain_02_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_02_07",
+      "file": "Terrain/Terrain_02_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_03_00",
+      "file": "Terrain/Terrain_03_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_03_01",
+      "file": "Terrain/Terrain_03_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_02",
+      "file": "Terrain/Terrain_03_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_03",
+      "file": "Terrain/Terrain_03_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_04",
+      "file": "Terrain/Terrain_03_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_05",
+      "file": "Terrain/Terrain_03_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_06",
+      "file": "Terrain/Terrain_03_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_03_07",
+      "file": "Terrain/Terrain_03_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_04_00",
+      "file": "Terrain/Terrain_04_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_04_01",
+      "file": "Terrain/Terrain_04_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_02",
+      "file": "Terrain/Terrain_04_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_03",
+      "file": "Terrain/Terrain_04_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_04",
+      "file": "Terrain/Terrain_04_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_05",
+      "file": "Terrain/Terrain_04_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_06",
+      "file": "Terrain/Terrain_04_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_04_07",
+      "file": "Terrain/Terrain_04_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_05_00",
+      "file": "Terrain/Terrain_05_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_05_01",
+      "file": "Terrain/Terrain_05_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_02",
+      "file": "Terrain/Terrain_05_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_03",
+      "file": "Terrain/Terrain_05_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_04",
+      "file": "Terrain/Terrain_05_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_05",
+      "file": "Terrain/Terrain_05_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_06",
+      "file": "Terrain/Terrain_05_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_05_07",
+      "file": "Terrain/Terrain_05_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_06_00",
+      "file": "Terrain/Terrain_06_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_06_01",
+      "file": "Terrain/Terrain_06_01.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_02",
+      "file": "Terrain/Terrain_06_02.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_03",
+      "file": "Terrain/Terrain_06_03.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_04",
+      "file": "Terrain/Terrain_06_04.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_05",
+      "file": "Terrain/Terrain_06_05.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_06",
+      "file": "Terrain/Terrain_06_06.fbx",
+      "stepFactors": [
+        1,
+        2,
+        4
+      ],
+      "triangles": [
+        8704,
+        2304,
+        640
+      ]
+    },
+    {
+      "name": "Terrain_06_07",
+      "file": "Terrain/Terrain_06_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_00",
+      "file": "Terrain/Terrain_07_00.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_01",
+      "file": "Terrain/Terrain_07_01.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_02",
+      "file": "Terrain/Terrain_07_02.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_03",
+      "file": "Terrain/Terrain_07_03.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_04",
+      "file": "Terrain/Terrain_07_04.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_05",
+      "file": "Terrain/Terrain_07_05.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_06",
+      "file": "Terrain/Terrain_07_06.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    },
+    {
+      "name": "Terrain_07_07",
+      "file": "Terrain/Terrain_07_07.fbx",
+      "stepFactors": [
+        2,
+        4,
+        8
+      ],
+      "triangles": [
+        2304,
+        640,
+        192
+      ]
+    }
+  ],
+  "backdrop": {
+    "parts": [
+      {
+        "name": "Backdrop",
+        "file": "Terrain/Backdrop.fbx",
+        "triangles": 14080
+      },
+      {
+        "name": "Skyline",
+        "file": "Terrain/Skyline.fbx",
+        "triangles": 10860
+      }
+    ],
+    "note": "Far scenery out to 20 km (mountains, the canyon bending away, the megacity skyline beyond the walls). No colliders; outside the flight bounds. Hide its far edge with fog."
+  },
+  "atmosphere": {
+    "fogStart": 300.0,
+    "fogScale": 3000.0,
+    "note": "Suggested exponential distance fog (the previews use the same numbers): factor = 1 - exp(-(distance - start) / scale)."
+  },
+  "markers": [
+    {
+      "kind": "MesaTop",
+      "index": 0,
+      "position": [
+        462.429,
+        104.187,
+        885.531
+      ],
+      "radius": 21.6
+    },
+    {
+      "kind": "MesaTop",
+      "index": 1,
+      "position": [
+        -317.67,
+        75.68,
+        -904.635
+      ],
+      "radius": 18.3
+    },
+    {
+      "kind": "MesaTop",
+      "index": 2,
+      "position": [
+        666.206,
+        77.0,
+        688.389
+      ],
+      "radius": 25.4
+    },
+    {
+      "kind": "MesaTop",
+      "index": 3,
+      "position": [
+        -567.59,
+        98.0,
+        -769.945
+      ],
+      "radius": 17.6
+    },
+    {
+      "kind": "MesaTop",
+      "index": 4,
+      "position": [
+        -202.77,
+        84.0,
+        955.799
+      ],
+      "radius": 22.7
+    },
+    {
+      "kind": "MesaTop",
+      "index": 5,
+      "position": [
+        -735.503,
+        77.0,
+        600.936
+      ],
+      "radius": 22.1
+    },
+    {
+      "kind": "MesaTop",
+      "index": 6,
+      "position": [
+        78.393,
+        105.019,
+        869.329
+      ],
+      "radius": 19.0
+    }
+  ],
+  "paths": {
+    "canyon": [
+      [
+        700.0,
+        -8.0,
+        176.0
+      ],
+      [
+        723.9,
+        -6.303,
+        176.845
+      ],
+      [
+        747.8,
+        -8.616,
+        179.416
+      ],
+      [
+        771.7,
+        -10.789,
+        183.685
+      ],
+      [
+        795.6,
+        -12.204,
+        189.527
+      ],
+      [
+        819.5,
+        -13.203,
+        196.717
+      ],
+      [
+        843.4,
+        -14.183,
+        204.943
+      ],
+      [
+        867.3,
+        -15.162,
+        213.82
+      ],
+      [
+        891.2,
+        -16.191,
+        222.907
+      ],
+      [
+        915.1,
+        -17.19,
+        231.724
+      ],
+      [
+        939.0,
+        -18.374,
+        239.777
+      ],
+      [
+        962.9,
+        -19.416,
+        240.162
+      ],
+      [
+        986.8,
+        -20.374,
+        239.059
+      ],
+      [
+        1010.7,
+        -21.32,
+        236.501
+      ],
+      [
+        1034.6,
+        -22.334,
+        232.564
+      ],
+      [
+        1058.5,
+        -23.351,
+        227.366
+      ],
+      [
+        1082.4,
+        -24.34,
+        221.061
+      ],
+      [
+        1106.3,
+        -25.316,
+        213.837
+      ],
+      [
+        1130.2,
+        -26.32,
+        205.91
+      ],
+      [
+        1154.1,
+        -27.371,
+        197.514
+      ],
+      [
+        1178.0,
+        -28.324,
+        188.901
+      ],
+      [
+        1201.9,
+        -29.375,
+        180.327
+      ],
+      [
+        1225.8,
+        -30.322,
+        172.047
+      ],
+      [
+        1249.7,
+        -31.286,
+        164.308
+      ],
+      [
+        1273.6,
+        -32.263,
+        157.34
+      ],
+      [
+        1297.5,
+        -33.207,
+        151.351
+      ],
+      [
+        1321.4,
+        -34.119,
+        146.519
+      ],
+      [
+        1345.3,
+        -35.073,
+        142.988
+      ],
+      [
+        1369.2,
+        -35.944,
+        140.863
+      ],
+      [
+        1393.1,
+        -36.849,
+        140.208
+      ],
+      [
+        1417.0,
+        -37.75,
+        141.042
+      ],
+      [
+        1440.9,
+        -38.703,
+        143.34
+      ],
+      [
+        1464.8,
+        -39.574,
+        147.033
+      ],
+      [
+        1488.7,
+        -40.504,
+        152.012
+      ],
+      [
+        1512.6,
+        -41.448,
+        158.129
+      ]
+    ],
+    "channel": [
+      [
+        -590.0,
+        -8.0,
+        176.0
+      ],
+      [
+        -520.0,
+        -8.0,
+        176.0
+      ],
+      [
+        520.0,
+        -8.0,
+        176.0
+      ],
+      [
+        620.0,
+        -8.0,
+        188.0
+      ],
+      [
+        700.0,
+        -8.0,
+        176.0
+      ]
+    ]
+  },
+  "layout": [
+    {
+      "building": "Landmark_Orb",
+      "position": [
+        -104.676,
+        0.0,
+        -82.972
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Mega_Slab",
+      "position": [
+        135.246,
+        0.0,
+        -70.72
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Mega_Needle",
+      "position": [
+        -107.676,
+        0.0,
+        29.907
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Block_Housing_V4",
+      "position": [
+        -12.358,
+        0.0,
+        -82.972
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Tower_Spire_V1",
+      "position": [
+        53.947,
+        0.0,
+        -70.72
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Block_Housing",
+      "position": [
+        -12.358,
+        0.0,
+        26.907
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Tower_Slab",
+      "position": [
+        56.947,
+        0.0,
+        49.967
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Ind_Stacks",
+      "position": [
+        -14.179,
+        0.0,
+        -184.502
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Tower_Pad_V2",
+      "position": [
+        56.947,
+        0.0,
+        -180.686
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -73.484,
+        0.0,
+        -183.254
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Tower_Spire",
+      "position": [
+        -128.85,
+        0.0,
+        -177.347
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Block_Court",
+      "position": [
+        163.229,
+        0.0,
+        22.612
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Block_Court",
+      "position": [
+        114.879,
+        0.0,
+        22.612
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Ind_Stacks",
+      "position": [
+        162.073,
+        0.0,
+        -154.935
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        110.722,
+        0.0,
+        -176.482
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Slum_Tower_V2",
+      "position": [
+        -34.219,
+        0.0,
+        -266.171
+      ],
+      "yaw": 188.97101386735932
+    },
+    {
+      "building": "Block_Housing_V4",
+      "position": [
+        -215.398,
+        0.0,
+        -113.273
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Block_Court_V3",
+      "position": [
+        -217.806,
+        0.0,
+        -61.236
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Block_Housing",
+      "position": [
+        -214.812,
+        0.0,
+        -6.935
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Stacks_V3",
+      "position": [
+        226.773,
+        0.0,
+        -87.521
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Ind_Tanks_V2",
+      "position": [
+        226.785,
+        0.0,
+        -38.383
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Slum_Stack",
+      "position": [
+        93.099,
+        0.0,
+        -299.515
+      ],
+      "yaw": 74.04294378130419
+    },
+    {
+      "building": "Slum_Tower_V2",
+      "position": [
+        -171.071,
+        0.0,
+        108.922
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Block_Corner_V2",
+      "position": [
+        -197.406,
+        0.0,
+        -228.94
+      ],
+      "yaw": 220.71303256790907
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        275.173,
+        0.0,
+        120.0
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        154.489,
+        0.0,
+        120.0
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Ind_Stacks_V9",
+      "position": [
+        -141.699,
+        0.0,
+        -294.341
+      ],
+      "yaw": 287.5478664597935
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        -97.526,
+        0.0,
+        -312.441
+      ],
+      "yaw": 107.54786645979345
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -156.835,
+        0.0,
+        -366.11
+      ],
+      "yaw": 197.5478664597935
+    },
+    {
+      "building": "Ind_Refinery",
+      "position": [
+        -50.549,
+        0.0,
+        -342.553
+      ],
+      "yaw": 107.5478664597935
+    },
+    {
+      "building": "Block_Housing",
+      "position": [
+        -234.381,
+        0.0,
+        73.431
+      ],
+      "yaw": 122.30264771773165
+    },
+    {
+      "building": "Ind_Stacks_V3",
+      "position": [
+        -280.858,
+        0.0,
+        106.851
+      ],
+      "yaw": 32.30264771773167
+    },
+    {
+      "building": "Slum_Stack_V1",
+      "position": [
+        56.399,
+        0.0,
+        -363.055
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Block_Housing_V1",
+      "position": [
+        103.634,
+        0.0,
+        -357.147
+      ],
+      "yaw": 264.79655920552875
+    },
+    {
+      "building": "Ind_Cooling_V5",
+      "position": [
+        -314.756,
+        0.0,
+        -57.337
+      ],
+      "yaw": 94.86131582408917
+    },
+    {
+      "building": "Slum_Stack_V4",
+      "position": [
+        -315.671,
+        0.0,
+        -109.297
+      ],
+      "yaw": 184.86131582408836
+    },
+    {
+      "building": "Ind_Stacks_V9",
+      "position": [
+        -318.264,
+        0.0,
+        21.247
+      ],
+      "yaw": 212.30264771773142
+    },
+    {
+      "building": "Block_Housing",
+      "position": [
+        56.713,
+        0.0,
+        292.751
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Ind_Stacks",
+      "position": [
+        167.525,
+        0.0,
+        -262.813
+      ],
+      "yaw": 311.2497153648904
+    },
+    {
+      "building": "Block_Housing",
+      "position": [
+        192.359,
+        0.0,
+        -284.593
+      ],
+      "yaw": 131.2497153648868
+    },
+    {
+      "building": "Block_Housing_V4",
+      "position": [
+        216.089,
+        0.0,
+        -302.464
+      ],
+      "yaw": 311.24971536489227
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        242.593,
+        0.0,
+        -325.708
+      ],
+      "yaw": 41.24971536489225
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        194.448,
+        0.0,
+        -358.085
+      ],
+      "yaw": 221.24971536489718
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        288.481,
+        0.0,
+        -344.375
+      ],
+      "yaw": 41.24971536489555
+    },
+    {
+      "building": "Slum_Tower_V2",
+      "position": [
+        268.087,
+        0.0,
+        -367.63
+      ],
+      "yaw": 221.24971536489556
+    },
+    {
+      "building": "Ind_Tanks_V2",
+      "position": [
+        357.298,
+        0.0,
+        -187.475
+      ],
+      "yaw": 181.9942862235633
+    },
+    {
+      "building": "Ind_Hall_V1",
+      "position": [
+        297.336,
+        0.0,
+        -167.142
+      ],
+      "yaw": 207.44151634236005
+    },
+    {
+      "building": "Slum_Tower",
+      "position": [
+        312.383,
+        0.0,
+        -117.281
+      ],
+      "yaw": 27.441516342360103
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -326.966,
+        0.0,
+        -176.214
+      ],
+      "yaw": 327.64719401298936
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        -301.738,
+        0.0,
+        -221.645
+      ],
+      "yaw": 147.64719401299345
+    },
+    {
+      "building": "Slum_Tower",
+      "position": [
+        -248.572,
+        0.0,
+        -351.68
+      ],
+      "yaw": 147.64719401299448
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -279.087,
+        0.0,
+        -292.582
+      ],
+      "yaw": 237.64719401299385
+    },
+    {
+      "building": "Slum_Stack_V4",
+      "position": [
+        -236.611,
+        0.0,
+        -265.675
+      ],
+      "yaw": 57.647194012994476
+    },
+    {
+      "building": "Ind_Hall_V7",
+      "position": [
+        -38.558,
+        0.0,
+        332.692
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Ind_Cooling",
+      "position": [
+        -25.0,
+        0.0,
+        257.869
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Slum_Stack_V4",
+      "position": [
+        166.039,
+        0.0,
+        266.38
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Ind_Stacks_V3",
+      "position": [
+        221.032,
+        0.0,
+        238.0
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Hall",
+      "position": [
+        -163.814,
+        0.0,
+        250.601
+      ],
+      "yaw": 49.00215193741807
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -237.485,
+        0.0,
+        241.631
+      ],
+      "yaw": 319.00215193741803
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        325.065,
+        0.0,
+        -286.428
+      ],
+      "yaw": 311.24971536489386
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        364.406,
+        0.0,
+        -314.437
+      ],
+      "yaw": 131.2497153648938
+    },
+    {
+      "building": "Ind_Cooling_V5",
+      "position": [
+        277.729,
+        0.0,
+        -248.645
+      ],
+      "yaw": 41.249715364893476
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        221.411,
+        0.0,
+        -211.573
+      ],
+      "yaw": 311.24971536489113
+    },
+    {
+      "building": "Slum_Stack_V1",
+      "position": [
+        -112.602,
+        0.0,
+        336.811
+      ],
+      "yaw": 351.1186386117754
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        385.216,
+        0.0,
+        88.359
+      ],
+      "yaw": 91.99428622356331
+    },
+    {
+      "building": "Ind_Stacks_V3",
+      "position": [
+        63.159,
+        0.0,
+        357.931
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -393.691,
+        0.0,
+        -48.849
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Block_Court",
+      "position": [
+        -452.662,
+        0.0,
+        -46.184
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        -406.118,
+        0.0,
+        -133.38
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        -462.146,
+        0.0,
+        -141.131
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Ind_Spheres_V6",
+      "position": [
+        -450.21,
+        0.0,
+        96.967
+      ],
+      "yaw": 269.99999999999994
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -451.289,
+        0.0,
+        31.504
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Refinery",
+      "position": [
+        -387.742,
+        0.0,
+        60.545
+      ],
+      "yaw": 94.86131582408825
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        -300.006,
+        0.0,
+        -361.319
+      ],
+      "yaw": 57.647194012993374
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -357.709,
+        0.0,
+        -328.217
+      ],
+      "yaw": 327.6471940129927
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -409.237,
+        0.0,
+        -285.261
+      ],
+      "yaw": 237.64719401299334
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        -371.196,
+        0.0,
+        -261.163
+      ],
+      "yaw": 57.64719401299451
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        -418.041,
+        0.0,
+        -232.977
+      ],
+      "yaw": 327.6471940129935
+    },
+    {
+      "building": "Slum_Stack_V4",
+      "position": [
+        472.0,
+        0.0,
+        -20.915
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        470.0,
+        0.0,
+        -105.143
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "Ind_Refinery",
+      "position": [
+        448.754,
+        0.0,
+        -160.283
+      ],
+      "yaw": 1.9942862235633356
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        447.87,
+        0.0,
+        -201.856
+      ],
+      "yaw": 181.9942862235635
+    },
+    {
+      "building": "Slum_Tower",
+      "position": [
+        178.877,
+        0.0,
+        368.563
+      ],
+      "yaw": 40.72438700056125
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -176.628,
+        0.0,
+        358.311
+      ],
+      "yaw": 49.00215193741823
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -255.187,
+        0.0,
+        362.059
+      ],
+      "yaw": 49.00215193742034
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -298.172,
+        0.0,
+        330.359
+      ],
+      "yaw": 319.0021519374178
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -228.682,
+        0.0,
+        320.321
+      ],
+      "yaw": 49.00215193741995
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        -266.599,
+        0.0,
+        287.363
+      ],
+      "yaw": 229.00215193741818
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        281.829,
+        0.0,
+        362.987
+      ],
+      "yaw": 310.72438700056136
+    },
+    {
+      "building": "Ind_Hall_V1",
+      "position": [
+        311.002,
+        0.0,
+        333.914
+      ],
+      "yaw": 40.7243870005623
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        282.844,
+        0.0,
+        280.202
+      ],
+      "yaw": 130.72438700056207
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        256.184,
+        0.0,
+        303.153
+      ],
+      "yaw": 130.7243870005614
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        221.645,
+        0.0,
+        332.887
+      ],
+      "yaw": 310.72438700056216
+    },
+    {
+      "building": "Ind_Tanks_V2",
+      "position": [
+        -388.001,
+        0.0,
+        250.612
+      ],
+      "yaw": 229.00215193741622
+    },
+    {
+      "building": "Slum_Stack_V1",
+      "position": [
+        -346.288,
+        0.0,
+        286.87
+      ],
+      "yaw": 49.00215193741771
+    },
+    {
+      "building": "Ind_Stacks",
+      "position": [
+        -305.898,
+        0.0,
+        247.562
+      ],
+      "yaw": 49.00215193742525
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        451.788,
+        0.0,
+        63.322
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Refinery_V4",
+      "position": [
+        450.412,
+        0.0,
+        111.129
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Ind_Hall_V1",
+      "position": [
+        323.609,
+        0.0,
+        249.835
+      ],
+      "yaw": 310.7243870005613
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        360.202,
+        0.0,
+        292.342
+      ],
+      "yaw": 310.7243870005623
+    },
+    {
+      "building": "Ind_Spheres",
+      "position": [
+        406.62,
+        0.0,
+        251.003
+      ],
+      "yaw": 40.72438700055764
+    },
+    {
+      "building": "Slum_Stack_V4",
+      "position": [
+        446.571,
+        0.0,
+        -242.157
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        389.519,
+        0.0,
+        -370.0
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Slum_Stack",
+      "position": [
+        451.382,
+        0.0,
+        -337.468
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Block_Housing_V1",
+      "position": [
+        451.382,
+        0.0,
+        -366.734
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -461.834,
+        0.0,
+        -336.025
+      ],
+      "yaw": 147.6471940129945
+    },
+    {
+      "building": "Slum_Stack_V1",
+      "position": [
+        -436.942,
+        0.0,
+        -372.0
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Ind_Hall",
+      "position": [
+        -433.676,
+        0.0,
+        304.579
+      ],
+      "yaw": 229.00215193741775
+    },
+    {
+      "building": "Ind_Hall_V7",
+      "position": [
+        -391.963,
+        0.0,
+        340.837
+      ],
+      "yaw": 49.00215193742221
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        -437.457,
+        0.0,
+        370.0
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "Slum_Low",
+      "position": [
+        452.652,
+        0.0,
+        290.226
+      ],
+      "yaw": 180.0
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        412.909,
+        0.0,
+        351.943
+      ],
+      "yaw": 270.0
+    },
+    {
+      "building": "Slum_Low_V3",
+      "position": [
+        460.963,
+        0.0,
+        351.943
+      ],
+      "yaw": 90.0
+    },
+    {
+      "building": "City_Roads",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "City_Freeway",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "yaw": 0.0
+    },
+    {
+      "building": "City_SkyRoads",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "yaw": 0.0
+    }
+  ],
+  "flightBounds": {
+    "centre": [
+      0.0,
+      450.0,
+      0.0
+    ],
+    "size": [
+      2672.0,
+      900.0,
+      2672.0
+    ]
+  },
+  "audit": []
+}

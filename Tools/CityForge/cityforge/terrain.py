@@ -34,13 +34,16 @@ DEFAULTS = dict(
     strata=11.0,                  # cliff terrace height (m)
     canyon=dict(width=(72.0, 110.0), wall=24.0, floor=(-8.0, -40.0), wiggle=110.0, start=40.0),
     channel=dict(depth=8.0, bottom=36.0, top=56.0, west=90.0),
+    # Optional lava (volcanic maps): moat (rx, rz) round the city into the canyon, streams from the rim, trench width
+    # range and depth. The masks mark it as full flow, so the biome's glow shows on it.
+    lava=None,
 )
 
 
 def settings(style):
     values = json.loads(json.dumps(DEFAULTS))
     for key, value in (style.get("terrain") or {}).items():
-        if isinstance(value, dict):
+        if isinstance(value, dict) and isinstance(values.get(key), dict):
             values[key].update(value)
         else:
             values[key] = value
@@ -143,6 +146,7 @@ class Terrain:
             points.append((x, mouth[1] + wiggle - v["canyon"]["wiggle"] * math.sin(phase) * min(1.0, t / 0.25)))
         self.canyon = points
         self._exterior_roads()
+        self._lava_paths(rng)
         # Mesas on a ring, kept clear of the canyon, the roads and the channel's closed end.
         m = v["mesas"]
         self.mesas = []
@@ -165,12 +169,66 @@ class Terrain:
             if any(polyline_distance(np.array([cx]), np.array([cz]), road["points"])[0][0]
                    < radius / stretch + m["talus"] + road["width"] / 2 + 60.0 for road in self.roads):
                 continue
+            if any(polyline_distance(np.array([cx]), np.array([cz]), path)[0][0]
+                   < radius / stretch + m["talus"] + width / 2 + 40.0 for path, width in self.lava):
+                continue
             if any(math.hypot(cx - o[0], cz - o[1]) < radius / stretch + o[2] / o[5] + 60.0 for o in self.mesas):
                 continue
             if abs(cx) + radius / stretch > size / 2 - 60 or abs(cz) + radius / stretch > size / 2 - 60:
                 continue
             # (x, z, radius, height, turn, stretch): an ellipse, long axis radius / stretch.
             self.mesas.append((cx, cz, radius, height, rng.uniform(0, math.pi), stretch))
+
+    def _lava_paths(self, rng):
+        """Lava (values["lava"]): a moat round the city (a wobbly ellipse that passes the canyon mouth) and streams from
+        the foot of the rim down to it, kept away from the roads and the canyon. self.lava: [(points, width), ...]."""
+        self.lava = []
+        lava = self.values.get("lava")
+        if not lava:
+            return
+        cx, cz = (self.city[0] + self.city[1]) / 2, (self.city[2] + self.city[3]) / 2
+        rx, rz = lava["moat"]
+        low, high = lava["width"]
+        phases = [rng.uniform(0, math.tau) for _ in range(3)]
+
+        def moat_radius(angle):
+            """A rounded rectangle (superellipse, power 4) round the city's rectangle, with a little wobble."""
+            c, s_ = abs(math.cos(angle)), abs(math.sin(angle))
+            r = 1.0 / ((c / rx) ** 4 + (s_ / rz) ** 4) ** 0.25
+            return r * (1.0 + 0.02 * math.sin(3 * angle + phases[0]) + 0.01 * math.sin(7 * angle + phases[1]))
+
+        moat = [(cx + math.cos(a) * moat_radius(a), cz + math.sin(a) * moat_radius(a))
+                for a in np.linspace(0.0, math.tau, 145)]
+        self.lava.append((moat, high))
+        plateau = self.values["plateau"]
+        tries = 0
+        while len(self.lava) < 1 + lava["streams"] and tries < 200:
+            tries += 1
+            angle = rng.uniform(0, math.tau)
+            outer = plateau["radius"] + 40.0
+            inner = moat_radius(angle)
+            end = (cx + math.cos(angle) * inner, cz + math.sin(angle) * inner)
+            start = (cx + math.cos(angle) * outer, cz + math.sin(angle) * outer)
+            side = rng.uniform(-60.0, 60.0)
+            mid = ((start[0] + end[0]) / 2 - math.sin(angle) * side, (start[1] + end[1]) / 2 + math.cos(angle) * side)
+            path = [start, mid, end]
+            xs = np.array([p[0] for p in path])
+            zs = np.array([p[1] for p in path])
+            if polyline_distance(xs, zs, self.canyon)[0].min() < 220.0:
+                continue
+            if any(polyline_distance(xs, zs, road["points"])[0].min() < road["width"] / 2 + 80.0 for road in self.roads):
+                continue
+            if any(polyline_distance(xs, zs, other)[0].min() < 160.0 for other, _w in self.lava[1:]):
+                continue
+            self.lava.append((path, rng.uniform(low, high * 0.8)))
+
+    def lava_distance(self, x, z):
+        """Distance to the nearest lava centre line minus its half width (< 0 = in the lava), or inf."""
+        best = np.full(np.shape(x), np.inf)
+        for path, width in getattr(self, "lava", []):
+            d, _a, _t = polyline_distance(x, z, path)
+            best = np.minimum(best, d - width / 2)
+        return best
 
     def _city_distance(self, x, z):
         x0, x1, z0, z1 = self.city
@@ -255,11 +313,16 @@ class Terrain:
         rock = np.maximum(np.zeros_like(h), self._rim(x, z))
         # Mesas: flat top, a cliff, a talus apron.
         m = v["mesas"]
+        cone = m.get("shape") == "cone"
         for k, (mx, mz, radius, height, turn, stretch) in enumerate(self.mesas):
             u = ((x - mx) * math.cos(turn) + (z - mz) * math.sin(turn)) * stretch
             w = -(x - mx) * math.sin(turn) + (z - mz) * math.cos(turn)
-            dm = np.hypot(u, w) + 0.35 * radius * fbm(seed + 10 + k, x, z, radius * 0.7, 3)
-            cliff = np.clip((radius - dm) / m["cliff"], 0.0, 1.0)
+            dm = np.hypot(u, w) + (0.12 if cone else 0.35) * radius * fbm(seed + 10 + k, x, z, radius * 0.7, 3)
+            if cone:
+                # Cinder cone: a flat top (share `top` of the radius), straight steep sides.
+                cliff = np.clip((radius - dm) / (radius * (1.0 - m.get("top", 0.38))), 0.0, 1.0)
+            else:
+                cliff = np.clip((radius - dm) / m["cliff"], 0.0, 1.0)
             talus = np.clip((radius + m["talus"] - dm) / m["talus"], 0.0, 1.0) ** 2 * 0.28
             rock = np.maximum(rock, height * np.maximum(cliff, talus))
         # Terraces on rock (strata), only where the rock stands above the ground.
@@ -280,6 +343,12 @@ class Terrain:
         carved = floor + (h - floor) * wall
         h = np.where(h > floor, carved, h)
         self.canyon_distance, self.canyon_width = dc, width
+        # Lava: a shallow trench (not in the city).
+        lava = v.get("lava")
+        if lava:
+            dl = self.lava_distance(x, z)
+            trench = (1.0 - smoothstep(-2.0, 4.0, dl)) * smoothstep(CITY_FLAT + 10.0, CITY_FLAT + 40.0, d)
+            h = h - lava["depth"] * trench
         h = self._flatten_roads(x, z, h)
         # Storm drain: a trapezoid concrete channel; open water strip in the middle.
         ch = v["channel"]
@@ -340,6 +409,8 @@ class Terrain:
         for road in getattr(self, "roads", []):
             dr, _a, _t = polyline_distance(self.x, self.z, road["points"])
             made = np.maximum(made, smoothstep(road["width"] / 2 + 4.0, road["width"] / 2, dr))
+        if getattr(self, "lava", None):
+            flow = np.maximum(flow, 1.0 - smoothstep(-3.0, 1.0, self.lava_distance(self.x, self.z)))
         self._masks = np.stack([flow, hollow, made, scree], axis=-1)
         return self._masks
 
@@ -373,7 +444,10 @@ class Terrain:
         markers = []
         m = self.values["mesas"]
         for k, (mx, mz, radius, height, _turn, _stretch) in enumerate(self.mesas):
-            clear = radius * 0.5 - m["cliff"]
+            if m.get("shape") == "cone":
+                clear = radius * (m.get("top", 0.38) - 0.12) - 2.0
+            else:
+                clear = radius * 0.5 - m["cliff"]
             if clear < 15.0:
                 continue
             top = float(self.sample(mx, mz))
@@ -419,6 +493,10 @@ class Terrain:
             heights = self.sample(gx, gz)
             if np.abs(heights).max() > 0.05:
                 problems.append(f"plot       {name} is not on flat ground ({np.abs(heights).max():.2f} m)")
+        if getattr(self, "lava", None):
+            near = self.lava_distance(self.x, self.z) < 0.0
+            if (near & (d <= CITY_FLAT + 10.0)).any():
+                problems.append("lava       reaches the city floor")
         # Canyon: at every path point, the open width 30 m above its floor must be 50 m or more.
         for k, (px, pz) in enumerate(self.canyon[1:-1], 1):
             ax, az = self.canyon[k + 1][0] - self.canyon[k - 1][0], self.canyon[k + 1][1] - self.canyon[k - 1][1]

@@ -667,6 +667,17 @@ def industrial(b):
         hx = min(max(xa, hall_rect.x0), hall_rect.x1)
         hz = min(max(za, hall_rect.z0), hall_rect.z1)
         _pipe_run(b, (xa, za), ra, (hx, hz), 0.0, min(ha * 0.45, spec["hall"][2] - 1.0))
+    # Refinery parts (City04 and later kits).
+    for x, z, radius, height in spec.get("columns", []):
+        _column(b, x, z, radius, height)
+    for x, z, radius, height in spec.get("cooling", []):
+        _cooling_tower(b, x, z, radius, height)
+    for x, z, radius in spec.get("spheres", []):
+        _sphere_tank(b, x, z, radius)
+    for x, z, height in spec.get("flares", []):
+        _flare(b, x, z, height)
+    for a, c, y in spec.get("racks", []):
+        _pipe_run(b, tuple(a), 0.0, tuple(c), 0.0, y, rest=True)
     plot = b.plot
     for x, z in ((plot.x0 + 1.0, plot.z1 - 1.0), (plot.x1 - 1.0, plot.z0 + 1.0)):
         if not _occupied(b, x, z):
@@ -751,8 +762,9 @@ def _tank(b, x, z, radius, height):
     b.round_collider(x, z, radius, 0.0, height + radius * 0.18)
 
 
-def _pipe_run(b, a, ra, c, rc, y):
-    """Two pipes between two points (stopping at the tank walls), on frames every 6 m."""
+def _pipe_run(b, a, ra, c, rc, y, rest=False):
+    """Two pipes between two points (stopping at the tank walls), on frames every 6 m. rest: both pipes lie on the
+    frames (free ends: a pipe rack)."""
     (xa, za), (xc, zc) = a, c
     dx, dz = xc - xa, zc - za
     length = math.hypot(dx, dz)
@@ -763,7 +775,7 @@ def _pipe_run(b, a, ra, c, rc, y):
     end = (xc - ux * (rc - 0.2), zc - uz * (rc - 0.2)) if rc > 0 else (xc, zc)
     run = math.hypot(end[0] - start[0], end[1] - start[1])
     px, pz = -uz, ux
-    for offset, radius, lift in ((-0.45, 0.32, 0.0), (0.45, 0.22, 0.25)):
+    for offset, radius, lift in ((-0.45, 0.32, 0.0), (0.45, 0.22, -0.1 if rest else 0.25)):
         p0 = (start[0] + px * offset, y + lift, start[1] + pz * offset)
         p1 = (end[0] + px * offset, y + lift, end[1] + pz * offset)
         b.cylinder(p0, p1, radius, "metal", segments=8)
@@ -778,3 +790,94 @@ def _pipe_run(b, a, ra, c, rc, y):
             lx, lz = fx + px * side * 0.9, fz + pz * side * 0.9
             b.span(lx - 0.1, lx + 0.1, 0.0, y - 0.35, lz - 0.1, lz + 0.1, "metal")
         b.beam((fx - px * 0.9, y - 0.35, fz - pz * 0.9), (fx + px * 0.9, y - 0.35, fz + pz * 0.9), 0.18, "metal")
+
+
+# -- refinery parts ----------------------------------------------------------------------------------------------------
+
+def _column(b, x, z, radius, height):
+    """Distillation column: a tall thin vessel on a plinth, platform rings every 9 m, a ladder, a domed top, a pipe
+    down its side, red light on top when tall."""
+    rng = b.rng
+    swatch = rng.choice(("steel", "trim", "steel"))
+    deck = radius + 1.2
+    cap = height + radius * 0.5
+    b.span(x - radius - 0.8, x + radius + 0.8, 0.0, 1.2, z - radius - 0.8, z + radius + 0.8, "concrete", L01)
+    b.cylinder((x, 1.2, z), (x, height, z), radius, swatch, segments=16, at=L01)
+    b.cylinder((x, height, z), (x, cap, z), radius, swatch, segments=16, at=L01, end_radius=radius * 0.3)
+    b.cylinder((x, 0.0, z), (x, height, z), radius, swatch, segments=6, at=L2)
+    b.cylinder((x, height, z), (x, cap, z), radius, swatch, segments=6, at=L2, end_radius=radius * 0.3)
+    y = 8.0
+    while y < height - 2.0:
+        b.cylinder((x, y - 0.25, z), (x, y, z), deck, "metal", segments=16)
+        if rng.random() < 0.5:
+            b.box((x + deck - 0.3, y + 0.3, z), (0.3, 0.3, 0.3), "sodium")
+        y += 9.0
+    for k in (0.25, 0.55, 0.85):
+        yy = 1.2 + (height - 1.2) * k
+        b.cylinder((x, yy, z), (x, yy + 0.4, z), radius + 0.06, "metal", segments=16)
+    kit.ladder(b, x, z + radius - 0.05, 1.2, height, (0.0, 1.0))
+    px = x + radius + 0.6
+    b.cylinder((px, 1.2, z), (px, height - 1.0, z), 0.25, "metal", segments=8)
+    b.cylinder((px, height - 1.0, z), (x + radius * 0.5, height - 1.0, z), 0.25, "metal", segments=8)
+    if cap >= b.style["obstruction_height"]:
+        b.box((x, cap + 0.15, z), (0.4, 0.4, 0.4), "warning", L01)
+    b.round_collider(x, z, deck, 0.0, cap)
+
+
+def _cooling_tower(b, x, z, radius, height):
+    """Hyperbolic cooling tower: a ring of crossed legs, the shell narrowing to a waist and flaring to the lip, dark
+    inside the rim, red lights on the lip."""
+    leg_h = 4.0
+    mid_y, waist_y = height * 0.4, height * 0.72
+    mid_r, waist_r, top_r = radius * 0.8, radius * 0.66, radius * 0.74
+    b.cylinder((x, 0.0, z), (x, 0.6, z), radius * 1.03, "concrete", segments=28, at=L01)
+    for k in range(16):
+        a, a2 = math.tau * k / 16, math.tau * (k + 0.5) / 16
+        b.beam((x + math.cos(a) * radius * 0.96, 0.3, z + math.sin(a) * radius * 0.96),
+               (x + math.cos(a2) * radius * 0.96, leg_h + 0.4, z + math.sin(a2) * radius * 0.96), 0.5, "concrete", L01)
+    b.cylinder((x, leg_h, z), (x, mid_y, z), radius, "concrete", segments=28, at=L01, end_radius=mid_r)
+    b.cylinder((x, mid_y, z), (x, waist_y, z), mid_r, "concrete", segments=28, at=L01, end_radius=waist_r)
+    b.cylinder((x, waist_y, z), (x, height, z), waist_r, "concrete", segments=28, at=L01, end_radius=top_r,
+               cap_end="soot")
+    b.cylinder((x, height - 7.0, z), (x, height, z), top_r - (top_r - waist_r) * 7.0 / (height - waist_y) + 0.06,
+               "soot", segments=28, at=L01, end_radius=top_r + 0.06)
+    b.cylinder((x, 0.0, z), (x, mid_y, z), radius, "concrete", segments=8, at=L2, end_radius=mid_r)
+    b.cylinder((x, mid_y, z), (x, height, z), mid_r, "concrete", segments=8, at=L2, end_radius=top_r, cap_end="soot")
+    for angle in (45, 135, 225, 315):
+        a = math.radians(angle)
+        b.box((x + math.cos(a) * (top_r + 0.1), height + 0.2, z + math.sin(a) * (top_r + 0.1)), (0.4, 0.4, 0.4),
+              "warning", L01)
+    b.round_collider(x, z, radius, 0.0, mid_y)
+    b.round_collider(x, z, mid_r, mid_y, height)
+
+
+def _sphere_tank(b, x, z, radius):
+    """Gas sphere on legs, with an equator band and a stair tower beside it."""
+    y = radius + 2.0
+    b.ico((x, y, z), radius, "trim", at=L01, subdivisions=2)
+    b.cylinder((x, 0.0, z), (x, y + radius, z), radius * 0.85, "trim", segments=6, at=L2, end_radius=radius * 0.4)
+    b.cylinder((x, y - 0.3, z), (x, y + 0.3, z), radius * 1.01, "metal", segments=24, at=L01)
+    for k in range(8):
+        a = math.tau * (k + 0.5) / 8
+        lx, lz = x + math.cos(a) * radius * 0.9, z + math.sin(a) * radius * 0.9
+        b.span(lx - 0.3, lx + 0.3, 0.0, y, lz - 0.3, lz + 0.3, "metal", L01)
+        b.span(lx - 0.5, lx + 0.5, 0.0, 0.4, lz - 0.5, lz + 0.5, "concrete", L01)
+    b.span(x - radius - 0.8, x + radius + 0.8, 0.0, 0.3, z - radius - 0.8, z + radius + 0.8, "concrete", L01)
+    b.round_collider(x, z, radius, 0.0, y + radius)
+
+
+def _flare(b, x, z, height):
+    """Flare stack: a thin steel stack held by three guy braces, a platform near the top and a burning tip."""
+    b.span(x - 1.5, x + 1.5, 0.0, 1.0, z - 1.5, z + 1.5, "concrete", L01)
+    b.cylinder((x, 1.0, z), (x, height, z), 0.7, "steel", segments=8, at=L01, end_radius=0.55)
+    b.cylinder((x, 0.0, z), (x, height + 1.2, z), 0.7, "steel", segments=6, at=L2, end_radius=0.55)
+    b.cylinder((x, height, z), (x, height + 1.2, z), 0.85, "soot", segments=8, at=L01)
+    b.cylinder((x, height - 3.2, z), (x, height - 3.0, z), 1.8, "metal", segments=12, at=L01)
+    for angle in (90, 210, 330):
+        a = math.radians(angle)
+        b.beam((x + math.cos(a) * 5.0, 0.15, z + math.sin(a) * 5.0), (x, height * 0.55, z), 0.2, "metal", L01)
+    # The flame: an amber cone over the tip (glows), thin (no collider above the tip).
+    b.cylinder((x, height + 1.2, z), (x, height + 5.0, z), 0.8, "sodium", segments=8, at=L01, end_radius=0.08)
+    b.box((x, height - 2.8, z + 1.6), (0.4, 0.4, 0.4), "warning", L01)
+    b.add_thin(x, z, height + 5.2)
+    b.round_collider(x, z, 1.0, 0.0, height + 1.2)

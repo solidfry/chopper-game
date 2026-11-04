@@ -64,15 +64,20 @@ def clear():
             bpy.data.meshes.remove(mesh)
 
 
-def all_specs(with_variants=True):
-    return specs.BUILDINGS + (layout.variant_specs() if with_variants else [])
+def all_specs(style, with_variants=True):
+    """The style's base buildings (specs.for_style) and, for a city, their variants (layout.variant_specs)."""
+    unique = set(layout.settings(style)["unique"])
+    # One-off buildings (megatowers, landmarks) only when the style's layout places them.
+    base = [spec for spec in specs.for_style(style["name"])
+            if spec["type"] in ("tower", "block", "slum", "industrial") or spec["name"] in unique]
+    return base + (layout.variant_specs(base, layout.settings(style)["variants"]) if with_variants else [])
 
 
 def make_buildings(style, names=None, with_variants=False):
     """The Building objects (meshes still in the builders), for the audit and for generate()."""
     form = dict(kit.CITY_FORM, edge_radius=style.get("edge_radius", 0.0))
     geo.configure({"form": form})
-    chosen = [spec for spec in all_specs(with_variants) if not names or spec["name"] in names]
+    chosen = [spec for spec in all_specs(style, with_variants) if not names or spec["name"] in names]
     return [buildings.build(kit.Building(spec, style)) for spec in chosen]
 
 
@@ -89,7 +94,7 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     city = None
     if with_terrain and not names:
         made = make_buildings(style, with_variants=True)
-        city = layout.Layout(all_specs(True))
+        city = layout.Layout(all_specs(style, True), layout.settings(style))
     else:
         made = make_buildings(style, names)
     problems = {b.name: audit.check(b) for b in made}
@@ -325,7 +330,7 @@ def _place_choppers(state):
         base = state.placements.get(name)
         return None if base is None else tuple(a + b for a, b in zip(base, offset))
 
-    mega = state.built.get("Mega_Arcology")
+    mega = state.built.get("Mega_Arcology") if "Mega_Arcology" in state.placements else None
     if mega:
         for kind, index, position, radius in mega["building"].markers:
             if kind == "RoofPad":
@@ -337,7 +342,7 @@ def _place_choppers(state):
         plot = mega["building"].plot
         flyby = at("Mega_Arcology", (-plot.w * 0.25, 140.0, plot.d / 2 + 22.0))
         state.choppers.append(library.chopper("Scout", flyby, -90.0, name="Chopper_Flyby"))
-    twins = state.built.get("Mega_Twins")
+    twins = state.built.get("Mega_Twins") if "Mega_Twins" in state.placements else None
     if twins:
         for kind, index, position, radius in twins["building"].markers:
             if kind == "RoofPad":
@@ -349,7 +354,7 @@ def _place_choppers(state):
         if bridges:
             state.choppers.append(library.chopper("Gunship", at("Mega_Twins", (2.0, bridges[-1] - 9.0, 6.0)), 15.0,
                                                   name="Chopper_Bridge"))
-    orb = state.built.get("Landmark_Orb")
+    orb = state.built.get("Landmark_Orb") if "Landmark_Orb" in state.placements else None
     if orb:
         for kind, index, position, radius in orb["building"].markers[:1]:
             spot = at("Landmark_Orb", position)
@@ -869,6 +874,23 @@ def _terrain_shots(state, by_name):
         sx, sy, sz = state.built["City_SkyRoads"]["building"].spiral_centre
         shots.append(("spiral", geo.to_blender((sx + 150.0, sy * 0.55, sz - 190.0)),
                       geo.to_blender((sx, sy * 0.45, sz)), 24.0))
+    if getattr(t, "lava", None):
+        # Low over the lava moat on the far side from the canyon, looking along it to the crater wall.
+        moat = t.lava[0][0]
+        k = len(moat) * 3 // 8
+        here, ahead = moat[k], moat[(k + 6) % len(moat)]
+        shots.append(("lava", b((here[0] * 0.92, 40.0, here[1] * 0.92)), b((ahead[0] * 1.15, 25.0, ahead[1] * 1.15)), 22.0))
+    if state.layout is not None:
+        # The refinery: the first cooling tower (else refinery) the layout placed, from chopper height beside it.
+        for wanted in ("Ind_Cooling", "Ind_Refinery"):
+            spot = next((p for name, p, _yaw in state.layout.instances if name.split("_V")[0] == wanted), None)
+            if spot is not None:
+                x, _y, z = spot
+                away = Vector((x, z)).normalized() if math.hypot(x, z) > 1.0 else Vector((1.0, 0.0))
+                shots.append(("refinery", geo.to_blender((x - away.x * 110.0 + away.y * 50.0, 55.0,
+                                                          z - away.y * 110.0 - away.x * 50.0)),
+                              geo.to_blender((x, 22.0, z)), 24.0))
+                break
     if "Chopper_Mesa" in by_name and t.markers:
         _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
         away = Vector((mx, mz)).normalized()

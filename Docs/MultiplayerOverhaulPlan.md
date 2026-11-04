@@ -546,6 +546,8 @@ Then (4 Nov) wear and grime: per-vertex masks (occlusion, splash, drip, sky) gra
 graph; CC0 detail maps (Poly Haven, ambientCG) in both shaders. Unity Setup step 8 (`CityAssets.cs`, written without
 the editor): materials, building prefabs, city scene `Assets/Scenes/City01.unity` for a SubScene. Next: run step 8
 and fix compile errors in the editor, a match scene with the city, Blender panel.
+Then (4 Nov) map styles: a style sets biome, terrain shape, building mix; second map City04 (`crater`: volcanic
+crater, lava moat, refinery). More map ideas in `Tools/CityForge/README.md`.
 
 
 A procedural generator for **city buildings**, like PartForge for the choppers (`Tools/PartForge`): code + numbers in Blender (Python and geometry nodes), so a change is a re-run, not a re-model.
