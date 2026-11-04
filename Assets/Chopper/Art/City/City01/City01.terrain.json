@@ -14,7 +14,14 @@
     ],
     "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."
   },
-  "uv": "UV0 = palette swatch (fallback). Vertex colour (linear) = biome masks: R flow, G hollow, B made ground (city, roads, channel), A scree. Material: TerrainBiome shader graph.",
+  "uv": "UV0 = palette swatch (fallback). No vertex colours: the TerrainBiome shader graph reads the surface textures by world position.",
+  "surface": {
+    "masks": "Terrain/City01_TerrainMasks.png",
+    "normal": "Terrain/City01_TerrainNormal.png",
+    "size": 3072.0,
+    "resolution": 2048,
+    "note": "Whole map, centred on the origin; first image row = +Z edge. uv = xz / size + 0.5. Both linear (sRGB off), bilinear, clamp. Masks RGBA: R flow, G hollow, B made ground (city, roads, channel), A scree. Normal RGB = world normal * 0.5 + 0.5 (Unity axes)."
+  },
   "biomes": {
     "file": "City01_BiomeTable.png",
     "width": 16,
@@ -27,7 +34,6 @@
       "toxic"
     ],
     "current": "desert",
-    "masks": "Terrain/City01_TerrainMasks.png",
     "note": "Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, no mipmaps, no compression. _BiomeIndex = row."
   },
   "collider": "Mesh collider from each chunk's LOD0 mesh.",
@@ -35,8 +41,8 @@
     "file": "Terrain/City01_Height.raw",
     "format": "RAW 16-bit little-endian (Unity: Windows byte order)",
     "resolution": 513,
-    "min": -38.449,
-    "max": 396.0,
+    "min": -36.93,
+    "max": 400.0,
     "rows": "first row = -Z edge"
   },
   "chunks": [
@@ -1103,177 +1109,177 @@
     "canyon": [
       [
         700.0,
-        -8.0,
+        -8.029,
         176.0
       ],
       [
         723.9,
-        -7.417,
+        -8.52,
         174.779
       ],
       [
         747.8,
-        -9.944,
+        -7.478,
         171.654
       ],
       [
         771.7,
-        -11.955,
+        -4.662,
         167.513
       ],
       [
         795.6,
-        -12.898,
+        -3.321,
         163.324
       ],
       [
         819.5,
-        -13.588,
+        -5.776,
         160.086
       ],
       [
         843.4,
-        -14.235,
+        -7.966,
         158.78
       ],
       [
         867.3,
-        -14.891,
+        -10.147,
         160.321
       ],
       [
         891.2,
-        -15.531,
+        -12.104,
         165.509
       ],
       [
         915.1,
-        -16.228,
+        -12.981,
         174.992
       ],
       [
         939.0,
-        -16.994,
+        -13.848,
         189.225
       ],
       [
         962.9,
-        -17.834,
+        -14.68,
         205.494
       ],
       [
         986.8,
-        -18.706,
+        -15.528,
         223.203
       ],
       [
         1010.7,
-        -19.593,
+        -16.426,
         241.823
       ],
       [
         1034.6,
-        -20.495,
+        -17.335,
         260.801
       ],
       [
         1058.5,
-        -21.406,
+        -18.229,
         279.572
       ],
       [
         1082.4,
-        -22.309,
+        -19.138,
         297.575
       ],
       [
         1106.3,
-        -23.197,
+        -20.003,
         314.276
       ],
       [
         1130.2,
-        -24.08,
+        -20.867,
         329.177
       ],
       [
         1154.1,
-        -24.936,
+        -21.677,
         341.833
       ],
       [
         1178.0,
-        -25.724,
+        -22.528,
         351.869
       ],
       [
         1201.9,
-        -26.538,
+        -23.302,
         358.985
       ],
       [
         1225.8,
-        -27.294,
+        -24.099,
         362.969
       ],
       [
         1249.7,
-        -28.074,
+        -24.875,
         363.703
       ],
       [
         1273.6,
-        -28.864,
+        -25.634,
         361.165
       ],
       [
         1297.5,
-        -29.647,
+        -26.439,
         355.43
       ],
       [
         1321.4,
-        -30.473,
+        -27.259,
         346.669
       ],
       [
         1345.3,
-        -31.31,
+        -28.088,
         335.143
       ],
       [
         1369.2,
-        -32.151,
+        -28.972,
         321.196
       ],
       [
         1393.1,
-        -33.046,
+        -29.831,
         305.242
       ],
       [
         1417.0,
-        -33.952,
+        -30.721,
         287.757
       ],
       [
         1440.9,
-        -34.853,
+        -31.642,
         269.262
       ],
       [
         1464.8,
-        -35.749,
+        -32.555,
         250.307
       ],
       [
         1488.7,
-        -36.64,
+        -33.464,
         231.457
       ],
       [
         1512.6,
-        -37.518,
+        -34.334,
         213.273
       ]
     ],
@@ -1300,7 +1306,7 @@
       ],
       [
         700.0,
-        -8.0,
+        -8.029,
         176.0
       ]
     ]
