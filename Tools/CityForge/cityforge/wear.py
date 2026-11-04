@@ -177,15 +177,36 @@ def add_preview_nodes(material, dust, grime="#3b342b", wear=1.0, rain=0.0):
         return math_node("MULTIPLY", value, dirty) if rough else value
 
     base = source
-    # CC0 concrete detail (if fetched): three-axis projection in object space (3 m), rough surfaces only.
+    # CC0 concrete detail (if fetched): three-axis projection in world space (so copies of a building differ), two
+    # scales (3 m, and 7.7 m turned) blended by noise so the tiling does not repeat, and a slow light/dark drift.
+    # Rough surfaces only. Same rules as BuildingWear.hlsl.
     from .terrain_biomes import detail_image, detail_nodes
     concrete = detail_image("ConcreteWall")
     if concrete is not None:
-        coords = new("ShaderNodeTexCoord")
-        mapping = new("ShaderNodeMapping")
-        mapping.inputs["Scale"].default_value = (1.0 / 3.0,) * 3
-        links.new(coords.outputs["Object"], mapping.inputs["Vector"])
-        factor, height = detail_nodes(nodes, links, concrete, mapping.outputs["Vector"])
+        def projected(metres, turn):
+            mapping = new("ShaderNodeMapping")
+            mapping.inputs["Scale"].default_value = (1.0 / metres,) * 3
+            mapping.inputs["Rotation"].default_value = (0.0, 0.0, turn)
+            links.new(geometry.outputs["Position"], mapping.inputs["Vector"])
+            return detail_nodes(nodes, links, concrete, mapping.outputs["Vector"])
+
+        fine_factor, height = projected(3.0, 0.0)
+        coarse_factor, _height2 = projected(7.7, 0.6)
+        pick = new("ShaderNodeTexNoise", Scale=1.0 / 18.0, Detail=2.0)
+        links.new(geometry.outputs["Position"], pick.inputs["Vector"])
+        blend = new("ShaderNodeMapRange")
+        blend.interpolation_type = "SMOOTHSTEP"
+        blend.inputs["From Min"].default_value, blend.inputs["From Max"].default_value = 0.35, 0.65
+        links.new(pick.outputs["Fac"], blend.inputs["Value"])
+        both = new("ShaderNodeMix")
+        both.data_type = "FLOAT"
+        links.new(blend.outputs["Result"], both.inputs[0])
+        links.new(fine_factor, both.inputs[2])
+        links.new(coarse_factor, both.inputs[3])
+        drift = new("ShaderNodeTexNoise", Scale=1.0 / 30.0, Detail=2.0)
+        links.new(geometry.outputs["Position"], drift.inputs["Vector"])
+        factor = math_node("MULTIPLY", both.outputs[0],
+                           math_node("ADD", math_node("MULTIPLY", drift.outputs["Fac"], 0.3), 0.85, clamp=False), clamp=False)
         strength = math_node("MULTIPLY", dirty, 0.6) if rough else 0.6
         soft = new("ShaderNodeMix")
         soft.data_type = "FLOAT"

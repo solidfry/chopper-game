@@ -726,15 +726,32 @@ def _hall(b, rect, h):
 
 
 def _chimney(b, x, z, radius, height):
+    """Concrete stack. Varies per stack (the building's seed): shaft colour, ring bands, soot length; stacks of 40 m
+    and more get red and white aviation bands at the top (as real tall stacks do)."""
+    rng = b.rng
+    shaft = rng.choice(("concrete", "wall", "concrete", "trim"))
     b.span(x - radius - 0.6, x + radius + 0.6, 0.0, 1.5, z - radius - 0.6, z + radius + 0.6, "concrete", L01)
-    b.cylinder((x, 1.5, z), (x, height, z), radius, "concrete", segments=16, at=L01, end_radius=radius * 0.82)
-    b.cylinder((x, 1.5, z), (x, height, z), radius, "concrete", segments=6, at=L2, end_radius=radius * 0.82)
+    b.cylinder((x, 1.5, z), (x, height, z), radius, shaft, segments=16, at=L01, end_radius=radius * 0.82)
+    b.cylinder((x, 1.5, z), (x, height, z), radius, shaft, segments=6, at=L2, end_radius=radius * 0.82)
     top_r = radius * 0.82
-    b.cylinder((x, height - 3.0, z), (x, height, z), top_r * 1.04 + 0.03, "soot", segments=16, at=L01)
-    for k in (0.33, 0.66):
+
+    def r_at(y):
+        return radius + (top_r - radius) * (y - 1.5) / (height - 1.5) + 0.05
+
+    soot = rng.uniform(2.5, 6.0)
+    b.cylinder((x, height - soot, z), (x, height, z), r_at(height - soot) + 0.03, "soot", segments=16, at=L01,
+               end_radius=top_r + 0.08)
+    if height >= 40.0:
+        bands, band = 6, (height * 0.22) / 6
+        for k in range(bands):
+            y = height - soot - (k + 1) * band
+            b.cylinder((x, y, z), (x, y + band, z), r_at(y) + 0.02, "primer" if k % 2 == 0 else "trim", segments=16,
+                       at=L01, end_radius=r_at(y + band) + 0.02)
+    for k in sorted(rng.sample((0.2, 0.33, 0.45, 0.55, 0.66), rng.randint(1, 3))):
         y = height * k
-        r = radius + (top_r - radius) * k + 0.05
-        b.cylinder((x, y, z), (x, y + 0.6, z), r, "trim", segments=16)
+        r = r_at(y)
+        b.cylinder((x, y, z), (x, y + rng.choice((0.4, 0.6, 1.0)), z), r, rng.choice(("trim", "metal", "rust")),
+                   segments=16)
     for angle in (0, 120, 240):
         a = math.radians(angle)
         for y in (height - 0.5, height * 0.5):

@@ -117,10 +117,17 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     float streaks = vertical * (drip * 0.8 + 0.2) * saturate((streakNoise - 0.45) * 3.0) * sky;
     float fine = BW_Fbm(PositionWS.xz * 0.6 + PositionWS.y * 0.3, 3);
 
-    // CC0 concrete detail on three axes (3 m), rough surfaces only.
+    // CC0 concrete detail on three axes, rough surfaces only. Two scales (3 m, and 7.7 m turned 0.6 rad about Y)
+    // blended by noise so the tiling does not repeat, and a slow light/dark drift (same as the Blender preview).
     float3 blend = BW_Blend(n);
     float rough = saturate((1.0 - metalSmooth.a - 0.25) * 1.6);
-    float detailF = lerp(1.0, BW_Detail(BW_Tri(ConcreteColour, PositionWS, blend, 1.0 / 3.0)), 0.6 * rough);
+    float3 turned = float3(PositionWS.x * 0.825 - PositionWS.z * 0.565, PositionWS.y, PositionWS.x * 0.565 + PositionWS.z * 0.825);
+    float2 slant = float2(PositionWS.x + PositionWS.y * 0.7, PositionWS.z - PositionWS.y * 0.7);
+    float pick = smoothstep(0.35, 0.65, BW_Fbm(slant / 18.0, 2));
+    float detailRaw = lerp(BW_Detail(BW_Tri(ConcreteColour, PositionWS, blend, 1.0 / 3.0)),
+                           BW_Detail(BW_Tri(ConcreteColour, turned, blend, 1.0 / 7.7)), pick);
+    detailRaw *= 0.85 + 0.3 * BW_Fbm(slant / 30.0, 2);
+    float detailF = lerp(1.0, detailRaw, 0.6 * rough);
 
     float3 colour = base * detailF;
     colour *= lerp(1.0, 0.6, saturate(occlusion - 0.25) * 0.6 * dirty);
