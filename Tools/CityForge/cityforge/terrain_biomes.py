@@ -244,6 +244,12 @@ def make_material(biome, name="CF Terrain"):
     cover_image = detail_image("WindSnow")
     cover_detail = detail_nodes(nodes, links, cover_image, scaled(6.0), box=False) if cover_image else None
 
+    def slab_grey(value):
+        grey = new("ShaderNodeCombineColor")
+        for k in range(3):
+            link(value, grey.inputs[k])
+        return grey.outputs[0]
+
     def detailed(colour_socket, pair):
         if pair is None:
             return colour_socket
@@ -294,7 +300,26 @@ def make_material(biome, name="CF Terrain"):
     for k in range(3):
         link(darker, grey.inputs[k])
     link(grey.outputs[0], shaded.inputs[7])
-    result = mix(shaded.outputs[2], colour(b["concrete"]), ramp(made, 0.3, 0.7))
+    # Made ground: concrete slabs (6 m joints, each slab a little lighter or darker), oil stains, cracks, and dirt
+    # blown onto the edges. Same rules as TerrainBiome.hlsl.
+    slab = math_node("ADD", math_node("MULTIPLY", noise(7.0), 0.3), 0.85, clamp=False)
+    concrete = mix(colour(b["concrete"]), (1.0, 1.0, 1.0, 1.0), 0.0)
+    concrete = mix(concrete, slab_grey(slab), 1.0, "MULTIPLY")
+    joint = None
+    for axis in ("X", "Y"):
+        across = math_node("ABSOLUTE", math_node("SUBTRACT", math_node("MULTIPLY", math_node(
+            "FRACT", math_node("DIVIDE", split_p.outputs[axis], 6.0, clamp=False)), 2.0, clamp=False), 1.0, clamp=False))
+        line = ramp(across, 0.93, 0.98)
+        joint = line if joint is None else math_node("MAXIMUM", joint, line)
+    concrete = mix(concrete, (0.0, 0.0, 0.0, 1.0), math_node("MULTIPLY", joint, 0.25))
+    oil = ramp(noise(9.0, 3.0), 0.62, 0.7)
+    concrete = mix(concrete, (0.05, 0.05, 0.05, 1.0), math_node("MULTIPLY", oil, 0.55))
+    crack = ramp(math_node("SUBTRACT", 1.0, math_node("ABSOLUTE", math_node("SUBTRACT", math_node(
+        "MULTIPLY", noise(4.0, 4.0), 2.0, clamp=False), 1.0, clamp=False))), 0.94, 0.985)
+    concrete = mix(concrete, (0.02, 0.02, 0.02, 1.0), math_node("MULTIPLY", crack, 0.6))
+    edge = math_node("MULTIPLY", math_node("SUBTRACT", 1.0, ramp(made, 0.75, 0.98)), ramp(noise(5.0), 0.4, 0.6))
+    concrete = mix(concrete, ground, math_node("MULTIPLY", edge, 0.8))
+    result = mix(shaded.outputs[2], concrete, ramp(made, 0.3, 0.7))
     bsdf = new("ShaderNodeBsdfPrincipled")
     link(result, bsdf.inputs["Base Color"])
     if rock_detail and sand_detail:

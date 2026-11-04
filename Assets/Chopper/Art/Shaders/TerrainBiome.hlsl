@@ -153,7 +153,18 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityT
 
     float wet = saturate(wetBase + flow * flowWet);
     colour *= 1.0 - 0.45 * wet;
-    colour = lerp(colour, TB_Colour(BiomeTable, row, rows, 11), smoothstep(0.3, 0.7, made));
+    // Made ground: concrete slabs (6 m joints, each slab a little lighter or darker), oil stains, cracks, and dirt
+    // blown onto the edges (same rules as the Blender preview).
+    float3 concrete = TB_Colour(BiomeTable, row, rows, 11) * (0.85 + 0.3 * TB_Fbm(xz / 7.0, 2));
+    float2 across = abs(frac(xz / 6.0) * 2.0 - 1.0);
+    float joint = smoothstep(0.93, 0.98, max(across.x, across.y));
+    concrete *= 1.0 - 0.25 * joint;
+    concrete *= 1.0 - 0.55 * smoothstep(0.62, 0.7, TB_Fbm(xz / 9.0 + 3.1, 3));
+    float crack = smoothstep(0.94, 0.985, 1.0 - abs(TB_Fbm(xz / 4.0 + 7.7, 4) * 2.0 - 1.0));
+    concrete *= 1.0 - 0.6 * crack;
+    float edgeDirt = (1.0 - smoothstep(0.75, 0.98, made)) * smoothstep(0.4, 0.6, TB_Fbm(xz / 5.0 + 1.3, 2));
+    concrete = lerp(concrete, ground, edgeDirt * 0.8);
+    colour = lerp(colour, concrete, smoothstep(0.3, 0.7, made));
 
     float4 glow = TB_Row(BiomeTable, row, rows, 10);
     float glowMask = smoothstep(glowFlow, glowFlow + 0.15, flow) * (1.0 - saturate(made));

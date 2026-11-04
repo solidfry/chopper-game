@@ -40,6 +40,11 @@ DEFAULTS = dict(
     # Far backdrop mesh (polar): rings and segments. edge_smooth: fade the rim crest out over the last metres inside the
     # map edge, so the coarse backdrop meets the terrain edge without gaps (needed for a high, jagged crest).
     backdrop=dict(rings=44, segments=160, edge_smooth=0.0),
+    # Optional hydraulic erosion (erosion.py settings, e.g. droplets per cell); None = off.
+    erosion=None,
+    # Optional boulders on the scree below cliffs: chance per scree cell, size range (m), most in the map. In the
+    # chunk meshes (LOD0; LOD1 the big ones), so the mesh colliders have them too. None = off.
+    boulders=None,
 )
 
 
@@ -347,6 +352,16 @@ class Terrain:
         rock = np.where(rock > 6.0, terraced, rock)
         h = np.maximum(h, rock)
         self.rock = rock
+        # Erosion: gullies down the slopes and cliffs, sediment fans below; not on the city floor or the mesa tops.
+        if v.get("erosion"):
+            from . import erosion
+            keep = smoothstep(CITY_FLAT + 20.0, CITY_FLAT + 90.0, d)
+            top_share = m.get("top", 0.38) if cone else 0.5
+            for mx, mz, radius, height, _turn, stretch in self.mesas:
+                dm = np.hypot(x - mx, z - mz)
+                keep = keep * smoothstep(radius * top_share * 0.9, radius * top_share * 0.9 + 12.0, dm)
+            settings = dict(v["erosion"])
+            h = erosion.hydraulic(h, STEP, keep, seed=seed + 50, **settings)
         # City floor: exactly flat.
         h = np.where(d <= CITY_FLAT, 0.0, h)
         # Canyon: carve a winding trench to a floor that falls away from the basin.
@@ -364,6 +379,11 @@ class Terrain:
             dl = self.lava_distance(x, z)
             trench = (1.0 - smoothstep(-2.0, 4.0, dl)) * smoothstep(CITY_FLAT + 10.0, CITY_FLAT + 40.0, d)
             h = h - lava["depth"] * trench
+            # Cooled lava fields: lumpy ropes of old flows along the lava (not in the trench, not in the city).
+            near = (1.0 - smoothstep(0.0, lava.get("field", 70.0), dl)) * (dl > 0) * smoothstep(
+                CITY_FLAT + 10.0, CITY_FLAT + 60.0, d)
+            ropes = (1.0 - np.abs(fbm(seed + 31, x, z, 22.0, 3))) ** 3
+            h = h + lava.get("field_height", 1.8) * ropes * near
         h = self._flatten_roads(x, z, h)
         # Storm drain: a trapezoid concrete channel; open water strip in the middle.
         ch = v["channel"]
@@ -452,6 +472,30 @@ class Terrain:
         names[in_channel & (dch < ch["bottom"] / 2)] = "concrete"
         names[in_channel & (dch < 2.5)] = "glass"
         return names
+
+    def boulders(self):
+        """[(x, y, z, size, seed)] on loose rock below the cliffs (the scree mask), away from the city and roads."""
+        if getattr(self, "_boulders", None) is not None:
+            return self._boulders
+        b = self.values.get("boulders")
+        self._boulders = []
+        if not b:
+            return self._boulders
+        rng = np.random.default_rng(self.values["seed"] + 77)
+        masks = self.masks()
+        scree, made = masks[..., 3], masks[..., 2]
+        gz, gx = np.gradient(self.h, STEP)
+        slope = np.degrees(np.arctan(np.hypot(gx, gz)))
+        chance = b["chance"] * scree * (slope < 38.0) * (made < 0.01)
+        picks = np.argwhere(rng.random(chance.shape) < chance)
+        rng.shuffle(picks)
+        low, high = b["size"]
+        for iz, ix in picks[: b["most"]]:
+            x = float(self.x[iz, ix] + rng.uniform(-STEP / 2, STEP / 2))
+            z = float(self.z[iz, ix] + rng.uniform(-STEP / 2, STEP / 2))
+            size = float(low + (high - low) * rng.random() ** 2.5)     # many small, few big
+            self._boulders.append((x, float(self.sample(x, z)), z, size, int(rng.integers(1 << 30))))
+        return self._boulders
 
     # -- markers ---------------------------------------------------------------------------------------------------
     def make_markers(self):
@@ -586,7 +630,8 @@ def make_chunks(t, collection, material):
         for cj, (x0, x1) in enumerate(ranges):
             name = f"Terrain_{ci:02d}_{cj:02d}"
             factors = OUTER_FACTORS if ci in (0, last) or cj in (0, last) else LOD_FACTORS
-            objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material)
+            objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material,
+                                   level)
                        for level, factor in enumerate(factors)]
             chunks.append((name, objects, factors))
     return chunks
@@ -599,7 +644,37 @@ def _steps(a, b, factor):
     return np.array(values)
 
 
-def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
+_ICO = None
+
+
+def _boulder(x, y, z, size, seed):
+    """A rough rock: an icosahedron with jittered corners, squashed and turned, sunk a third into the ground.
+    Returns (Blender verts, faces) with local indices."""
+    global _ICO
+    if _ICO is None:
+        p = (1 + 5 ** 0.5) / 2
+        corners = [(-1, p, 0), (1, p, 0), (-1, -p, 0), (1, -p, 0), (0, -1, p), (0, 1, p), (0, -1, -p), (0, 1, -p),
+                   (p, 0, -1), (p, 0, 1), (-p, 0, -1), (-p, 0, 1)]
+        faces = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2),
+                 (10, 7, 6), (7, 1, 8), (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11),
+                 (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+        _ICO = (np.array(corners, float) / math.sqrt(1 + p * p), faces)
+    corners, faces = _ICO
+    rng = np.random.default_rng(seed)
+    local = corners * rng.uniform(0.75, 1.15, (12, 1)) * np.array([1.0, rng.uniform(0.55, 0.85), rng.uniform(0.8, 1.2)])
+    a = rng.uniform(0, math.tau)
+    c, s_ = math.cos(a), math.sin(a)
+    ux = local[:, 0] * c - local[:, 2] * s_
+    uz = local[:, 0] * s_ + local[:, 2] * c
+    uy = local[:, 1]
+    half = size / 2
+    centre_y = y - 0.35 * (uy.max() - uy.min()) * half - uy.min() * half    # a third of its height in the ground
+    verts = np.stack([-(x + ux * half), -(z + uz * half), centre_y + uy * half], axis=-1)   # Unity -> Blender
+    # Unity -> Blender mirrors, so the winding turns round: reverse it to keep the faces pointing out.
+    return verts, [tuple(reversed(face)) for face in faces]
+
+
+def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material, level=0):
     import bpy
 
     from .pf import palette
@@ -637,15 +712,32 @@ def _chunk_mesh(t, index, z0, z1, x0, x1, factor, name, collection, material):
                 a, b, c, d = b, a, d, c
             faces.append([a, b, c, d])
             swatches.append(skirt_swatch)
+    # Boulders in this chunk: all in LOD0, the big ones in LOD1, none further out.
+    terrain_verts = len(verts)
+    if level < 2:
+        xa, xb = t.x[0, x0], t.x[0, x1]
+        za, zb = t.z[z0, 0], t.z[z1, 0]
+        rock = sw("rock")
+        for bx, by, bz, size, seed in t.boulders():
+            if not (xa <= bx < xb and za <= bz < zb) or (level == 1 and size < 3.5):
+                continue
+            bverts, bfaces = _boulder(bx, by, bz, size, seed)
+            base = len(verts)
+            verts.extend(bverts.tolist())
+            for face in bfaces:
+                faces.append([base + i for i in face])
+                swatches.append(rock)
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(verts, [], faces)
     attribute = mesh.attributes.new("swatch", "INT", "FACE")
     attribute.data.foreach_set("value", swatches)
-    # Biome masks as vertex colour (point domain; skirt vertices copy their edge vertex).
+    # Biome masks as vertex colour (point domain; skirt vertices copy their edge vertex; boulders = scree).
     masks = t.masks()[np.ix_(iz, ix)].reshape(-1, 4)
-    skirt_count = len(verts) - masks.shape[0]
+    skirt_count = terrain_verts - masks.shape[0]
     edge_rows = np.concatenate([grid[0, :], grid[-1, :], grid[:, 0], grid[:, -1]])
     colours = np.concatenate([masks, masks[edge_rows[:skirt_count]]]) if skirt_count else masks
+    if len(verts) > terrain_verts:
+        colours = np.concatenate([colours, np.tile([0.0, 0.0, 0.0, 1.0], (len(verts) - terrain_verts, 1))])
     layer = mesh.color_attributes.new("Masks", "FLOAT_COLOR", "POINT")
     layer.data.foreach_set("color", colours.astype(np.float32).ravel())
     obj = bpy.data.objects.new(name, mesh)

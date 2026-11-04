@@ -41,6 +41,10 @@ What a style can set:
   hugging the edges of the free space). Defaults in `layout.DEFAULTS`.
 - `terrain`: any `terrain.DEFAULTS` value; `mesas.shape = "cone"` (with `top`, the flat share) makes cinder cones;
   `lava` (moat size, streams, width, depth) adds lava (full flow in the masks, so the biome's glow shows on it).
+- `terrain.erosion` (water droplets cut gullies, `cityforge/erosion.py`), `terrain.boulders` (rocks on the scree in
+  the chunk meshes, so the colliders have them), `lava.field` (lumpy cooled lava beside the lava). City04 uses all;
+  City01 not yet. Made ground (city floor, roads) gets concrete slabs, oil stains, cracks and edge dirt in the
+  terrain shader and the preview.
 - Buildings with `only=(style, ...)` in `specs.py` belong to those styles (the refinery set: `Ind_Refinery`,
   `Ind_Cooling`, `Ind_Spheres`; industrial parts: distillation columns, cooling towers, gas spheres, flare stacks,
   pipe racks).

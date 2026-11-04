@@ -111,6 +111,9 @@ STYLES = {
             # Lava: a moat round the city that drains into the breach, and streams down from the crater wall.
             lava=dict(moat=(745.0, 635.0), streams=4, width=(14.0, 26.0), depth=2.5),
             backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
+            # Water erosion: gullies in the crater wall and the cones, sediment fans on the floor.
+            erosion=dict(droplets=1.2, strength=1.0),
+            boulders=dict(chance=0.25, size=(1.2, 7.0), most=6000),
         ),
     ),
 }
