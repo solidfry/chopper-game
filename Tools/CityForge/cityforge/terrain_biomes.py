@@ -87,10 +87,12 @@ BIOMES = {
     # Black basalt and ash; lava glows in the strongest flow lines.
     "volcanic": dict(
         # Ash flats, then wall bands: dark basalt, rusty oxidised cinder, buff tuff, grey ash.
-        ground=("#4a443e", "#3a342f"), sediment="#2c2724", rock=("#2a2725", "#5a3b2c", "#6e6151", "#403a35"),
+        ground=("#5c564d", "#2a2623"), sediment="#2c2724", rock=("#2a2725", "#5a3b2c", "#6e6151", "#403a35"),
         band=8.0, cliff="#221f1d", scree="#3b3430", cover="#5e5952", cover_slope=0.3, cover_height=120.0,
         cover_amount=0.35, wet=0.0, flow_wet=0.0, glow="#ff3a0a", glow_strength=3.0, glow_flow=0.55,
-        concrete="#55524f", roughness=0.95),
+        concrete="#55524f", roughness=0.95,
+        # Rusty scorched ground near the lava; old lava flows as sharp dark patches on the ash.
+        scorch="#6e3a20", scorch_amount=0.85, patch=0.04),
     # Poisoned waste: sick yellow-green ground, crusted rock, glowing runs.
     "toxic": dict(
         ground=("#6b6a3a", "#59592f"), sediment="#3b4722", rock=("#4e4a3c", "#5d5845", "#433f33", "#57513f"),
@@ -114,7 +116,8 @@ def row(biome):
     """16 RGBA pixels (0..1). Colours sRGB; parameters packed in 0..1 (decoded the same way in TerrainBiome.hlsl).
     0 groundA, 1 groundB, 2 sediment, 3-6 rock strata, 7 cliff, 8 scree, 9 cover (A = amount), 10 glow (A = strength
     / 10), 11 concrete, 12 (band / 50, cover slope, (cover height + 100) / 1000, glow flow), 13 (wet, flow wet,
-    roughness, has cover), 14-15 spare."""
+    roughness, has cover), 14 scorch (A = amount: ground near lava, by the heat in the surface normal map's alpha),
+    15 (patch: half width of the groundA/groundB edge, 0.15 soft .. 0.03 sharp; spare)."""
     b = BIOMES[biome]
     pixels = [(*_rgb(b["ground"][0]), 1.0), (*_rgb(b["ground"][1]), 1.0), (*_rgb(b["sediment"]), 1.0)]
     pixels += [(*_rgb(c), 1.0) for c in b["rock"]]
@@ -124,6 +127,8 @@ def row(biome):
     pixels.append((*_rgb(b["concrete"]), 1.0))
     pixels.append((b["band"] / 50.0, b["cover_slope"], (b["cover_height"] + 100.0) / 1000.0, b["glow_flow"]))
     pixels.append((b["wet"], b["flow_wet"], b["roughness"], 1.0 if b["cover"] else 0.0))
+    pixels.append((*_rgb(b.get("scorch") or "#000000"), b.get("scorch_amount", 0.0) if b.get("scorch") else 0.0))
+    pixels.append((b.get("patch", 0.15), 0.0, 0.0, 0.0))
     pixels += [(0.0, 0.0, 0.0, 0.0)] * (TABLE_WIDTH - len(pixels))
     return pixels
 
@@ -155,7 +160,7 @@ def surface_images(t, kit):
     out = []
     for suffix, data in zip(("SurfaceMasks", "SurfaceNormal"), t.surface()):
         if suffix == "SurfaceNormal":
-            data = np.concatenate([data * 0.5 + 0.5, np.ones(data.shape[:2] + (1,), np.float32)], axis=-1)
+            data = np.concatenate([data[..., :3] * 0.5 + 0.5, data[..., 3:]], axis=-1)   # A = heat
         name = f"{kit}_{suffix}"
         image = bpy.data.images.get(name)
         if image is not None:
@@ -269,9 +274,18 @@ def make_material(biome, name="CF Terrain", surface=None):
         link(math_node("MULTIPLY", parts.outputs["X"], -1.0), blender_n.inputs["X"])
         link(math_node("MULTIPLY", parts.outputs["Z"], -1.0), blender_n.inputs["Y"])
         link(parts.outputs["Y"], blender_n.inputs["Z"])
+        # On the map: 1, fading to 0 over the last 6 m (as TerrainBiome.hlsl); outside, the mesh normal.
+        uv = new("ShaderNodeSeparateXYZ")
+        link(mapping.outputs["Vector"], uv.inputs[0])
+        edge = None
+        for axis in ("X", "Y"):
+            for value in (uv.outputs[axis], math_node("SUBTRACT", 1.0, uv.outputs[axis])):
+                edge = value if edge is None else math_node("MINIMUM", edge, value)
+        inside = math_node("MULTIPLY", edge, size / 6.0, clamp=True)
+        heat = math_node("MULTIPLY", normal_node.outputs["Alpha"], inside)
         pick = new("ShaderNodeMix")
         pick.data_type = "VECTOR"
-        link(normal_node.outputs["Alpha"], pick.inputs[0])
+        link(inside, pick.inputs[0])
         link(normal, pick.inputs[4])
         link(blender_n.outputs[0], pick.inputs[5])
         tidy = new("ShaderNodeVectorMath")
@@ -279,7 +293,7 @@ def make_material(biome, name="CF Terrain", surface=None):
         link(pick.outputs[1], tidy.inputs[0])
         normal = tidy.outputs[0]
     else:
-        flow = hollow = made = scree = new("ShaderNodeValue").outputs[0]
+        flow = hollow = made = scree = heat = new("ShaderNodeValue").outputs[0]
     split_n = new("ShaderNodeSeparateXYZ")
     link(normal, split_n.inputs[0])
     split_p = new("ShaderNodeSeparateXYZ")
@@ -296,6 +310,7 @@ def make_material(biome, name="CF Terrain", surface=None):
         return node.outputs["Fac"]
 
     macro, detail = noise(180.0), noise(9.0, 4.0)
+    macro.node.inputs["Distortion"].default_value = 0.6     # warped, like the shader (flow-lobe shapes)
     shade = math_node("ADD", math_node("MULTIPLY", detail, 0.3), 0.85)       # 0.85..1.15
     # CC0 detail maps (if fetched): rock on three axes (8 m), sand and mud from above (4 m).
     def scaled(metres):
@@ -325,8 +340,14 @@ def make_material(biome, name="CF Terrain", surface=None):
             link(pair[0], grey.inputs[k])
         return mix(colour_socket, grey.outputs[0], 1.0, "MULTIPLY")
 
-    ground = mix(colour(b["ground"][0]), colour(b["ground"][1]), ramp(macro, 0.35, 0.65))
+    patch = b.get("patch", 0.15)
+    ground = mix(colour(b["ground"][0]), colour(b["ground"][1]), ramp(macro, 0.5 - patch, 0.5 + patch))
     ground = mix(ground, shade, 1.0, "MULTIPLY")
+    middle = math_node("ADD", math_node("MULTIPLY", noise(45.0, 2.0), 0.3), 0.85)            # 45 m light and dark
+    ground = mix(ground, slab_grey(middle), 1.0, "MULTIPLY")
+    if b.get("scorch"):
+        burn = math_node("MULTIPLY", math_node("MULTIPLY", heat, heat), b.get("scorch_amount", 0.0))
+        ground = mix(ground, colour(b["scorch"]), burn)
     ground = detailed(ground, sand_detail)
     # Strata: height bands (warped), 4 colours, constant steps.
     warp = math_node("MULTIPLY", noise(90.0), 6.0)

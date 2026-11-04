@@ -100,7 +100,13 @@ Road meshes (each one FBX, placed once at the city origin, with colliders):
   in the rim, east down into the canyon and out of the map), the portals (headwall, dark opening with lights going
   in: the road end is never seen).
 - `City_Freeway`: 2 x 2 lanes on T piers, 16 m over the north frontage road along the storm drain; ramps down to the
-  ground 200 m outside the city on both sides.
+  ground 200 m outside the city on both sides. The west and canyon roads run beside each ramp and join the freeway line past the
+  landing.
+- `City_Utilities`: two-tier pipe racks (7 m, frames every 8 m) along the streets between industrial plots, with a
+  spur to each plot (a pipe bridge over the street when the plot is across it); lattice power-line pylons with
+  sagging cables beside the roads out of the city (off steep ground and lava); parked trucks, tankers, vans,
+  dumpsters and barriers in the kerb lanes of the small streets. Industrial plots also get catwalks between
+  vessels of the same height and a few yard vehicles (`kit.vehicle`). Preview: `pipes_day.jpg`.
 - `City_SkyRoads`: a sky road loop round the core (120 to 180 m, rises and falls, goes over low buildings and round
   tall ones, columns where the ground is free) and a 3-turn spiral ramp from the loop down to a plaza, round a
   central column with neon rings. Glass barriers with cyan neon, pink under-glow.

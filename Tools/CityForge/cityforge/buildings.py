@@ -680,10 +680,38 @@ def industrial(b):
         _containers(b, x, z, cols, rows, stacks)
     for a, c, y in spec.get("racks", []):
         _pipe_run(b, tuple(a), 0.0, tuple(c), 0.0, y, rest=True)
+    # Catwalks between neighbouring vessels of about the same height (tank tops, column decks).
+    def top_deck(height):       # the highest platform ring _column builds (8 m, then every 9 m, below the top)
+        y = 8.0
+        while y + 9.0 < height - 2.0:
+            y += 9.0
+        return y
+
+    vessels = [(x, z, r, h) for x, z, r, h in tanks] + [(x, z, r + 1.2, top_deck(h))
+                                                        for x, z, r, h in spec.get("columns", []) if h > 12.0]
+    for (xa, za, ra, ha), (xb, zb, rb, hb) in zip(vessels, vessels[1:]):
+        gap = math.hypot(xb - xa, zb - za) - ra - rb
+        if 1.0 < gap < 24.0 and abs(ha - hb) < 2.5:
+            _catwalk(b, (xa, za), ra, (xb, zb), rb, min(ha, hb))
     plot = b.plot
     for x, z in ((plot.x0 + 1.0, plot.z1 - 1.0), (plot.x1 - 1.0, plot.z0 + 1.0)):
         if not _occupied(b, x, z):
             kit.floodlight(b, x, z, 11.0, facing=(1.0 if x < 0 else -1.0, 0.0))
+    # Yard vehicles: a few trucks, tankers and vans in free spots of the yard.
+    parked = 0
+    for _ in range(24):
+        if parked >= spec.get("vehicles", 3):
+            break
+        x, z = rng.uniform(plot.x0 + 4.0, plot.x1 - 4.0), rng.uniform(plot.z0 + 7.0, plot.z1 - 7.0)
+        yaw = rng.choice((0.0, 90.0, 180.0, 270.0))
+        long = 6.5 if yaw in (0.0, 180.0) else 2.0
+        wide = 2.0 if yaw in (0.0, 180.0) else 6.5
+        if not plot.inset(max(long, wide) + 1.0).contains(x, z):
+            continue
+        if any(_occupied(b, x + dx, z + dz) for dx in (-wide, 0.0, wide) for dz in (-long, 0.0, long)):
+            continue
+        kit.vehicle(b, rng.choice(("truck", "tanker", "van")), x, z, yaw)
+        parked += 1
 
 
 def _occupied(b, x, z):
@@ -809,6 +837,33 @@ def _pipe_run(b, a, ra, c, rc, y, rest=False):
             lx, lz = fx + px * side * 0.9, fz + pz * side * 0.9
             b.span(lx - 0.1, lx + 0.1, 0.0, y - 0.35, lz - 0.1, lz + 0.1, "metal")
         b.beam((fx - px * 0.9, y - 0.35, fz - pz * 0.9), (fx + px * 0.9, y - 0.35, fz + pz * 0.9), 0.18, "metal")
+
+
+def _catwalk(b, a, ra, c, rc, y):
+    """A grated walkway from vessel wall to vessel wall at height y: deck, posts and two hand rails each side."""
+    (xa, za), (xc, zc) = a, c
+    dx, dz = xc - xa, zc - za
+    length = math.hypot(dx, dz)
+    ux, uz = dx / length, dz / length
+    start = (xa + ux * (ra - 0.2), za + uz * (ra - 0.2))
+    end = (xc - ux * (rc - 0.2), zc - uz * (rc - 0.2))
+    run = math.hypot(end[0] - start[0], end[1] - start[1])
+    mx, mz = (start[0] + end[0]) / 2, (start[1] + end[1]) / 2
+    yaw = math.degrees(math.atan2(ux, uz))
+    with b.turned(mx, mz, yaw):
+        b.span(mx - 0.6, mx + 0.6, y - 0.15, y, mz - run / 2, mz + run / 2, "metal", L01)
+        for side in (-1, 1):
+            rx = mx + side * 0.6
+            for rail in (0.55, 1.05):
+                b.span(rx - 0.03, rx + 0.03, y + rail - 0.03, y + rail + 0.03, mz - run / 2, mz + run / 2, "hazard", L01)
+            k = 0.0
+            while k <= run:
+                b.span(rx - 0.03, rx + 0.03, y, y + 1.05, mz - run / 2 + k - 0.03, mz - run / 2 + k + 0.03, "metal")
+                k += 2.0
+        b.collider(mx - 0.7, mx + 0.7, y - 0.15, y + 1.1, mz - run / 2, mz + run / 2)
+        if run > 12.0:
+            # A support frame in the middle of long spans.
+            b.span(mx - 0.12, mx + 0.12, 0.0, y - 0.15, mz - 0.12, mz + 0.12, "steel", L01)
 
 
 # -- refinery parts ----------------------------------------------------------------------------------------------------

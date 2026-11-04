@@ -3,7 +3,8 @@
 // Biome-free facts come from two map-wide textures (CityForge terrain.Terrain.surface, 1.5 m per texel; uv = xz /
 // MapSize + 0.5, the map centred on the origin): MaskMap RGBA = R flow (gullies, river beds), G hollow (concave
 // ground), B made ground (city floor, roads, channel), A scree (loose rock below cliffs); SurfaceNormal RGB = world
-// normal * 0.5 + 0.5 with small gullies the mesh does not have (so every LOD lights the same). Outside the map (the
+// normal * 0.5 + 0.5 with small gullies the mesh does not have (so every LOD lights the same), A = heat (1 at the
+// lava edge, 0 from 60 m out). Outside the map (the
 // backdrop) or with MapSize 0: no masks, mesh normal. A biome is one row
 // of 16 pixels in _BiomeTable (Tools/CityForge/cityforge/terrain_biomes.py writes it; the same rules make the Blender
 // previews). Colours come from world position and noise; CC0 detail maps (rock on three axes, sand and mud from
@@ -11,7 +12,8 @@
 //
 // Table row (sRGB colours, decoded here): 0 groundA, 1 groundB, 2 sediment, 3-6 rock strata, 7 cliff, 8 scree,
 // 9 cover (a = amount), 10 glow (a = strength / 10), 11 concrete, 12 (band / 50, cover slope, (cover height + 100) /
-// 1000, glow flow), 13 (wet, flow wet, roughness, has cover).
+// 1000, glow flow), 13 (wet, flow wet, roughness, has cover), 14 scorch (a = amount, by the heat in SurfaceNormal.a),
+// 15 (patch: half width of the groundA/groundB edge).
 //
 // Written without the editor (4 Nov 2026): compile and check in Unity. TerrainBiome.shadergraph wraps it
 // (Tools/CityForge/make_city_graphs.py writes the graph).
@@ -127,7 +129,7 @@ float3 TB_Colour(UnityTexture2D table, float row, float rows, int texel)
 
 // Masks and surface normal at a world position; inside = 1 on the map, 0 outside (fades over the last texels).
 void TB_Surface(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal, float MapSize,
-    out float4 masks, out float3 normal)
+    out float4 masks, out float3 normal, out float heat)
 {
     // No early return: texture samples need derivatives, so they stay out of branches.
     float size = max(MapSize, 1.0);
@@ -136,7 +138,9 @@ void TB_Surface(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, Unit
     float inside = saturate(min(edge.x, edge.y) / 6.0) * step(1.0, MapSize);
     normal = normalize(NormalWS);
     masks = SAMPLE_TEXTURE2D(MaskMap.tex, MaskMap.samplerstate, uv) * inside;
-    float3 baked = SAMPLE_TEXTURE2D(SurfaceNormal.tex, SurfaceNormal.samplerstate, uv).xyz * 2.0 - 1.0;
+    float4 bakedTexel = SAMPLE_TEXTURE2D(SurfaceNormal.tex, SurfaceNormal.samplerstate, uv);
+    heat = bakedTexel.a * inside;
+    float3 baked = bakedTexel.xyz * 2.0 - 1.0;
     baked = dot(baked, baked) > 0.01 ? normalize(baked) : normal;   // a grey default map would be a zero vector
     normal = normalize(lerp(normal, baked, inside));
 }
@@ -160,11 +164,14 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskM
 
     float4 Masks;
     float3 n;
-    TB_Surface(PositionWS, NormalWS, MaskMap, SurfaceNormal, MapSize, Masks, n);
+    float heat;
+    TB_Surface(PositionWS, NormalWS, MaskMap, SurfaceNormal, MapSize, Masks, n, heat);
     float flow = Masks.r, hollow = Masks.g, made = Masks.b, scree = Masks.a;
     float slope = 1.0 - saturate(n.y);
     float2 xz = PositionWS.xz;
-    float macro = TB_Fbm(xz / 180.0, 3);
+    // Warped large noise: ground patches with lobed edges (old flows, drifts), sharp where the biome says.
+    float macro = TB_Fbm(xz / 180.0 + (TB_Fbm(xz / 60.0 + 5.3, 2) - 0.5) * 1.2, 3);
+    float patch = TB_Row(BiomeTable, row, rows, 15).x;
     float detail = TB_Fbm(xz / 9.0, 4);
     float shade = 0.85 + 0.3 * detail;
 
@@ -173,7 +180,10 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskM
     float mudF = lerp(1.0, TB_Detail(SAMPLE_TEXTURE2D(MudColour.tex, MudColour.samplerstate, xz / 5.0).rgb), DetailStrength);
     float rockF = lerp(1.0, TB_Detail(TB_Tri(RockColour, PositionWS, blend, 1.0 / 8.0)), DetailStrength);
     float3 ground = lerp(TB_Colour(BiomeTable, row, rows, 0), TB_Colour(BiomeTable, row, rows, 1),
-                         smoothstep(0.35, 0.65, macro)) * shade * sandF;
+                         smoothstep(0.5 - patch, 0.5 + patch, macro)) * shade * sandF;
+    ground *= 0.85 + 0.3 * TB_Fbm(xz / 45.0 + 9.1, 2);                       // 45 m light and dark
+    float4 scorch = TB_Row(BiomeTable, row, rows, 14);
+    ground = lerp(ground, TB_Linear(scorch.rgb), heat * heat * scorch.a);     // burnt near the lava
     // Strata: 4 colours by height band, warped by noise.
     float warp = (TB_Fbm(xz / 90.0, 2) - 0.5) * 12.0;
     int strata = (int)floor(frac((PositionWS.y + warp) / (band * 4.0)) * 4.0);

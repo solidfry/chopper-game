@@ -157,7 +157,7 @@ def _make_roads(scene, state, city, export_collection, material):
         tops.append((shape, _unity_bounds(state.built[name]["objects"][0])[1][1]))
     state.building_tops = tops
     made = [roads.city_roads(city, state.terrain, state.style), roads.freeway(city, state.terrain, state.style),
-            roads.sky_roads(city, state.terrain, state.style, tops)]
+            roads.sky_roads(city, state.terrain, state.style, tops), roads.utilities(city, state.terrain, state.style)]
     collection = _collection(scene, DISTRICT_COLLECTION)
     for b in made:
         state.problems[b.name] = audit.check(b)
@@ -544,7 +544,7 @@ def export_terrain(state, out_dir):
                   "channel": [_r(p) for p in t.path_points(t.channel)]},
         "layout": ([{"building": name, "position": _r(p), "yaw": yaw} for name, p, yaw in state.layout.instances]
                    + [{"building": name, "position": [0.0, 0.0, 0.0], "yaw": 0.0}
-                      for name in ("City_Roads", "City_Freeway", "City_SkyRoads") if name in state.built]
+                      for name in roads.CITY_PARTS if name in state.built]
                    if state.layout is not None else
                    [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
                     for name, p in state.placements.items()]),
@@ -898,6 +898,15 @@ def _terrain_shots(state, by_name):
                                                           z - away.y * 110.0 - away.x * 50.0)),
                               geo.to_blender((x, 22.0, z)), 24.0))
                 break
+    racks = getattr(state.built.get("City_Utilities", {}).get("building"), "racks", None)
+    if racks:
+        # Down a refinery street: the longest pipe rack, from low beside it.
+        rack = max(racks, key=lambda line: line.length)
+        mid, ahead = rack.interpolate(0.3, normalized=True), rack.interpolate(0.8, normalized=True)
+        dx, dz = ahead.x - mid.x, ahead.y - mid.y
+        n = math.hypot(dx, dz) or 1.0
+        shots.append(("pipes", geo.to_blender((mid.x - dx / n * 40.0 + dz / n * 18.0, 22.0, mid.y - dz / n * 40.0 - dx / n * 18.0)),
+                      geo.to_blender((ahead.x, 6.0, ahead.y)), 22.0))
     if "Chopper_Mesa" in by_name and t.markers:
         _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
         away = Vector((mx, mz)).normalized()

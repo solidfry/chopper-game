@@ -6,6 +6,8 @@ Road meshes, each a Building (LODs, box colliders, audit) placed once at the cit
                    (strips on the flattened terrain), tunnel portals in the rim (the road ends out of sight)
     City_Freeway   the elevated freeway along the storm drain: 2 x 2 lanes on T piers, ramps down to the ground at
                    both ends (west to the tunnel, east into the canyon)
+    City_Utilities pipe racks between the industrial plots (pipe bridges over the streets), power lines on the
+                   roads out of the city, parked trucks, vans, dumpsters and barriers in the small streets
     City_SkyRoads  a sky road loop round the core (rises and falls, kept clear of the towers) and a spiral ramp that
                    winds down from it to a plaza, round a central column
 
@@ -16,11 +18,14 @@ import math
 
 import numpy as np
 import shapely
+import shapely.ops
 from shapely.geometry import LineString, Point
 
 from . import layout as layout_module
+from . import kit
 from .kit import ALL, L0, L01, L2, Building, sw
 
+CITY_PARTS = ("City_Roads", "City_Freeway", "City_SkyRoads", "City_Utilities")   # placed once at the city origin
 ROAD_BUDGETS = dict(lod0=400000, lod1=0.95, lod2=60000)
 SURFACE_Y = 0.05
 
@@ -414,3 +419,242 @@ def _pylons(b, path, tops, city, closed):
         b.span(x - 3.5, x + 3.5, top - 2.0, top, z - 3.5, z + 3.5, "concrete", L01)
         b.cylinder((x, top * 0.5, z), (x, top * 0.5 + 0.8, z), 2.35, "neon_cyan", segments=10, at=L01)
         b.round_collider(x, z, 2.2, 0.0, top)
+
+
+# -- City_Utilities -----------------------------------------------------------------------------------------------------
+# What ties the city together: pipe racks along the streets between the industrial plots (crossing the streets as pipe
+# bridges), power lines along the roads out of the city, parked trucks and street clutter.
+
+RACK = dict(height=7.0, frame=8.0, reach=260.0, front=14.0)
+PYLON = dict(spacing=95.0, offset=24.0, height=26.0)
+
+
+def utilities(city, terrain, style):
+    b = _road_building("City_Utilities", style, terrain.values["size"] if terrain else 3000.0)
+    b.ground_level = -60.0
+    industrial = [shape for name, shape in city.footprints if city.specs[name]["type"] == "industrial"]
+    keep_out = city.channel.buffer(12.0)
+    racks = _pipe_racks(b, city, industrial, keep_out)
+    b.racks = racks             # for the preview shot
+    _street_clutter(b, city, racks, keep_out)
+    if terrain is not None:
+        _power_lines(b, terrain)
+    return b
+
+
+def _side_line(line, offset):
+    """The line moved sideways (shapely offset_curve; + = left of the direction), as one LineString or None."""
+    moved = line.offset_curve(offset)
+    parts = [p for p in layout_module._parts(moved) if p.geom_type == "LineString" and p.length > 1.0]
+    return max(parts, key=lambda p: p.length) if parts else None
+
+
+def _pipe_racks(b, city, industrial, keep_out):
+    """For every street: the industrial plots that front it; a two-tier rack on one side of the street from plot to
+    plot (when they are close), and a spur from the rack to each plot (over the street when the plot is across it).
+    Returns the rack lines (for keeping clutter away)."""
+    lines = []
+    for road in city.roads:
+        if road.kind not in ("street", "frontage", "perimeter", "radial"):
+            continue
+        line = road.line.intersection(city.rect.buffer(-2.0)).difference(keep_out)
+        for part in layout_module._parts(line):
+            if part.geom_type != "LineString" or part.length < 30.0:
+                continue
+            fronting = [(part.project(shape.centroid), shape) for shape in industrial
+                        if shape.distance(part) < road.width / 2 + RACK["front"]]
+            if len(fronting) < 2:
+                continue
+            fronting.sort(key=lambda item: item[0])
+            # The rack side: where most of the plots are.
+            left = sum(1 if _side(part, shape.centroid) > 0 else -1 for _a, shape in fronting)
+            sign = 1.0 if left >= 0 else -1.0
+            offset = sign * (road.width / 2 - 1.3)
+            rail = _side_line(part, offset)
+            if rail is None:
+                continue
+            for (a0, s0), (a1, s1) in zip(fronting, fronting[1:]):
+                if a1 - a0 < 8.0 or a1 - a0 > RACK["reach"]:
+                    continue
+                piece = shapely.ops.substring(rail, rail.project(part.interpolate(a0)), rail.project(part.interpolate(a1)))
+                if piece.geom_type != "LineString" or piece.length < 8.0:
+                    continue
+                _rack(b, list(piece.coords))
+                lines.append(piece)
+            for along, shape in fronting:
+                _spur(b, rail, part.interpolate(along), shape)
+    return lines
+
+
+def _side(line, point):
+    """> 0 when the point is left of the line (looking along it)."""
+    along = line.project(point)
+    a, c = line.interpolate(max(0.0, along - 1.0)), line.interpolate(min(line.length, along + 1.0))
+    return (c.x - a.x) * (point.y - a.y) - (c.y - a.y) * (point.x - a.x)
+
+
+def _rack_pipes(b, p0, p1, y):
+    """Pipes on a two-tier rack between two ground points (x, z): 3 low (big), 2 high (small), across offsets."""
+    (x0, z0), (x1, z1) = p0, p1
+    length = math.hypot(x1 - x0, z1 - z0)
+    if length < 0.5:
+        return
+    px, pz = -(z1 - z0) / length, (x1 - x0) / length
+    for offset, radius, lift, swatch in ((-0.7, 0.38, 0.0, "metal"), (0.0, 0.28, 0.0, "steel"),
+                                         (0.7, 0.32, 0.0, "rust"), (-0.45, 0.18, 1.3, "trim"),
+                                         (0.45, 0.22, 1.3, "metal")):
+        top = y + lift + radius
+        b.cylinder((x0 + px * offset, top, z0 + pz * offset), (x1 + px * offset, top, z1 + pz * offset), radius,
+                   swatch, segments=8, at=L01)
+    b.cylinder((x0, y + 0.4, z0), (x1, y + 0.4, z1), 0.9, "metal", segments=4, at=(2,))
+
+
+def _rack(b, coords):
+    """A pipe rack along ground points: T frames every RACK["frame"] m, two cross beams, pipes per straight piece."""
+    y = RACK["height"]
+    line = LineString(coords)
+    for (x0, z0), (x1, z1) in zip(coords, coords[1:]):
+        _rack_pipes(b, (x0, z0), (x1, z1), y)
+        length = math.hypot(x1 - x0, z1 - z0)
+        if length > 0.5:
+            yaw = math.degrees(math.atan2(x1 - x0, z1 - z0))
+            b.colliders.append((((x0 + x1) / 2, y + 1.0, (z0 + z1) / 2), (2.4, 2.4, length), yaw))
+    d = 0.0
+    while d <= line.length:
+        p = line.interpolate(d)
+        q = line.interpolate(min(line.length, d + 1.0)) if d + 1.0 <= line.length else line.interpolate(d - 1.0)
+        dx, dz = q.x - p.x, q.y - p.y
+        n = math.hypot(dx, dz) or 1.0
+        rx, rz = dz / n, -dx / n
+        b.cylinder((p.x, 0.0, p.y), (p.x, y + 1.3, p.y), 0.22, "steel", segments=6, at=L01)
+        b.span(p.x - 0.4, p.x + 0.4, 0.0, 0.3, p.y - 0.4, p.y + 0.4, "concrete", L01)
+        for level in (y - 0.15, y + 1.15):
+            b.beam((p.x - rx * 1.1, level, p.y - rz * 1.1), (p.x + rx * 1.1, level, p.y + rz * 1.1), 0.2, "steel", L01)
+        b.colliders.append(((p.x, (y + 1.3) / 2, p.y), (0.5, y + 1.3, 0.5), 0.0))
+        d += RACK["frame"]
+
+
+def _spur(b, rail, at, shape):
+    """From the rack (nearest point) straight to the plot edge, then a drop to a ground manifold."""
+    start = rail.interpolate(rail.project(at))
+    edge = shape.exterior.interpolate(shape.exterior.project(start))
+    dx, dz = edge.x - start.x, edge.y - start.y
+    length = math.hypot(dx, dz)
+    if length < 1.0 or length > 40.0:
+        return
+    ux, uz = dx / length, dz / length
+    end = (edge.x - ux * 1.0, edge.y - uz * 1.0)      # stop 1 m short of the plot
+    y = RACK["height"] + 0.45
+    b.cylinder((start.x, y, start.y), (end[0], y, end[1]), 0.3, "metal", segments=8, at=L01)
+    b.cylinder((end[0], 0.6, end[1]), (end[0], y + 0.3, end[1]), 0.3, "metal", segments=8, at=L01)
+    b.span(end[0] - 0.8, end[0] + 0.8, 0.0, 1.2, end[1] - 0.8, end[1] + 0.8, "primer", L01)
+    b.box((end[0], 1.4, end[1]), (0.5, 0.3, 0.5), "hazard", L01)          # valve wheel housing
+    if length > 3.0:
+        # A post halfway, so long spurs over a street do not hang free.
+        mx, mz = (start.x + end[0]) / 2, (start.y + end[1]) / 2
+        b.cylinder((mx, 0.0, mz), (mx, y - 0.3, mz), 0.18, "steel", segments=6, at=L01)
+    yaw = math.degrees(math.atan2(ux, uz))
+    b.colliders.append((((start.x + end[0]) / 2, y, (start.y + end[1]) / 2), (0.8, 0.8, length), yaw))
+
+
+def _street_clutter(b, city, racks, keep_out):
+    """Parked trucks, tankers, vans, dumpsters and barriers in the kerb lane of the small streets, on the side
+    without a rack, kept off junctions."""
+    rng = b.rng
+    rack_zone = shapely.unary_union([line.buffer(3.0) for line in racks]) if racks else None
+    junctions = shapely.unary_union([r.line for r in city.roads if r.kind not in ("street", "frontage")]).buffer(16.0)
+    blocked = keep_out.union(junctions)
+    if rack_zone is not None:
+        blocked = blocked.union(rack_zone)
+    footprints = shapely.unary_union([shape for _n, shape in city.footprints]).buffer(0.8)
+    kinds = ("truck", "tanker", "van", "van", "dumpster", "barrier", "barrier")
+    for road in city.roads:
+        if road.kind not in ("street", "frontage"):
+            continue
+        pieces = [part for part in layout_module._parts(road.line.intersection(city.rect.buffer(-4.0)))
+                  if part.geom_type == "LineString" and part.length > 20.0]
+        for piece, sign in [(piece, sign) for piece in pieces for sign in (-1.0, 1.0)]:
+            lane = _side_line(piece, sign * (road.width / 2 - 1.6))
+            if lane is None:
+                continue
+            d = rng.uniform(5.0, 25.0)
+            while d < lane.length - 8.0:
+                p = lane.interpolate(d)
+                q = lane.interpolate(d + 1.0)
+                kind = rng.choice(kinds)
+                if not blocked.contains(p) and not footprints.contains(p):
+                    yaw = math.degrees(math.atan2(q.x - p.x, q.y - p.y)) + (180.0 if rng.random() < 0.5 else 0.0)
+                    kit.vehicle(b, kind, p.x, p.y, yaw)
+                d += rng.uniform(14.0, 45.0)
+
+
+def _power_lines(b, terrain):
+    """Lattice pylons beside the roads out of the city (outside the city floor), three sagging cables between them.
+    Pylons stand off steep ground and lava; cables only between neighbours that both stand."""
+    from .terrain import CITY_FLAT
+    p = PYLON
+    for road in terrain.roads:
+        line = LineString(road["points"])
+        rail = _side_line(line, -(road["width"] / 2 + p["offset"]))
+        if rail is None:
+            continue
+        previous = None
+        d = 30.0
+        while d < rail.length:
+            pt = rail.interpolate(d)
+            x, z = pt.x, pt.y
+            half = terrain.values["size"] / 2 - 40.0
+            ok = abs(x) < half and abs(z) < half and terrain._city_distance(x, z) > CITY_FLAT + 20.0
+            if ok:
+                ys = [float(terrain.sample(x + dx, z + dz)) for dx, dz in ((0, 0), (4, 0), (-4, 0), (0, 4), (0, -4))]
+                ok = max(ys) - min(ys) < 3.0 and float(terrain.lava_distance(np.array(x), np.array(z))) > 12.0
+            if ok:
+                q = rail.interpolate(min(rail.length, d + 1.0))
+                yaw = math.degrees(math.atan2(q.x - x, q.y - z))
+                ground = min(ys)
+                arms = _pylon(b, x, ground, z, yaw)
+                if previous is not None and math.hypot(x - previous[2][0], z - previous[2][2]) < p["spacing"] * 1.6:
+                    for a, c in zip(previous, arms):
+                        _cable(b, a, c)
+                previous = arms
+            else:
+                previous = None
+            d += p["spacing"]
+
+
+def _pylon(b, x, y, z, yaw):
+    """A tapered lattice pylon (4 legs, cross braces) with two cross arms; returns the 3 cable points."""
+    h = PYLON["height"]
+    arms = []
+    with b.turned(x, z, yaw):
+        base, top = 3.0, 0.9
+        corners = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        for sx, sz in corners:
+            b.beam((x + sx * base, y, z + sz * base), (x + sx * top, y + h, z + sz * top), 0.25, "steel", L01)
+            b.span(x + sx * base - 0.5, x + sx * base + 0.5, y - 0.5, y + 0.4, z + sz * base - 0.5,
+                   z + sz * base + 0.5, "concrete", L01)
+        for k in range(4):
+            y0, y1 = y + h * k / 4, y + h * (k + 1) / 4
+            w0, w1 = base + (top - base) * k / 4, base + (top - base) * (k + 1) / 4
+            for (ax, az), (cx, cz) in zip(corners, corners[1:] + corners[:1]):
+                b.beam((x + ax * w0, y0, z + az * w0), (x + cx * w1, y1, z + cz * w1), 0.12, "steel", (0,))
+        b.span(x - 0.9, x + 0.9, y, y + h, z - 0.9, z + 0.9, "steel", (2,))
+        for level, reach in ((h - 5.0, 7.0), (h - 0.5, 4.5)):
+            b.span(x - reach, x + reach, y + level - 0.3, y + level + 0.3, z - 0.3, z + 0.3, "steel", L01)
+        b.box((x, y + h + 0.4, z), (0.5, 0.5, 0.5), "warning", L01)
+        b.collider(x - 3.0, x + 3.0, y, y + h, z - 3.0, z + 3.0)
+    a = math.radians(yaw)       # local +X turns to (cos, -sin) for a Unity yaw
+    for lx, ly in ((-6.5, h - 5.6), (6.5, h - 5.6), (0.0, h - 1.1)):
+        arms.append((x + lx * math.cos(a), y + ly, z - lx * math.sin(a)))
+    return arms
+
+
+def _cable(b, a, c, sag=3.5, pieces=6):
+    """A sagging cable (parabola) of short thin bars."""
+    points = []
+    for k in range(pieces + 1):
+        t = k / pieces
+        points.append((a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t - sag * 4 * t * (1 - t),
+                       a[2] + (c[2] - a[2]) * t))
+    for p0, p1 in zip(points, points[1:]):
+        b.beam(p0, p1, 0.08, "dark", L01)

@@ -669,9 +669,10 @@ class Terrain:
         texel centres at ((i + 0.5) * size / resolution - size / 2)), so the ground does not depend on the mesh:
             masks  RGBA 0..1: R flow, G hollow, B made, A scree (see masks), sharp at texel size: lava, roads and the
                    city edge are worked out again here, the rest is the masks smoothly resampled
-            normal RGB = Unity world normal * 0.5 + 0.5, A = 1: the height field (smooth resample) with small gullies
-                   on the steep parts. Lighting detail the mesh does not have; the same on every LOD.
-        Returns (masks, normal) float32 arrays, first row = -Z (flip for an image)."""
+            normal RGB = Unity world normal * 0.5 + 0.5: the height field (smooth resample) with small gullies on the
+                   steep parts (lighting detail the mesh does not have; the same on every LOD); A = heat: 1 at the
+                   lava edge, 0 from 60 m out (scorched ground; 0 on maps without lava)
+        Returns (masks RGBA, normal RGBA with the alpha = heat) float32 arrays, first row = -Z (flip for an image)."""
         if getattr(self, "_surface", None) is not None:
             return self._surface
         v = self.values
@@ -707,9 +708,12 @@ class Terrain:
             roads = np.minimum(roads, dr - road["width"] / 2)
         made = np.maximum(made, smoothstep(4.0, 0.0, fine(roads)))
         masks[..., 2] = made
+        heat = np.zeros_like(h)
         if getattr(self, "lava", None):
             lava = fine(self.lava_distance(self.x, self.z))
             masks[..., 0] = np.maximum(masks[..., 0], 1.0 - smoothstep(-3.0, 1.0, lava))
+            heat = (1.0 - smoothstep(0.0, 60.0, lava)) * (1.0 - made)
+        normal = np.concatenate([normal, heat[..., None]], axis=-1)
         masks[..., 3] *= 1.0 - made
         self._surface = (masks.astype(np.float32), normal.astype(np.float32))
         return self._surface
@@ -718,7 +722,7 @@ class Terrain:
         """The surface textures as 8-bit PNGs (linear data, first row = +Z)."""
         masks, normal = self.surface()
         write_png(masks_path, np.clip(np.round(masks[::-1] * 255.0), 0, 255).astype(np.uint8))
-        encoded = np.concatenate([normal * 0.5 + 0.5, np.ones(normal.shape[:2] + (1,), np.float32)], axis=-1)
+        encoded = np.concatenate([normal[..., :3] * 0.5 + 0.5, normal[..., 3:]], axis=-1)
         write_png(normal_path, np.clip(np.round(encoded[::-1] * 255.0), 0, 255).astype(np.uint8))
 
     def write_raw(self, path):

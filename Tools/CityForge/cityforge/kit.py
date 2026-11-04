@@ -690,3 +690,44 @@ def tier_lights(b, rect, y0, y1, step=90.0):
             for z in (rect.z0 - 0.1, rect.z1 + 0.1):
                 b.box((x, y, z), (0.5, 0.5, 0.5), "warning", L01)
         y += step
+
+
+# -- vehicles and street props ------------------------------------------------------------------------------------------
+
+VEHICLE_COLOURS = ("primer", "trim", "hazard", "steel", "rust", "wall")
+
+
+def vehicle(b, kind, x, z, yaw):
+    """A simple vehicle or prop on the ground at (x, z), long side along the yaw (local +Z = forward)."""
+    rng = b.rng
+    colour = rng.choice(VEHICLE_COLOURS)
+    with b.turned(x, z, yaw):
+        if kind in ("truck", "tanker"):
+            b.span(x - 1.2, x + 1.2, 0.5, 1.1, z - 5.5, z + 5.0, "dark", L01)                # chassis
+            b.span(x - 1.25, x + 1.25, 1.1, 3.6, z + 2.8, z + 5.0, colour, L01)                 # cab
+            b.span(x - 1.1, x + 1.1, 2.6, 3.3, z + 4.95, z + 5.02, "glass", L01)
+            for zz in (z + 3.8, z - 2.0, z - 4.2):
+                for side in (-1, 1):
+                    b.cylinder((x + side * 1.0, 0.5, zz), (x + side * 1.3, 0.5, zz), 0.5, "rubber", segments=8, at=L01)
+            if kind == "tanker":
+                b.cylinder((x, 2.4, z - 5.4), (x, 2.4, z + 2.5), 1.25, rng.choice(("steel", "trim")), segments=12, at=L01)
+            else:
+                b.span(x - 1.3, x + 1.3, 1.1, 4.0, z - 5.6, z + 2.6, rng.choice(VEHICLE_COLOURS), L01)
+            b.span(x - 1.2, x + 1.2, 3.62, 3.7, z + 3.2, z + 4.6, "sodium", L0)
+            b.collider(x - 1.3, x + 1.3, 0.0, 4.0, z - 5.6, z + 5.0)
+        elif kind == "van":
+            b.span(x - 1.0, x + 1.0, 0.4, 2.5, z - 2.6, z + 2.6, colour, L01)
+            b.span(x - 0.9, x + 0.9, 1.6, 2.2, z + 2.58, z + 2.64, "glass", L01)
+            for zz in (z - 1.7, z + 1.7):
+                b.span(x - 1.05, x + 1.05, 0.0, 0.7, zz - 0.35, zz + 0.35, "rubber", L01)
+            b.collider(x - 1.0, x + 1.0, 0.0, 2.5, z - 2.6, z + 2.6)
+        elif kind == "dumpster":
+            b.span(x - 0.9, x + 0.9, 0.0, 1.3, z - 1.0, z + 1.0, rng.choice(("primer", "hazard", "rust")), L01)
+            b.span(x - 0.95, x + 0.95, 1.3, 1.4, z - 1.05, z + 1.05, "dark", L01)
+            b.collider(x - 0.9, x + 0.9, 0.0, 1.4, z - 1.0, z + 1.0)
+        else:  # a row of concrete barriers with warning stripes
+            for k in range(3):
+                zz = z - 2.1 + k * 2.1
+                b.span(x - 0.3, x + 0.3, 0.0, 0.9, zz - 1.0, zz + 1.0, "concrete", L01)
+                b.span(x - 0.31, x + 0.31, 0.55, 0.7, zz - 1.0, zz + 1.0, "hazard", L0)
+            b.collider(x - 0.3, x + 0.3, 0.0, 0.9, z - 3.1, z + 3.1)
