@@ -15,6 +15,10 @@
 // walls get panel seams (1.5 m x 3 m, building space) with stains below them. Flat ground and roofs get puddles in
 // wet biomes (smooth, dark, flat).
 //
+// Animated lights (PaletteMetalSmooth B = light kind, CityForge kit.LIGHT_KINDS): 0.25 aviation lights blink (all
+// lights of one building together, as real ones are synchronised), 0.5 neon buzzes and now and then drops out,
+// 0.75 flare flames flicker. Uses _Time.
+//
 // Written without the editor (4 Nov 2026): compile and check in Unity. BuildingWear.shadergraph wraps it
 // (Tools/CityForge/make_city_graphs.py writes the graph). Same rules as the Blender preview (wear.add_preview_nodes).
 
@@ -126,6 +130,19 @@ float2 BW_Room(float3 p, float3 dir, float seed)
     return float2(shade / (1.0 + 0.35 * t), t);
 }
 
+// Brightness factor for an animated light. kind: metal-smooth B; seed: per copy; p: world position.
+float BW_LightAnimation(float kind, float seed, float3 p)
+{
+    float t = _Time.y;
+    float spot = BW_Hash(floor(p.xz / 1.5) + floor(p.y / 1.5) * 3.7);
+    float blink = 0.06 + 0.94 * step(frac(t * 0.75 + seed), 0.4);
+    float dropout = step(0.965, BW_Hash(float2(floor(t * 7.0), spot * 91.0)));
+    float neon = (0.93 + 0.07 * sin(t * 60.0 + spot * 6.28)) * (1.0 - 0.85 * dropout);
+    float flame = 0.65 + 0.55 * BW_Noise(float2(t * 9.0 + spot * 13.0, p.y * 0.8 - t * 4.0));
+    float animated = abs(kind - 0.25) < 0.1 ? blink : abs(kind - 0.5) < 0.1 ? neon : abs(kind - 0.75) < 0.1 ? flame : 1.0;
+    return kind > 0.1 ? animated : 1.0;
+}
+
 void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Masks,
     UnityTexture2D PaletteColour, UnityTexture2D PaletteEmission, UnityTexture2D PaletteMetalSmooth,
     UnityTexture2D BiomeTable, float BiomeIndex, float Wear, float EmissionStrength,
@@ -211,7 +228,7 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     Metallic = metalSmooth.r;
     Smoothness = saturate(lerp(metalSmooth.a + rain * sky * 0.4 * (1.0 - metalSmooth.a), 0.96, puddle));
     NormalOut = normalize(lerp(n, BW_TriNormal(ConcreteNormal, PositionWS, n, blend, 1.0 / 3.0), 0.6 * rough * (1.0 - puddle)));
-    Emission = lerp(glow, roomGlow, window) * EmissionStrength;
+    Emission = lerp(glow, roomGlow, window) * EmissionStrength * BW_LightAnimation(metalSmooth.b, seed, PositionWS);
     AmbientOcclusion = 1.0 - 0.5 * occlusion;
 }
 

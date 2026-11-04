@@ -33,7 +33,8 @@ SWATCH = {
     "bare": "bare",
     "sand": "hazard",          # terrain: desert sand (the city never uses the bright hazard paint)
     "rock": "warhead",         # terrain: red sandstone
-    "rock_dark": "exhaust",    # terrain: dark strata
+    "rock_dark": "soot",       # terrain: dark strata (fallback only: the terrain shader colours the ground)
+    "flame": "exhaust",        # flare flames (glow, flickers in the building shader)
 }
 
 STYLES = {
@@ -62,7 +63,7 @@ STYLES = {
             "carbon": ("#262624", None, 0.0, 0.2),        # roof membrane
             "hazard": ("#b39b78", None, 0.0, 0.12),       # sand (terrain)
             "warhead": ("#8e6a52", None, 0.0, 0.15),      # sandstone (terrain)
-            "exhaust": ("#5b4536", None, 0.0, 0.15),      # dark strata (terrain); no glow
+            "exhaust": ("#ffb347", "#ff7a1e", 0.0, 0.5),  # flare flame
         },
     ),
     # City04: a refinery town on the floor of a volcanic crater. Ash-grey concrete, sodium light, lava glow below the
@@ -84,7 +85,7 @@ STYLES = {
             "carbon": ("#232220", None, 0.0, 0.2),
             "hazard": ("#4a4542", None, 0.0, 0.12),       # ash (terrain fallback)
             "warhead": ("#3a2f2a", None, 0.0, 0.15),      # basalt (terrain fallback)
-            "exhaust": ("#24201e", None, 0.0, 0.15),      # dark basalt (terrain fallback)
+            "exhaust": ("#ffb347", "#ff7a1e", 0.0, 0.5),  # flare flame
         },
         layout=dict(
             unique=("Mega_Slab", "Mega_Needle", "Landmark_Orb"),

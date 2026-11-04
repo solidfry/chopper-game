@@ -130,6 +130,16 @@ channel corridor, every building on flat ground, road colliders cover the decks.
   the suggested numbers for the game are in the terrain manifest (`atmosphere`). Cloud ceiling and sandstorm wall
   are for the Unity step.
 
+## Lights (game scene)
+
+Every Building keeps real lights (`b.light(kind, position, colour, range, intensity)`): street lamps, yard
+floodlights, landing pads, flare flames, shanty decks; the terrain adds glow points along the lava (on the crater
+walls where the streams fall). `<kit>.terrain.json` "lights" lists them all in city space. Setup step 8 places point
+lights from it (most important kinds first, close lights of a kind merged, at most 320; no shadows).
+Animated lights are in the building shader: the palette metal-smooth B channel holds the light kind
+(`kit.LIGHT_KINDS`): aviation lights blink (synchronised per building), neon buzzes and drops out, flare flames
+(swatch `flame`) flicker.
+
 ## Building surfaces
 
 Shader work on top of the wear (BuildingWear.hlsl in the game, `wear._surfaces` in the previews):

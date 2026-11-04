@@ -28,20 +28,27 @@ def sw(name):
 
 
 WINDOW_SWATCHES = ("glass", "lit_warm", "lit_cool")
+# Light kinds the building shader animates (metal-smooth B): aviation lights blink, neon flickers, flames flicker fast.
+LIGHT_KINDS = {"warning": 0.25, "neon_pink": 0.5, "neon_cyan": 0.5, "neon_green": 0.5, "flame": 0.75}
 
 
 def mark_windows(metal_smooth):
-    """Sets G = 1 in the palette's metal-smooth map (a Blender image) for the window swatches: the building shader
-    (BuildingWear.hlsl, wear.add_preview_nodes) puts fake rooms behind those faces. G is unused otherwise."""
+    """Flags in the palette's metal-smooth map (a Blender image; G and B are unused otherwise), read by the building
+    shader (BuildingWear.hlsl, wear.add_preview_nodes): G = 1 on window swatches (fake rooms behind them), B = the
+    light kind (LIGHT_KINDS: 0.25 blink, 0.5 flicker, 0.75 flame)."""
     grid, cell = palette.GRID, palette.CELL
     size = grid * cell
     windows = {sw(name) for name in WINDOW_SWATCHES}
+    kinds = {sw(name): value for name, value in LIGHT_KINDS.items()}
     pixels = list(metal_smooth.pixels)
     for y in range(size):
         row = (size - 1 - y) // cell           # as palette._fill: image rows go up from the bottom
         for x in range(size):
-            if row * grid + x // cell in windows:
+            index = row * grid + x // cell
+            if index in windows:
                 pixels[(y * size + x) * 4 + 1] = 1.0
+            if index in kinds:
+                pixels[(y * size + x) * 4 + 2] = kinds[index]
     metal_smooth.pixels = pixels
     metal_smooth.update()
 
@@ -120,6 +127,7 @@ class Building:
         self.lods = [geo.Builder() for _ in range(LOD_COUNT)]
         self.colliders = []   # (centre, size, yaw): yaw = Unity euler Y in degrees (local +X turns to (cos, 0, -sin))
         self.markers = []     # (kind, index, position, radius)
+        self.lights = []      # (kind, position, colour hex, range m, intensity): real lights for the game scene
         self.thin = []        # (x, z, top[, radius]): masts and spires allowed above every collider
         plot = spec["plot"]
         self.plot = Rect.centred(0.0, 0.0, plot[0], plot[1])
@@ -144,6 +152,11 @@ class Building:
         cx, cz, _degrees, matrix = self._turn
         v = matrix @ Vector((p[0] - cx, p[1], p[2] - cz))
         return (v.x + cx, v.y, v.z + cz)
+
+    def light(self, kind, position, colour, range_m, intensity=1.0):
+        """A real light for the game scene (Unity places the most important ones; see CityAssets.BuildScene). kind:
+        street, flood, pad, flame, lava, shanty."""
+        self.lights.append((kind, self._tp(position), colour, range_m, intensity))
 
     def add_thin(self, x, z, top, radius=1.3):
         tx, _ty, tz = self._tp((x, 0.0, z))
@@ -535,6 +548,7 @@ def helipad(b, rect, y):
             b.box((x, deck + 0.08, z), (0.22, 0.16, 0.22), "sodium", L01)
     b.collider(pad.x0, pad.x1, y, deck, pad.z0, pad.z1)
     b.marker("RoofPad", (pad.cx, deck, pad.cz), size / 2)
+    b.light("pad", (pad.cx, deck + 4.0, pad.cz), "#ffb35a", size * 1.2, 1.5)
     return pad
 
 
@@ -626,6 +640,7 @@ def floodlight(b, x, z, height=10.0, facing=(0.0, 1.0)):
     b.span(hx - 0.6, hx + 0.6, height - 0.2, height + 0.2, hz - 0.35, hz + 0.35, "dark", L01)
     b.span(hx - 0.5, hx + 0.5, height - 0.26, height - 0.2, hz - 0.28, hz + 0.28, "sodium", L01)
     b.add_thin(x, z, height + 0.6)
+    b.light("flood", (hx + facing[0] * 2.0, height - 0.6, hz + facing[1] * 2.0), "#ffae52", 26.0, 2.0)
 
 
 # -- megastructures ---------------------------------------------------------------------------------------------------

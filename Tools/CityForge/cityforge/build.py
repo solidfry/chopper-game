@@ -514,6 +514,39 @@ def _export_fbx(objects, path, colours="NONE"):
         use_mesh_modifiers=True, colors_type=colours)
 
 
+def _city_lights(state):
+    """Every real light in city space: from each placed building (its local lights turned and moved to the layout
+    spot), the city parts (roads, utilities, shanties) and glow points along the lava. Unity keeps the most important
+    ones (CityAssets.BuildScene)."""
+    out = []
+
+    def add(kind, p, colour, range_m, intensity):
+        out.append({"kind": kind, "position": _r(p), "colour": colour, "range": round(range_m, 1),
+                    "intensity": round(intensity, 2)})
+
+    if state.layout is not None:
+        for name, (px, _py, pz), yaw in state.layout.instances:
+            c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+            for kind, (lx, ly, lz), colour, range_m, intensity in state.built[name]["building"].lights:
+                add(kind, (px + lx * c + lz * s_, ly, pz - lx * s_ + lz * c), colour, range_m, intensity)
+    for name in roads.CITY_PARTS:
+        if name in state.built:
+            for kind, p, colour, range_m, intensity in state.built[name]["building"].lights:
+                add(kind, p, colour, range_m, intensity)
+    t = state.terrain
+    glow = terrain_biomes.BIOMES[state.biome].get("glow")
+    if glow and getattr(t, "lava", None):
+        from shapely.geometry import LineString
+        for path, width in t.lava:
+            line = LineString(path)
+            d = 0.0
+            while d < line.length:
+                p = line.interpolate(d)
+                add("lava", (p.x, float(t.sample(p.x, p.y)) + 4.0 + width * 0.15, p.y), glow, 30.0 + width * 1.5, 4.0)
+                d += 55.0
+    return out
+
+
 def export_terrain(state, out_dir):
     """Terrain/<chunk>.fbx (LOD0..2 each), a 16-bit RAW height map and <kit>.terrain.json (chunks, height map,
     markers, paths, the building layout on the terrain). Returns a short summary for the main manifest."""
@@ -580,6 +613,7 @@ def export_terrain(state, out_dir):
                    if state.layout is not None else
                    [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
                     for name, p in state.placements.items()]),
+        "lights": _city_lights(state),
         "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
         "audit": state.terrain_problems,
     }

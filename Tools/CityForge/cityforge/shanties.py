@@ -95,6 +95,9 @@ def shanties(city, terrain, style):
                 _wall_shack(b, terrain, x, y, z, w, h, facing)
             for (xa, y, za, wa, _ha, fa), (xb, _y, zb, wb, _hb, _fb) in zip(row, row[1:]):
                 _deck(b, terrain, (xa, za), (xb, zb), y, fa)
+            if k % 2 == 0:
+                x, y, z, _w, h, (nx, nz) = row[len(row) // 2]
+                b.light("shanty", (x + nx * 5.0, y + h * 0.6, z + nz * 5.0), "#ffb070", 14.0, 1.0)
             if k:
                 # A stair from the nearest roof below to this level's first shack.
                 x, y, z, _w, _h, facing = row[0]

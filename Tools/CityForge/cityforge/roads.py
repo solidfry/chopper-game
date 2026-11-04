@@ -119,6 +119,7 @@ def lamp(b, x, y, z, facing, height=7.0):
     b.box((hx, y + height + 0.1, hz), (0.5 + abs(fx) * 1.4, 0.25, 0.5 + abs(fz) * 1.4), "dark")
     b.box((hx, y + height - 0.05, hz), (0.4 + abs(fx) * 1.2, 0.08, 0.4 + abs(fz) * 1.2), "sodium", L01)
     b.add_thin(x, z, y + height + 0.4, 2.0)
+    b.light("street", (hx, y + height - 0.5, hz), "#ffae42", 20.0, 1.2)
 
 
 def dashes(b, line, y, spacing=10.0, length=3.0, at=L0, skip=None):

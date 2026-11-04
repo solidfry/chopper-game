@@ -951,7 +951,8 @@ def _flare(b, x, z, height):
         a = math.radians(angle)
         b.beam((x + math.cos(a) * 5.0, 0.15, z + math.sin(a) * 5.0), (x, height * 0.55, z), 0.2, "metal", L01)
     # The flame: an amber cone over the tip (glows), thin (no collider above the tip).
-    b.cylinder((x, height + 1.2, z), (x, height + 5.0, z), 0.8, "sodium", segments=8, at=L01, end_radius=0.08)
+    b.cylinder((x, height + 1.2, z), (x, height + 5.0, z), 0.8, "flame", segments=8, at=L01, end_radius=0.08)
+    b.light("flame", (x, height + 4.0, z), "#ff8a2a", 45.0, 3.0)
     b.box((x, height - 2.8, z + 1.6), (0.4, 0.4, 0.4), "warning", L01)
     b.add_thin(x, z, height + 5.2)
     b.round_collider(x, z, 1.0, 0.0, height + 1.2)

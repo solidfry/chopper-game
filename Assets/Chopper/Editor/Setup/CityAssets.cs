@@ -113,6 +113,7 @@ namespace Chopper.Editor.Setup
             public AtmosphereInfo atmosphere;
             public TerrainMarker[] markers;
             public Placement[] layout;
+            public CityLight[] lights;
         }
 
         [Serializable]
@@ -161,6 +162,17 @@ namespace Chopper.Editor.Setup
             public string normal;
             public float size;
             public int resolution;
+        }
+
+        /// <summary>A real light from CityForge (city space): street, flood, pad, flame, lava, shanty.</summary>
+        [Serializable]
+        internal sealed class CityLight
+        {
+            public string kind;
+            public float[] position;
+            public string colour;
+            public float range;
+            public float intensity;
         }
 
         [Serializable]
@@ -608,6 +620,8 @@ namespace Chopper.Editor.Setup
                     marker.transform.localPosition = Vector(info.position);
                 }
 
+                PlaceLights(scene, terrain.lights);
+
                 Directory.CreateDirectory(SceneFolder);
                 EditorSceneManager.SaveScene(scene, path);
             }
@@ -619,6 +633,61 @@ namespace Chopper.Editor.Setup
                 Debug.Log($"Setup: city {manifest.kit} scene saved to {path}. Suggested fog: exponential, density " +
                           $"{1f / terrain.atmosphere.fogScale:0.#####}; camera far clip 20000 m for the backdrop. " +
                           "Add the scene as a SubScene of the match scene.");
+        }
+
+        /// <summary>Most realtime lights the city scene gets. Forward+ handles many, but each costs; tune by eye.</summary>
+        private const int MaxCityLights = 320;
+        /// <summary>Lights of one kind closer than this are one light (a row of street lamps becomes every other lamp).</summary>
+        private const float LightMergeDistance = 14f;
+        /// <summary>Which lights matter most, first kept: lava glow on the walls, flares, pads, yards, shanties, streets.</summary>
+        private static readonly string[] LightPriority = { "lava", "flame", "pad", "flood", "shanty", "street" };
+
+        /// <summary>"Lights": point lights from the CityForge list, the most important first, close ones of a kind
+        /// merged, at most <see cref="MaxCityLights"/>. No shadows (cost); realtime, so they also light the choppers.</summary>
+        private static void PlaceLights(Scene scene, CityLight[] lights)
+        {
+            if (lights == null || lights.Length == 0) return;
+            var root = new GameObject("Lights");
+            SceneManager.MoveGameObjectToScene(root, scene);
+            var groups = new Dictionary<string, Transform>();
+            var kept = new Dictionary<(string, int, int), List<Vector3>>();
+            var ordered = lights
+                .Where(l => l?.position != null && l.position.Length == 3)
+                .OrderBy(l => { var i = Array.IndexOf(LightPriority, l.kind); return i < 0 ? LightPriority.Length : i; });
+            var count = 0;
+            foreach (var info in ordered)
+            {
+                if (count >= MaxCityLights) break;
+                var position = Vector(info.position);
+                var cell = ((string)info.kind, Mathf.FloorToInt(position.x / LightMergeDistance), Mathf.FloorToInt(position.z / LightMergeDistance));
+                var close = false;
+                for (var dx = -1; dx <= 1 && !close; dx++)
+                for (var dz = -1; dz <= 1 && !close; dz++)
+                    if (kept.TryGetValue((cell.Item1, cell.Item2 + dx, cell.Item3 + dz), out var near))
+                        close = near.Any(p => (p - position).sqrMagnitude < LightMergeDistance * LightMergeDistance);
+                if (close) continue;
+                if (!kept.TryGetValue(cell, out var list)) kept[cell] = list = new List<Vector3>();
+                list.Add(position);
+
+                if (!groups.TryGetValue(info.kind ?? "other", out var group))
+                {
+                    group = new GameObject(info.kind ?? "other").transform;
+                    group.SetParent(root.transform, false);
+                    groups[info.kind ?? "other"] = group;
+                }
+                var go = new GameObject($"{info.kind}_{count}");
+                go.transform.SetParent(group, false);
+                go.transform.localPosition = position;
+                var light = go.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.color = ColorUtility.TryParseHtmlString(info.colour, out var colour) ? colour : new Color(1f, 0.7f, 0.35f);
+                light.range = Mathf.Max(1f, info.range);
+                light.intensity = Mathf.Max(0f, info.intensity);
+                light.shadows = LightShadows.None;
+                light.lightmapBakeType = LightmapBakeType.Realtime;
+                count++;
+            }
+            Debug.Log($"Setup: placed {count} of {lights.Length} city lights (cap {MaxCityLights}, merge {LightMergeDistance} m).");
         }
 
         private static void SetStatic(GameObject root)
