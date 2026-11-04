@@ -107,6 +107,10 @@ Road meshes (each one FBX, placed once at the city origin, with colliders):
   sagging cables beside the roads out of the city (off steep ground and lava); parked trucks, tankers, vans,
   dumpsters and barriers in the kerb lanes of the small streets. Industrial plots also get catwalks between
   vessels of the same height and a few yard vehicles (`kit.vehicle`). Preview: `pipes_day.jpg`.
+- `City_Shanties` (style option `shanties`, City04): a slum town dug into the inner rim wall
+  (`cityforge/shanties.py`). Clusters of 2 to 7 shacks climb the cliff (backs in the rock, fronts on stilts down to
+  the slope), steel stairs from roof to roof, cables between clusters, lit windows, some neon. Clear of lava, the
+  canyon and the tunnel portals. Preview: `shanties_day.jpg`.
 - `City_SkyRoads`: a sky road loop round the core (120 to 180 m, rises and falls, goes over low buildings and round
   tall ones, columns where the ground is free) and a 3-turn spiral ramp from the loop down to a plaza, round a
   central column with neon rings. Glass barriers with cyan neon, pink under-glow.

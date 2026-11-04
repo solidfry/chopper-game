@@ -112,6 +112,8 @@ STYLES = {
             lava=dict(moat=(745.0, 635.0), streams=4, width=(14.0, 26.0), depth=2.5),
             backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
         ),
+        # Slum town dug into the crater wall (shanties.py).
+        shanties=dict(step=2.4, chance=0.55, levels=(2, 7), height=(5.0, 120.0)),
     ),
 }
 

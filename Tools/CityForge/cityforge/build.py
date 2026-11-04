@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain, terrain_biomes, wear
+from . import audit, buildings, choppers, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, wear
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -157,7 +157,9 @@ def _make_roads(scene, state, city, export_collection, material):
         tops.append((shape, _unity_bounds(state.built[name]["objects"][0])[1][1]))
     state.building_tops = tops
     made = [roads.city_roads(city, state.terrain, state.style), roads.freeway(city, state.terrain, state.style),
-            roads.sky_roads(city, state.terrain, state.style, tops), roads.utilities(city, state.terrain, state.style)]
+            roads.sky_roads(city, state.terrain, state.style, tops), roads.utilities(city, state.terrain, state.style),
+            shanties.shanties(city, state.terrain, state.style)]
+    made = [b for b in made if b is not None]
     collection = _collection(scene, DISTRICT_COLLECTION)
     for b in made:
         state.problems[b.name] = audit.check(b)
@@ -907,6 +909,13 @@ def _terrain_shots(state, by_name):
         n = math.hypot(dx, dz) or 1.0
         shots.append(("pipes", geo.to_blender((mid.x - dx / n * 40.0 + dz / n * 18.0, 22.0, mid.y - dz / n * 40.0 - dx / n * 18.0)),
                       geo.to_blender((ahead.x, 6.0, ahead.y)), 22.0))
+    clusters = getattr(state.built.get("City_Shanties", {}).get("building"), "clusters", None)
+    if clusters:
+        # The wall town: the tallest cluster, from out over the crater floor at its height.
+        cluster = max(clusters, key=len)
+        x, y, z, _w, _h, (nx, nz) = cluster[len(cluster) // 2]
+        shots.append(("shanties", geo.to_blender((x + nx * 110.0 - nz * 40.0, y + 15.0, z + nz * 110.0 + nx * 40.0)),
+                      geo.to_blender((x, y, z)), 26.0))
     if "Chopper_Mesa" in by_name and t.markers:
         _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
         away = Vector((mx, mz)).normalized()
