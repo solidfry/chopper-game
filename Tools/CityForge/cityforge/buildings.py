@@ -676,6 +676,8 @@ def industrial(b):
         _sphere_tank(b, x, z, radius)
     for x, z, height in spec.get("flares", []):
         _flare(b, x, z, height)
+    for x, z, cols, rows, stacks in spec.get("containers", []):
+        _containers(b, x, z, cols, rows, stacks)
     for a, c, y in spec.get("racks", []):
         _pipe_run(b, tuple(a), 0.0, tuple(c), 0.0, y, rest=True)
     plot = b.plot
@@ -881,3 +883,24 @@ def _flare(b, x, z, height):
     b.box((x, height - 2.8, z + 1.6), (0.4, 0.4, 0.4), "warning", L01)
     b.add_thin(x, z, height + 5.2)
     b.round_collider(x, z, 1.0, 0.0, height + 1.2)
+
+
+def _containers(b, x, z, cols, rows, stacks):
+    """Shipping containers (12 x 2.5 x 2.6 m, long side along x) in a block: cols along x, rows along z, stacked up
+    to `stacks` high (fewer at random), mixed colours. One collider per column of the block."""
+    rng = b.rng
+    length, width, height, gap = 12.2, 2.45, 2.6, 0.3
+    colours = ("rust", "primer", "steel", "metal", "hazard", "trim")
+    x0 = x - (cols * (length + gap) - gap) / 2
+    z0 = z - (rows * (width + gap) - gap) / 2
+    for i in range(cols):
+        cx = x0 + i * (length + gap) + length / 2
+        top = 0.0
+        for j in range(rows):
+            cz = z0 + j * (width + gap) + width / 2
+            count = rng.randint(1, stacks)
+            for k in range(count):
+                b.box((cx, k * height + height / 2, cz), (length - 0.1 * (k % 2), height, width), rng.choice(colours), L01)
+            top = max(top, count * height)
+        b.span(cx - length / 2, cx + length / 2, 0.0, top, z0, z0 + rows * (width + gap) - gap, "rust", L2)
+        b.collider(cx - length / 2, cx + length / 2, 0.0, top, z0, z0 + rows * (width + gap) - gap)

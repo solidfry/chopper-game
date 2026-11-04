@@ -86,6 +86,15 @@ BUILDINGS = [
          hall=None, chimneys=[], tanks=[(16, -12, 4.0, 9)], office=None,
          spheres=[(-14, -8, 7.0), (2, -8, 7.0), (-14, 10, 6.0)], columns=[(14, 7, 2.0, 32)],
          racks=[((-22, 1.5), (22, 1.5), 5.0)]),
+    # -- refinery fillers: small plots between the big plants (sheds, pump yards, container stacks) ----------------
+    dict(name="Ind_Shed", type="industrial", seed=421, plot=(26, 18), only=("crater",),
+         hall=(20, 12, 8, 0, -1), chimneys=[(8, 6, 0.8, 16)], tanks=[], office=None),
+    dict(name="Ind_Pumps", type="industrial", seed=422, plot=(22, 22), only=("crater",),
+         hall=(8, 6, 7, -6, -6.5), chimneys=[], tanks=[(5, -5, 3.5, 7), (5, 5.5, 3.0, 6)], office=None,
+         columns=[(-5.5, 5.5, 1.4, 18)]),
+    dict(name="Ind_Yard", type="industrial", seed=423, plot=(30, 20), only=("crater",),
+         hall=None, chimneys=[], tanks=[], office=None, containers=[(0, -2.5, 2, 4, 3)],
+         racks=[((-14, 7.5), (14, 7.5), 4.0)]),
 ]
 
 

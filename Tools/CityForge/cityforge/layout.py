@@ -19,6 +19,9 @@ import json
 import math
 import random
 
+import numpy as np
+import shapely
+
 from shapely import affinity
 from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import split, unary_union
@@ -40,7 +43,11 @@ VARIANTS = {"tower": 6, "block": 6, "slum": 6, "industrial": 3}
 # A style's "layout" entry overrides these (styles.py). zones: None = the default mix (_kind, _target); else a list of
 # (zone limit 0..1, lot area target m², ((kind, share), ...)), the first zone whose limit is above the lot's zone wins.
 # spacing: local street spacing (m) in the core, then by zone (< 0.55, < 0.9, the edge).
-DEFAULTS = dict(city=CITY, unique=UNIQUE, variants=VARIANTS, zones=None, spacing=(118.0, 112.0, 98.0, 84.0))
+# fill: most buildings on one lot; gap: space kept round each building on a lot (m).
+DEFAULTS = dict(city=CITY, unique=UNIQUE, variants=VARIANTS, zones=None, spacing=(118.0, 112.0, 98.0, 84.0),
+                fill=4, gap=8.0, pack=False)
+# pack: place each building where it leaves the biggest piece free (corners first) instead of the middle of the lot
+# (the middle leaves thin strips all round that nothing fits in). Denser.
 
 
 def settings(style):
@@ -221,6 +228,8 @@ class Layout:
     def _fit(self, spec, area, rng, near_centre=False):
         """Where a building fits in an area: (yaw, centre, footprint) or None. Tries the area's main directions and
         a few positions; prefers the front facing the nearest road."""
+        if self.values["pack"] and not near_centre:
+            return self._fit_packed(spec, area, rng)
         w, d = spec["plot"]
         obb = area.minimum_rotated_rectangle
         coords = list(obb.exterior.coords)[:4]
@@ -251,10 +260,53 @@ class Layout:
                 a = math.radians(yaw)
                 front = Point(cx + math.sin(a) * d / 2, cz + math.cos(a) * d / 2)
                 score = front.distance(self.road_area) + (math.hypot(cx, cz) * 0.05 if near_centre else 0.0)
+                if self.values["pack"]:
+                    # Waste: the area left over outside the biggest free piece, as a strip width (m).
+                    rest = [p.area for p in _parts(area.difference(shape.buffer(self.values["gap"])))]
+                    waste = area.area - shape.area - (max(rest) if rest else 0.0)
+                    score += waste / max(w, d)
                 if best is None or score < best[0]:
                     best = (score, yaw, (cx, cz), shape)
-            if best is not None and oa == 0.0 and ob == 0.0:
+            if best is not None and oa == 0.0 and ob == 0.0 and not self.values["pack"]:
                 break
+        return None if best is None else best[1:]
+
+    def _fit_packed(self, spec, area, rng):
+        """Pack mode: try centres on a grid over the part of the area a footprint centre can reach (the area shrunk by
+        half the short side: a fast "does not fit"), in the area's main directions. Best = hugs the edges of the
+        area (leaves one big free piece, not strips) and faces a road."""
+        w, d = spec["plot"]
+        inner = area.buffer(-1.5)
+        if inner.is_empty:
+            return None
+        reach = inner.buffer(-min(w, d) / 2.0)
+        if reach.is_empty:
+            return None
+        shapely.prepare(inner)
+        coords = list(area.minimum_rotated_rectangle.exterior.coords)[:2]
+        base = math.degrees(math.atan2(-(coords[1][1] - coords[0][1]), coords[1][0] - coords[0][0]))
+        x0, z0, x1, z1 = reach.bounds
+        step = max(3.0, min(w, d) / 5.0)
+        xs, zs = np.meshgrid(np.arange(x0, x1 + step, step), np.arange(z0, z1 + step, step))
+        keep = shapely.contains_xy(reach.buffer(step * 0.5), xs.ravel(), zs.ravel())
+        points = list(zip(xs.ravel()[keep], zs.ravel()[keep]))
+        if len(points) > 160:
+            points = rng.sample(points, 160)
+        ring_width = self.values["gap"] + 2.0
+        best = None
+        for cx, cz in points:
+            for k in range(4):
+                yaw = (base + 90.0 * k) % 360.0
+                shape = footprint(cx, cz, w, d, yaw)
+                if not inner.contains(shape):
+                    continue
+                a = math.radians(yaw)
+                front = Point(cx + math.sin(a) * d / 2, cz + math.cos(a) * d / 2)
+                ring = shape.buffer(ring_width)
+                contact = ring.difference(area).area / max(1.0, ring.area - shape.area)
+                score = front.distance(self.road_area) - 60.0 * contact
+                if best is None or score < best[0]:
+                    best = (score, yaw, (cx, cz), shape)
         return None if best is None else best[1:]
 
     def _place(self, spec, yaw, centre, shape):
@@ -326,21 +378,23 @@ class Layout:
         for block in blocks:
             c = block.centroid
             core = self.ring_area.contains(c)
-            lots += self._split(block, self._target(c.x, c.y, core), 20.0)
+            # Pack mode: a whole block is one piece, filled building by building (no lot splits).
+            lots += [block] if self.values["pack"] else self._split(block, self._target(c.x, c.y, core), 20.0)
         # 3. The biggest building of the zone that fits; else smaller kinds; else an open plaza.
         fallback = {"tower": ["block"], "block": ["slum"], "industrial": ["block", "slum"], "slum": []}
         for lot in lots:
             # A big lot can take more than one building: fill what is left after each one.
             pieces, placed = [lot], 0
-            while pieces and placed < 4:
+            while pieces and placed < self.values["fill"]:
                 piece = pieces.pop(0)
                 c = piece.centroid
-                if placed == 0:
+                pack = self.values["pack"]
+                if placed == 0 or pack:
                     kind = self._kind(c.x, c.y)
                 fit_spec = None
                 # The first building of a lot may fall back to a smaller kind; the rest of the lot only takes the
                 # lot's own kind (otherwise every leftover strip fills with slum shacks).
-                kinds = [kind] + fallback[kind] if placed == 0 else [kind]
+                kinds = [kind] + fallback[kind] if placed == 0 or pack else [kind]
                 for name in kinds:
                     pool = sorted(self.pools.get(name, []),
                                   key=lambda s: -s["plot"][0] * s["plot"][1] * rng.uniform(0.7, 1.3))
@@ -358,7 +412,8 @@ class Layout:
                 spec, (yaw, centre, shape) = fit_spec
                 self._place(spec, yaw, centre, shape)
                 placed += 1
-                pieces += [p for p in _parts(piece.difference(shape.buffer(8.0))) if p.area > 450]
+                gap = self.values["gap"]
+                pieces += [p for p in _parts(piece.difference(shape.buffer(gap))) if p.area > 450 * gap / 8.0]
 
     def _split(self, poly, target, min_side):
         if poly.area <= target:

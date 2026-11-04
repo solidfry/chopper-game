@@ -88,26 +88,28 @@ STYLES = {
         },
         layout=dict(
             unique=("Mega_Slab", "Mega_Needle", "Landmark_Orb"),
-            variants={"tower": 4, "block": 4, "slum": 4, "industrial": 9},
+            variants={"tower": 4, "block": 4, "slum": 4, "industrial": 12},
+            # Dense: a bigger city on the crater floor, up to 10 buildings per lot, 4 m between them.
+            city=(1150.0, 920.0), fill=40, gap=3.0, pack=True,
             # Refinery plots are big: wider street spacing and bigger lots outside the core.
             spacing=(118.0, 140.0, 150.0, 120.0),
             zones=[(0.35, 3600.0, (("tower", 0.75), ("block", 0.25))),
-                   (0.62, 5600.0, (("industrial", 0.6), ("block", 0.25), ("tower", 0.15))),
-                   (0.92, 6500.0, (("industrial", 0.85), ("slum", 0.1), ("block", 0.05))),
-                   (9.0, 4200.0, (("industrial", 0.6), ("slum", 0.4)))],
+                   (0.62, 4200.0, (("industrial", 0.6), ("block", 0.25), ("tower", 0.15))),
+                   (0.92, 4800.0, (("industrial", 0.85), ("slum", 0.1), ("block", 0.05))),
+                   (9.0, 3600.0, (("industrial", 0.6), ("slum", 0.4)))],
         ),
         terrain=dict(
             seed=41, rise=10.0, dunes=2.5,
             # Crater wall: a steep inner cliff, a second step, a high jagged crest.
             plateau=dict(radius=1120.0, width=45.0, height=230.0, warp=90.0, wall=150.0, wall_at=130.0, crest=75.0),
             # Old cinder cones on the crater floor: flat tops (landing), steep terraced sides.
-            mesas=dict(shape="cone", count=7, ring=(860.0, 1010.0), radius=(70.0, 130.0), height=(50.0, 115.0),
+            mesas=dict(shape="cone", count=6, ring=(920.0, 1040.0), radius=(70.0, 130.0), height=(50.0, 115.0),
                        cliff=10.0, talus=30.0, top=0.38),
             strata=7.0,
             # The breach: where lava once broke out through the crater wall.
             canyon=dict(width=(120.0, 170.0), wall=30.0, floor=(-6.0, -45.0), wiggle=50.0, start=40.0),
             # Lava: a moat round the city that drains into the breach, and streams down from the crater wall.
-            lava=dict(moat=(660.0, 560.0), streams=4, width=(14.0, 26.0), depth=2.5),
+            lava=dict(moat=(745.0, 635.0), streams=4, width=(14.0, 26.0), depth=2.5),
             backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
         ),
     ),

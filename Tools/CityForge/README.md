@@ -32,11 +32,13 @@ One style in `cityforge/styles.py` = one map: kit name, biome, palette, building
 | Style | Kit | Biome | Map |
 |---|---|---|---|
 | `dystopia` | City01 | desert | Desert basin: mesas, a canyon out through the rim, a storm drain, 7 megatowers and landmarks. |
-| `crater` | City04 | volcanic | Refinery town on a crater floor: cinder cones (flat tops), a breach in the crater wall, a lava moat round the city and lava streams down the wall; 3 corporate towers in the core, refinery round it, a worker slum belt. |
+| `crater` | City04 | volcanic | Dense refinery town (about 270 buildings) on a crater floor: cinder cones (flat tops), a breach in the crater wall, a lava moat round the city and lava streams down the wall; 3 corporate towers in the core, refinery and fillers (sheds, pump yards, container stacks) round it, a worker slum belt. |
 
 What a style can set:
 - `layout`: `unique` (megatowers and landmarks it places), `variants` (count per type), `zones` (zone limit, lot
-  target, kind shares), `spacing` (street spacing: core, mid, outer, edge). Defaults in `layout.DEFAULTS`.
+  target, kind shares), `spacing` (street spacing: core, mid, outer, edge), `city` (size), `fill` and `gap`
+  (buildings per lot, space between them), `pack` (dense: each whole block filled building by building, each one
+  hugging the edges of the free space). Defaults in `layout.DEFAULTS`.
 - `terrain`: any `terrain.DEFAULTS` value; `mesas.shape = "cone"` (with `top`, the flat share) makes cinder cones;
   `lava` (moat size, streams, width, depth) adds lava (full flow in the masks, so the biome's glow shows on it).
 - Buildings with `only=(style, ...)` in `specs.py` belong to those styles (the refinery set: `Ind_Refinery`,
