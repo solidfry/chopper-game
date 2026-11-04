@@ -15,7 +15,7 @@ import numpy as np
 
 from . import roads
 from .buildings import _shack
-from .kit import L01, Rect
+from .kit import L0, L01, Rect
 from .terrain import polyline_distance
 
 DEFAULTS = dict(step=2.4, chance=0.55, levels=(2, 7), height=(5.0, 120.0), size=((4.0, 8.0), (2.8, 3.6)))
@@ -27,7 +27,8 @@ def shanties(city, terrain, style):
     if not settings or terrain is None:
         return None
     s = dict(DEFAULTS, **settings)
-    b = roads._road_building("City_Shanties", style, terrain.values["size"])
+    # A wall town at night is mostly lit windows: three times the style's share.
+    b = roads._road_building("City_Shanties", dict(style, lit=min(0.4, style["lit"] * 3.0)), terrain.values["size"])
     b.ground_level = -60.0
     rng = b.rng
     x0, x1, z0, z1 = terrain.city
@@ -38,40 +39,68 @@ def shanties(city, terrain, style):
     half = terrain.values["size"] / 2 - 30.0
     canyon_clear = max(terrain.values["canyon"]["width"]) / 2 + 80.0
     radii = np.arange(inner, outer, 1.5)
+    reach = plateau["radius"]
+
+    def wall_at(a, level):
+        """Where the wall reaches `level` along the ray at angle a: (x, z, facing) or None (not a steep wall there,
+        or too close to lava, the canyon, a portal or the map edge)."""
+        ux, uz = math.cos(a), math.sin(a)
+        xs, zs = cx + ux * radii, cz + uz * radii
+        hs = terrain.sample(xs, zs)
+        if not (hs >= level).any():
+            return None
+        i = int(np.argmax(hs >= level))
+        if i < 4 or i > len(radii) - 5 or (hs[i + 3] - hs[i - 3]) / (6 * 1.5) < 1.0:
+            return None
+        x, z = float(xs[i]), float(zs[i])
+        if abs(x) > half or abs(z) > half or not _clear(terrain, x, z, canyon_clear):
+            return None
+        return x, z, (-ux, -uz)
+
     spots = []
     for angle in np.arange(0.0, 360.0, s["step"]):
         if rng.random() > s["chance"]:
             continue
-        a = math.radians(angle + rng.uniform(-0.8, 0.8))
-        ux, uz = math.cos(a), math.sin(a)
-        xs, zs = cx + ux * radii, cz + uz * radii
-        hs = terrain.sample(xs, zs)
-        floor = float(hs[0])
+        a0 = math.radians(angle + rng.uniform(-0.8, 0.8))
+        floor = float(terrain.sample(cx + math.cos(a0) * radii[0], cz + math.sin(a0) * radii[0]))
         count = rng.randint(*s["levels"])
+        wide = rng.randint(2, 4)                # shacks side by side on the lowest level; fewer higher up
         level = floor + rng.uniform(s["height"][0], s["height"][0] + 25.0)
-        cluster = []
-        for _k in range(count):
+        drift = 0.0
+        levels = []
+        for k in range(count):
             if level > floor + s["height"][1]:
                 break
-            i = int(np.argmax(hs >= level)) if (hs >= level).any() else -1
-            if i < 4 or i > len(radii) - 5:
+            per = max(1, wide - k // 2 - rng.randint(0, 1))
+            sizes = [(rng.uniform(*s["size"][0]), rng.uniform(*s["size"][1])) for _ in range(per)]
+            gaps = [rng.uniform(0.6, 2.5) for _ in range(per)]
+            total = sum(w for w, _h in sizes) + sum(gaps[:-1])
+            u = drift - total / 2
+            row = []
+            for (w, h), gap in zip(sizes, gaps):
+                spot = wall_at(a0 + (u + w / 2) / reach, level)
+                if spot is not None:
+                    row.append((spot[0], level, spot[1], w, h, spot[2]))
+                u += w + gap
+            if not row:
                 break
-            steep = (hs[i + 3] - hs[i - 3]) / (6 * 1.5)
-            x, z = float(xs[i]), float(zs[i])
-            if steep < 1.0 or abs(x) > half or abs(z) > half or not _clear(terrain, x, z, canyon_clear):
-                break
-            w = rng.uniform(*s["size"][0])
-            h = rng.uniform(*s["size"][1])
-            cluster.append((x, level, z, w, h, (-ux, -uz)))
-            level += h + rng.uniform(0.3, 2.5)
-        if len(cluster) >= 2:
-            spots.append(cluster)
-    for cluster in spots:
-        for k, (x, y, z, w, h, facing) in enumerate(cluster):
-            _wall_shack(b, terrain, x, y, z, w, h, facing)
+            levels.append(row)
+            drift += rng.uniform(-3.0, 3.0)    # each level a little off the one below
+            level += max(h for _w, h in sizes) + rng.uniform(0.4, 2.5)
+        if len(levels) >= 2:
+            spots.append(levels)
+    for levels in spots:
+        for k, row in enumerate(levels):
+            for x, y, z, w, h, facing in row:
+                _wall_shack(b, terrain, x, y, z, w, h, facing)
+            for (xa, y, za, wa, _ha, fa), (xb, _y, zb, wb, _hb, _fb) in zip(row, row[1:]):
+                _deck(b, terrain, (xa, za), (xb, zb), y, fa)
             if k:
-                px, py, pz, _pw, ph, _pf = cluster[k - 1]
+                # A stair from the nearest roof below to this level's first shack.
+                x, y, z, _w, _h, facing = row[0]
+                px, py, pz, _pw, ph, _pf = min(levels[k - 1], key=lambda s_: math.hypot(s_[0] - x, s_[2] - z))
                 _stair(b, (px, py + ph + 0.12, pz), (x, y, z), facing)
+    spots = [[shack for row in levels for shack in row] for levels in spots]
     _cables(b, spots)
     b.clusters = spots          # for the preview shot
     return b
@@ -115,6 +144,34 @@ def _wall_shack(b, terrain, x, y, z, w, h, facing):
                 continue
             b.span(sx - 0.1, sx + 0.1, ground, y - 0.25, sz - 0.1, sz + 0.1, "metal", L01)
             b.collider(sx - 0.15, sx + 0.15, ground, y - 0.25, sz - 0.15, sz + 0.15)
+
+
+def _deck(b, terrain, p, q, y, facing):
+    """An open walkway along the wall between two shacks of a level: plank deck out in front of the doors, a rail on
+    the open side, a post down to the slope, a string of bulbs."""
+    nx, nz = facing
+    out = 3.2                                  # in front of the shack fronts (the front is 1.5 .. 3.5 m out)
+    a = (p[0] + nx * out, p[1] + nz * out)
+    c = (q[0] + nx * out, q[1] + nz * out)
+    dx, dz = c[0] - a[0], c[1] - a[1]
+    length = math.hypot(dx, dz)
+    if length < 1.0:
+        return
+    mx, mz = (a[0] + c[0]) / 2, (a[1] + c[1]) / 2
+    with b.turned(mx, mz, math.degrees(math.atan2(dx, dz))):
+        b.span(mx - 0.9, mx + 0.9, y - 0.2, y, mz - length / 2, mz + length / 2, "rust", L01)
+        rail = mx + 0.9 if (nx * dz - nz * dx) < 0 else mx - 0.9    # the side away from the wall
+        b.span(rail - 0.03, rail + 0.03, y + 0.95, y + 1.0, mz - length / 2, mz + length / 2, "metal", L01)
+        k = mz - length / 2
+        while k <= mz + length / 2:
+            b.span(rail - 0.03, rail + 0.03, y, y + 1.0, k - 0.03, k + 0.03, "metal")
+            b.box((rail, y + 2.3, k), (0.12, 0.12, 0.12), b.lit_swatch(), L0)
+            k += 1.6
+        b.collider(mx - 0.9, mx + 0.9, y - 0.2, y + 1.0, mz - length / 2, mz + length / 2)
+    ground = float(terrain.sample(mx, mz)) - 0.5
+    if y - ground > 0.5:
+        b.span(mx - 0.1, mx + 0.1, ground, y - 0.2, mz - 0.1, mz + 0.1, "metal", L01)
+        b.collider(mx - 0.15, mx + 0.15, ground, y - 0.2, mz - 0.15, mz + 0.15)
 
 
 def _stair(b, low, high, facing):

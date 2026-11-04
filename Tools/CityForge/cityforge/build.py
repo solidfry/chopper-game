@@ -157,7 +157,7 @@ def _make_roads(scene, state, city, export_collection, material):
         tops.append((shape, _unity_bounds(state.built[name]["objects"][0])[1][1]))
     state.building_tops = tops
     made = [roads.city_roads(city, state.terrain, state.style), roads.freeway(city, state.terrain, state.style),
-            roads.sky_roads(city, state.terrain, state.style, tops), roads.utilities(city, state.terrain, state.style),
+            roads.sky_roads(city, state.terrain, state.style, tops), roads.utilities(city, state.terrain, state.style, tops, _wall_hit(state, city)),
             shanties.shanties(city, state.terrain, state.style)]
     made = [b for b in made if b is not None]
     collection = _collection(scene, DISTRICT_COLLECTION)
@@ -171,6 +171,23 @@ def _make_roads(scene, state, city, export_collection, material):
         state.district.append(obj)
         state.placements.setdefault(b.name, (0.0, 0.0, 0.0))
     state.problems["City_Roads"] = state.problems["City_Roads"] + city.audit()
+
+
+def _wall_hit(state, city):
+    """hit(k, origin, direction, distance): where a ray (Unity, city space) first meets the mesh of layout instance k
+    (LOD0, in the instance's place and yaw), as (x, y, z), or None."""
+    def hit(k, origin, direction, distance):
+        name, (px, _py, pz), yaw = city.instances[k]
+        builder = state.built[name]["building"].lods[0]
+        c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        dx, dz = origin[0] - px, origin[2] - pz
+        local_origin = (dx * c - dz * s_, origin[1], dx * s_ + dz * c)
+        local_dir = (direction[0] * c - direction[2] * s_, direction[1], direction[0] * s_ + direction[2] * c)
+        point, _normal = builder.hit(local_origin, local_dir, everything=True, distance=distance)
+        if point is None:
+            return None
+        return (px + point.x * c + point.z * s_, point.y, pz - point.x * s_ + point.z * c)
+    return hit
 
 
 def _faces_up(objects, height):

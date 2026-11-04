@@ -423,13 +423,14 @@ def _pylons(b, path, tops, city, closed):
 
 # -- City_Utilities -----------------------------------------------------------------------------------------------------
 # What ties the city together: pipe racks along the streets between the industrial plots (crossing the streets as pipe
-# bridges), power lines along the roads out of the city, parked trucks and street clutter.
+# bridges), power lines along the roads out of the city, parked trucks and street clutter, covered sky walks between
+# neighbouring tall buildings.
 
 RACK = dict(height=7.0, frame=8.0, reach=260.0, front=14.0)
 PYLON = dict(spacing=95.0, offset=24.0, height=26.0)
 
 
-def utilities(city, terrain, style):
+def utilities(city, terrain, style, tops=(), wall_hit=None):
     b = _road_building("City_Utilities", style, terrain.values["size"] if terrain else 3000.0)
     b.ground_level = -60.0
     industrial = [shape for name, shape in city.footprints if city.specs[name]["type"] == "industrial"]
@@ -437,9 +438,82 @@ def utilities(city, terrain, style):
     racks = _pipe_racks(b, city, industrial, keep_out)
     b.racks = racks             # for the preview shot
     _street_clutter(b, city, racks, keep_out)
+    if wall_hit is not None:
+        _sky_walks(b, city, tops, wall_hit)
     if terrain is not None:
         _power_lines(b, terrain)
     return b
+
+
+WALK = dict(gap=(6.0, 32.0), low=22.0, high=110.0, most=2, chance=0.55, width=3.2, height=3.4)
+
+
+def _sky_walks(b, city, tops, wall_hit):
+    """Covered footbridges between tall neighbours (towers, blocks) across a street: from wall to wall where the two
+    face each other along at least 6 m, at a random height between 22 m and 110 m (under the sky roads, over the
+    freeway and the racks), at most 2 per building, never through a third building. Both ends are found on the real
+    walls (wall_hit: a ray against the building's mesh), so a tower that steps back gets a longer walk, not a gap."""
+    w = WALK
+    rng = b.rng
+    tall = [(k, shape, top) for k, ((name, _p, _y), (shape, top)) in enumerate(zip(city.instances, tops))
+            if city.specs[name]["type"] in ("tower", "block") and top > w["low"] + 8.0]
+    count = [0] * len(tall)
+    every = [shape for shape, _top in tops]
+    for i, (ka, a, top_a) in enumerate(tall):
+        for j in range(i + 1, len(tall)):
+            kb, b_shape, top_b = tall[j]
+            if count[i] >= w["most"] or count[j] >= w["most"]:
+                continue
+            gap = a.distance(b_shape)
+            if not w["gap"][0] < gap < w["gap"][1] or rng.random() > w["chance"]:
+                continue
+            strip = a.buffer(gap + 2.0).intersection(b_shape)
+            if strip.is_empty or strip.area < 12.0:      # they only touch at a corner
+                continue
+            centre = strip.centroid
+            p = a.exterior.interpolate(a.exterior.project(centre))
+            q = b_shape.exterior.interpolate(b_shape.exterior.project(p))
+            span = LineString([(p.x, p.y), (q.x, q.y)])
+            if span.length < 3.0 or any(other is not a and other is not b_shape and other.intersects(span.buffer(w["width"]))
+                                        for other in every):
+                continue
+            top = min(top_a, top_b, w["high"])
+            y = max(w["low"], rng.uniform(0.35, 0.75) * top)
+            if y + w["height"] > top - 3.0:
+                continue
+            # The real walls: rays from the middle of the gap, out to each building at deck height + 1.5 m.
+            ux, uz = (q.x - p.x) / span.length, (q.y - p.y) / span.length
+            mid = ((p.x + q.x) / 2, y + 1.5, (p.y + q.y) / 2)
+            end_a = wall_hit(ka, mid, (-ux, 0.0, -uz), span.length / 2 + 15.0)
+            end_b = wall_hit(kb, mid, (ux, 0.0, uz), span.length / 2 + 15.0)
+            if end_a is None or end_b is None or math.dist(end_a, end_b) > w["gap"][1] + 10.0:
+                continue
+            _walk(b, (end_a[0], end_a[2]), (end_b[0], end_b[2]), y)
+            count[i] += 1
+            count[j] += 1
+
+
+def _walk(b, p, q, y):
+    """A glass tube on a concrete deck, steel ribs every 3 m, a neon strip under it; ends 0.5 m into the walls."""
+    w, h = WALK["width"], WALK["height"]
+    dx, dz = q[0] - p[0], q[1] - p[1]
+    length = math.hypot(dx, dz) + 1.0
+    mx, mz = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+    with b.turned(mx, mz, math.degrees(math.atan2(dx, dz))):
+        z0, z1 = mz - length / 2, mz + length / 2
+        b.span(mx - w / 2, mx + w / 2, y - 0.6, y, z0, z1, "concrete", L01)
+        b.span(mx - w / 2, mx + w / 2, y - 0.6, y + h, z0, z1, "concrete", (2,))
+        for side in (-1, 1):
+            b.span(mx + side * (w / 2 - 0.05) - 0.05, mx + side * (w / 2 - 0.05) + 0.05, y, y + h, z0, z1, "glass", L01)
+        b.span(mx - w / 2 - 0.1, mx + w / 2 + 0.1, y + h, y + h + 0.25, z0, z1, "metal", L01)
+        k = z0 + 1.5
+        while k < z1 - 1.0:
+            for side in (-1, 1):
+                b.span(mx + side * w / 2 - 0.12, mx + side * w / 2 + 0.12, y, y + h, k - 0.12, k + 0.12, "trim", L01)
+            k += 3.0
+        b.span(mx - 0.4, mx + 0.4, y - 0.66, y - 0.6, z0 + 0.5, z1 - 0.5, "neon_cyan", L01)
+        b.span(mx - w / 2 + 0.3, mx + w / 2 - 0.3, y + h - 0.1, y + h, z0 + 0.5, z1 - 0.5, b.lit_swatch(), L0)
+        b.collider(mx - w / 2, mx + w / 2, y - 0.6, y + h + 0.25, z0, z1)
 
 
 def _side_line(line, offset):
@@ -642,7 +716,9 @@ def _pylon(b, x, y, z, yaw):
         for level, reach in ((h - 5.0, 7.0), (h - 0.5, 4.5)):
             b.span(x - reach, x + reach, y + level - 0.3, y + level + 0.3, z - 0.3, z + 0.3, "steel", L01)
         b.box((x, y + h + 0.4, z), (0.5, 0.5, 0.5), "warning", L01)
-        b.collider(x - 3.0, x + 3.0, y, y + h, z - 3.0, z + 3.0)
+        b.collider(x - 3.2, x + 3.2, y - 0.5, y + h + 0.7, z - 3.2, z + 3.2)
+        for level, reach in ((h - 5.0, 7.0), (h - 0.5, 4.5)):
+            b.collider(x - reach, x + reach, y + level - 0.4, y + level + 0.4, z - 0.4, z + 0.4)
     a = math.radians(yaw)       # local +X turns to (cos, -sin) for a Unity yaw
     for lx, ly in ((-6.5, h - 5.6), (6.5, h - 5.6), (0.0, h - 1.1)):
         arms.append((x + lx * math.cos(a), y + ly, z - lx * math.sin(a)))
