@@ -130,6 +130,7 @@ def _wall_shack(b, terrain, x, y, z, w, h, facing):
         rect = Rect(x - w / 2, x + w / 2, z + back, z + front)
         _shack(b, rect, y, h)
         b.span(rect.x0 - 0.2, rect.x1 + 0.2, y - 0.25, y, rect.z0, rect.z1 + 0.6, "metal", L01)   # floor deck
+        b.collider(rect.x0 - 0.2, rect.x1 + 0.2, y - 0.25, y, rect.z0, rect.z1 + 0.6)
         if rng.random() < 0.25:
             b.span(x - w * 0.3, x + w * 0.3, y + h - 0.9, y + h - 0.3, z + front + 0.05, z + front + 0.15,
                    rng.choice(NEON), L01)

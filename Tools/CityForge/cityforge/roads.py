@@ -513,7 +513,7 @@ def _walk(b, p, q, y):
             k += 3.0
         b.span(mx - 0.4, mx + 0.4, y - 0.66, y - 0.6, z0 + 0.5, z1 - 0.5, "neon_cyan", L01)
         b.span(mx - w / 2 + 0.3, mx + w / 2 - 0.3, y + h - 0.1, y + h, z0 + 0.5, z1 - 0.5, b.lit_swatch(), L0)
-        b.collider(mx - w / 2, mx + w / 2, y - 0.6, y + h + 0.25, z0, z1)
+        b.collider(mx - w / 2, mx + w / 2, y - 0.7, y + h + 0.25, z0, z1)       # down past the neon strip
 
 
 def _side_line(line, offset):
@@ -737,4 +737,4 @@ def _cable(b, a, c, sag=3.5, pieces=6):
         # Wires are solid: a chopper that flies into them hits them.
         dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
         b.colliders.append((((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2),
-                            (0.4, 0.4 + abs(dy), math.hypot(dx, dz)), math.degrees(math.atan2(dx, dz))))
+                            (0.4, 0.2 + abs(dy), math.hypot(dx, dz)), math.degrees(math.atan2(dx, dz))))
