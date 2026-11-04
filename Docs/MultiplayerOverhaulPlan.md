@@ -646,6 +646,22 @@ A procedural generator for **city buildings**, like PartForge for the choppers (
 - ~~Pin `com.coplaydev.unity-mcp`~~ — pinned to the commit it was already locked to (`81542a7`). Move to a release tag (v10.3.0 is latest) when you want to update.
 - Old scenes (`Multiplayer`, `Training`, `FreeForAll`, `TeamDeathMatch`, `SampleScene`) have missing legacy scripts; delete or rebuild during later phases.
 
+## 7c2. Rotor downwash (owner TODO, 4 Nov 2026 — not started)
+
+When a chopper is close to the ground with its rotors running, dust, dirt, grass, snow and so on blow up from the
+ground, realistically. Design notes:
+- Presentation only (client): no simulation or netcode change; remote choppers too (rotor speed is a ghost field).
+- Per chopper, a short ray (or a few) down from each rotor hub: height above the surface, hit point, hit normal.
+  Strength = rotor speed (collective) x (1 - height / ~25 m); nothing above that height.
+- Surface type from what the ray hits: terrain (its vertex-colour masks: made ground = concrete/road dust, flow =
+  wet mud or water spray, scree = grit) plus the current biome (biome table: sand, snow, ash, grass/leaves, toxic
+  dust), roofs and decks (concrete grit, litter), water in the channel (spray rings).
+- Effects: a VFX Graph ring of dust moving out from the hit point (radius grows as the chopper gets lower), debris
+  bits, a darker ground decal flattening under the rotor, grass bending if there is grass; colour from the biome's
+  dust colour (same table as `BuildingWear` dust). One `DownwashEffect` per chopper through the presentation bridge
+  (`PresentationSystemBase`), pooled, settings in `GameConfig` (one config root).
+- Also feeds feel: camera shake and rotor sound change near the ground; a little visibility loss in thick dust.
+
 ## 7d. Feel pass and style guide (28 Oct 2026, tested in play)
 
 **Done**
