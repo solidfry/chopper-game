@@ -85,7 +85,7 @@ BIOMES = {
     "volcanic": dict(
         ground=("#2f2b28", "#3b3430"), sediment="#1f1c1a", rock=("#1e1c1b", "#2d2926", "#3a2a22", "#262321"),
         band=8.0, cliff="#141312", scree="#4a4440", cover="#5a5450", cover_slope=0.3, cover_height=120.0,
-        cover_amount=0.6, wet=0.0, flow_wet=0.0, glow="#ff4a12", glow_strength=6.0, glow_flow=0.55,
+        cover_amount=0.6, wet=0.0, flow_wet=0.0, glow="#ff3a0a", glow_strength=3.0, glow_flow=0.55,
         concrete="#55524f", roughness=0.95),
     # Poisoned waste: sick yellow-green ground, crusted rock, glowing runs.
     "toxic": dict(
@@ -313,6 +313,9 @@ def make_material(biome, name="CF Terrain"):
     if b["glow"]:
         glow = ramp(flow, b["glow_flow"], b["glow_flow"] + 0.15)
         glow = math_node("MULTIPLY", glow, math_node("SUBTRACT", 1.0, made, clamp=True))
+        # Crust: dark cooled plates over the glowing melt (25 % .. 100 % glow), as in TerrainBiome.hlsl.
+        crust = ramp(noise(14.0, 3.0), 0.35, 0.65)
+        glow = math_node("MULTIPLY", glow, math_node("ADD", math_node("MULTIPLY", crust, 0.75), 0.25))
         bsdf.inputs["Emission Color"].default_value = colour(b["glow"])
         link(math_node("MULTIPLY", glow, b["glow_strength"]), bsdf.inputs["Emission Strength"])
     output = new("ShaderNodeOutputMaterial")

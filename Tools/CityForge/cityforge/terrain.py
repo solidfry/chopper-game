@@ -37,6 +37,9 @@ DEFAULTS = dict(
     # Optional lava (volcanic maps): moat (rx, rz) round the city into the canyon, streams from the rim, trench width
     # range and depth. The masks mark it as full flow, so the biome's glow shows on it.
     lava=None,
+    # Far backdrop mesh (polar): rings and segments. edge_smooth: fade the rim crest out over the last metres inside the
+    # map edge, so the coarse backdrop meets the terrain edge without gaps (needed for a high, jagged crest).
+    backdrop=dict(rings=44, segments=160, edge_smooth=0.0),
 )
 
 
@@ -209,9 +212,14 @@ class Terrain:
             inner = moat_radius(angle)
             end = (cx + math.cos(angle) * inner, cz + math.sin(angle) * inner)
             start = (cx + math.cos(angle) * outer, cz + math.sin(angle) * outer)
-            side = rng.uniform(-60.0, 60.0)
-            mid = ((start[0] + end[0]) / 2 - math.sin(angle) * side, (start[1] + end[1]) / 2 + math.cos(angle) * side)
-            path = [start, mid, end]
+            # A winding run: points along the line pushed sideways by a sum of two waves.
+            swing, phase = rng.uniform(25.0, 55.0), rng.uniform(0, math.tau)
+            path = []
+            for k in range(13):
+                f = k / 12
+                px, pz = start[0] + (end[0] - start[0]) * f, start[1] + (end[1] - start[1]) * f
+                side = swing * math.sin(phase + f * 9.0) * math.sin(f * math.pi) + 0.4 * swing * math.sin(f * 23.0 + phase)
+                path.append((px - math.sin(angle) * side, pz + math.cos(angle) * side))
             xs = np.array([p[0] for p in path])
             zs = np.array([p[1] for p in path])
             if polyline_distance(xs, zs, self.canyon)[0].min() < 220.0:
@@ -245,9 +253,16 @@ class Terrain:
         r = np.hypot(x - cx, z - cz) + p["warp"] * fbm(seed + 1, x, z, 420.0)
         r2 = np.hypot(x - cx, z - cz) + p["warp"] * 0.7 * fbm(seed + 4, x, z, 300.0)
         wall_at = p["radius"] + p["wall_at"]
+        crest = p["crest"] * (1.0 - np.abs(fbm(seed + 2, x, z, 240.0))) * smoothstep(wall_at, wall_at + 120.0, r2)
+        fade = v["backdrop"]["edge_smooth"]
+        if fade > 0:
+            edge = np.maximum(np.abs(x), np.abs(z))
+            half = v["size"] / 2
+            crest = crest * (1.0 - smoothstep(half - fade, half - 10.0, edge)) + p["crest"] * 0.5 * smoothstep(
+                half - fade, half - 10.0, edge) * smoothstep(wall_at, wall_at + 120.0, r2)
         return (p["height"] * smoothstep(p["radius"] - p["width"] / 2, p["radius"] + p["width"] / 2, r)
                 + p["wall"] * smoothstep(wall_at - p["width"] / 2, wall_at + p["width"] / 2, r2)
-                + p["crest"] * (1.0 - np.abs(fbm(seed + 2, x, z, 240.0))) * smoothstep(wall_at, wall_at + 120.0, r2))
+                + crest)
 
     def _exterior_roads(self):
         """Roads out of the city: west along the freeway line into a tunnel in the rim, north from the boulevard into
@@ -659,7 +674,13 @@ def backdrop_heights(t, x, z):
     r = np.hypot(x, z)
     ridges = 1.0 - np.abs(fbm(seed + 20, x, z, 5200.0, 5))
     mountains = (380.0 + 820.0 * ridges ** 2 * smoothstep(1500.0, 7000.0, r)) * (1.0 - 0.85 * smoothstep(11000.0, BACKDROP_RADIUS, r))
-    h = np.where(inside, t.sample(np.clip(x, -half, half), np.clip(z, -half, half)) - 40.0,
+    # Under the terrain inside the map: 40 m down, but only 3 m near the edge when the edge is smoothed (so the
+    # backdrop faces that cross the edge do not dip under it and show the chunk skirts).
+    sink = 40.0
+    if v["backdrop"]["edge_smooth"] > 0:
+        inner = half - np.maximum(np.abs(x), np.abs(z))
+        sink = 3.0 + 37.0 * smoothstep(0.0, 300.0, inner)
+    h = np.where(inside, t.sample(np.clip(x, -half, half), np.clip(z, -half, half)) - sink,
                  edge + (mountains - edge) * smoothstep(0.0, 1400.0, d_out))
     # The canyon goes on outside the map and turns north, rising into the mountains (out of sight round the bend).
     (ax, az), (bx, bz) = t.canyon[-3], t.canyon[-1]
@@ -674,13 +695,15 @@ def backdrop_heights(t, x, z):
     return h
 
 
-def make_backdrop(t, collection, material, rings=44, segments=160):
+def make_backdrop(t, collection, material, rings=None, segments=None):
     """Polar mesh from just inside the map edge out to BACKDROP_RADIUS (one LOD, no collider)."""
     import bpy
 
     from .kit import sw
     from .pf import palette
 
+    rings = rings or t.values["backdrop"]["rings"]
+    segments = segments or t.values["backdrop"]["segments"]
     half = t.values["size"] / 2
     radii = (half * 0.85) * (BACKDROP_RADIUS / (half * 0.85)) ** (np.arange(rings + 1) / rings)
     angles = np.linspace(0.0, math.tau, segments, endpoint=False)

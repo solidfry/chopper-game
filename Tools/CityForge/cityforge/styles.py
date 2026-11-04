@@ -108,6 +108,7 @@ STYLES = {
             canyon=dict(width=(120.0, 170.0), wall=30.0, floor=(-6.0, -45.0), wiggle=50.0, start=40.0),
             # Lava: a moat round the city that drains into the breach, and streams down from the crater wall.
             lava=dict(moat=(660.0, 560.0), streams=4, width=(14.0, 26.0), depth=2.5),
+            backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
         ),
     ),
 }

@@ -157,6 +157,8 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, float4 Masks, UnityT
 
     float4 glow = TB_Row(BiomeTable, row, rows, 10);
     float glowMask = smoothstep(glowFlow, glowFlow + 0.15, flow) * (1.0 - saturate(made));
+    // Crust: dark cooled plates over the glowing melt (25 % .. 100 % glow).
+    glowMask *= 0.25 + 0.75 * smoothstep(0.35, 0.65, TB_Fbm(xz / 14.0, 3));
     Emission = TB_Linear(glow.rgb) * glow.a * 10.0 * glowMask;
 
     Albedo = colour;
