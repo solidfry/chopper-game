@@ -106,6 +106,7 @@ namespace Chopper.Editor.Setup
         internal sealed class TerrainData
         {
             public string kit;
+            public float size;
             public BiomeInfo biomes;
             public SurfaceInfo surface;
             public ChunkInfo[] chunks;
@@ -114,6 +115,8 @@ namespace Chopper.Editor.Setup
             public TerrainMarker[] markers;
             public Placement[] layout;
             public CityLight[] lights;
+            public CityEmitter[] emitters;
+            public HeightFogInfo heightFog;
         }
 
         [Serializable]
@@ -173,6 +176,26 @@ namespace Chopper.Editor.Setup
             public string colour;
             public float range;
             public float intensity;
+        }
+
+        /// <summary>A steam, smoke or heat outlet from CityForge (city space; position = top centre of the outlet).</summary>
+        [Serializable]
+        internal sealed class CityEmitter
+        {
+            public string kind;
+            public float[] position;
+            public float radius;
+        }
+
+        /// <summary>The map's height fog (CityForge build.HEIGHT_FOG per biome).</summary>
+        [Serializable]
+        internal sealed class HeightFogInfo
+        {
+            public string colour;
+            public float density;
+            public float @base;
+            public float falloff;
+            public float most;
         }
 
         [Serializable]
@@ -621,6 +644,9 @@ namespace Chopper.Editor.Setup
                 }
 
                 PlaceLights(scene, terrain.lights);
+                PlaceEmitters(scene, terrain.emitters);
+                PlaceProbes(scene, terrain.size);
+                PlaceAtmosphere(scene, terrain.heightFog);
 
                 Directory.CreateDirectory(SceneFolder);
                 EditorSceneManager.SaveScene(scene, path);
@@ -688,6 +714,213 @@ namespace Chopper.Editor.Setup
                 count++;
             }
             Debug.Log($"Setup: placed {count} of {lights.Length} city lights (cap {MaxCityLights}, merge {LightMergeDistance} m).");
+        }
+
+        // -- steam, smoke, heat ---------------------------------------------------------------------------------------
+
+        /// <summary>Particle look per emitter kind. Tune here (all values in metres and seconds).</summary>
+        private sealed class PlumeLook
+        {
+            public string Kind;
+            public int Most;               // most emitters of this kind in a city
+            public float Merge;            // emitters of this kind closer than this are one
+            public Color Colour;           // rgb, a = most opacity
+            public Vector2 Lifetime;
+            public Vector2 Speed;
+            public Vector2 SizeOfRadius;   // start size as a share of the outlet radius
+            public float MinSize;
+            public float Grow;             // size at the end of life x start size
+            public float RatePerMetre;     // particles per second per metre of outlet radius
+            public float MinRate;
+            public int MaxParticles;
+        }
+
+        private static readonly PlumeLook[] PlumeLooks =
+        {
+            new() { Kind = "steam", Most = 40, Merge = 10f, Colour = new Color(0.86f, 0.87f, 0.89f, 0.55f), Lifetime = new Vector2(14f, 20f),
+                    Speed = new Vector2(2.5f, 4f), SizeOfRadius = new Vector2(0.9f, 1.5f), MinSize = 4f, Grow = 3.5f, RatePerMetre = 0.35f,
+                    MinRate = 2f, MaxParticles = 140 },
+            new() { Kind = "smoke", Most = 70, Merge = 3f, Colour = new Color(0.18f, 0.17f, 0.16f, 0.6f), Lifetime = new Vector2(10f, 14f),
+                    Speed = new Vector2(2f, 3f), SizeOfRadius = new Vector2(2f, 3f), MinSize = 2f, Grow = 4f, RatePerMetre = 1.5f,
+                    MinRate = 2.5f, MaxParticles = 70 },
+            new() { Kind = "heat", Most = 20, Merge = 3f, Colour = new Color(0.36f, 0.31f, 0.28f, 0.25f), Lifetime = new Vector2(3f, 5f),
+                    Speed = new Vector2(2.5f, 3.5f), SizeOfRadius = new Vector2(2f, 3.5f), MinSize = 1.5f, Grow = 2.5f, RatePerMetre = 4f,
+                    MinRate = 3f, MaxParticles = 30 },
+        };
+
+        /// <summary>One wind for every plume (world, m/s): plumes lean the same way.</summary>
+        private static readonly Vector3 Wind = new(1.6f, 0f, 0.7f);
+        private const string PlumeMaterialPath = "Assets/Chopper/Data/Effects/CityPlume.mat";
+
+        /// <summary>"Emitters": a looping world-space particle system on every kept outlet (a cap and a merge distance per
+        /// kind). Lit particles, so lava, street lights and flares colour the steam at night. Particle systems in a
+        /// SubScene stay GameObjects (companion objects).</summary>
+        private static void PlaceEmitters(Scene scene, CityEmitter[] emitters)
+        {
+            if (emitters == null || emitters.Length == 0) return;
+            var material = EnsurePlumeMaterial();
+            if (material == null) return;
+            var root = new GameObject("Emitters");
+            SceneManager.MoveGameObjectToScene(root, scene);
+            foreach (var look in PlumeLooks)
+            {
+                var group = new GameObject(look.Kind).transform;
+                group.SetParent(root.transform, false);
+                var kept = new List<Vector3>();
+                foreach (var info in emitters.Where(e => e?.kind == look.Kind && e.position != null && e.position.Length == 3)
+                             .OrderByDescending(e => e.radius))
+                {
+                    if (kept.Count >= look.Most) break;
+                    var position = Vector(info.position);
+                    if (kept.Any(p => (p - position).sqrMagnitude < look.Merge * look.Merge)) continue;
+                    kept.Add(position);
+                    var go = new GameObject($"{look.Kind}_{kept.Count}");
+                    go.transform.SetParent(group, false);
+                    go.transform.SetLocalPositionAndRotation(position, Quaternion.Euler(-90f, 0f, 0f));   // cone points up
+                    MakePlume(go, look, Mathf.Max(0.3f, info.radius), material);
+                }
+            }
+        }
+
+        private static void MakePlume(GameObject go, PlumeLook look, float radius, Material material)
+        {
+            var system = go.AddComponent<ParticleSystem>();
+            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = system.main;
+            main.loop = true;
+            main.prewarm = true;
+            main.playOnAwake = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = look.MaxParticles;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(look.Lifetime.x, look.Lifetime.y);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(look.Speed.x, look.Speed.y);
+            var size = Mathf.Max(look.MinSize, radius * look.SizeOfRadius.x);
+            main.startSize = new ParticleSystem.MinMaxCurve(size, Mathf.Max(size * 1.2f, radius * look.SizeOfRadius.y));
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(look.Colour, look.Colour * new Color(0.9f, 0.9f, 0.9f, 0.8f));
+            main.gravityModifier = -0.01f;
+
+            var emission = system.emission;
+            emission.rateOverTime = Mathf.Max(look.MinRate, radius * look.RatePerMetre);
+
+            var shape = system.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 6f;
+            shape.radius = radius;
+
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            // All three axes in the same curve mode (two constants), or Unity rejects them.
+            velocity.x = new ParticleSystem.MinMaxCurve(Wind.x * 0.6f, Wind.x * 1.2f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0.3f);
+            velocity.z = new ParticleSystem.MinMaxCurve(Wind.z * 0.6f, Wind.z * 1.2f);
+
+            var limit = system.limitVelocityOverLifetime;
+            limit.enabled = true;
+            limit.limit = new ParticleSystem.MinMaxCurve(Wind.magnitude * 1.5f + 1f);
+            limit.dampen = 0.05f;
+
+            var noise = system.noise;
+            noise.enabled = true;
+            noise.strength = new ParticleSystem.MinMaxCurve(0.6f);
+            noise.frequency = 0.15f;
+            noise.scrollSpeed = 0.2f;
+
+            var growth = system.sizeOverLifetime;
+            growth.enabled = true;
+            growth.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, look.Grow));
+
+            var fade = new Gradient();
+            fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.12f), new GradientAlphaKey(0.5f, 0.6f), new GradientAlphaKey(0f, 1f) });
+            var colourOverLifetime = system.colorOverLifetime;
+            colourOverLifetime.enabled = true;
+            colourOverLifetime.color = new ParticleSystem.MinMaxGradient(fade);
+
+            var rotation = system.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.25f, 0.25f);
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortMode = ParticleSystemSortMode.Distance;
+            renderer.maxParticleSize = 4f;
+        }
+
+        /// <summary>Plumes: URP Particles Simple Lit (lit by the city lights), transparent alpha blend, Unity's soft round
+        /// particle texture, soft particles. Made once.</summary>
+        private static Material EnsurePlumeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(PlumeMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null)
+            {
+                Debug.LogWarning("Setup: URP particle shaders not found; no city steam and smoke.");
+                return null;
+            }
+            material = new Material(shader) { name = "CityPlume" };
+            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SoftParticlesEnabled", 1f);
+            material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 4f, 0f, 0f));
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            Directory.CreateDirectory(Path.GetDirectoryName(PlumeMaterialPath));
+            AssetDatabase.CreateAsset(material, PlumeMaterialPath);
+            return material;
+        }
+
+        // -- reflection probes, fog -----------------------------------------------------------------------------------
+
+        /// <summary>"Reflection Probes": a 3 x 3 grid of baked box probes over the city floor (glass, wet ground and puddles
+        /// reflect the neon) and one high probe for the tower tops. Bake lighting in the editor to fill them.</summary>
+        private static void PlaceProbes(Scene scene, float mapSize)
+        {
+            var root = new GameObject("Reflection Probes") { isStatic = true };
+            SceneManager.MoveGameObjectToScene(root, scene);
+            var spacing = Mathf.Clamp(mapSize * 0.15f, 250f, 500f);
+            for (var i = -1; i <= 1; i++)
+            for (var j = -1; j <= 1; j++)
+                AddProbe(root.transform, $"Probe_{i + 1}{j + 1}", new Vector3(i * spacing, 35f, j * spacing), new Vector3(spacing, 160f, spacing));
+            AddProbe(root.transform, "Probe_High", new Vector3(0f, 220f, 0f), new Vector3(spacing * 3f, 300f, spacing * 3f));
+        }
+
+        private static void AddProbe(Transform parent, string name, Vector3 position, Vector3 size)
+        {
+            var go = new GameObject(name) { isStatic = true };
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = position;
+            var probe = go.AddComponent<ReflectionProbe>();
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+            probe.size = size;
+            probe.boxProjection = true;
+            probe.resolution = 256;
+            probe.hdr = true;
+            probe.importance = name == "Probe_High" ? 0 : 1;
+        }
+
+        /// <summary>"Atmosphere": the map's height fog (CityAtmosphereAuthoring, baked to an ECS component the client
+        /// hands to the full-screen fog pass; Setup step 9 adds that pass to the renderer).</summary>
+        private static void PlaceAtmosphere(Scene scene, HeightFogInfo fog)
+        {
+            if (fog == null || fog.density <= 0f) return;
+            var go = new GameObject("Atmosphere");
+            SceneManager.MoveGameObjectToScene(go, scene);
+            var authoring = go.AddComponent<Chopper.Simulation.Visuals.CityAtmosphereAuthoring>();
+            var colour = ColorUtility.TryParseHtmlString(fog.colour, out var parsed) ? parsed : new Color(0.29f, 0.24f, 0.22f);
+            authoring.Set(colour, fog.density, fog.@base, fog.falloff, fog.most);
         }
 
         private static void SetStatic(GameObject root)

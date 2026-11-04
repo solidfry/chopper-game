@@ -787,6 +787,7 @@ def _chimney(b, x, z, radius, height):
             b.box((x + math.cos(a) * r, y, z + math.sin(a) * r), (0.3, 0.3, 0.3), "warning", L01)
     kit.ladder(b, x, z + radius * 0.9 - 0.05, 1.5, height - 1.0, (0.0, 1.0), rung=1.2)
     b.round_collider(x, z, radius, 0.0, height)
+    b.emitter("smoke", (x, height, z), top_r)
 
 
 def _tank(b, x, z, radius, height):
@@ -923,6 +924,7 @@ def _cooling_tower(b, x, z, radius, height):
               "warning", L01)
     b.round_collider(x, z, radius, 0.0, mid_y)
     b.round_collider(x, z, mid_r, mid_y, height)
+    b.emitter("steam", (x, height, z), top_r * 0.85)
 
 
 def _sphere_tank(b, x, z, radius):
@@ -953,6 +955,7 @@ def _flare(b, x, z, height):
     # The flame: an amber cone over the tip (glows), thin (no collider above the tip).
     b.cylinder((x, height + 1.2, z), (x, height + 5.0, z), 0.8, "flame", segments=8, at=L01, end_radius=0.08)
     b.light("flame", (x, height + 4.0, z), "#ff8a2a", 45.0, 3.0)
+    b.emitter("heat", (x, height + 5.0, z), 0.8)
     b.box((x, height - 2.8, z + 1.6), (0.4, 0.4, 0.4), "warning", L01)
     b.add_thin(x, z, height + 5.2)
     b.round_collider(x, z, 1.0, 0.0, height + 1.2)

@@ -140,6 +140,14 @@ Animated lights are in the building shader: the palette metal-smooth B channel h
 (`kit.LIGHT_KINDS`): aviation lights blink (synchronised per building), neon buzzes and drops out, flare flames
 (swatch `flame`) flicker.
 
+Steam, smoke and heat: Buildings keep emitters (`b.emitter(kind, position, radius)`: cooling-tower tops, chimney
+tops, flare tips); "emitters" in the JSON. Step 8 makes a lit, world-space particle plume on each (cap and merge per
+kind, one wind for all; looks in `CityAssets.PlumeLooks`). Height fog: "heightFog" in the JSON (per biome,
+`build.HEIGHT_FOG`, a style's `height_fog` overrides): step 8 puts it on an Atmosphere object in the city scene
+(baked to `CityAtmosphere`), the client hands it to the full-screen fog pass (`CityHeightFog.shader`), which step 9
+adds to the URP renderer with SSAO, plus a post profile (bloom, ACES, contrast, vignette) on a Global Volume. Step 8
+also places baked reflection probes over the city (bake lighting to fill them).
+
 ## Building surfaces
 
 Shader work on top of the wear (BuildingWear.hlsl in the game, `wear._surfaces` in the previews):

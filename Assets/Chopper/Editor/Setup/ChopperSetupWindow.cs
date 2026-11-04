@@ -31,6 +31,7 @@ namespace Chopper.Editor.Setup
             root.Add(new Button(() => Do(() => KitChassis.EnsureAll(ConfigAssets.Load()))) { text = "6. Build chassis from kit" });
             root.Add(new Button(() => Do(() => HangarSetup.Apply(ConfigAssets.Load()))) { text = "7. Build hangar" });
             root.Add(new Button(() => Do(CityAssets.EnsureAll)) { text = "8. Import city (CityForge)" });
+            root.Add(new Button(() => Do(CityLookSetup.Apply)) { text = "9. City look (fog, SSAO, bloom)" });
             root.Add(new Button(() => Do(() =>
             {
                 var config = ConfigAssets.EnsureAll();
@@ -41,6 +42,7 @@ namespace Chopper.Editor.Setup
                 KitChassis.EnsureAll(config);
                 HangarSetup.Apply(config);
                 CityAssets.EnsureAll();
+                CityLookSetup.Apply();
             })) { text = "Do all" });
 
             var configRow = new Button(() =>

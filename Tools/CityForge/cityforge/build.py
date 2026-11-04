@@ -524,15 +524,8 @@ def _city_lights(state):
         out.append({"kind": kind, "position": _r(p), "colour": colour, "range": round(range_m, 1),
                     "intensity": round(intensity, 2)})
 
-    if state.layout is not None:
-        for name, (px, _py, pz), yaw in state.layout.instances:
-            c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
-            for kind, (lx, ly, lz), colour, range_m, intensity in state.built[name]["building"].lights:
-                add(kind, (px + lx * c + lz * s_, ly, pz - lx * s_ + lz * c), colour, range_m, intensity)
-    for name in roads.CITY_PARTS:
-        if name in state.built:
-            for kind, p, colour, range_m, intensity in state.built[name]["building"].lights:
-                add(kind, p, colour, range_m, intensity)
+    for kind, p, colour, range_m, intensity in _placed(state, "lights"):
+        add(kind, p, colour, range_m, intensity)
     t = state.terrain
     glow = terrain_biomes.BIOMES[state.biome].get("glow")
     if glow and getattr(t, "lava", None):
@@ -545,6 +538,42 @@ def _city_lights(state):
                 add("lava", (p.x, float(t.sample(p.x, p.y)) + 4.0 + width * 0.15, p.y), glow, 30.0 + width * 1.5, 4.0)
                 d += 55.0
     return out
+
+
+def _placed(state, attribute):
+    """(record with its position in city space) for every placed building and city part: buildings' local records
+    are turned and moved to their layout spot. Records are tuples (kind, position, *rest)."""
+    if state.layout is not None:
+        for name, (px, _py, pz), yaw in state.layout.instances:
+            c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+            for kind, (lx, ly, lz), *rest in getattr(state.built[name]["building"], attribute):
+                yield (kind, (px + lx * c + lz * s_, ly, pz - lx * s_ + lz * c), *rest)
+    for name in roads.CITY_PARTS:
+        if name in state.built:
+            yield from getattr(state.built[name]["building"], attribute)
+
+
+def _city_emitters(state):
+    """Steam, smoke and heat outlets in city space (CityAssets.PlaceEmitters makes particle systems there)."""
+    return [{"kind": kind, "position": _r(p), "radius": round(radius, 2)} for kind, p, radius in _placed(state, "emitters")]
+
+
+# Height fog per biome: colour (hex), density at the base (1/m), base height (m, city floor = 0), falloff height (m:
+# the density drops to 1/e this much higher), most opacity. A style's "height_fog" overrides it.
+HEIGHT_FOG = {
+    "volcanic": dict(colour="#4a3d37", density=0.0016, base=0.0, falloff=55.0, most=0.88),
+    "toxic": dict(colour="#5b6a3a", density=0.0014, base=0.0, falloff=45.0, most=0.85),
+    "rain_desert": dict(colour="#7d7a74", density=0.0010, base=0.0, falloff=90.0, most=0.8),
+    "arctic": dict(colour="#c9d3da", density=0.0008, base=0.0, falloff=80.0, most=0.75),
+    "jungle": dict(colour="#7f8f80", density=0.0012, base=0.0, falloff=50.0, most=0.8),
+    "desert": dict(colour="#c2ad8f", density=0.0004, base=0.0, falloff=140.0, most=0.6),
+}
+
+
+def _height_fog(state):
+    """The map's height fog for the game (TerrainBiome and buildings get it from the full-screen fog pass)."""
+    fog = dict(HEIGHT_FOG.get(state.biome, HEIGHT_FOG["desert"]), **(state.style.get("height_fog") or {}))
+    return {key: (round(value, 6) if isinstance(value, float) else value) for key, value in fog.items()}
 
 
 def export_terrain(state, out_dir):
@@ -614,6 +643,8 @@ def export_terrain(state, out_dir):
                    [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
                     for name, p in state.placements.items()]),
         "lights": _city_lights(state),
+        "emitters": _city_emitters(state),
+        "heightFog": _height_fog(state),
         "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
         "audit": state.terrain_problems,
     }

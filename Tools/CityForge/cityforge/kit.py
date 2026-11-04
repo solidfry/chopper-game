@@ -128,6 +128,7 @@ class Building:
         self.colliders = []   # (centre, size, yaw): yaw = Unity euler Y in degrees (local +X turns to (cos, 0, -sin))
         self.markers = []     # (kind, index, position, radius)
         self.lights = []      # (kind, position, colour hex, range m, intensity): real lights for the game scene
+        self.emitters = []    # (kind, position, radius m): steam, smoke and heat for the game scene
         self.thin = []        # (x, z, top[, radius]): masts and spires allowed above every collider
         plot = spec["plot"]
         self.plot = Rect.centred(0.0, 0.0, plot[0], plot[1])
@@ -157,6 +158,11 @@ class Building:
         """A real light for the game scene (Unity places the most important ones; see CityAssets.BuildScene). kind:
         street, flood, pad, flame, lava, shanty."""
         self.lights.append((kind, self._tp(position), colour, range_m, intensity))
+
+    def emitter(self, kind, position, radius):
+        """A particle emitter for the game scene (Unity places them; see CityAssets.PlaceEmitters). kind: steam
+        (cooling towers), smoke (chimneys), heat (flare tips). position: the top centre of the outlet."""
+        self.emitters.append((kind, self._tp(position), radius))
 
     def add_thin(self, x, z, top, radius=1.3):
         tx, _ty, tz = self._tp((x, 0.0, z))
