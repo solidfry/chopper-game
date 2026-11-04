@@ -491,7 +491,7 @@ def export_terrain(state, out_dir):
                            "triangles": [sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects]})
         backdrop = []
         for obj in state.backdrop:
-            _export_fbx([obj], os.path.join(folder, f"{obj.name}.fbx"))
+            _export_fbx([obj], os.path.join(folder, f"{obj.name}.fbx"), colours="LINEAR")
             backdrop.append({"name": obj.name, "file": f"Terrain/{obj.name}.fbx",
                              "triangles": sum(len(p.vertices) - 2 for p in obj.data.polygons)})
     finally:

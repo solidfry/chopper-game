@@ -625,6 +625,9 @@ def make_backdrop(t, collection, material, rings=44, segments=160):
     mesh = bpy.data.meshes.new("Backdrop")
     mesh.from_pydata(verts, [], faces)
     mesh.attributes.new("swatch", "INT", "FACE").data.foreach_set("value", swatches)
+    # Zero biome masks (no flow, hollow, made ground or scree): without them Unity reads white (all masks on).
+    mesh.color_attributes.new("Masks", "FLOAT_COLOR", "POINT").data.foreach_set(
+        "color", np.zeros(len(verts) * 4, dtype=np.float32))
     obj = bpy.data.objects.new("Backdrop", mesh)
     collection.objects.link(obj)
     palette.apply_uvs(obj, palette_only=True)
@@ -673,4 +676,6 @@ def make_skyline(t, collection, material, count=260):
         obj.data.uv_layers.remove(obj.data.uv_layers["Screen"])
     obj.data.materials.clear()
     obj.data.materials.append(material)
+    from . import wear
+    wear.clear(obj)   # zero wear masks: Unity reads a missing vertex colour as white (full grime)
     return obj

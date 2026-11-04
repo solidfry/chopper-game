@@ -36,6 +36,7 @@ namespace Chopper.Editor.Setup
             problems.AddRange(KitAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(KitChassis.Problems(config).Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(HangarSetup.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
+            problems.AddRange(CityAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             CheckPrefab(problems);
             CheckScene(problems);
             return problems;

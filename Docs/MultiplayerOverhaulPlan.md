@@ -541,7 +541,11 @@ storm drain, a sky road loop round the core and a spiral ramp.
 Then biome terrain shading: biome-free masks in the terrain vertex colours (flow, hollow, made ground, scree), 6 biome
 presets (desert, rain desert, arctic, jungle, volcanic, toxic) as a biome table, `TerrainBiome.hlsl` +
 `TerrainBiome.shadergraph` (not yet compiled), the same rules in the Blender previews. Output in
-`Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
+`Assets/Chopper/Art/City/City01`.
+Then (4 Nov) wear and grime: per-vertex masks (occlusion, splash, drip, sky) graded by `BuildingWear.hlsl` +
+graph; CC0 detail maps (Poly Haven, ambientCG) in both shaders. Unity Setup step 8 (`CityAssets.cs`, written without
+the editor): materials, building prefabs, city scene `Assets/Scenes/City01.unity` for a SubScene. Next: run step 8
+and fix compile errors in the editor, a match scene with the city, Blender panel.
 
 
 A procedural generator for **city buildings**, like PartForge for the choppers (`Tools/PartForge`): code + numbers in Blender (Python and geometry nodes), so a change is a re-run, not a re-model.

@@ -176,10 +176,26 @@ the storm drain), `mesa_*.jpg` (a Lifter on a mesa top), `district_day.jpg`, `di
 - Parts: `cityforge/kit.py` (facades, shop fronts, roof props, pads, signs, lights; `Building.turned()` turns a group
   of parts, colliders and markers round a vertical axis), `cityforge/buildings.py` (the building types).
 
+## Unity import
+
+Setup window step **8. Import city (CityForge)** (`Assets/Chopper/Editor/Setup/CityAssets.cs`; written without the
+editor, 4 Nov):
+
+- Texture imports: palette and biome table point, no mipmaps, uncompressed; CC0 maps repeat, normal maps as normal maps.
+- Materials: `<kit>_Buildings.mat` (BuildingWear graph; URP Lit on the palette until the graph compiles) and
+  `<kit>_Terrain.mat` (TerrainBiome graph); biome index from `biomes.current` in the terrain manifest.
+- FBX remap to those materials; no importer colliders; FBX normals kept (hard edges); vertex colours kept.
+- One prefab per building in `Assets/Chopper/Prefabs/City/<kit>`: model with LOD Group (manifest screen heights),
+  `Colliders` (one box per manifest collider), `Markers` (RoofPad, Roof).
+- Scene `Assets/Scenes/<kit>.unity`: terrain chunks (mesh collider from LOD0), backdrop (no colliders, no shadows),
+  buildings at their layout spots, terrain markers. Rebuilt every time.
+
+Editor steps: open `TerrainBiome.shadergraph` and `BuildingWear.shadergraph` and fix compile errors; press step 8;
+add the city scene as a SubScene of a match scene (Unity Physics bakes the colliders there); set fog (exponential,
+density 0.00033) and camera far clip 20000 m; size the arena bounds to `flightBounds` in `<kit>.terrain.json`.
+
 ## Next
 
-- Unity: a Setup step that imports `Assets/Chopper/Art/City/<kit>` (palette material with point filtering, LOD
-  screen heights, box colliders and markers from the manifest, one prefab per building) and a validator check.
 - Blender panel (N > CityForge) with Rebuild and sliders, like PartForge.
 - Wear and grime: the PartForge bake and runtime skin path (texture sets per building).
 - A district / map layout generator (streets, plots, spawn and objective placement from the markers). The terrain
