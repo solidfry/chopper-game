@@ -1,22 +1,40 @@
 """
-City layout: fills the basin floor with buildings. Zones by distance from the core (megatowers and landmarks in the
-core, towers round it, blocks, slums at the edge, industrial on the canyon side), rows of plots with streets between,
-a corridor for the storm-drain channel with bridges over it. Variants of the base buildings (new seeds and numbers)
-give variety; each variant is one more FBX, used many times (instances).
+City layout: roads first, then blocks, lots and buildings (the usual order of procedural city generators):
 
-Coordinates: Unity space, origin = the city centre on the ground (the same origin as the terrain).
+1. Main roads (after Parish & Mueller 2001, "Procedural Modeling of Cities": main roads first, a radial pattern round a
+   core): a ring road round the core, radial avenues out to the city edge, a main boulevard through the core (it goes
+   on to the north tunnel), a perimeter road, frontage roads along the storm drain (the freeway runs above the north one).
+2. Local streets (after Chen et al. 2008, "Interactive Procedural Street Modeling", tensor fields): every area between
+   main roads gets a street grid turned to the local direction: square to the axes in the core, along the radial
+   direction outside it. Spacing by zone (big blocks in the core, small ones in the slums); some streets left out.
+3. Lots (after Vanegas et al. 2012, "Procedural Generation of Parcels in Urban Modeling", oriented bounding box
+   splits): each block is cut across its long side again and again until the lots fit the zone.
+4. Buildings: the unique megatowers and landmarks go into whole core blocks first; then each lot gets the biggest
+   building of its zone that fits, turned so its front faces the nearest road. Lots with nothing that fits stay open
+   (plazas: open space for fights).
+
+Coordinates: Unity space (x, z on the ground), origin = the city centre (the terrain origin). Yaw = Unity euler Y.
 """
 import json
 import math
 import random
 
-from . import specs as spec_list
-from .kit import Rect
+from shapely import affinity
+from shapely.geometry import LineString, Point, Polygon, box
+from shapely.ops import split, unary_union
 
-STREET = 16.0
+from . import specs as spec_list
+
 CITY = (1000.0, 800.0)        # city size x, z (m)
-CHANNEL_SHARE = 0.22          # channel corridor at z = this share of the city depth (towards +Z, the front)
-CORRIDOR = 84.0               # channel (56 m) + a road on each side
+CHANNEL_SHARE = 0.22          # storm-drain corridor at z = this share of the city depth (towards +Z)
+CORRIDOR = 84.0               # channel (56 m) + a frontage road on each side
+CHANNEL_TOP = 56.0
+FREEWAY_OFFSET = 35.0         # freeway centre line: channel z + this (above the north frontage road)
+RING = dict(cx=0.0, cz=-60.0, rx=270.0, rz=180.0)
+WIDTH = dict(ring=24.0, radial=20.0, boulevard=26.0, perimeter=16.0, frontage=12.0, street=12.0)
+RADIAL_ANGLES = (30, 70, 110, 150, 200, 240, 290, 330)   # degrees in the (x, z) plane; 0 = +X (the spiral is there)
+BOULEVARD_X = 20.0
+SPIRAL = dict(x=385.0, z=-60.0, radius=78.0)              # plaza kept free for the sky-road spiral
 UNIQUE = ("Mega_Arcology", "Mega_Twins", "Landmark_Halo", "Mega_Needle", "Landmark_Orb", "Mega_Slab", "Landmark_Twist")
 VARIANTS = {"tower": 6, "block": 6, "slum": 6, "industrial": 3}
 
@@ -54,130 +72,329 @@ def variant_specs(seed=11):
     return out
 
 
+class Road:
+    def __init__(self, kind, points, closed=False, width=None):
+        self.kind = kind
+        self.width = width or WIDTH[kind]
+        self.closed = closed
+        self.points = list(points) + ([points[0]] if closed else [])
+        self.line = LineString(self.points)
+
+    def area(self):
+        return self.line.buffer(self.width / 2, cap_style="flat" if not self.closed else "round", join_style="round")
+
+
+def footprint(cx, cz, w, d, yaw):
+    """Building footprint polygon: local +X = (cos, -sin), local +Z (the front) = (sin, cos) for a Unity yaw."""
+    a = math.radians(yaw)
+    ux, uz = math.cos(a), -math.sin(a)
+    fx, fz = math.sin(a), math.cos(a)
+    corners = [(sx * w / 2, sz * d / 2) for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    return Polygon([(cx + x * ux + z * fx, cz + x * uz + z * fz) for x, z in corners])
+
+
+def _parts(geometry):
+    if geometry.is_empty:
+        return []
+    return list(geometry.geoms) if hasattr(geometry, "geoms") else [geometry]
+
+
 class Layout:
     def __init__(self, building_specs, seed=5):
         self.rng = random.Random(seed)
         self.width, self.depth = CITY
-        self.rect = Rect.centred(0.0, 0.0, self.width, self.depth)
+        self.rect = box(-self.width / 2, -self.depth / 2, self.width / 2, self.depth / 2)
         self.channel_z = self.depth * CHANNEL_SHARE
+        self.freeway_z = self.channel_z + FREEWAY_OFFSET
+        self.corridor = box(-self.width, self.channel_z - CORRIDOR / 2, self.width, self.channel_z + CORRIDOR / 2)
+        self.channel = box(-self.width, self.channel_z - CHANNEL_TOP / 2, self.width, self.channel_z + CHANNEL_TOP / 2)
+        self.spiral = Point(SPIRAL["x"], SPIRAL["z"]).buffer(SPIRAL["radius"], 48)
         self.specs = {spec["name"]: spec for spec in building_specs}
         self.pools = {}
         for spec in building_specs:
             if spec["name"] not in UNIQUE:
                 self.pools.setdefault(spec["type"], []).append(spec)
-        self.instances = []       # (name, (x, 0, z), yaw)
-        self.plots = []           # (name, Rect)
-        self.bridges = []         # x of each bridge over the channel
-        self._fill()
+        self.roads, self.instances, self.footprints, self.plazas, self.bridges = [], [], [], [], []
+        self._main_roads()
+        self.ring_area = self._ring_polygon()
+        self._local_streets()
+        self.road_area = unary_union([road.area() for road in self.roads])
+        self._blocks()
+        self._buildings()
+        self._bridges()
+
+    # -- roads -----------------------------------------------------------------------------------------------------
+    def _ring_points(self, count=72):
+        return [(RING["cx"] + RING["rx"] * math.cos(math.tau * k / count),
+                 RING["cz"] + RING["rz"] * math.sin(math.tau * k / count)) for k in range(count)]
+
+    def _ring_polygon(self):
+        return Polygon(self._ring_points())
+
+    def _main_roads(self):
+        rng = self.rng
+        hw, hd = self.width / 2, self.depth / 2
+        self.roads.append(Road("ring", self._ring_points(), closed=True))
+        for degrees in RADIAL_ANGLES:
+            a = math.radians(degrees + rng.uniform(-4, 4))
+            dx, dz = math.cos(a), math.sin(a)
+            start = (RING["cx"] + RING["rx"] * dx, RING["cz"] + RING["rz"] * dz)
+            ray = LineString([start, (start[0] + dx * 3000, start[1] + dz * 3000)])
+            end = ray.intersection(self.rect.boundary)
+            end = end if end.geom_type == "Point" else _parts(end)[0]
+            mid = ((start[0] + end.x) / 2 - dz * rng.uniform(-25, 25), (start[1] + end.y) / 2 + dx * rng.uniform(-25, 25))
+            self.roads.append(Road("radial", [start, mid, (end.x, end.y)]))
+        self.roads.append(Road("boulevard", [(BOULEVARD_X, -hd), (BOULEVARD_X, hd)]))
+        inset = WIDTH["perimeter"] / 2
+        self.roads.append(Road("perimeter", [(-hw + inset, -hd + inset), (hw - inset, -hd + inset),
+                                             (hw - inset, hd - inset), (-hw + inset, hd - inset)], closed=True))
+        for side in (-1, 1):
+            z = self.channel_z + side * FREEWAY_OFFSET
+            self.roads.append(Road("frontage", [(-hw, z), (hw, z)]))
 
     def _zone(self, x, z):
         """0 = core ... 1 = city edge (an ellipse over the city rectangle)."""
         return math.hypot(x / (self.width / 2), z / (self.depth / 2))
 
-    def _pick(self, x, z, max_depth, uniques):
-        r = self._zone(x, z)
+    def _local_streets(self):
         rng = self.rng
-        if uniques and r < 0.42:
-            spec = self.specs.get(uniques[0])
-            if spec and spec["plot"][1] <= max_depth:
-                return spec
-        if r < 0.3:
+        main = unary_union([road.area() for road in self.roads])
+        areas = self.rect.difference(main).difference(self.corridor).difference(self.spiral)
+        self.superblocks = [p for p in _parts(areas) if p.area > 1500]
+        for area in self.superblocks:
+            c = area.centroid
+            core = self.ring_area.contains(c)
+            if core:
+                angle, spacing = 0.0, 118.0
+            else:
+                angle = math.degrees(math.atan2(c.y - RING["cz"], c.x - RING["cx"]))
+                r = self._zone(c.x, c.y)
+                spacing = 112.0 if r < 0.55 else 98.0 if r < 0.9 else 84.0
+            # Grid lines in the area's own frame, then turned into place and cut by the area.
+            local = affinity.rotate(area, -angle, origin=c)
+            x0, z0, x1, z1 = local.bounds
+            lines = []
+            offset = rng.uniform(0, spacing)
+            x = x0 + offset
+            while x < x1:
+                lines.append(LineString([(x, z0 - 10), (x, z1 + 10)]))
+                x += spacing * rng.uniform(0.85, 1.15)
+            z = z0 + rng.uniform(0, spacing)
+            while z < z1:
+                lines.append(LineString([(x0 - 10, z), (x1 + 10, z)]))
+                z += spacing * rng.uniform(0.85, 1.15)
+            for line in lines:
+                if rng.random() < 0.12 and not core:
+                    continue
+                for piece in _parts(affinity.rotate(line, angle, origin=c).intersection(area)):
+                    if piece.geom_type == "LineString" and piece.length > 35.0:
+                        self.roads.append(Road("street", list(piece.coords)))
+
+    # -- blocks, lots, buildings -----------------------------------------------------------------------------------
+    def _blocks(self):
+        areas = self.rect.difference(self.road_area).difference(self.corridor).difference(self.spiral)
+        self.blocks = [p for p in _parts(areas) if p.area > 500]
+
+    def _fit(self, spec, area, rng, near_centre=False):
+        """Where a building fits in an area: (yaw, centre, footprint) or None. Tries the area's main directions and
+        a few positions; prefers the front facing the nearest road."""
+        w, d = spec["plot"]
+        obb = area.minimum_rotated_rectangle
+        coords = list(obb.exterior.coords)[:4]
+        ex, ez = coords[1][0] - coords[0][0], coords[1][1] - coords[0][1]
+        base = math.degrees(math.atan2(-ez, ex))
+        inner = area.buffer(-1.5)
+        if inner.is_empty:
+            return None
+        c = obb.centroid
+        side_a = math.hypot(ex, ez)
+        side_b = math.hypot(coords[2][0] - coords[1][0], coords[2][1] - coords[1][1])
+        if min(w, d) > min(side_a, side_b) - 3.0 or max(w, d) > max(side_a, side_b) - 3.0:
+            return None
+        ax, az = ex / side_a, ez / side_a
+        bx, bz = -az, ax
+        # Positions: the middle first, then a grid over the free room along both sides.
+        room_a = max(0.0, (side_a - max(w, d)) / 2)
+        room_b = max(0.0, (side_b - min(w, d)) / 2)
+        offsets = [(0.0, 0.0)] + [(fa * room_a, fb * room_b) for fa in (-1.0, -0.5, 0.5, 1.0) for fb in (-1.0, 0.0, 1.0)]
+        best = None
+        for oa, ob in offsets:
+            cx, cz = c.x + ax * oa + bx * ob, c.y + az * oa + bz * ob
+            for k in range(4):
+                yaw = (base + 90.0 * k) % 360.0
+                shape = footprint(cx, cz, w, d, yaw)
+                if not inner.contains(shape):
+                    continue
+                a = math.radians(yaw)
+                front = Point(cx + math.sin(a) * d / 2, cz + math.cos(a) * d / 2)
+                score = front.distance(self.road_area) + (math.hypot(cx, cz) * 0.05 if near_centre else 0.0)
+                if best is None or score < best[0]:
+                    best = (score, yaw, (cx, cz), shape)
+            if best is not None and oa == 0.0 and ob == 0.0:
+                break
+        return None if best is None else best[1:]
+
+    def _place(self, spec, yaw, centre, shape):
+        self.instances.append((spec["name"], (centre[0], 0.0, centre[1]), yaw))
+        self.footprints.append((spec["name"], shape))
+
+    def _kind(self, x, z):
+        rng = self.rng
+        r = self._zone(x, z)
+        if r < 0.35:
             kinds = (("tower", 1.0),)
-        elif r < 0.52:
-            kinds = (("tower", 0.7), ("block", 0.3))
-        elif r < 0.76:
-            kinds = (("block", 0.7), ("tower", 0.1), ("slum", 0.2))
+        elif r < 0.6:
+            kinds = (("tower", 0.6), ("block", 0.4))
+        elif r < 0.92:
+            kinds = (("block", 0.65), ("tower", 0.15), ("slum", 0.2))
         elif x > self.width * 0.22:
-            kinds = (("industrial", 0.5), ("slum", 0.3), ("block", 0.2))
+            kinds = (("industrial", 0.55), ("block", 0.25), ("slum", 0.2))
         else:
-            kinds = (("slum", 0.65), ("block", 0.2), ("industrial", 0.15))
+            kinds = (("slum", 0.5), ("block", 0.35), ("industrial", 0.15))
         roll, total = rng.random(), 0.0
-        kind = kinds[-1][0]
         for name, share in kinds:
             total += share
             if roll <= total:
-                kind = name
-                break
-        choices = [s for s in self.pools.get(kind, []) if s["plot"][1] <= max_depth]
-        return rng.choice(choices) if choices else None
+                return name
+        return kinds[-1][0]
 
-    def _fill(self):
-        half_w, half_d = self.width / 2, self.depth / 2
-        corridor_top, corridor_bottom = self.channel_z + CORRIDOR / 2, self.channel_z - CORRIDOR / 2
-        bands = [(half_d, corridor_top), (corridor_bottom, -half_d)]
-        uniques = [name for name in UNIQUE if name in self.specs]
-        for top, bottom in bands:
-            front = top
-            while front - bottom >= 18.0:
-                x = -half_w
-                row_depth = 0.0
-                while True:
-                    spec = self._pick(x + 30.0, front - 25.0, front - bottom, uniques)
-                    if spec is None:
-                        break
-                    w, d = spec["plot"]
-                    if x + w > half_w:
-                        # Try a narrower building to close the row.
-                        narrow = [s for s in self.pools.get("slum", []) + self.pools.get("block", [])
-                                  if s["plot"][0] <= half_w - x and s["plot"][1] <= front - bottom]
-                        if not narrow:
-                            break
-                        spec = self.rng.choice(narrow)
-                        w, d = spec["plot"]
-                    if spec["name"] in uniques:
-                        uniques.remove(spec["name"])
-                    centre = (x + w / 2, 0.0, front - d / 2)
-                    yaw = 0.0 if spec["type"] in ("mega", "twins", "twist", "halo", "orb") or self.rng.random() < 0.6 \
-                        else 180.0
-                    self.instances.append((spec["name"], centre, yaw))
-                    self.plots.append((spec["name"], Rect.centred(centre[0], centre[2], w, d)))
-                    row_depth = max(row_depth, d)
-                    x += w + STREET
-                if row_depth == 0.0:
+    def _target(self, x, z, core):
+        if core:
+            return 5200.0
+        r = self._zone(x, z)
+        if r < 0.6:
+            return 3600.0
+        if r < 0.92:
+            return 2600.0
+        return 3000.0 if x > self.width * 0.22 else 1500.0
+
+    def _buildings(self):
+        rng = self.rng
+        blocks = sorted(self.blocks, key=lambda p: p.centroid.distance(Point(RING["cx"], RING["cz"])))
+        # 1. Unique buildings into whole core blocks, biggest first, nearest the centre.
+        uniques = sorted([self.specs[n] for n in UNIQUE if n in self.specs], key=lambda s: -s["plot"][0] * s["plot"][1])
+        self.missing = []
+        for spec in uniques:
+            placed = False
+            for k, block in enumerate(blocks):
+                if not self.ring_area.buffer(140).contains(block.centroid):
+                    continue
+                fit = self._fit(spec, block, rng, near_centre=True)
+                if fit:
+                    yaw, centre, shape = fit
+                    self._place(spec, yaw, centre, shape)
+                    rest = block.difference(shape.buffer(12.0))
+                    blocks[k:k + 1] = [p for p in _parts(rest) if p.area > 400]
+                    placed = True
                     break
-                front -= row_depth + STREET
-        # Bridges over the channel where streets would cross it: every ~130 m.
-        count = int(self.width // 130)
-        self.bridges = [-half_w + (k + 0.5) * self.width / count for k in range(count)]
-        self.missing = uniques
+            if not placed:
+                self.missing.append(spec["name"])
+        # 2. Lots: oriented bounding box splits.
+        lots = []
+        for block in blocks:
+            c = block.centroid
+            core = self.ring_area.contains(c)
+            lots += self._split(block, self._target(c.x, c.y, core), 20.0)
+        # 3. The biggest building of the zone that fits; else smaller kinds; else an open plaza.
+        fallback = {"tower": ["block"], "block": ["slum"], "industrial": ["block", "slum"], "slum": []}
+        for lot in lots:
+            # A big lot can take more than one building: fill what is left after each one.
+            pieces, placed = [lot], 0
+            while pieces and placed < 4:
+                piece = pieces.pop(0)
+                c = piece.centroid
+                if placed == 0:
+                    kind = self._kind(c.x, c.y)
+                fit_spec = None
+                # The first building of a lot may fall back to a smaller kind; the rest of the lot only takes the
+                # lot's own kind (otherwise every leftover strip fills with slum shacks).
+                kinds = [kind] + fallback[kind] if placed == 0 else [kind]
+                for name in kinds:
+                    pool = sorted(self.pools.get(name, []),
+                                  key=lambda s: -s["plot"][0] * s["plot"][1] * rng.uniform(0.7, 1.3))
+                    for spec in pool:
+                        fit = self._fit(spec, piece, rng)
+                        if fit:
+                            fit_spec = (spec, fit)
+                            break
+                    if fit_spec:
+                        break
+                if fit_spec is None:
+                    if piece.area > 1200 and placed == 0:
+                        self.plazas.append(piece)
+                    continue
+                spec, (yaw, centre, shape) = fit_spec
+                self._place(spec, yaw, centre, shape)
+                placed += 1
+                pieces += [p for p in _parts(piece.difference(shape.buffer(8.0))) if p.area > 450]
 
+    def _split(self, poly, target, min_side):
+        if poly.area <= target:
+            return [poly]
+        obb = poly.minimum_rotated_rectangle
+        coords = list(obb.exterior.coords)[:4]
+        e0 = (coords[1][0] - coords[0][0], coords[1][1] - coords[0][1])
+        e1 = (coords[2][0] - coords[1][0], coords[2][1] - coords[1][1])
+        long_, short = (e0, e1) if math.hypot(*e0) >= math.hypot(*e1) else (e1, e0)
+        length = math.hypot(*long_)
+        if length < 2 * min_side:
+            return [poly]
+        ux, uz = long_[0] / length, long_[1] / length
+        c = obb.centroid
+        t = self.rng.uniform(-0.12, 0.12) * length
+        px, pz = c.x + ux * t, c.y + uz * t
+        cut = LineString([(px - uz * 5000, pz + ux * 5000), (px + uz * 5000, pz - ux * 5000)])
+        pieces = [g for g in _parts(split(poly, cut)) if g.area > 60]
+        if len(pieces) < 2:
+            return [poly]
+        out = []
+        for piece in pieces:
+            out += self._split(piece, target, min_side)
+        return out
+
+    def _bridges(self):
+        """A bridge wherever a road centre line crosses the channel: (x, z, yaw, deck width)."""
+        channel_line = LineString([(-self.width, self.channel_z), (self.width, self.channel_z)])
+        for road in self.roads:
+            if road.kind in ("frontage",):
+                continue
+            hit = road.line.intersection(channel_line)
+            for point in _parts(hit):
+                if point.geom_type != "Point" or not self.rect.buffer(1.0).contains(point):
+                    continue
+                d = road.line.project(point)
+                a, b = road.line.interpolate(max(0.0, d - 2.0)), road.line.interpolate(min(road.line.length, d + 2.0))
+                yaw = math.degrees(math.atan2(b.x - a.x, b.y - a.y))
+                self.bridges.append((point.x, point.y, yaw, road.width + 4.0))
+
+    # -- results ---------------------------------------------------------------------------------------------------
     def city_rect(self):
-        plots = [rect for _name, rect in self.plots]
-        return (min(r.x0 for r in plots), max(r.x1 for r in plots), min(r.z0 for r in plots), max(r.z1 for r in plots))
+        x0, z0, x1, z1 = self.rect.bounds
+        return (x0, x1, z0, z1)
+
+    def plots(self):
+        """(name, corner list) per building, for the terrain audit."""
+        return [(name, list(shape.exterior.coords)[:4]) for name, shape in self.footprints]
+
+    def exterior(self):
+        """What the terrain needs for the roads out of the city: freeway line, boulevard x, ramp ends."""
+        return dict(freeway_z=self.freeway_z, north_x=BOULEVARD_X, ramp=self.width / 2 + 200.0,
+                    city=self.city_rect())
 
     def audit(self):
         problems = []
-        for k, (name_a, a) in enumerate(self.plots):
-            for name_b, b2 in self.plots[k + 1:]:
-                if a.overlaps(b2, -0.01):
+        shapes = self.footprints
+        for k, (name_a, a) in enumerate(shapes):
+            for name_b, other in shapes[k + 1:]:
+                if a.intersection(other).area > 1.0:
                     problems.append(f"layout     {name_a} and {name_b} overlap")
-        corridor = Rect(-1e6, 1e6, self.channel_z - CORRIDOR / 2 + 1.0, self.channel_z + CORRIDOR / 2 - 1.0)
-        for name, rect in self.plots:
-            if rect.overlaps(corridor):
+        for name, shape in shapes:
+            if shape.intersection(self.road_area).area > 1.0:
+                problems.append(f"layout     {name} stands on a road")
+            if shape.intersection(self.corridor).area > 1.0:
                 problems.append(f"layout     {name} stands in the channel corridor")
+            if not self.rect.contains(shape):
+                problems.append(f"layout     {name} leaves the city")
         if self.missing:
             problems.append(f"layout     no room for {', '.join(self.missing)}")
         return problems
-
-
-def bridges(layout, style):
-    """Road bridges over the storm drain: deck, railings with lights, a pier in the channel. A Building, so it gets
-    LODs, colliders and the audit like any other."""
-    from .kit import ALL, L0, L01, Building
-
-    b = Building(dict(name="City_Bridges", type="props", seed=77, plot=(layout.width + 40.0, layout.depth + 40.0)), style)
-    b.ground_level = -8.0  # the piers stand on the channel floor
-    z0, z1 = layout.channel_z - 31.0, layout.channel_z + 31.0
-    for x in layout.bridges:
-        w = 18.0
-        b.span(x - w / 2, x + w / 2, -1.4, 0.15, z0, z1, "concrete", ALL, swatches={"top": "tar"})
-        b.collider(x - w / 2, x + w / 2, -1.4, 0.15, z0, z1)
-        for side in (-1, 1):
-            rx = x + side * (w / 2 - 0.2)
-            b.span(rx - 0.2, rx + 0.2, 0.15, 1.2, z0, z1, "trim", L01)
-            for k in range(5):
-                z = z0 + 3.0 + k * (z1 - z0 - 6.0) / 4
-                b.span(rx - 0.15, rx + 0.15, 1.2, 1.35, z - 0.15, z + 0.15, "sodium", L0)
-        b.span(x - 6.0, x + 6.0, -8.0, -1.4, layout.channel_z - 1.0, layout.channel_z + 1.0, "concrete", ALL)
-        b.collider(x - 6.0, x + 6.0, -8.0, -1.4, layout.channel_z - 1.0, layout.channel_z + 1.0)
-    return b

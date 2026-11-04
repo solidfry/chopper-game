@@ -534,7 +534,10 @@ deck with a pad) and high-tech landmarks (`Landmark_Twist`, `_Halo`, `_Orb`). Th
 mesas with flat tops (MesaTop markers), plateau rim; 64 chunk FBX with LODs, 16-bit RAW height map, terrain manifest.
 Then map edges (rim wall up to about 400 m, far backdrop to 20 km, distant skyline, haze in the previews) and the city
 layout (`layout.py`: about 220 buildings in zones on a 1000 x 800 m floor, 21 building variants, bridges over the
-channel). For the Unity step: fog, a cloud ceiling at 600 to 800 m, a sandstorm wall at the flight bounds. Output in
+channel). For the Unity step: fog, a cloud ceiling at 600 to 800 m, a sandstorm wall at the flight bounds.
+Then a road-first layout (main roads, local street grids turned per area, lot splits; `RESEARCH.md`), road meshes
+(streets, lights, bridges, roads out to tunnel portals in the rim and into the canyon), an elevated freeway along the
+storm drain, a sky road loop round the core and a spiral ramp. Output in
 `Assets/Chopper/Art/City/City01`. Next: Setup step in Unity, Blender panel, wear bake, district layout.
 
 

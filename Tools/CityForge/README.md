@@ -11,7 +11,7 @@ Status: first version (3 Nov 2026). Built and checked with `bpy` in a cloud sess
 
 Blender as a Python module (no Blender install needed):
 
-    python -m venv Tools/CityForge/.venv && Tools/CityForge/.venv/bin/pip install bpy==5.2.3 numpy   # Python 3.13
+    python -m venv Tools/CityForge/.venv && Tools/CityForge/.venv/bin/pip install bpy==5.2.3 numpy shapely  # Py 3.13
     Tools/CityForge/.venv/bin/python Tools/CityForge/generate.py             # style "dystopia" -> City01
     Tools/CityForge/.venv/bin/python Tools/CityForge/generate.py --audit     # building check only (1 to 2 s)
 
@@ -51,13 +51,32 @@ Height and ground cues (test lesson: dark ground and too much glow made height h
 floor, a lit band of shop fronts and sodium strips at street level, red obstruction lights on tops above 30 m and on
 masts, few lit windows (style `lit` = 14 %).
 
-## City layout
+## City layout and roads
 
-`cityforge/layout.py` (with the terrain): fills a 1000 x 800 m city floor with about 220 buildings (instances of the
-41 building FBX files). Zones by distance from the core: megatowers and landmarks in the core, towers round it, blocks,
-slums at the edge, industrial on the canyon side. Rows of plots with 16 m streets; an 84 m corridor for the storm drain
-with 7 road bridges over it (`City_Bridges`, a building with colliders). The layout (building, position, yaw) goes into
-`City01.terrain.json`; the audit checks for overlaps, plots in the corridor and plots on flat ground.
+`cityforge/layout.py` and `cityforge/roads.py` (with the terrain). Roads first, then blocks, lots and buildings (see
+`RESEARCH.md` for the algorithms):
+1. Main roads: a ring road round the core, 8 radial avenues, a main boulevard through the core (it goes on to the
+   north tunnel), a perimeter road, frontage roads along the storm drain.
+2. Local streets: each area between main roads gets a grid turned to the local direction (axes in the core, radial
+   outside); spacing by zone; some streets left out.
+3. Lots: blocks cut across their long side again and again (oriented bounding box splits) until they fit the zone.
+4. Buildings: the 7 unique megatowers and landmarks into whole core blocks first; then the biggest building of the
+   zone that fits each lot, turned so its front faces the nearest road; a big lot takes more than one. Lots with
+   nothing that fits stay open (plazas). About 170 buildings on a 1000 x 800 m floor.
+
+Road meshes (each one FBX, placed once at the city origin, with colliders):
+- `City_Roads`: street surfaces (asphalt at 0.05 m), centre lines and sodium street lights on the main roads, a
+  bridge wherever a road crosses the storm drain, the roads out of the city (west and north into **tunnel portals**
+  in the rim, east down into the canyon and out of the map), the portals (headwall, dark opening with lights going
+  in: the road end is never seen).
+- `City_Freeway`: 2 x 2 lanes on T piers, 16 m over the north frontage road along the storm drain; ramps down to the
+  ground 200 m outside the city on both sides.
+- `City_SkyRoads`: a sky road loop round the core (120 to 180 m, rises and falls, goes over low buildings and round
+  tall ones, columns where the ground is free) and a 3-turn spiral ramp from the loop down to a plaza, round a
+  central column with neon rings. Glass barriers with cyan neon, pink under-glow.
+
+The layout (building, position, yaw) goes into `City01.terrain.json`. Audit: no overlaps, nothing on a road or in the
+channel corridor, every building on flat ground, road colliders cover the decks.
 
 ## Map edges
 
@@ -102,7 +121,8 @@ Terrain audit: city floor flat, no plot touches the channel, every plot on flat 
 Previews (`previews/City01`), with the game's Kit02 choppers for scale (`cityforge/choppers.py`, preview only):
 `scale_pad_*.jpg` (a Gunship on a megatower wall pad), `scale_flyby_*.jpg` (a Scout flying past, seen from below),
 `skyline_*.jpg` (the megatowers from chopper height), `bridge_*.jpg` (a Gunship under a sky bridge),
-`landmarks_*.jpg`, `terrain_overview_*.jpg`, `canyon_*.jpg` (a Gunship in the canyon), `channel_*.jpg` (a Scout in
+`landmarks_*.jpg`, `freeway_*.jpg`, `tunnel_*.jpg` (the west tunnel portal), `skyloop_*.jpg`, `spiral_*.jpg`,
+`rim_*.jpg`, `terrain_overview_*.jpg`, `canyon_*.jpg` (a Gunship in the canyon), `channel_*.jpg` (a Scout in
 the storm drain), `mesa_*.jpg` (a Lifter on a mesa top), `district_day.jpg`, `district_night.jpg` (glow balance), `street_day.jpg` and
 `street_night.jpg` (chopper height, ground cues), `lods.jpg` (LOD0 / LOD1 / LOD2 side by side),
 `buildings_sheet.jpg` (every building alone).

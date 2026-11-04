@@ -121,7 +121,8 @@ def check(b):
     bm = b.lods[0].bm.copy()
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
     bm.normal_update()
-    problems += _floating(bm)
+    if not getattr(b, "skip_floating", False):
+        problems += _floating(bm)
 
     points = [v.co.copy() for v in bm.verts]
     low = min(p.y for p in points)
@@ -170,7 +171,7 @@ def check(b):
                             f"({near.x:+.1f}, {near.y:+.1f}, {near.z:+.1f})")
     bm.free()
 
-    budgets = b.style["budgets"]
+    budgets = getattr(b, "budgets", None) or b.style["budgets"]
     counts = [triangles(level.bm) for level in b.lods]
     if counts[0] > budgets["lod0"]:
         problems.append(f"budget     LOD0 {counts[0]} triangles (limit {budgets['lod0']})")
@@ -180,7 +181,7 @@ def check(b):
     if counts[2] > budgets["lod2"]:
         problems.append(f"budget     LOD2 {counts[2]} triangles (limit {budgets['lod2']})")
     lod2 = [v.co.y for v in b.lods[2].bm.verts]
-    if lod2 and abs(max(lod2) - collider_top) > 1.5:
+    if lod2 and b.type != "props" and abs(max(lod2) - collider_top) > 1.5:
         problems.append(f"lod        LOD2 top {max(lod2):.1f} m, colliders reach {collider_top:.1f} m (skyline pop)")
     return problems
 

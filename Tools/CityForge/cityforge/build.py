@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, specs, styles, terrain
+from . import audit, buildings, choppers, kit, layout, roads, specs, styles, terrain
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -87,36 +87,10 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     if with_terrain and not names:
         made = make_buildings(style, with_variants=True)
         city = layout.Layout(all_specs(True))
-        made.append(layout.bridges(city, style))
     else:
         made = make_buildings(style, names)
     problems = {b.name: audit.check(b) for b in made}
-    if city is not None:
-        problems["City_Bridges"] = problems.get("City_Bridges", []) + city.audit()
-    built = {}
-    for b in made:
-        triangles = [audit.triangles(level.bm) for level in b.lods]
-        objects = []
-        for level, builder in enumerate(b.lods):
-            bevel = style.get("edge_radius", 0.0) if level == 0 else 0.0
-            obj = builder.to_object(f"{b.name}_LOD{level}", export_collection, bevel_width=bevel)
-            palette.apply_uvs(obj, palette_only=True)
-            _strip_builder_layers(obj)
-            obj.data.materials.clear()
-            obj.data.materials.append(material)
-            for polygon in obj.data.polygons:
-                polygon.material_index = 0
-            objects.append(obj)
-        # Marker names repeat across buildings, so they carry the building name here; export() strips it.
-        for kind, index, position, radius in b.markers:
-            empty = bpy.data.objects.new(f"{b.name}:MARKER_{kind}_{index}", None)
-            empty.empty_display_type = "CIRCLE" if radius > 0 else "ARROWS"
-            empty.empty_display_size = max(radius, 0.5)
-            export_collection.objects.link(empty)
-            empty.parent = objects[0]
-            empty.location = geo.to_blender(position)
-            empty.rotation_euler = (math.radians(90), 0, 0) if radius > 0 else (0, 0, 0)  # circle lies flat
-        built[b.name] = dict(building=b, objects=objects, triangles=triangles)
+    built = {b.name: _building_objects(b, export_collection, material, style) for b in made}
     state = State(kit_name, style, built, images, problems)
     state.layout = city
     _ensure_stage(scene)
@@ -127,10 +101,74 @@ def generate(style, kit_name=None, names=None, with_terrain=True):
     _lod_lineup(scene, state)
     if with_terrain:
         _make_terrain(scene, state, material)
+    if city is not None:
+        _make_roads(scene, state, city, export_collection, material)
     _place_choppers(state)
     export_collection.hide_render = True
     export_collection.hide_viewport = True
     return state
+
+
+def _building_objects(b, export_collection, material, style):
+    """A Building's LOD meshes (palette material) and marker empties, in the export collection."""
+    triangles = [audit.triangles(level.bm) for level in b.lods]
+    objects = []
+    for level, builder in enumerate(b.lods):
+        bevel = style.get("edge_radius", 0.0) if level == 0 else 0.0
+        obj = builder.to_object(f"{b.name}_LOD{level}", export_collection, bevel_width=bevel)
+        palette.apply_uvs(obj, palette_only=True)
+        _strip_builder_layers(obj)
+        obj.data.materials.clear()
+        obj.data.materials.append(material)
+        for polygon in obj.data.polygons:
+            polygon.material_index = 0
+        objects.append(obj)
+    # Marker names repeat across buildings, so they carry the building name here; export() strips it.
+    for kind, index, position, radius in b.markers:
+        empty = bpy.data.objects.new(f"{b.name}:MARKER_{kind}_{index}", None)
+        empty.empty_display_type = "CIRCLE" if radius > 0 else "ARROWS"
+        empty.empty_display_size = max(radius, 0.5)
+        export_collection.objects.link(empty)
+        empty.parent = objects[0]
+        empty.location = geo.to_blender(position)
+        empty.rotation_euler = (math.radians(90), 0, 0) if radius > 0 else (0, 0, 0)  # circle lies flat
+    return dict(building=b, objects=objects, triangles=triangles)
+
+
+def _make_roads(scene, state, city, export_collection, material):
+    """Street surfaces, bridges, roads out of the city, tunnel portals, the freeway and the sky roads (roads.py):
+    each a Building, placed once at the city origin."""
+    tops = []
+    for (name, _position, _yaw), (_n, shape) in zip(city.instances, city.footprints):
+        tops.append((shape, _unity_bounds(state.built[name]["objects"][0])[1][1]))
+    state.building_tops = tops
+    made = [roads.city_roads(city, state.terrain, state.style), roads.freeway(city, state.terrain, state.style),
+            roads.sky_roads(city, state.terrain, state.style, tops)]
+    collection = _collection(scene, DISTRICT_COLLECTION)
+    for b in made:
+        state.problems[b.name] = audit.check(b)
+        state.built[b.name] = _building_objects(b, export_collection, material, state.style)
+        if getattr(b, "face_up_at", None) is not None:
+            _faces_up(state.built[b.name]["objects"], b.face_up_at)
+        obj = bpy.data.objects.new(f"District_{b.name}", state.built[b.name]["objects"][0].data)
+        collection.objects.link(obj)
+        state.district.append(obj)
+        state.placements.setdefault(b.name, (0.0, 0.0, 0.0))
+    state.problems["City_Roads"] = state.problems["City_Roads"] + city.audit()
+
+
+def _faces_up(objects, height):
+    """Flat faces at a height (Unity y = Blender z) that point down are turned over (open surfaces)."""
+    import bmesh
+
+    for obj in objects:
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        flip = [f for f in bm.faces if abs(f.calc_center_median().z - height) < 0.005 and f.normal.z < 0.0]
+        if flip:
+            bmesh.ops.reverse_faces(bm, faces=flip)
+        bm.to_mesh(obj.data)
+        bm.free()
 
 
 def _strip_builder_layers(obj):
@@ -190,17 +228,13 @@ def _city(scene, state, city):
     state.centre = (0.0, 0.0, 0.0)
     state.city_rect = city.city_rect()
     state.channel_z = city.channel_z
-    state.plot_rects = {}
-    instances = list(city.instances) + [("City_Bridges", (0.0, 0.0, 0.0), 0.0)]
-    for k, (name, position, yaw) in enumerate(instances):
+    for k, (name, position, yaw) in enumerate(city.instances):
         obj = bpy.data.objects.new(f"District_{name}_{k:03d}", state.built[name]["objects"][0].data)
         collection.objects.link(obj)
         obj.location = geo.to_blender(position)
         obj.rotation_euler = (0.0, 0.0, math.radians(-yaw))
         state.district.append(obj)
         state.placements.setdefault(name, position)
-    for k, (name, rect) in enumerate(city.plots):
-        state.plot_rects[f"{name}#{k}"] = (rect.x0, rect.x1, rect.z0, rect.z1)
 
 
 def _lod_lineup(scene, state):
@@ -229,9 +263,13 @@ def _make_terrain(scene, state, material):
     centre, preview copies moved onto the district)."""
     cx, _cy, cz = state.centre
     x0, x1, z0, z1 = state.city_rect
-    plots = [(name.split("#")[0], (r[0] - cx, r[1] - cx, r[2] - cz, r[3] - cz)) for name, r in state.plot_rects.items()]
+    if state.layout is not None:
+        plots, exterior = state.layout.plots(), state.layout.exterior()
+    else:
+        plots = [(name, (r[0] - cx, r[1] - cx, r[2] - cz, r[3] - cz)) for name, r in state.plot_rects.items()]
+        exterior = None
     channel_z = (state.channel_z if state.channel_z is not None else z0 - 60.0) - cz
-    t = terrain.Terrain(state.style, (x0 - cx, x1 - cx, z0 - cz, z1 - cz), channel_z, plots)
+    t = terrain.Terrain(state.style, (x0 - cx, x1 - cx, z0 - cz, z1 - cz), channel_z, plots, exterior)
     t.make_markers()
     state.terrain = t
     state.terrain_problems = t.audit()
@@ -252,6 +290,16 @@ def _make_terrain(scene, state, material):
 def _world(state, point):
     """Terrain point (relative to the city centre) -> district (Unity) position."""
     return (point[0] + state.centre[0], point[1], point[2] + state.centre[2])
+
+
+def _channel_spot(state):
+    """x in the storm drain halfway between the two bridges nearest the city centre."""
+    if state.layout is None or len(state.layout.bridges) < 2:
+        t = state.terrain
+        return (t.city[0] + t.city[1]) / 2 + 72.0
+    xs = sorted(x for x, _z, _yaw, _w in state.layout.bridges)
+    pairs = sorted(zip(xs, xs[1:]), key=lambda p: abs((p[0] + p[1]) / 2))
+    return (pairs[0][0] + pairs[0][1]) / 2
 
 
 def _place_choppers(state):
@@ -305,8 +353,8 @@ def _place_choppers(state):
         yaw = math.degrees(math.atan2(-(bx - ax), -(bz - az)))
         state.choppers.append(library.chopper("Gunship", _world(state, (ax, floor + 22.0, az)), yaw,
                                               name="Chopper_Canyon"))
-        # In the storm drain, below street level, through the city.
-        cx = (t.city[0] + t.city[1]) / 2 + 72.0  # between two bridges
+        # In the storm drain, below street level, through the city (between two bridges).
+        cx = _channel_spot(state)
         state.choppers.append(library.chopper("Scout", _world(state, (cx, -1.0, t.channel_z)), 90.0,
                                               name="Chopper_Channel"))
         # Landed on the mesa top nearest the city.
@@ -316,6 +364,19 @@ def _place_choppers(state):
             state.choppers.append(library.chopper("Lifter", _world(state, (mx, my + library.ground_offset("Lifter"),
                                                                            mz)), math.degrees(math.atan2(-mx, -mz)),
                                                   name="Chopper_Mesa"))
+    if state.layout is not None and "City_SkyRoads" in state.built:
+        city = state.layout
+        state.choppers.append(library.chopper("Gunship", (-250.0, 9.0, city.channel_z), 90.0, name="Chopper_Freeway"))
+        if t is not None and t.portals:
+            px, pz = t.portals[0]["position"]
+            state.choppers.append(library.chopper("Scout", (px + 80.0, 22.0, pz - 6.0), 270.0, name="Chopper_Tunnel"))
+        sky = state.built["City_SkyRoads"]["building"]
+        k = len(sky.loop) // 3
+        a, c = sky.loop[k], sky.loop[k + 1]
+        yaw = math.degrees(math.atan2(c[0] - a[0], c[2] - a[2]))
+        state.choppers.append(library.chopper("Gunship", (a[0], a[1] + 12.0, a[2]), yaw, name="Chopper_Sky"))
+        sx, sy, sz = sky.spiral_centre
+        state.choppers.append(library.chopper("Scout", (sx + 20.0, sy * 0.45, sz - 70.0), 200.0, name="Chopper_Spiral"))
     street = at("Block_Corner", (0.0, 45.0, 30.0))
     if street:
         state.choppers.append(library.chopper("Lifter", street, 60.0, name="Chopper_Street"))
@@ -452,7 +513,8 @@ def export_terrain(state, out_dir):
         "paths": {"canyon": [_r(p) for p in t.path_points(t.canyon)],
                   "channel": [_r(p) for p in t.path_points(t.channel)]},
         "layout": ([{"building": name, "position": _r(p), "yaw": yaw} for name, p, yaw in state.layout.instances]
-                   + [{"building": "City_Bridges", "position": [0.0, 0.0, 0.0], "yaw": 0.0}]
+                   + [{"building": name, "position": [0.0, 0.0, 0.0], "yaw": 0.0}
+                      for name in ("City_Roads", "City_Freeway", "City_SkyRoads") if name in state.built]
                    if state.layout is not None else
                    [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
                     for name, p in state.placements.items()]),
@@ -768,8 +830,25 @@ def _terrain_shots(state, by_name):
         shots.append(("canyon", b((behind[0], float(t.sample(*behind)) + 34.0, behind[1])),
                       b((ahead[0], float(t.sample(*ahead)) + 14.0, ahead[1])), 22.0))
     if "Chopper_Channel" in by_name:
-        cx = (t.city[0] + t.city[1]) / 2 + 72.0
+        cx = _channel_spot(state)
         shots.append(("channel", b((cx - 46.0, 3.0, t.channel_z + 6.0)), b((cx + 40.0, 7.0, t.channel_z)), 22.0))
+    if "Chopper_Freeway" in by_name:
+        p = by_name["Chopper_Freeway"].location
+        shots.append(("freeway", Vector((p.x + 70.0, p.y + 34.0, p.z + 1.0)), Vector((p.x - 60.0, p.y - 24.0, p.z + 6.0)),
+                      24.0))
+    if "Chopper_Tunnel" in by_name and t.portals:
+        px, pz = t.portals[0]["position"]
+        shots.append(("tunnel", b((px + 190.0, 34.0, pz + 45.0)), b((px, 10.0, pz)), 28.0))
+    if "Chopper_Sky" in by_name:
+        sky = state.built["City_SkyRoads"]["building"]
+        k = len(sky.loop) // 3
+        behind, ahead = sky.loop[k - 6], sky.loop[(k + 14) % len(sky.loop)]
+        shots.append(("skyloop", geo.to_blender((behind[0], behind[1] + 24.0, behind[2])),
+                      geo.to_blender((ahead[0], ahead[1] + 4.0, ahead[2])), 22.0))
+    if "Chopper_Spiral" in by_name:
+        sx, sy, sz = state.built["City_SkyRoads"]["building"].spiral_centre
+        shots.append(("spiral", geo.to_blender((sx + 150.0, sy * 0.55, sz - 190.0)),
+                      geo.to_blender((sx, sy * 0.45, sz)), 24.0))
     if "Chopper_Mesa" in by_name and t.markers:
         _kind, _i, (mx, my, mz), _r = sorted(t.markers, key=lambda m: math.hypot(m[2][0], m[2][2]))[0]
         away = Vector((mx, mz)).normalized()

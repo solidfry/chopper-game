@@ -107,9 +107,11 @@ class Terrain:
     """The height field and everything placed by it. city: (x0, x1, z0, z1) of the plots, relative to the city
     centre; channel_z: z of the storm-drain channel through the city (in the street gap left for it)."""
 
-    def __init__(self, style, city, channel_z, plots=()):
+    def __init__(self, style, city, channel_z, plots=(), exterior=None):
+        """plots: (name, corner list) per building. exterior: the roads out of the city (layout.Layout.exterior())."""
         self.values = values = settings(style)
         self.city, self.channel_z, self.plots = city, channel_z, list(plots)
+        self.exterior = exterior
         size = values["size"]
         self.count = int(round(size / STEP)) + 1
         axis = np.linspace(-size / 2, size / 2, self.count)
@@ -140,7 +142,8 @@ class Terrain:
             wiggle = v["canyon"]["wiggle"] * math.sin(phase + t * math.pi * 2.2) * min(1.0, t / 0.25)
             points.append((x, mouth[1] + wiggle - v["canyon"]["wiggle"] * math.sin(phase) * min(1.0, t / 0.25)))
         self.canyon = points
-        # Mesas on a ring, kept clear of the canyon and of the channel's closed end.
+        self._exterior_roads()
+        # Mesas on a ring, kept clear of the canyon, the roads and the channel's closed end.
         m = v["mesas"]
         self.mesas = []
         tries = 0
@@ -159,6 +162,9 @@ class Terrain:
             gap_z = max(z0 - cz, 0.0, cz - z1)
             if math.hypot(gap_x, gap_z) < radius / stretch + m["talus"] + CITY_FLAT + 60.0:
                 continue
+            if any(polyline_distance(np.array([cx]), np.array([cz]), road["points"])[0][0]
+                   < radius / stretch + m["talus"] + road["width"] / 2 + 60.0 for road in self.roads):
+                continue
             if any(math.hypot(cx - o[0], cz - o[1]) < radius / stretch + o[2] / o[5] + 60.0 for o in self.mesas):
                 continue
             if abs(cx) + radius / stretch > size / 2 - 60 or abs(cz) + radius / stretch > size / 2 - 60:
@@ -172,22 +178,81 @@ class Terrain:
         dz = np.maximum(np.maximum(z0 - z, 0.0), z - z1)
         return np.hypot(dx, dz)
 
-    def _height(self, x, z):
+    def _rim(self, x, z):
+        """The rim: a first cliff step, a higher wall further out, a ragged crest."""
         v = self.values
         seed = v["seed"]
-        d = self._city_distance(x, z)
-        h = v["rise"] * smoothstep(CITY_FLAT, 900.0, d) + v["dunes"] * fbm(seed, x, z, 180.0) * smoothstep(CITY_FLAT, 300.0, d)
-        rock = np.zeros_like(h)
-        # Plateau rim with a ragged edge.
         p = v["plateau"]
         cx, cz = (self.city[0] + self.city[1]) / 2, (self.city[2] + self.city[3]) / 2
         r = np.hypot(x - cx, z - cz) + p["warp"] * fbm(seed + 1, x, z, 420.0)
         r2 = np.hypot(x - cx, z - cz) + p["warp"] * 0.7 * fbm(seed + 4, x, z, 300.0)
         wall_at = p["radius"] + p["wall_at"]
-        rim = (p["height"] * smoothstep(p["radius"] - p["width"] / 2, p["radius"] + p["width"] / 2, r)
-               + p["wall"] * smoothstep(wall_at - p["width"] / 2, wall_at + p["width"] / 2, r2)
-               + p["crest"] * (1.0 - np.abs(fbm(seed + 2, x, z, 240.0))) * smoothstep(wall_at, wall_at + 120.0, r2))
-        rock = np.maximum(rock, rim)
+        return (p["height"] * smoothstep(p["radius"] - p["width"] / 2, p["radius"] + p["width"] / 2, r)
+                + p["wall"] * smoothstep(wall_at - p["width"] / 2, wall_at + p["width"] / 2, r2)
+                + p["crest"] * (1.0 - np.abs(fbm(seed + 2, x, z, 240.0))) * smoothstep(wall_at, wall_at + 120.0, r2))
+
+    def _exterior_roads(self):
+        """Roads out of the city: west along the freeway line into a tunnel in the rim, north from the boulevard into
+        a tunnel, east down into the canyon and out of the map. Each: points, heights at the points, width."""
+        self.roads, self.portals = [], []
+        e = self.exterior
+        if not e:
+            return
+        x0, x1, z0, z1 = self.city
+        half = self.values["size"] / 2
+        fz = e["freeway_z"]
+
+        def portal(start, direction):
+            """First point along the direction where the rim cliff starts (rock over 22 m), a little before it."""
+            steps = np.arange(0.0, 1500.0, 4.0)
+            xs, zs = start[0] + direction[0] * steps, start[1] + direction[1] * steps
+            rim = self._rim(xs, zs)
+            k = int(np.argmax(rim > 22.0)) if (rim > 22.0).any() else len(steps) - 1
+            k = max(0, k - 2)
+            return (float(xs[k]), float(zs[k]))
+
+        west = portal((x0, fz), (-1.0, 0.0))
+        self.roads.append(dict(name="West", points=[(x0, fz), west], heights=[0.0, 0.0], width=24.0))
+        self.portals.append(dict(name="West", position=west, yaw=90.0, width=24.0))
+        north = portal((e["north_x"], z0), (0.0, -1.0))
+        self.roads.append(dict(name="North", points=[(e["north_x"], z0), north], heights=[0.0, 0.0], width=20.0))
+        self.portals.append(dict(name="North", position=north, yaw=0.0, width=20.0))
+        # Canyon road: along the freeway line to the canyon mouth, then along the canyon floor (left bank).
+        from shapely.geometry import LineString
+        mouth_x = self.channel[-1][0]
+        bank = LineString(self.canyon).offset_curve(18.0)
+        coords = [(px, pz) for px, pz in bank.coords if px > mouth_x - 10.0 and abs(px) < half + 300.0]
+        points = [(x1, fz), (mouth_x - 70.0, fz)] + coords[1:]
+        c = self.values["canyon"]
+        total = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(self.canyon, self.canyon[1:]))
+        heights, run = [], 0.0
+        for k, (px, pz) in enumerate(points):
+            if k:
+                run += math.hypot(px - points[k - 1][0], pz - points[k - 1][1])
+            t = max(0.0, run - (mouth_x - 70.0 - x1))
+            floor = c["floor"][0] + (c["floor"][1] - c["floor"][0]) * min(1.0, t / total)
+            blend = float(smoothstep(0.0, 160.0, np.array(t)))
+            heights.append(floor * blend)
+        self.roads.append(dict(name="Canyon", points=points, heights=heights, width=24.0))
+
+    def _flatten_roads(self, x, z, h):
+        for road in self.roads:
+            points, heights, width = road["points"], road["heights"], road["width"]
+            d, along, _total = polyline_distance(x, z, points)
+            runs = np.concatenate([[0.0], np.cumsum([math.hypot(b[0] - a[0], b[1] - a[1])
+                                                     for a, b in zip(points, points[1:])])])
+            level = np.interp(along, runs, heights)
+            blend = smoothstep(width / 2 + 2.0, width / 2 + 30.0, d)
+            near = d < width / 2 + 30.0
+            h = np.where(near, level + (h - level) * blend, h)
+        return h
+
+    def _height(self, x, z):
+        v = self.values
+        seed = v["seed"]
+        d = self._city_distance(x, z)
+        h = v["rise"] * smoothstep(CITY_FLAT, 900.0, d) + v["dunes"] * fbm(seed, x, z, 180.0) * smoothstep(CITY_FLAT, 300.0, d)
+        rock = np.maximum(np.zeros_like(h), self._rim(x, z))
         # Mesas: flat top, a cliff, a talus apron.
         m = v["mesas"]
         for k, (mx, mz, radius, height, turn, stretch) in enumerate(self.mesas):
@@ -215,6 +280,7 @@ class Terrain:
         carved = floor + (h - floor) * wall
         h = np.where(h > floor, carved, h)
         self.canyon_distance, self.canyon_width = dc, width
+        h = self._flatten_roads(x, z, h)
         # Storm drain: a trapezoid concrete channel; open water strip in the middle.
         ch = v["channel"]
         dch, _along, _total = polyline_distance(x, z, self.channel)
@@ -289,10 +355,13 @@ class Terrain:
         if bumps > 0.01:
             problems.append(f"city       ground not flat ({bumps:.2f} m)")
         top = self.values["channel"]["top"] / 2
-        for name, (px0, px1, pz0, pz1) in self.plots:
-            xs = np.linspace(px0, px1, 9)
-            zs = np.linspace(pz0, pz1, 9)
-            gx, gz = np.meshgrid(xs, zs)
+        for name, corners in self.plots:
+            if len(corners) == 4 and not hasattr(corners[0], "__len__"):
+                px0, px1, pz0, pz1 = corners
+                corners = [(px0, pz0), (px1, pz0), (px1, pz1), (px0, pz1)]
+            pts = list(corners) + [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(corners, corners[1:] + corners[:1])]
+            pts.append((sum(p[0] for p in corners) / 4, sum(p[1] for p in corners) / 4))
+            gx, gz = np.array([p[0] for p in pts]), np.array([p[1] for p in pts])
             dch, _a, _t = polyline_distance(gx, gz, self.channel)
             if (dch < top + 2.0).any():
                 problems.append(f"plot       {name} touches the storm-drain channel")
