@@ -78,6 +78,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Dive",
+                    "type": "Button",
+                    "id": "e871477e-dd44-426d-8da8-63e29da512e7",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "MouseLook",
                     "type": "Value",
                     "id": "d724c962-c864-492e-8850-fc8fdccc59be",
@@ -150,28 +159,6 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Thrust",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "Descend",
-                    "id": "40f4e1a6-dd9b-45de-8e01-72ae6951a436",
-                    "path": "1DAxis",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Thrust",
-                    "isComposite": true,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "negative",
-                    "id": "9bb618b9-efc8-49b0-93f4-0c582a678937",
-                    "path": "<Keyboard>/leftCtrl",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
                     "action": "Thrust",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -503,6 +490,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "MouseLook",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a8d4bcbd-f8e0-4b49-ae28-52fad033ecaa",
+                    "path": "<Keyboard>/leftCtrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Mouse and Keyboard",
+                    "action": "Dive",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

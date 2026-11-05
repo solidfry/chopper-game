@@ -62,6 +62,8 @@ namespace Chopper.Simulation.Loadout
                 Weathervane = flight.Weathervane,
                 AutoLevel = flight.AutoLevel,
                 CollectiveResponse = flight.CollectiveResponse,
+                DiveLiftCut = flight.DiveLiftCut,
+                DiveResponse = flight.DiveResponse,
                 BoostAcceleration = FlightEstimate.BoostPower(flight, stats),
                 BoostKick = flight.BoostKick * stats.BoostPowerMultiplier,
                 BoostDragScale = flight.BoostDragScale,

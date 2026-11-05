@@ -19,6 +19,12 @@ namespace Chopper.Simulation.Flight
         [Tooltip("How fast the rotor spools to the W/S input (1/s). Lower = heavier, higher = snappier.")]
         public float CollectiveResponse = 6f;
 
+        [Header("Dive (Ctrl, held)")]
+        [Range(0f, 1f), Tooltip("Part of the hover lift the rotor drops while diving. 1 = falls at full gravity, plus the S sink.")]
+        public float DiveLiftCut = 1f;
+        [Tooltip("How fast the rotor spools down when a dive starts (1/s). Higher than the collective response: the drop starts at once.")]
+        public float DiveResponse = 16f;
+
         [Header("Weight and lift")]
         [Tooltip("Gravity multiplier. Above 1 = heavier; drops feel punchier.")]
         public float GravityScale = 1.6f;

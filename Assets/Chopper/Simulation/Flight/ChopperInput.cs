@@ -14,6 +14,8 @@ namespace Chopper.Simulation.Flight
         public float Roll;
         /// <summary>Held: boost (uses the boost tank).</summary>
         public bool Boost;
+        /// <summary>Held: dive (Ctrl). The rotor drops its hover lift and pushes down at full collective.</summary>
+        public bool Dive;
         /// <summary>Held: the nose gun fires at its fire rate.</summary>
         public bool Fire;
         /// <summary>Held: pylon rockets fire at their fire rate.</summary>

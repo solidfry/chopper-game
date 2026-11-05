@@ -175,6 +175,16 @@ namespace Chopper.Simulation.Input
                     ""priority"": 0
                 },
                 {
+                    ""name"": ""Dive"",
+                    ""type"": ""Button"",
+                    ""id"": ""e871477e-dd44-426d-8da8-63e29da512e7"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
                     ""name"": ""MouseLook"",
                     ""type"": ""Value"",
                     ""id"": ""d724c962-c864-492e-8850-fc8fdccc59be"",
@@ -248,28 +258,6 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
-                    ""action"": ""Thrust"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": true
-                },
-                {
-                    ""name"": ""Descend"",
-                    ""id"": ""40f4e1a6-dd9b-45de-8e01-72ae6951a436"",
-                    ""path"": ""1DAxis"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Thrust"",
-                    ""isComposite"": true,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": ""negative"",
-                    ""id"": ""9bb618b9-efc8-49b0-93f4-0c582a678937"",
-                    ""path"": ""<Keyboard>/leftCtrl"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
                     ""action"": ""Thrust"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
@@ -603,6 +591,17 @@ namespace Chopper.Simulation.Input
                     ""action"": ""MouseLook"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a8d4bcbd-f8e0-4b49-ae28-52fad033ecaa"",
+                    ""path"": ""<Keyboard>/leftCtrl"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Dive"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -647,6 +646,7 @@ namespace Chopper.Simulation.Input
             m_Flight_Fire2 = m_Flight.FindAction("Fire2", throwIfNotFound: true);
             m_Flight_Fire3 = m_Flight.FindAction("Fire3", throwIfNotFound: true);
             m_Flight_Dash = m_Flight.FindAction("Dash", throwIfNotFound: true);
+            m_Flight_Dive = m_Flight.FindAction("Dive", throwIfNotFound: true);
             m_Flight_MouseLook = m_Flight.FindAction("MouseLook", throwIfNotFound: true);
         }
 
@@ -736,6 +736,7 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_Fire2;
         private readonly InputAction m_Flight_Fire3;
         private readonly InputAction m_Flight_Dash;
+        private readonly InputAction m_Flight_Dive;
         private readonly InputAction m_Flight_MouseLook;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
@@ -780,6 +781,10 @@ namespace Chopper.Simulation.Input
             /// Provides access to the underlying input action "Flight/Dash".
             /// </summary>
             public InputAction @Dash => m_Wrapper.m_Flight_Dash;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/Dive".
+            /// </summary>
+            public InputAction @Dive => m_Wrapper.m_Flight_Dive;
             /// <summary>
             /// Provides access to the underlying input action "Flight/MouseLook".
             /// </summary>
@@ -834,6 +839,9 @@ namespace Chopper.Simulation.Input
                 @Dash.started += instance.OnDash;
                 @Dash.performed += instance.OnDash;
                 @Dash.canceled += instance.OnDash;
+                @Dive.started += instance.OnDive;
+                @Dive.performed += instance.OnDive;
+                @Dive.canceled += instance.OnDive;
                 @MouseLook.started += instance.OnMouseLook;
                 @MouseLook.performed += instance.OnMouseLook;
                 @MouseLook.canceled += instance.OnMouseLook;
@@ -872,6 +880,9 @@ namespace Chopper.Simulation.Input
                 @Dash.started -= instance.OnDash;
                 @Dash.performed -= instance.OnDash;
                 @Dash.canceled -= instance.OnDash;
+                @Dive.started -= instance.OnDive;
+                @Dive.performed -= instance.OnDive;
+                @Dive.canceled -= instance.OnDive;
                 @MouseLook.started -= instance.OnMouseLook;
                 @MouseLook.performed -= instance.OnMouseLook;
                 @MouseLook.canceled -= instance.OnMouseLook;
@@ -997,6 +1008,13 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnDash(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Dive" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnDive(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "MouseLook" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

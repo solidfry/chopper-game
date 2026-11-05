@@ -73,7 +73,8 @@ namespace Chopper.Simulation.Flight
 
                 state.Altitude = MeasureAltitude(entity, transform.Position);
 
-                var thrust = math.clamp(input.Thrust, -1f, 1f);
+                // Dive (Ctrl): full down collective at once, and the rotor drops its hover lift (below).
+                var thrust = input.Dive ? -1f : math.clamp(input.Thrust, -1f, 1f);
                 var pitch = math.clamp(input.Pitch, -1f, 1f);
                 var yaw = math.clamp(input.Yaw, -1f, 1f);
                 var roll = math.clamp(input.Roll, -1f, 1f);
@@ -90,6 +91,7 @@ namespace Chopper.Simulation.Flight
                     var compensation = 1f / math.max(uprightDot, config.MaxCompensatedTilt);
                     hoverLift *= math.lerp(1f, compensation, config.TiltCompensation);
                 }
+                if (input.Dive) hoverLift *= 1f - math.saturate(config.DiveLiftCut);
                 var lift = up * hoverLift;
                 var verticalLift = worldUp * math.dot(lift, worldUp);
                 // Horizontal part of the lift = the push from tilt (TiltThrust): nose down accelerates, flaring brakes,
@@ -103,7 +105,8 @@ namespace Chopper.Simulation.Flight
 
                 // Collective (W/S), Battlefield: extra lift along the rotor axis. Level = rise; nose down = rise and go
                 // forward; S sinks. The rotor spools to the input, so lift builds and fades with a little weight.
-                state.Collective += (thrust - state.Collective) * (1f - math.exp(-config.CollectiveResponse * DeltaTime));
+                var spool = input.Dive ? math.max(config.DiveResponse, config.CollectiveResponse) : config.CollectiveResponse;
+                state.Collective += (thrust - state.Collective) * (1f - math.exp(-spool * DeltaTime));
                 var spooled = state.Collective;
                 var collective = spooled >= 0f ? spooled * config.CollectiveUp : spooled * config.CollectiveDown;
                 velocity.Linear += up * (collective * DeltaTime);

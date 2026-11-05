@@ -64,6 +64,7 @@ namespace Chopper.Simulation.Flight
             var pitch = headLook ? 0f : math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f);
             var roll = headLook ? 0f : math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
             var boost = flight.Dash.IsPressed();
+            var dive = flight.Dive.IsPressed();
             var fire = flight.Fire1.IsPressed();
             var fireSecondary = flight.Fire2.IsPressed();
             var countermeasure = flight.Fire3.WasPressedThisFrame();
@@ -91,6 +92,7 @@ namespace Chopper.Simulation.Flight
                     Pitch = math.clamp(pitch + mousePitch, -1f, 1f),
                     Roll = math.clamp(roll + mouseRoll, -1f, 1f),
                     Boost = boost,
+                    Dive = dive,
                     Fire = fire,
                     FireSecondary = fireSecondary,
                 };
