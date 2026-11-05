@@ -66,7 +66,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -1878332245247344467}
   - {fileID: 182549485377595532}
-  m_RendererFeatureMap: adc0de57c6d2eee58ca8dc2dca8b8802l
+  - {fileID: 3636119974633985752}
+  m_RendererFeatureMap: adc0de57c6d2eee58ca8dc2dca8b8802d8d6c218da177632l
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3
@@ -109,3 +110,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Hud.HudLookRendererFeature
   m_Active: 1
   shader: {fileID: 4800000, guid: 275e9513d68c0064c8730315f677400d, type: 3}
+--- !u!114 &3636119974633985752
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: City Height Fog
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 1
+  injectionPoint: 550
+  fetchColorBuffer: 1
+  requirements: 1
+  passMaterial: {fileID: 2100000, guid: f12177dd88f41dd4db883aa03d7d1177, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1

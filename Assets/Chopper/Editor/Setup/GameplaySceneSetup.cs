@@ -74,7 +74,10 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>Scene paths of the SubScene components in the open scenes (found by name: no Unity.Scenes reference).</summary>
-        private static string[] SubScenePathsInOpenScenes()
+        private static string[] SubScenePathsInOpenScenes() => SubScenesInOpenScenes().Select(s => s.Path).Distinct().ToArray();
+
+        /// <summary>Each SubScene in the open scenes: the scene that holds it and the path of its scene asset.</summary>
+        internal static (Scene Host, string Path)[] SubScenesInOpenScenes()
         {
             return Enumerable.Range(0, SceneManager.sceneCount)
                 .Select(SceneManager.GetSceneAt)
@@ -82,9 +85,9 @@ namespace Chopper.Editor.Setup
                 .SelectMany(s => s.GetRootGameObjects())
                 .SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true))
                 .Where(c => c != null && c.GetType().Name == "SubScene")
-                .Select(c => c.GetType().GetProperty("SceneAsset")?.GetValue(c) as SceneAsset)
-                .Where(asset => asset != null)
-                .Select(AssetDatabase.GetAssetPath)
+                .Select(c => (Host: c.gameObject.scene, Asset: c.GetType().GetProperty("SceneAsset")?.GetValue(c) as SceneAsset))
+                .Where(s => s.Asset != null)
+                .Select(s => (s.Host, AssetDatabase.GetAssetPath(s.Asset)))
                 .ToArray();
         }
 

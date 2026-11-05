@@ -110,15 +110,15 @@ def write_graph(name, PROPERTIES, INPUTS):
     sources = {"position": position, "normal": normal, "colour": colour, "uv": uv}
 
     function_slots = []
-    for slot_id, (name, kind, _source) in enumerate(INPUTS):
+    for slot_id, (slot_name, kind, _source) in enumerate(INPUTS):
         if kind == "tex":
-            function_slots.append(sg.slot("Texture2DInputMaterialSlot", slot_id, name, 0, m_BareResource=False,
+            function_slots.append(sg.slot("Texture2DInputMaterialSlot", slot_id, slot_name, 0, m_BareResource=False,
                                           m_Texture={"m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
                                                      "m_Guid": ""}, m_DefaultType=0))
         else:
-            function_slots.append(sg.slot(KIND[kind], slot_id, name, 0))
-    for offset, (name, kind, _block) in enumerate(OUTPUTS):
-        function_slots.append(sg.slot(KIND[kind], len(INPUTS) + offset, name, 1))
+            function_slots.append(sg.slot(KIND[kind], slot_id, slot_name, 0))
+    for offset, (slot_name, kind, _block) in enumerate(OUTPUTS):
+        function_slots.append(sg.slot(KIND[kind], len(INPUTS) + offset, slot_name, 1))
     function = sg.node("CustomFunctionNode", f"{name} (Custom Function)", function_slots, -600, -300,
                        m_SGVersion=1, synonyms=["code", "HLSL"], m_SourceType=0, m_FunctionName=name,
                        m_FunctionSource=hlsl_guid, m_FunctionBody="")

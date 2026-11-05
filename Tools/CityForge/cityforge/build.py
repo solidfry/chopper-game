@@ -618,7 +618,7 @@ def export_terrain(state, out_dir):
                     "note": "Whole map, centred on the origin; first image row = +Z edge. uv = xz / size + 0.5. Both "
                             "linear (sRGB off), bilinear, clamp. Masks RGBA: R flow, G hollow, B made ground (city, "
                             "roads, channel), A scree. Normal RGB = world normal * 0.5 + 0.5 (Unity axes)."},
-        "biomes": dict(table, current=state.biome,
+        "biomes": dict(table, file=f"Terrain/{table['file']}", current=state.biome,
                        note="Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, "
                             "no mipmaps, no compression. _BiomeIndex = row."),
         "collider": "Mesh collider from each chunk's LOD0 mesh.",

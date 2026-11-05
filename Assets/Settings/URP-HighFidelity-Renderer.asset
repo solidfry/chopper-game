@@ -27,6 +27,26 @@ MonoBehaviour:
   m_Name: ShapesRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
+--- !u!114 &-2786297583507323440
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: City Height Fog
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 1
+  injectionPoint: 550
+  fetchColorBuffer: 1
+  requirements: 1
+  passMaterial: {fileID: 2100000, guid: f12177dd88f41dd4db883aa03d7d1177, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &-1521868796174429534
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -80,7 +100,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -1521868796174429534}
   - {fileID: -7903661611874616205}
-  m_RendererFeatureMap: a29245a1643ce1ea737c52afa38d5092l
+  - {fileID: -2786297583507323440}
+  m_RendererFeatureMap: a29245a1643ce1ea737c52afa38d5092d04584381c1555d9l
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3

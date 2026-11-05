@@ -661,59 +661,73 @@ namespace Chopper.Editor.Setup
                           "Add the scene as a SubScene of the match scene.");
         }
 
-        /// <summary>Most realtime lights the city scene gets. Forward+ handles many, but each costs; tune by eye.</summary>
-        private const int MaxCityLights = 320;
-        /// <summary>Lights of one kind closer than this are one light (a row of street lamps becomes every other lamp).</summary>
-        private const float LightMergeDistance = 14f;
-        /// <summary>Which lights matter most, first kept: lava glow on the walls, flares, pads, yards, shanties, streets.</summary>
-        private static readonly string[] LightPriority = { "lava", "flame", "pad", "flood", "shanty", "street" };
+        /// <summary>Light budget per kind. Tune here by eye. Most = cap for the kind; Merge = lights of the kind closer than
+        /// this (m) are one; Range and Brightness = x the CityForge range and intensity. The sum of Most stays under the Forward+ limit (256 visible).</summary>
+        private sealed class LightLook
+        {
+            public string Kind;
+            public int Most;
+            public float Merge;
+            public float Range = 1f;
+            public float Brightness = 1f;
+        }
 
-        /// <summary>"Lights": point lights from the CityForge list, the most important first, close ones of a kind
-        /// merged, at most <see cref="MaxCityLights"/>. No shadows (cost); realtime, so they also light the choppers.</summary>
+        private static readonly LightLook[] LightLooks =
+        {
+            new() { Kind = "lava", Most = 36, Merge = 100f, Range = 1.8f },
+            new() { Kind = "flame", Most = 16, Merge = 20f },
+            new() { Kind = "pad", Most = 12, Merge = 14f },
+            new() { Kind = "flood", Most = 40, Merge = 40f, Brightness = 2f },
+            new() { Kind = "shanty", Most = 24, Merge = 30f },
+            new() { Kind = "street", Most = 128, Merge = 22f, Range = 1.4f, Brightness = 3f },
+        };
+
+        /// <summary>CityForge intensities x this = URP point light intensity (URP lights fall off with 1/d²; tuned by eye
+        /// at night, 5 Nov 2026).</summary>
+        private const float LightIntensityScale = 40f;
+
+        /// <summary>"Lights": point lights from the CityForge list. Per kind (<see cref="LightLooks"/>): close lights
+        /// merged, then thinned evenly to the kind's cap, so every part of the map keeps some. No shadows (cost);
+        /// realtime, so they also light the choppers.</summary>
         private static void PlaceLights(Scene scene, CityLight[] lights)
         {
             if (lights == null || lights.Length == 0) return;
             var root = new GameObject("Lights");
             SceneManager.MoveGameObjectToScene(root, scene);
-            var groups = new Dictionary<string, Transform>();
-            var kept = new Dictionary<(string, int, int), List<Vector3>>();
-            var ordered = lights
-                .Where(l => l?.position != null && l.position.Length == 3)
-                .OrderBy(l => { var i = Array.IndexOf(LightPriority, l.kind); return i < 0 ? LightPriority.Length : i; });
             var count = 0;
-            foreach (var info in ordered)
+            var report = new List<string>();
+            foreach (var look in LightLooks)
             {
-                if (count >= MaxCityLights) break;
-                var position = Vector(info.position);
-                var cell = ((string)info.kind, Mathf.FloorToInt(position.x / LightMergeDistance), Mathf.FloorToInt(position.z / LightMergeDistance));
-                var close = false;
-                for (var dx = -1; dx <= 1 && !close; dx++)
-                for (var dz = -1; dz <= 1 && !close; dz++)
-                    if (kept.TryGetValue((cell.Item1, cell.Item2 + dx, cell.Item3 + dz), out var near))
-                        close = near.Any(p => (p - position).sqrMagnitude < LightMergeDistance * LightMergeDistance);
-                if (close) continue;
-                if (!kept.TryGetValue(cell, out var list)) kept[cell] = list = new List<Vector3>();
-                list.Add(position);
-
-                if (!groups.TryGetValue(info.kind ?? "other", out var group))
+                var merged = new List<(Vector3 Position, CityLight Info)>();
+                foreach (var info in lights.Where(l => l?.kind == look.Kind && l.position != null && l.position.Length == 3))
                 {
-                    group = new GameObject(info.kind ?? "other").transform;
-                    group.SetParent(root.transform, false);
-                    groups[info.kind ?? "other"] = group;
+                    var position = Vector(info.position);
+                    if (merged.Any(m => (m.Position - position).sqrMagnitude < look.Merge * look.Merge)) continue;
+                    merged.Add((position, info));
                 }
-                var go = new GameObject($"{info.kind}_{count}");
-                go.transform.SetParent(group, false);
-                go.transform.localPosition = position;
-                var light = go.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = ColorUtility.TryParseHtmlString(info.colour, out var colour) ? colour : new Color(1f, 0.7f, 0.35f);
-                light.range = Mathf.Max(1f, info.range);
-                light.intensity = Mathf.Max(0f, info.intensity);
-                light.shadows = LightShadows.None;
-                light.lightmapBakeType = LightmapBakeType.Realtime;
-                count++;
+                if (merged.Count == 0) continue;
+                var group = new GameObject(look.Kind).transform;
+                group.SetParent(root.transform, false);
+                // Even thinning: every n-th light (the list follows the roads and walls, so this keeps coverage).
+                var keep = Mathf.Min(look.Most, merged.Count);
+                for (var k = 0; k < keep; k++)
+                {
+                    var (position, info) = merged[k * merged.Count / keep];
+                    var go = new GameObject($"{look.Kind}_{k}");
+                    go.transform.SetParent(group, false);
+                    go.transform.localPosition = position;
+                    var light = go.AddComponent<Light>();
+                    light.type = LightType.Point;
+                    light.color = ColorUtility.TryParseHtmlString(info.colour, out var colour) ? colour : new Color(1f, 0.7f, 0.35f);
+                    light.range = Mathf.Max(1f, info.range * look.Range);
+                    light.intensity = Mathf.Max(0f, info.intensity * look.Brightness * LightIntensityScale);
+                    light.shadows = LightShadows.None;
+                    light.lightmapBakeType = LightmapBakeType.Realtime;
+                }
+                count += keep;
+                report.Add($"{look.Kind} {keep}/{merged.Count}");
             }
-            Debug.Log($"Setup: placed {count} of {lights.Length} city lights (cap {MaxCityLights}, merge {LightMergeDistance} m).");
+            Debug.Log($"Setup: placed {count} of {lights.Length} city lights ({string.Join(", ", report)}).");
         }
 
         // -- steam, smoke, heat ---------------------------------------------------------------------------------------
@@ -733,24 +747,28 @@ namespace Chopper.Editor.Setup
             public float RatePerMetre;     // particles per second per metre of outlet radius
             public float MinRate;
             public int MaxParticles;
+            public Color Glow;             // emission (linear): city light from below, so plumes show at night
         }
 
         private static readonly PlumeLook[] PlumeLooks =
         {
             new() { Kind = "steam", Most = 40, Merge = 10f, Colour = new Color(0.86f, 0.87f, 0.89f, 0.55f), Lifetime = new Vector2(14f, 20f),
                     Speed = new Vector2(2.5f, 4f), SizeOfRadius = new Vector2(0.9f, 1.5f), MinSize = 4f, Grow = 3.5f, RatePerMetre = 0.35f,
-                    MinRate = 2f, MaxParticles = 140 },
+                    MinRate = 2f, MaxParticles = 140,
+                    Glow = new Color(0.16f, 0.12f, 0.09f) },
             new() { Kind = "smoke", Most = 70, Merge = 3f, Colour = new Color(0.18f, 0.17f, 0.16f, 0.6f), Lifetime = new Vector2(10f, 14f),
                     Speed = new Vector2(2f, 3f), SizeOfRadius = new Vector2(2f, 3f), MinSize = 2f, Grow = 4f, RatePerMetre = 1.5f,
-                    MinRate = 2.5f, MaxParticles = 70 },
+                    MinRate = 2.5f, MaxParticles = 70,
+                    Glow = new Color(0.03f, 0.022f, 0.016f) },
             new() { Kind = "heat", Most = 20, Merge = 3f, Colour = new Color(0.36f, 0.31f, 0.28f, 0.25f), Lifetime = new Vector2(3f, 5f),
                     Speed = new Vector2(2.5f, 3.5f), SizeOfRadius = new Vector2(2f, 3.5f), MinSize = 1.5f, Grow = 2.5f, RatePerMetre = 4f,
-                    MinRate = 3f, MaxParticles = 30 },
+                    MinRate = 3f, MaxParticles = 30,
+                    Glow = new Color(0.5f, 0.14f, 0.03f) },
         };
 
         /// <summary>One wind for every plume (world, m/s): plumes lean the same way.</summary>
         private static readonly Vector3 Wind = new(1.6f, 0f, 0.7f);
-        private const string PlumeMaterialPath = "Assets/Chopper/Data/Effects/CityPlume.mat";
+        private static string PlumeMaterialPath(string kind) => $"Assets/Chopper/Data/Effects/CityPlume_{kind}.mat";
 
         /// <summary>"Emitters": a looping world-space particle system on every kept outlet (a cap and a merge distance per
         /// kind). Lit particles, so lava, street lights and flares colour the steam at night. Particle systems in a
@@ -758,12 +776,12 @@ namespace Chopper.Editor.Setup
         private static void PlaceEmitters(Scene scene, CityEmitter[] emitters)
         {
             if (emitters == null || emitters.Length == 0) return;
-            var material = EnsurePlumeMaterial();
-            if (material == null) return;
             var root = new GameObject("Emitters");
             SceneManager.MoveGameObjectToScene(root, scene);
             foreach (var look in PlumeLooks)
             {
+                var material = EnsurePlumeMaterial(look);
+                if (material == null) return;
                 var group = new GameObject(look.Kind).transform;
                 group.SetParent(root.transform, false);
                 var kept = new List<Vector3>();
@@ -854,9 +872,11 @@ namespace Chopper.Editor.Setup
 
         /// <summary>Plumes: URP Particles Simple Lit (lit by the city lights), transparent alpha blend, Unity's soft round
         /// particle texture, soft particles. Made once.</summary>
-        private static Material EnsurePlumeMaterial()
+        /// <summary>One particle material per plume kind (its glow differs). Made once, then left alone for tuning.</summary>
+        private static Material EnsurePlumeMaterial(PlumeLook look)
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(PlumeMaterialPath);
+            var path = PlumeMaterialPath(look.Kind);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
             var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null)
@@ -864,7 +884,7 @@ namespace Chopper.Editor.Setup
                 Debug.LogWarning("Setup: URP particle shaders not found; no city steam and smoke.");
                 return null;
             }
-            material = new Material(shader) { name = "CityPlume" };
+            material = new Material(shader) { name = $"CityPlume_{look.Kind}" };
             material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
             material.SetColor("_BaseColor", Color.white);
             material.SetFloat("_Surface", 1f);
@@ -876,9 +896,16 @@ namespace Chopper.Editor.Setup
             material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 4f, 0f, 0f));
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.SetColor("_EmissionColor", look.Glow);
+            material.EnableKeyword("_EMISSION");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            Directory.CreateDirectory(Path.GetDirectoryName(PlumeMaterialPath));
-            AssetDatabase.CreateAsset(material, PlumeMaterialPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            AssetDatabase.CreateAsset(material, path);
+            // Set the keywords again on the asset: before CreateAsset they were lost (seen 5 Nov 2026, no glow).
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(material);
             return material;
         }
 

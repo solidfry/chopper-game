@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace Chopper.Editor.Setup
@@ -15,7 +16,7 @@ namespace Chopper.Editor.Setup
     /// Setup step 9, the city look (plan: light and air). On every URP renderer in use: the full-screen height fog pass
     /// (<c>Art/Shaders/CityHeightFog.shader</c>, before post processing, depth) and screen-space ambient occlusion. A
     /// post profile (<c>Data/Rendering/CityPost.asset</c>: bloom on the lights, ACES tonemapping, a little contrast and
-    /// a vignette) on a Global Volume in the open scene, and post processing on its cameras. Each map's fog numbers come
+    /// a vignette) on a Global Volume in each open match scene with a city SubScene, and post processing on its cameras. Each map's fog numbers come
     /// with the city scene (step 8). Made once, then left alone, so tuning by hand stays.
     /// Written without the editor (4 Nov 2026): check the renderer asset after the first run.
     /// </summary>
@@ -172,28 +173,47 @@ namespace Chopper.Editor.Setup
             return profile;
         }
 
-        /// <summary>A Global Volume with the city profile in the open scene, and post processing on its cameras.</summary>
+        /// <summary>
+        /// A Global Volume with the city profile in each open match scene that holds a city SubScene (a Volume inside
+        /// the SubScene would be baked away), and post processing on that scene's cameras. Other scenes (hangar, menus)
+        /// keep their own look.
+        /// </summary>
         private static void EnsureVolume(VolumeProfile profile)
         {
-            var volume = Object.FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .FirstOrDefault(v => v.isGlobal && v.sharedProfile == profile);
-            if (volume == null)
+            var hosts = GameplaySceneSetup.SubScenesInOpenScenes()
+                .Where(s => s.Path.StartsWith(CityAssets.SceneFolder + "/City", StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Host).Distinct().ToArray();
+            if (hosts.Length == 0)
             {
-                var go = new GameObject(VolumeName);
-                Undo.RegisterCreatedObjectUndo(go, "Add city post volume");
-                volume = Undo.AddComponent<Volume>(go);
-                volume.isGlobal = true;
-                volume.sharedProfile = profile;
+                Debug.Log("Setup: no open scene has a city SubScene, so no city post volume was added. Open the match " +
+                          "scene with the city SubScene and press '9. City look' again.");
+                return;
             }
-            foreach (var camera in Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var scene in hosts)
             {
-                var data = camera.GetComponent<UniversalAdditionalCameraData>();
-                if (data == null) data = Undo.AddComponent<UniversalAdditionalCameraData>(camera.gameObject);
-                Undo.RecordObject(data, "City post processing");
-                data.renderPostProcessing = true;
-                EditorUtility.SetDirty(data);
+                var roots = scene.GetRootGameObjects();
+                var volume = roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true))
+                    .FirstOrDefault(v => v.isGlobal && v.sharedProfile == profile);
+                if (volume == null)
+                {
+                    var go = new GameObject(VolumeName);
+                    SceneManager.MoveGameObjectToScene(go, scene);
+                    Undo.RegisterCreatedObjectUndo(go, "Add city post volume");
+                    volume = Undo.AddComponent<Volume>(go);
+                    volume.isGlobal = true;
+                    volume.sharedProfile = profile;
+                }
+                foreach (var camera in roots.SelectMany(r => r.GetComponentsInChildren<UnityEngine.Camera>(true)))
+                {
+                    var data = camera.GetComponent<UniversalAdditionalCameraData>();
+                    if (data == null) data = Undo.AddComponent<UniversalAdditionalCameraData>(camera.gameObject);
+                    Undo.RecordObject(data, "City post processing");
+                    data.renderPostProcessing = true;
+                    EditorUtility.SetDirty(data);
+                }
+                EditorSceneManager.MarkSceneDirty(scene);
+                Debug.Log($"Setup: city post volume ready in scene '{scene.name}'.");
             }
-            EditorSceneManager.MarkSceneDirty(volume.gameObject.scene);
         }
     }
 }
