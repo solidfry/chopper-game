@@ -315,7 +315,11 @@ namespace Chopper.Editor.Setup
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
-        private static bool IsMatchScene(string path) =>
-            Path.GetFileNameWithoutExtension(path) == ChopperBootstrap.TrainingRangeScene;
+        /// <summary>The training range and the city match scenes (Map_&lt;kit&gt;, step 10).</summary>
+        private static bool IsMatchScene(string path)
+        {
+            var name = Path.GetFileNameWithoutExtension(path);
+            return name == ChopperBootstrap.TrainingRangeScene || name.StartsWith(ChopperBootstrap.MapScenePrefix, System.StringComparison.Ordinal);
+        }
     }
 }
