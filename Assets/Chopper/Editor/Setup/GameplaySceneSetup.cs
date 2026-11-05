@@ -91,7 +91,7 @@ namespace Chopper.Editor.Setup
                 .ToArray();
         }
 
-        private static void ApplyTo(Scene scene)
+        internal static void ApplyTo(Scene scene)
         {
             var settings = FindOrCreateSettingsObject(scene);
             EnsureLagCompensation(scene, settings);

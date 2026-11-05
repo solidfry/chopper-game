@@ -143,7 +143,7 @@ namespace Chopper.Editor.Setup
             Debug.Log($"Setup: added '{feature.name}' to renderer {data.name}.");
         }
 
-        private static VolumeProfile EnsureProfile()
+        internal static VolumeProfile EnsureProfile()
         {
             var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
             if (profile != null) return profile;
@@ -178,7 +178,7 @@ namespace Chopper.Editor.Setup
         /// the SubScene would be baked away), and post processing on that scene's cameras. Other scenes (hangar, menus)
         /// keep their own look.
         /// </summary>
-        private static void EnsureVolume(VolumeProfile profile)
+        internal static void EnsureVolume(VolumeProfile profile)
         {
             var hosts = GameplaySceneSetup.SubScenesInOpenScenes()
                 .Where(s => s.Path.StartsWith(CityAssets.SceneFolder + "/City", StringComparison.OrdinalIgnoreCase))

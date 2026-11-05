@@ -32,6 +32,7 @@ namespace Chopper.Editor.Setup
             root.Add(new Button(() => Do(() => HangarSetup.Apply(ConfigAssets.Load()))) { text = "7. Build hangar" });
             root.Add(new Button(() => Do(CityAssets.EnsureAll)) { text = "8. Import city (CityForge)" });
             root.Add(new Button(() => Do(CityLookSetup.Apply)) { text = "9. City look (fog, SSAO, bloom)" });
+            root.Add(new Button(() => Do(() => MapSceneSetup.Apply(ConfigAssets.Load()))) { text = "10. City match scenes (light, probes)" });
             root.Add(new Button(() => Do(() =>
             {
                 var config = ConfigAssets.EnsureAll();
@@ -43,6 +44,7 @@ namespace Chopper.Editor.Setup
                 HangarSetup.Apply(config);
                 CityAssets.EnsureAll();
                 CityLookSetup.Apply();
+                MapSceneSetup.Apply(config);
             })) { text = "Do all" });
 
             var configRow = new Button(() =>

@@ -117,6 +117,15 @@ namespace Chopper.Editor.Setup
             public CityLight[] lights;
             public CityEmitter[] emitters;
             public HeightFogInfo heightFog;
+            public FlightBoundsInfo flightBounds;
+        }
+
+        /// <summary>The box players may fly in (centre and size, m).</summary>
+        [Serializable]
+        internal sealed class FlightBoundsInfo
+        {
+            public float[] centre;
+            public float[] size;
         }
 
         [Serializable]
@@ -242,6 +251,22 @@ namespace Chopper.Editor.Setup
         private static IEnumerable<string> ManifestPaths() => Directory.Exists(CityFolder)
             ? Directory.GetFiles(CityFolder, "*.manifest.json", SearchOption.AllDirectories)
             : Array.Empty<string>();
+
+        /// <summary>Every exported city: its kit name, folder and terrain data (null when it has none).</summary>
+        internal static IEnumerable<(string Kit, string Folder, TerrainData Terrain)> Maps()
+        {
+            foreach (var path in ManifestPaths())
+            {
+                var manifest = Load<Manifest>(path, out var folder);
+                if (manifest == null || string.IsNullOrEmpty(manifest.kit)) continue;
+                var terrain = manifest.terrain != null && !string.IsNullOrEmpty(manifest.terrain.file)
+                    ? Load<TerrainData>($"{folder}/{manifest.terrain.file}", out _)
+                    : null;
+                yield return (manifest.kit, folder, terrain);
+            }
+        }
+
+        internal static Vector3 ToVector(float[] value) => Vector(value);
 
         private static T Load<T>(string path, out string folder) where T : class
         {
@@ -645,7 +670,7 @@ namespace Chopper.Editor.Setup
 
                 PlaceLights(scene, terrain.lights);
                 PlaceEmitters(scene, terrain.emitters);
-                PlaceProbes(scene, terrain.size);
+                PlaceProbes(scene, terrain.size, manifest.kit);
                 PlaceAtmosphere(scene, terrain.heightFog);
 
                 Directory.CreateDirectory(SceneFolder);
@@ -913,18 +938,20 @@ namespace Chopper.Editor.Setup
 
         /// <summary>"Reflection Probes": a 3 x 3 grid of baked box probes over the city floor (glass, wet ground and puddles
         /// reflect the neon) and one high probe for the tower tops. Bake lighting in the editor to fill them.</summary>
-        private static void PlaceProbes(Scene scene, float mapSize)
+        /// <summary>Probes use the cubemaps step 10 baked for the map's default time of day when they exist
+        /// (<see cref="MapSceneSetup.ProbePath"/>); otherwise they stay plain baked probes.</summary>
+        private static void PlaceProbes(Scene scene, float mapSize, string kit)
         {
             var root = new GameObject("Reflection Probes") { isStatic = true };
             SceneManager.MoveGameObjectToScene(root, scene);
             var spacing = Mathf.Clamp(mapSize * 0.15f, 250f, 500f);
             for (var i = -1; i <= 1; i++)
             for (var j = -1; j <= 1; j++)
-                AddProbe(root.transform, $"Probe_{i + 1}{j + 1}", new Vector3(i * spacing, 35f, j * spacing), new Vector3(spacing, 160f, spacing));
-            AddProbe(root.transform, "Probe_High", new Vector3(0f, 220f, 0f), new Vector3(spacing * 3f, 300f, spacing * 3f));
+                AddProbe(root.transform, kit, $"Probe_{i + 1}{j + 1}", new Vector3(i * spacing, 35f, j * spacing), new Vector3(spacing, 160f, spacing));
+            AddProbe(root.transform, kit, "Probe_High", new Vector3(0f, 220f, 0f), new Vector3(spacing * 3f, 300f, spacing * 3f));
         }
 
-        private static void AddProbe(Transform parent, string name, Vector3 position, Vector3 size)
+        private static void AddProbe(Transform parent, string kit, string name, Vector3 position, Vector3 size)
         {
             var go = new GameObject(name) { isStatic = true };
             go.transform.SetParent(parent, false);
@@ -936,6 +963,12 @@ namespace Chopper.Editor.Setup
             probe.resolution = 256;
             probe.hdr = true;
             probe.importance = name == "Probe_High" ? 0 : 1;
+            var baked = AssetDatabase.LoadAssetAtPath<Texture>(MapSceneSetup.ProbePath(kit, MapSceneSetup.DefaultTime, name));
+            if (baked != null)
+            {
+                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Custom;
+                probe.customBakedTexture = baked;
+            }
         }
 
         /// <summary>"Atmosphere": the map's height fog (CityAtmosphereAuthoring, baked to an ECS component the client

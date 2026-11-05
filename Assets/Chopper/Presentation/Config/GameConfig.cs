@@ -47,6 +47,8 @@ namespace Chopper.Presentation.Config
 
         [Header("Hangar")]
         [SerializeField, Tooltip("Hangar wireframe look and camera. Setup step 7 links it.")] private HangarSettings hangar;
+        [SerializeField, Tooltip("Look of each time of day and weather (city match scenes). Setup step 10 links it.")]
+        private EnvironmentSettings environment;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
         public SkinLibrary Skins => skins;
@@ -62,6 +64,7 @@ namespace Chopper.Presentation.Config
         public VisualTreeAsset CockpitScreensLayout => cockpitScreensLayout;
         public PanelSettings CockpitScreensPanel => cockpitScreensPanel;
         public HangarSettings Hangar => hangar;
+        public EnvironmentSettings Environment => environment;
 
         public void CollectProblems(List<string> problems)
         {
@@ -88,6 +91,7 @@ namespace Chopper.Presentation.Config
             if (hudLook != null) hudLook.CollectProblems(problems);
             if (skins != null) skins.CollectProblems(problems);
             if (hangar != null) hangar.CollectProblems(problems);
+            if (environment != null) environment.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -121,6 +125,9 @@ namespace Chopper.Presentation.Config
             hangar = settings;
             hangarLayout = layout;
         }
+
+        /// <summary>Editor only: used by the city match scene step.</summary>
+        public void SetEnvironment(EnvironmentSettings settings) => environment = settings;
 
         private void Require(Object value, string label, List<string> problems)
         {

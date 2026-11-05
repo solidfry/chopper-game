@@ -17,6 +17,8 @@ namespace Chopper.Simulation
     public sealed class ChopperBootstrap : ClientServerBootstrap
     {
         public const string TrainingRangeScene = "TrainingRange";
+        /// <summary>City match scenes are named Map_&lt;kit&gt; (Setup step 10); their subscenes Map_&lt;kit&gt;_….</summary>
+        public const string MapScenePrefix = "Map_";
         public const ushort LocalPort = 7979;
 
         public override bool Initialize(string defaultWorldName)
@@ -50,7 +52,7 @@ namespace Chopper.Simulation
             for (var i = 0; i < SceneManager.sceneCount; i++)
             {
                 var name = SceneManager.GetSceneAt(i).name;
-                if (name == TrainingRangeScene || name.StartsWith(TrainingRangeScene + "_")) return true;
+                if (name == TrainingRangeScene || name.StartsWith(TrainingRangeScene + "_") || name.StartsWith(MapScenePrefix)) return true;
             }
             return false;
         }
