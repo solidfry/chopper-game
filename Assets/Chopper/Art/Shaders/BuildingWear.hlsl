@@ -25,6 +25,8 @@
 #ifndef BUILDING_WEAR_INCLUDED
 #define BUILDING_WEAR_INCLUDED
 
+#include "Assets/Chopper/Art/Shaders/CityLightPools.hlsl"
+
 SamplerState building_wear_point_clamp_sampler;
 
 float BW_Hash(float2 p)
@@ -146,7 +148,7 @@ float BW_LightAnimation(float kind, float seed, float3 p)
 void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Masks,
     UnityTexture2D PaletteColour, UnityTexture2D PaletteEmission, UnityTexture2D PaletteMetalSmooth,
     UnityTexture2D BiomeTable, float BiomeIndex, float Wear, float EmissionStrength,
-    UnityTexture2D ConcreteColour, UnityTexture2D ConcreteNormal,
+    UnityTexture2D ConcreteColour, UnityTexture2D ConcreteNormal, UnityTexture2D LightPools, float MapSize,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
     out float AmbientOcclusion)
 {
@@ -228,19 +230,20 @@ void BuildingWear_float(float2 UV, float3 PositionWS, float3 NormalWS, float4 Ma
     Metallic = metalSmooth.r;
     Smoothness = saturate(lerp(metalSmooth.a + rain * sky * 0.4 * (1.0 - metalSmooth.a), 0.96, puddle));
     NormalOut = normalize(lerp(n, BW_TriNormal(ConcreteNormal, PositionWS, n, blend, 1.0 / 3.0), 0.6 * rough * (1.0 - puddle)));
-    Emission = lerp(glow, roomGlow, window) * EmissionStrength * BW_LightAnimation(metalSmooth.b, seed, PositionWS);
+    Emission = lerp(glow, roomGlow, window) * EmissionStrength * BW_LightAnimation(metalSmooth.b, seed, PositionWS)
+             + Albedo * CLP_Pool(PositionWS, NormalWS, LightPools, MapSize);          // lamp light on roads and roofs
     AmbientOcclusion = 1.0 - 0.5 * occlusion;
 }
 
 void BuildingWear_half(float2 UV, float3 PositionWS, float3 NormalWS, float4 Masks,
     UnityTexture2D PaletteColour, UnityTexture2D PaletteEmission, UnityTexture2D PaletteMetalSmooth,
     UnityTexture2D BiomeTable, float BiomeIndex, float Wear, float EmissionStrength,
-    UnityTexture2D ConcreteColour, UnityTexture2D ConcreteNormal,
+    UnityTexture2D ConcreteColour, UnityTexture2D ConcreteNormal, UnityTexture2D LightPools, float MapSize,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
     out float AmbientOcclusion)
 {
     BuildingWear_float(UV, PositionWS, NormalWS, Masks, PaletteColour, PaletteEmission, PaletteMetalSmooth, BiomeTable,
-                       BiomeIndex, Wear, EmissionStrength, ConcreteColour, ConcreteNormal, Albedo, Metallic, Smoothness,
+                       BiomeIndex, Wear, EmissionStrength, ConcreteColour, ConcreteNormal, LightPools, MapSize, Albedo, Metallic, Smoothness,
                        NormalOut, Emission, AmbientOcclusion);
 }
 

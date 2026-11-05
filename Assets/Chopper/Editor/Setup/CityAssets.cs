@@ -293,8 +293,16 @@ namespace Chopper.Editor.Setup
             var table = terrain?.biomes != null ? DataTexture($"{folder}/{terrain.biomes.file}", point: true) : null;
             var biomeIndex = terrain?.biomes?.biomes != null ? Mathf.Max(0, Array.IndexOf(terrain.biomes.biomes, terrain.biomes.current)) : 0;
 
+            var pools = terrain != null ? EnsureLightPools(folder, manifest.kit, terrain) : null;
             var buildingMaterial = EnsureBuildingMaterial(folder, manifest, table, biomeIndex);
             var terrainMaterial = terrain != null ? EnsureTerrainMaterial(folder, manifest.kit, table, biomeIndex, terrain.surface) : null;
+            foreach (var material in new[] { buildingMaterial, terrainMaterial })
+            {
+                if (material == null || !material.HasTexture("_LightPools")) continue;
+                material.SetTexture("_LightPools", pools);
+                material.SetFloat("_MapSize", pools != null ? terrain.size : 0f);
+                EditorUtility.SetDirty(material);
+            }
 
             foreach (var building in manifest.buildings)
                 Remap($"{folder}/{building.file}", buildingMaterial, manifest.palette.material, null, null);
@@ -367,6 +375,91 @@ namespace Chopper.Editor.Setup
                 importer.textureCompression = TextureImporterCompression.CompressedHQ;
                 importer.SaveAndReimport();
             }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        // -- light pools ----------------------------------------------------------------------------------------------
+
+        /// <summary>Lamp kinds that light the ground below them, and the pool radius as a share of the light range.</summary>
+        private static readonly string[] PoolKinds = { "street", "flood", "shanty", "pad" };
+        private const float PoolRadius = 0.75f;
+        /// <summary>CityForge intensity x this = pool light on the ground (albedo x pool = emission). Tuned by eye.</summary>
+        private const float PoolBrightness = 0.9f;
+        private const int PoolResolution = 1024;
+        /// <summary>Brightest pool (linear), so many lamps close together stay a pool, not a white patch.</summary>
+        private const float MaxPool = 1.2f;
+
+        /// <summary>
+        /// <c>&lt;kit&gt;_LightPools.exr</c>: every lamp's pool on the ground, map-wide (Art/Shaders/CityLightPools.hlsl).
+        /// rgb = summed light (linear), a = height of the strongest lamp. Half float, no compression (alpha is height).
+        /// </summary>
+        private static Texture2D EnsureLightPools(string folder, string kit, TerrainData terrain)
+        {
+            if (terrain.lights == null || terrain.size <= 0f) return null;
+            var n = PoolResolution;
+            var texel = terrain.size / n;
+            var light = new Color[n * n];
+            var strongest = new float[n * n];
+            var used = 0;
+            foreach (var info in terrain.lights)
+            {
+                if (info?.position is not { Length: 3 } || Array.IndexOf(PoolKinds, info.kind) < 0) continue;
+                var p = Vector(info.position);
+                var colour = (ColorUtility.TryParseHtmlString(info.colour, out var c) ? c : new Color(1f, 0.7f, 0.35f)).linear;
+                var power = info.intensity * PoolBrightness;
+                var radius = Mathf.Max(3f, info.range * PoolRadius);
+                int cx = Mathf.FloorToInt((p.x / terrain.size + 0.5f) * n), cz = Mathf.FloorToInt((0.5f - p.z / terrain.size) * n);
+                var reach = Mathf.CeilToInt(radius / texel) + 1;
+                for (var z = cz - reach; z <= cz + reach; z++)
+                for (var x = cx - reach; x <= cx + reach; x++)
+                {
+                    if (x < 0 || z < 0 || x >= n || z >= n) continue;
+                    var wx = ((x + 0.5f) / n - 0.5f) * terrain.size;
+                    var wz = (0.5f - (z + 0.5f) / n) * terrain.size;
+                    var d = new Vector2(wx - p.x, wz - p.z).magnitude / radius;
+                    if (d >= 1f) continue;
+                    var fall = (1f - d * d) * (1f - d * d);
+                    var i = z * n + x;
+                    light[i] += colour * (power * fall);
+                    if (power * fall > strongest[i])
+                    {
+                        strongest[i] = power * fall;
+                        light[i].a = p.y;
+                    }
+                }
+                used++;
+            }
+            // Close lamps add up (helipad rims): cap the pool so roofs and pads do not burn white.
+            for (var i = 0; i < light.Length; i++)
+            {
+                var c = light[i];
+                var peak = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+                if (peak > MaxPool) light[i] = new Color(c.r * MaxPool / peak, c.g * MaxPool / peak, c.b * MaxPool / peak, c.a);
+            }
+            // Texture rows: row 0 = the -Z edge in Unity textures, so flip (z above counts from +Z).
+            var pixels = new Color[n * n];
+            for (var z = 0; z < n; z++)
+                Array.Copy(light, z * n, pixels, (n - 1 - z) * n, n);
+            var texture = new Texture2D(n, n, TextureFormat.RGBAHalf, false, true);
+            texture.SetPixels(pixels);
+            texture.Apply();
+            var path = $"{folder}/Terrain/{kit}_LightPools.exr";
+            File.WriteAllBytes(path, texture.EncodeToEXR(Texture2D.EXRFlags.CompressZIP));
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path);
+            if (AssetImporter.GetAtPath(path) is TextureImporter importer)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = false;
+                importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.maxTextureSize = n;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+            Debug.Log($"Setup: city {kit} light pools from {used} lamps ({path}).");
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 

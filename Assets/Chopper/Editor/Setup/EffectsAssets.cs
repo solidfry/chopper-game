@@ -56,16 +56,17 @@ namespace Chopper.Editor.Setup
 
         private const string DownwashMaterialPath = "Assets/Chopper/Data/Effects/DownwashDust.mat";
 
-        /// <summary>Rotor downwash dust: URP Particles Unlit, transparent alpha blend, Unity's soft round particle texture,
-        /// colour from the particles (the settings' dust colour). Made once.</summary>
+        /// <summary>Rotor downwash dust: URP Particles Simple Lit (the chopper's spotlight and the city lights show it at
+        /// night), a little glow so it never goes black, transparent alpha blend, Unity's soft round particle texture,
+        /// colour from the particles (the map's dust colour). Made once.</summary>
         private static Material EnsureDownwashMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(DownwashMaterialPath);
             if (material != null) return material;
-            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit");
             if (shader == null)
             {
-                Debug.LogWarning("Combat effects: URP Particles/Unlit shader not found; no downwash material.");
+                Debug.LogWarning("Combat effects: URP Particles/Simple Lit shader not found; no downwash material.");
                 return null;
             }
             material = new Material(shader) { name = "DownwashDust" };
@@ -81,9 +82,15 @@ namespace Chopper.Editor.Setup
             material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 1.5f, 0f, 0f));
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.SetColor("_EmissionColor", new Color(0.06f, 0.05f, 0.04f));
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(DownwashMaterialPath));
             AssetDatabase.CreateAsset(material, DownwashMaterialPath);
+            // Keywords again on the asset: before CreateAsset they can be lost (seen with the city plumes, 5 Nov 2026).
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            material.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(material);
             return material;
         }
 

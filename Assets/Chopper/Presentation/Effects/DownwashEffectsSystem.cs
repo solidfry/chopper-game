@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Flight;
+using Chopper.Simulation.Visuals;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -17,7 +18,9 @@ namespace Chopper.Presentation.Effects
     /// The ring gets smaller and faster as it gets lower. Own chopper: a little camera shake. Cosmetic only, every chopper
     /// (remote ones too). One particle system per chopper, made in code (settings and material in
     /// <see cref="CombatEffectsSettings"/>).
-    /// Written without the editor (4 Nov 2026). Next: surface type from what the ray hits (water spray, snow, grass).
+    /// Dust colour: the map's height fog colour when a city is loaded (its sand or ash), else the settings' colour.
+    /// Lit particles: at night the chopper's spotlight shows the dust. Checked in the editor 5 Nov 2026.
+    /// Next: surface type from what the ray hits (water spray, snow, grass), and weather (wet ground = less dust).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -63,6 +66,13 @@ namespace Chopper.Presentation.Effects
             }
             var settings = context.Effects.Settings;
             if (settings.DownwashMaterial == null || settings.DownwashHeight <= 0f) return;
+            // The map's dust: city maps carry a height fog whose colour is their air-borne dust (sand, ash).
+            var dust = settings.DownwashColour;
+            if (SystemAPI.TryGetSingleton<CityAtmosphere>(out var atmosphere))
+            {
+                var fog = new Color(atmosphere.Colour.x, atmosphere.Colour.y, atmosphere.Colour.z).gamma;
+                dust = new Color(fog.r, fog.g, fog.b, dust.a);
+            }
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var world = physics.CollisionWorld;
             var deltaTime = SystemAPI.Time.DeltaTime;
@@ -91,7 +101,7 @@ namespace Chopper.Presentation.Effects
                 if (!_emitters.TryGetValue(entity, out var emitter))
                 {
                     if (target <= 0f) continue;
-                    emitter = new Emitter { System = Create(settings) };
+                    emitter = new Emitter { System = Create(settings, dust) };
                     _emitters[entity] = emitter;
                 }
                 emitter.Strength = math.lerp(emitter.Strength, target, 1f - math.exp(-Response * deltaTime));
@@ -146,7 +156,7 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>A world-space ring emitter: puffs move out along the surface, slow down, rise a little, grow and fade.</summary>
-        private ParticleSystem Create(CombatEffectsSettings settings)
+        private ParticleSystem Create(CombatEffectsSettings settings, Color colour)
         {
             if (_root == null) _root = new GameObject("Rotor Downwash").transform;
             var go = new GameObject("Downwash");
@@ -163,7 +173,6 @@ namespace Chopper.Presentation.Effects
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.7f, 1.2f);
             main.startSize = new ParticleSystem.MinMaxCurve(settings.DownwashSize * 0.6f, settings.DownwashSize * 1.4f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            var colour = settings.DownwashColour;
             main.startColor = new ParticleSystem.MinMaxGradient(colour, colour * new Color(0.8f, 0.8f, 0.8f, 1f));
             main.gravityModifier = -0.04f;
 

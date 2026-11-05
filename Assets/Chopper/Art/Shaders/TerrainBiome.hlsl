@@ -21,6 +21,8 @@
 #ifndef TERRAIN_BIOME_INCLUDED
 #define TERRAIN_BIOME_INCLUDED
 
+#include "Assets/Chopper/Art/Shaders/CityLightPools.hlsl"
+
 SamplerState terrain_biome_point_clamp_sampler;
 
 float TB_Hash(float2 p)
@@ -148,7 +150,7 @@ void TB_Surface(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, Unit
 void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal,
     float MapSize, UnityTexture2D BiomeTable, float BiomeIndex,
     UnityTexture2D RockColour, UnityTexture2D RockNormal, UnityTexture2D SandColour, UnityTexture2D SandNormal,
-    UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength,
+    UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength, UnityTexture2D LightPools,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
     out float AmbientOcclusion)
 {
@@ -234,6 +236,7 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskM
     colour *= 1.0 - 0.65 * puddle;
 
     Albedo = colour;
+    Emission += colour * CLP_Pool(PositionWS, NormalWS, LightPools, MapSize);   // lamp light on the ground
     Metallic = 0.0;
     Smoothness = lerp(1.0 - saturate(roughness - wet * 0.55), 0.96, puddle);
     // Detail normals: sand from above on open ground, rock on three axes on cliffs; none on made ground.
@@ -248,12 +251,12 @@ void TerrainBiome_float(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskM
 void TerrainBiome_half(float3 PositionWS, float3 NormalWS, UnityTexture2D MaskMap, UnityTexture2D SurfaceNormal,
     float MapSize, UnityTexture2D BiomeTable, float BiomeIndex,
     UnityTexture2D RockColour, UnityTexture2D RockNormal, UnityTexture2D SandColour, UnityTexture2D SandNormal,
-    UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength,
+    UnityTexture2D MudColour, UnityTexture2D CoverColour, float DetailStrength, UnityTexture2D LightPools,
     out float3 Albedo, out float Metallic, out float Smoothness, out float3 NormalOut, out float3 Emission,
     out float AmbientOcclusion)
 {
     TerrainBiome_float(PositionWS, NormalWS, MaskMap, SurfaceNormal, MapSize, BiomeTable, BiomeIndex, RockColour, RockNormal, SandColour,
-                       SandNormal, MudColour, CoverColour, DetailStrength, Albedo, Metallic, Smoothness, NormalOut, Emission,
+                       SandNormal, MudColour, CoverColour, DetailStrength, LightPools, Albedo, Metallic, Smoothness, NormalOut, Emission,
                        AmbientOcclusion);
 }
 
