@@ -88,6 +88,9 @@ namespace Chopper.Simulation.Combat
                 var directTarget = Entity.Null;
                 var detonateAt = end;
                 var detonate = false;
+                // Where the direct hit lands on the target, and the direction out of its hull there.
+                var directPoint = end;
+                var directNormal = -math.normalizesafe(missile.Velocity, math.forward());
                 var impact = Explosions.TryRaycast(world, missile.Shooter, start, end, out var hit);
                 if (!impact && missile.Cluster.IsCluster)
                 {
@@ -106,11 +109,17 @@ namespace Chopper.Simulation.Combat
                     detonate = true;
                     detonateAt = hit.Position;
                     directTarget = hit.Entity;
+                    directPoint = hit.Position;
+                    directNormal = hit.SurfaceNormal;
                 }
                 else if (hasTarget && math.distance(end, targetPose.Position) <= missile.ProximityFuse)
                 {
                     detonate = true;
                     directTarget = missile.Target;
+                    // Proximity fuse: no contact. The hull side that faces the blast, about 1.5 m from the target's centre.
+                    var toBlast = end - targetPose.Position;
+                    directNormal = Explosions.SafeNormal(toBlast, directNormal);
+                    directPoint = targetPose.Position + directNormal * math.min(math.length(toBlast), 1.5f);
                 }
                 else if (missile.Remaining <= 0f)
                 {
@@ -119,7 +128,14 @@ namespace Chopper.Simulation.Combat
                 if (!detonate) continue;
 
                 if (directTarget != Entity.Null && _damage.TryGetBuffer(directTarget, out var direct))
-                    direct.Add(new DamageEvent { Amount = missile.DirectDamage, Source = missile.Shooter });
+                    direct.Add(new DamageEvent
+                    {
+                        Amount = missile.DirectDamage,
+                        Source = missile.Shooter,
+                        Point = directPoint,
+                        Normal = directNormal,
+                        Kind = DamageKind.Explosion,
+                    });
                 Explosions.Splash(world, ref _damage, detonateAt, missile.SplashRadius, missile.SplashDamage, missile.Shooter, directTarget);
 
                 var rpc = ecb.CreateEntity();

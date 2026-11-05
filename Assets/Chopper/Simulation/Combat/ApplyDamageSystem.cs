@@ -12,7 +12,9 @@ namespace Chopper.Simulation.Combat
     /// <summary>
     /// Server only. Applies this tick's <see cref="DamageEvent"/>s to <see cref="Health"/>. Tells each shooter that it
     /// hit (<see cref="HitConfirmRpc"/>), each victim where the hit came from (<see cref="DamageTakenRpc"/>), and
-    /// reports kills (<see cref="KillEvent"/>). No damage after the match ends.
+    /// reports kills (<see cref="KillEvent"/>), and tells every client where each victim was hit
+    /// (<see cref="ChopperHitRpc"/>: the strongest hit with a point, at most one per victim per tick). No damage after
+    /// the match ends.
     /// Death is handled by <see cref="ChopperRespawnSystem"/>.
     /// </summary>
     [BurstCompile]
@@ -28,6 +30,7 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<GhostOwner> _ownerLookup;
         private ComponentLookup<LastAttacker> _lastAttackerLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
+        private ComponentLookup<GhostInstance> _ghostLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -36,6 +39,7 @@ namespace Chopper.Simulation.Combat
             _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
             _lastAttackerLookup = state.GetComponentLookup<LastAttacker>();
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
+            _ghostLookup = state.GetComponentLookup<GhostInstance>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -49,6 +53,7 @@ namespace Chopper.Simulation.Combat
             _ownerLookup.Update(ref state);
             _lastAttackerLookup.Update(ref state);
             _transformLookup.Update(ref state);
+            _ghostLookup.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (health, damage, victim) in SystemAPI.Query<RefRW<Health>, DynamicBuffer<DamageEvent>>().WithEntityAccess())
@@ -59,9 +64,11 @@ namespace Chopper.Simulation.Combat
                     continue;
                 }
 
+                var strongest = new DamageEvent();
                 foreach (var hit in damage)
                 {
                     if (health.ValueRO.IsDead) break;
+                    if (hit.HasPoint && hit.Amount > strongest.Amount) strongest = hit;
                     var killed = health.ValueRW.TakeDamage(hit.Amount);
                     var attacker = RememberAttacker(victim, hit.Source, now);
 
@@ -91,8 +98,26 @@ namespace Chopper.Simulation.Combat
                     ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = shooter.Value });
                 }
                 damage.Clear();
+                if (strongest.HasPoint) BroadcastHit(ecb, victim, strongest);
             }
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>To every client: where the victim was hit, in the victim's own space.</summary>
+        private void BroadcastHit(EntityCommandBuffer ecb, Entity victim, in DamageEvent hit)
+        {
+            if (!_ghostLookup.TryGetComponent(victim, out var ghost) || !_transformLookup.TryGetComponent(victim, out var pose)) return;
+            var rpc = ecb.CreateEntity();
+            ecb.AddComponent(rpc, new ChopperHitRpc
+            {
+                GhostId = ghost.ghostId,
+                LocalPoint = pose.InverseTransformPoint(hit.Point),
+                LocalNormal = pose.InverseTransformDirection(hit.Normal),
+                Amount = hit.Amount,
+                Kind = (byte)hit.Kind,
+            });
+            // No target connection: sent to every client.
+            ecb.AddComponent<SendRpcCommandRequest>(rpc);
         }
 
         /// <summary>Returns the attacker's network id, or 0 for environment damage and self damage.</summary>

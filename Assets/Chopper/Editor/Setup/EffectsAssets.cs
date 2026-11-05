@@ -32,6 +32,7 @@ namespace Chopper.Editor.Setup
                 // Repair: fill slots added after the asset was made (guided missiles, flares).
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillDownwash(EnsureDownwashMaterial());
+                settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial());
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
                 if (settings.EffectsMixerGroup == null && mixer != null)
@@ -46,6 +47,7 @@ namespace Chopper.Editor.Setup
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             settings.FillDownwash(EnsureDownwashMaterial());
+            settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
@@ -55,6 +57,77 @@ namespace Chopper.Editor.Setup
         }
 
         private const string DownwashMaterialPath = "Assets/Chopper/Data/Effects/DownwashDust.mat";
+        private const string SparkMaterialPath = "Assets/Chopper/Data/Effects/DamageSparks.mat";
+        private const string SmokeMaterialPath = "Assets/Chopper/Data/Effects/DamageSmoke.mat";
+
+        /// <summary>Damage sparks and flames: URP Particles Unlit, additive, HDR base colour (about 4x) so bloom
+        /// catches them. Made once.</summary>
+        private static Material EnsureSparkMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(SparkMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null)
+            {
+                Debug.LogWarning("Combat effects: URP Particles/Unlit shader not found; no damage spark material.");
+                return null;
+            }
+            material = new Material(shader) { name = "DamageSparks" };
+            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetColor("_BaseColor", new Color(4f, 2.6f, 1.2f, 1f));
+            // Transparent, additive (Blend 2), no depth write, soft particles.
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 2f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SoftParticlesEnabled", 1f);
+            material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 0.5f, 0f, 0f));
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            return Save(material, SparkMaterialPath, emission: false);
+        }
+
+        /// <summary>Damage smoke: like the downwash dust (Simple Lit, alpha blend, soft) with almost no glow, so black
+        /// smoke stays black. Made once.</summary>
+        private static Material EnsureSmokeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(SmokeMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit");
+            if (shader == null)
+            {
+                Debug.LogWarning("Combat effects: URP Particles/Simple Lit shader not found; no damage smoke material.");
+                return null;
+            }
+            material = new Material(shader) { name = "DamageSmoke" };
+            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SoftParticlesEnabled", 1f);
+            material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 1.5f, 0f, 0f));
+            material.SetColor("_EmissionColor", new Color(0.01f, 0.01f, 0.01f));
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            return Save(material, SmokeMaterialPath, emission: true);
+        }
+
+        /// <summary>Saves a new particle material; sets the keywords again after CreateAsset (they can be lost
+        /// before it, seen with the city plumes, 5 Nov 2026).</summary>
+        private static Material Save(Material material, string path, bool emission)
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            AssetDatabase.CreateAsset(material, path);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_SOFTPARTICLES_ON");
+            if (emission) material.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(material);
+            return material;
+        }
 
         /// <summary>Rotor downwash dust: URP Particles Simple Lit (the chopper's spotlight and the city lights show it at
         /// night), a little glow so it never goes black, transparent alpha blend, Unity's soft round particle texture,

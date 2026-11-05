@@ -73,7 +73,7 @@ namespace Chopper.Simulation.Loadout
                 BoostStartEnergy = flight.BoostStartEnergy,
             };
             built.Health = stats.Health;
-            built.Crash = new CrashDamageConfig { SafeSpeedLoss = crash.SafeSpeedLoss, DamagePerSpeedLoss = crash.DamagePerSpeedLoss };
+            built.Crash = crash.ToConfig();
 
             BuildWeapons(chassis, modulesBySlot, sockets, resolveMissilePrefab, built);
             return built;

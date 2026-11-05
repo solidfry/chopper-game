@@ -1,3 +1,4 @@
+using Chopper.Simulation.Combat;
 using Chopper.Simulation.Match;
 using UnityEngine;
 
@@ -83,5 +84,27 @@ namespace Chopper.Presentation.Events
     {
         public readonly Vector3 Position;
         public MissileDetonated(Vector3 position) => Position = position;
+    }
+
+    /// <summary>
+    /// The server says a ghost with health (a chopper, a training target) was hit here. The point and normal are in
+    /// the victim's own space, so effects can stay on the hull.
+    /// </summary>
+    public readonly struct ChopperHit
+    {
+        /// <summary><c>GhostInstance.ghostId</c> of the victim.</summary>
+        public readonly int GhostId;
+        public readonly Vector3 LocalPoint;
+        public readonly Vector3 LocalNormal;
+        public readonly float Amount;
+        public readonly DamageKind Kind;
+        public ChopperHit(int ghostId, Vector3 localPoint, Vector3 localNormal, float amount, DamageKind kind)
+        {
+            GhostId = ghostId;
+            LocalPoint = localPoint;
+            LocalNormal = localNormal;
+            Amount = amount;
+            Kind = kind;
+        }
     }
 }

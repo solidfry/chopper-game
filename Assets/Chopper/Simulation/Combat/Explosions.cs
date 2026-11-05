@@ -28,11 +28,26 @@ namespace Chopper.Simulation.Combat
                     if (!damageLookup.TryGetBuffer(target, out var buffer)) continue;
 
                     var falloff = 1f - math.saturate(hit.Distance / radius);
-                    buffer.Add(new DamageEvent { Amount = damage * falloff, Source = source });
+                    // The closest point of the target to the blast: sparks on the side that faces it.
+                    buffer.Add(new DamageEvent
+                    {
+                        Amount = damage * falloff,
+                        Source = source,
+                        Point = hit.Position,
+                        Normal = SafeNormal(centre - hit.Position, hit.SurfaceNormal),
+                        Kind = DamageKind.Explosion,
+                    });
                 }
             }
             hits.Dispose();
             damaged.Dispose();
+        }
+
+        /// <summary>Unit vector along <paramref name="direction"/>, or <paramref name="fallback"/> when it is (almost) zero.</summary>
+        public static float3 SafeNormal(float3 direction, float3 fallback)
+        {
+            var length = math.length(direction);
+            return length > 1e-4f ? direction / length : fallback;
         }
 
         /// <summary>Closest ray hit that is not <paramref name="ignore"/>.</summary>

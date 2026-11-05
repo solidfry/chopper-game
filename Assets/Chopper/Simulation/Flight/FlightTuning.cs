@@ -81,9 +81,21 @@ namespace Chopper.Simulation.Flight
     [Serializable]
     public sealed class CrashTuning
     {
-        [Tooltip("Speed loss in one tick (m/s) that does no crash damage.")]
-        public float SafeSpeedLoss = 8f;
-        [Tooltip("Crash damage per m/s of speed loss above the safe value.")]
-        public float DamagePerSpeedLoss = 4f;
+        [Tooltip("Impact speed (m/s) against a wall, a ceiling or another chopper that does no damage.")]
+        public float SafeImpactSpeed = 5f;
+        [Tooltip("Vertical touchdown speed (m/s) on the ground or a roof that does no damage.")]
+        public float SafeLandingSpeed = 7f;
+        [Tooltip("Impact speed (m/s) that takes all the health in one hit.")]
+        public float LethalImpactSpeed = 45f;
+        [Tooltip("Damage curve between safe and lethal speed: 1 = straight line; above 1 = bumps are mild, big crashes hard.")]
+        public float Curve = 1.5f;
+
+        public Combat.CrashDamageConfig ToConfig() => new()
+        {
+            SafeImpactSpeed = SafeImpactSpeed,
+            SafeLandingSpeed = SafeLandingSpeed,
+            LethalImpactSpeed = LethalImpactSpeed,
+            Curve = Curve,
+        };
     }
 }

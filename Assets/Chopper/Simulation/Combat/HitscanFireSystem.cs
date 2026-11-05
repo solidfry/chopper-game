@@ -1,6 +1,5 @@
 using Chopper.Simulation.Flight;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -88,33 +87,19 @@ namespace Chopper.Simulation.Combat
                 var pose = transform.ValueRO;
                 var muzzle = pose.Position + math.mul(pose.Rotation, config.ValueRO.MuzzleOffset);
                 var forward = math.mul(pose.Rotation, math.forward());
-                if (!TryHit(collisionWorld, shooter, muzzle, muzzle + forward * config.ValueRO.Range, out var target))
+                if (!Explosions.TryRaycast(collisionWorld, shooter, muzzle, muzzle + forward * config.ValueRO.Range, out var hit))
                     continue;
 
-                if (_damageLookup.TryGetBuffer(target, out var damage))
-                    damage.Add(new DamageEvent { Amount = config.ValueRO.Damage, Source = shooter });
+                if (_damageLookup.TryGetBuffer(hit.Entity, out var damage))
+                    damage.Add(new DamageEvent
+                    {
+                        Amount = config.ValueRO.Damage,
+                        Source = shooter,
+                        Point = hit.Position,
+                        Normal = hit.SurfaceNormal,
+                        Kind = DamageKind.Bullet,
+                    });
             }
-        }
-
-        /// <summary>Closest hit along the ray that is not the shooter.</summary>
-        private static bool TryHit(in CollisionWorld world, Entity shooter, float3 start, float3 end, out Entity target)
-        {
-            var ray = new RaycastInput { Start = start, End = end, Filter = CollisionFilter.Default };
-            var hits = new NativeList<RaycastHit>(8, Allocator.Temp);
-            var closest = float.MaxValue;
-            target = Entity.Null;
-
-            if (world.CastRay(ray, ref hits))
-            {
-                foreach (var hit in hits)
-                {
-                    if (hit.Entity == shooter || hit.Fraction >= closest) continue;
-                    closest = hit.Fraction;
-                    target = hit.Entity;
-                }
-            }
-            hits.Dispose();
-            return target != Entity.Null;
         }
     }
 }

@@ -64,6 +64,33 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Camera shake per second for the own chopper at full strength (0..1 trauma).")]
         private float downwashShake = 0.15f;
 
+        [Header("Damage (sparks at hits, smoke and fire as the hull runs low)")]
+        [SerializeField, Tooltip("Additive particle material for sparks and flames (URP Particles Unlit, HDR base colour so " +
+                                 "bloom catches it). Empty: no sparks or fire.")]
+        private Material damageSparkMaterial;
+        [SerializeField, Tooltip("Alpha-blend particle material for damage smoke (URP Particles Simple Lit). Empty: no smoke.")]
+        private Material damageSmokeMaterial;
+        [SerializeField, Tooltip("Sparks per point of damage in one hit; the count is kept inside Spark Count.")]
+        private float sparksPerDamage = 1.5f;
+        [SerializeField, Tooltip("Least and most sparks for one hit.")]
+        private Vector2Int sparkCount = new(6, 48);
+        [SerializeField, Tooltip("Spark speed off the hull, m/s.")]
+        private float sparkSpeed = 16f;
+        [SerializeField, Range(0f, 1f), Tooltip("Health share below which light smoke comes out where the chopper was hit.")]
+        private float smokeBelow = 0.7f;
+        [SerializeField, Range(0f, 1f), Tooltip("Health share below which the smoke is thick and black.")]
+        private float heavySmokeBelow = 0.4f;
+        [SerializeField, Range(0f, 1f), Tooltip("Health share below which the hit points also burn.")]
+        private float fireBelow = 0.2f;
+        [SerializeField, Tooltip("Smoke puffs per second from one damage point at the lowest health.")]
+        private float smokeRate = 28f;
+        [SerializeField, Tooltip("Smoke puff size (m) when it leaves the hull; it grows as it drifts.")]
+        private float smokeSize = 1.4f;
+        [SerializeField] private Color lightSmokeColour = new(0.62f, 0.62f, 0.6f, 0.35f);
+        [SerializeField] private Color heavySmokeColour = new(0.05f, 0.05f, 0.05f, 0.8f);
+        [SerializeField, Tooltip("Dust puffs thrown up by a crash or a hard landing (downwash material and map dust colour).")]
+        private int impactDust = 24;
+
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
         private float oneShotLifetime = 3f;
@@ -93,6 +120,19 @@ namespace Chopper.Presentation.Effects
         public float DownwashSize => downwashSize;
         public Color DownwashColour => downwashColour;
         public float DownwashShake => downwashShake;
+        public Material DamageSparkMaterial => damageSparkMaterial;
+        public Material DamageSmokeMaterial => damageSmokeMaterial;
+        public float SparksPerDamage => sparksPerDamage;
+        public Vector2Int SparkCount => sparkCount;
+        public float SparkSpeed => sparkSpeed;
+        public float SmokeBelow => smokeBelow;
+        public float HeavySmokeBelow => heavySmokeBelow;
+        public float FireBelow => fireBelow;
+        public float SmokeRate => smokeRate;
+        public float SmokeSize => smokeSize;
+        public Color LightSmokeColour => lightSmokeColour;
+        public Color HeavySmokeColour => heavySmokeColour;
+        public int ImpactDust => impactDust;
 
         public void CollectProblems(List<string> problems)
         {
@@ -103,6 +143,8 @@ namespace Chopper.Presentation.Effects
             if (missile == null) problems.Add($"{name}: no missile prefab (rockets' visual is used).");
             if (flare == null) problems.Add($"{name}: no flare prefab, so flares are invisible.");
             if (downwashMaterial == null) problems.Add($"{name}: no downwash material, so low choppers blow up no dust.");
+            if (damageSparkMaterial == null) problems.Add($"{name}: no damage spark material, so hits show no sparks and damaged choppers no fire.");
+            if (damageSmokeMaterial == null) problems.Add($"{name}: no damage smoke material, so damaged choppers do not smoke.");
             if (effectsMixerGroup == null) problems.Add($"{name}: no effects mixer group, so prefab sounds skip the volume setting.");
         }
 
@@ -130,6 +172,13 @@ namespace Chopper.Presentation.Effects
         public void FillDownwash(Material material)
         {
             if (downwashMaterial == null) downwashMaterial = material;
+        }
+
+        /// <summary>Editor only: fills empty damage material slots.</summary>
+        public void FillDamage(Material sparks, Material smoke)
+        {
+            if (damageSparkMaterial == null) damageSparkMaterial = sparks;
+            if (damageSmokeMaterial == null) damageSmokeMaterial = smoke;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

@@ -44,7 +44,14 @@ namespace Chopper.Simulation.Combat
                 if (Explosions.TryRaycast(world, rocket.Shooter, rocket.Position, end, out var hit))
                 {
                     if (_damageLookup.TryGetBuffer(hit.Entity, out var direct))
-                        direct.Add(new DamageEvent { Amount = rocket.DirectDamage, Source = rocket.Shooter });
+                        direct.Add(new DamageEvent
+                        {
+                            Amount = rocket.DirectDamage,
+                            Source = rocket.Shooter,
+                            Point = hit.Position,
+                            Normal = hit.SurfaceNormal,
+                            Kind = DamageKind.Explosion,
+                        });
                     Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity);
                     ecb.DestroyEntity(entity);
                     continue;
