@@ -44,7 +44,8 @@ namespace Chopper.Editor.Setup
         private static readonly Color ConsoleGreen = new(0f, 1f, 0.58f);
         private static readonly Color CruisePink = new(1f, 0.259f, 0.537f);
         private static readonly Color LightningYellow = new(1f, 0.875f, 0.42f);
-        private static readonly Color ElectricBlueDark = new(0.027f, 0f, 0.098f);
+        // Console Green dark (#081B0A): the terminal backdrop behind the see-through hangar panels.
+        private static readonly Color ConsoleGreenDark = new(0.031f, 0.106f, 0.039f);
 
         public static void Apply(GameConfig config)
         {
@@ -247,7 +248,7 @@ namespace Chopper.Editor.Setup
             }
             camera.tag = "MainCamera";
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = ElectricBlueDark;
+            camera.backgroundColor = ConsoleGreenDark;
             camera.nearClipPlane = 0.1f;
             camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
 
