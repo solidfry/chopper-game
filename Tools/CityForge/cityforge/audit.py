@@ -106,6 +106,23 @@ def _corners(centre, size, yaw):
     return out
 
 
+class _Grid:
+    """Items in xz cells. `place(item)` = (x, z, reach): the item is listed in every cell its reach touches."""
+
+    CELL = 16.0
+
+    def __init__(self, items, place):
+        self.cells = {}
+        for item in items:
+            x, z, reach = place(item)
+            for i in range(int(math.floor((x - reach) / self.CELL)), int(math.floor((x + reach) / self.CELL)) + 1):
+                for k in range(int(math.floor((z - reach) / self.CELL)), int(math.floor((z + reach) / self.CELL)) + 1):
+                    self.cells.setdefault((i, k), []).append(item)
+
+    def near(self, x, z):
+        return self.cells.get((int(math.floor(x / self.CELL)), int(math.floor(z / self.CELL))), ())
+
+
 def _inside(collider, point, grow_side, grow_up):
     centre, size, yaw = collider
     a = math.radians(yaw)
@@ -147,13 +164,17 @@ def check(b):
         if centre[1] + size[1] / 2 > bounds[1][1] + 0.1:
             problems.append(f"wall       collider at ({centre[0]:+.1f}, {centre[2]:+.1f}) is higher than the mesh")
 
+    # Grid of colliders (and thin parts) by xz cell: big road and shanty parts have thousands of each, and testing
+    # every vertex against every collider took most of an export (5 Nov 2026).
+    grid = _Grid(b.colliders, lambda c: (c[0][0], c[0][2], 0.5 * math.hypot(c[1][0], c[1][2]) + UNCOVERED))
+    thin = _Grid(b.thin, lambda t: (t[0], t[1], t[3] if len(t) > 3 else 1.3))
     uncovered = []
     for p in points:
         if p.y < UNCOVERED:
             continue
-        if any(math.hypot(p.x - t[0], p.z - t[1]) < (t[3] if len(t) > 3 else 1.3) and p.y <= t[2] for t in b.thin):
+        if any(math.hypot(p.x - t[0], p.z - t[1]) < (t[3] if len(t) > 3 else 1.3) and p.y <= t[2] for t in thin.near(p.x, p.z)):
             continue
-        if not any(_inside(c, p, UNCOVERED, UNCOVERED) for c in b.colliders):
+        if not any(_inside(c, p, UNCOVERED, UNCOVERED) for c in grid.near(p.x, p.z)):
             uncovered.append(p)
     if uncovered:
         top = max(uncovered, key=lambda p: p.y)

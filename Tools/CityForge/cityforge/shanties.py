@@ -6,7 +6,8 @@ One Building placed at the city origin (terrain space), like the roads.
 
 Style settings (styles.py, "shanties"): step (degrees between cluster spots round the wall), chance (a spot gets a
 cluster), levels (shacks per cluster, low..high), height (lowest and highest floor above the crater floor, m),
-size ((width low, high), (height low, high)).
+start (share of that height range where a cluster's lowest level may start: 0 = all start at the bottom, 0.6 = some
+start well up the wall), size ((width low, high), (height low, high)).
 Kept away from lava, the canyon, tunnel portals and the map edge.
 """
 import math
@@ -18,7 +19,7 @@ from .buildings import _shack
 from .kit import L0, L01, Rect
 from .terrain import polyline_distance
 
-DEFAULTS = dict(step=2.4, chance=0.55, levels=(2, 7), height=(5.0, 120.0), size=((4.0, 8.0), (2.8, 3.6)))
+DEFAULTS = dict(step=2.4, chance=0.55, levels=(2, 7), height=(5.0, 120.0), start=0.0, size=((4.0, 8.0), (2.8, 3.6)))
 NEON = ("neon_pink", "neon_cyan", "neon_green")
 
 
@@ -30,6 +31,9 @@ def shanties(city, terrain, style):
     # A wall town at night is mostly lit windows: three times the style's share.
     b = roads._road_building("City_Shanties", dict(style, lit=min(0.4, style["lit"] * 3.0)), terrain.values["size"])
     b.ground_level = -60.0
+    # A whole wall town round the rim (5 Nov 2026: dense and tall at the owner's ask), not one building: a bigger
+    # LOD0 budget than the other map-wide parts. LOD1 and LOD2 keep the shared limits.
+    b.budgets = dict(roads.ROAD_BUDGETS, lod0=800000)
     rng = b.rng
     x0, x1, z0, z1 = terrain.city
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
@@ -65,7 +69,8 @@ def shanties(city, terrain, style):
         floor = float(terrain.sample(cx + math.cos(a0) * radii[0], cz + math.sin(a0) * radii[0]))
         count = rng.randint(*s["levels"])
         wide = rng.randint(2, 4)                # shacks side by side on the lowest level; fewer higher up
-        level = floor + rng.uniform(s["height"][0], s["height"][0] + 25.0)
+        low, high = s["height"]
+        level = floor + rng.uniform(low, low + max(25.0, s["start"] * (high - low)))
         drift = 0.0
         levels = []
         for k in range(count):

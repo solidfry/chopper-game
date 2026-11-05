@@ -19,6 +19,14 @@ or a normal Blender install (4.2 or newer):
 
     blender --background --python Tools/CityForge/generate.py -- [options]
 
+Blender's own Python needs `shapely` (and ignores the user package folder unless told). On Windows, once:
+
+    "C:/Program Files/Blender Foundation/Blender 5.2/5.2/python/bin/python.exe" -m pip install --user shapely
+
+then run with the user folder on the path:
+
+    PYTHONPATH="$APPDATA/Python/Python313/site-packages" blender --background --python-use-system-env         --python Tools/CityForge/generate.py -- --style crater --no-render --no-sheet
+
 Options: `--style NAME`, `--kit NAME` (default: the style's kit), `--out DIR` (default
 `Assets/Chopper/Art/City/<kit>`), `--previews DIR` (default `Tools/CityForge/previews/<kit>`), `--only A,B` (some
 buildings), `--no-render`, `--no-sheet` (skip the single-building renders), `--no-blend`, `--samples 32`.
@@ -108,7 +116,7 @@ Road meshes (each one FBX, placed once at the city origin, with colliders):
   dumpsters and barriers in the kerb lanes of the small streets. Industrial plots also get catwalks between
   vessels of the same height and a few yard vehicles (`kit.vehicle`). Preview: `pipes_day.jpg`.
 - `City_Shanties` (style option `shanties`, City04): a slum town dug into the inner rim wall
-  (`cityforge/shanties.py`). Clusters of 2 to 7 shacks climb the cliff (backs in the rock, fronts on stilts down to
+  (`cityforge/shanties.py`). Clusters of 4 to 16 levels climb the cliff up to 210 m (some start high up the wall) (backs in the rock, fronts on stilts down to
   the slope), steel stairs from roof to roof, cables between clusters, lit windows, some neon. Clear of lava, the
   canyon and the tunnel portals. Preview: `shanties_day.jpg`.
 - `City_SkyRoads`: a sky road loop round the core (120 to 180 m, rises and falls, goes over low buildings and round
