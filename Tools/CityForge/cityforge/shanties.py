@@ -108,10 +108,36 @@ def shanties(city, terrain, style):
                 x, y, z, _w, _h, facing = row[0]
                 px, py, pz, _pw, ph, _pf = min(levels[k - 1], key=lambda s_: math.hypot(s_[0] - x, s_[2] - z))
                 _stair(b, (px, py + ph + 0.12, pz), (x, y, z), facing)
+    _row_colliders(b, spots)
     spots = [[shack for row in levels for shack in row] for levels in spots]
     _cables(b, spots)
+    b.colliders = b.row_colliders      # cables, stairs and decks get none (see _row_colliders)
     b.clusters = spots          # for the preview shot
     return b
+
+
+def _row_colliders(b, spots):
+    """One box per row of shacks (a level of a cluster), not one per shack, deck, stair and cable: the wall town had
+    24 837 colliders, which overflowed the Entities name table and made the subscene bake run for many minutes
+    (5 Nov 2026). Players hit the shacks as blocks; stilts, stairs and cables are thin and have none, so the audit's
+    "uncovered points" check is off for this part (skip_uncovered)."""
+    boxes = []
+    saved, b.colliders = b.colliders, boxes
+    for levels in spots:
+        for row in levels:
+            mx, y, mz, _w, _h, facing = row[len(row) // 2]
+            yaw = _yaw(facing)
+            a = math.radians(yaw)
+            # Local +X of a Unity yaw is (cos, -sin) in world xz: the shacks' offsets along the row.
+            spans = [((x - mx) * math.cos(a) - (z - mz) * math.sin(a), w) for x, _y, z, w, _hh, _f in row]
+            u0 = min(u - w / 2 for u, w in spans) - 0.2
+            u1 = max(u + w / 2 for u, w in spans) + 0.2
+            top = max(h for _x, _y, _z, _w, h, _f in row)
+            with b.turned(mx, mz, yaw):
+                b.collider(mx + u0, mx + u1, y - 0.25, y + top, mz - 2.5, mz + 3.6)
+    b.colliders = saved
+    b.row_colliders = boxes
+    b.skip_uncovered = True
 
 
 def _clear(terrain, x, z, canyon_clear):

@@ -652,10 +652,12 @@ namespace Chopper.Editor.Setup
 
                 var colliders = new GameObject("Colliders") { isStatic = true };
                 colliders.transform.SetParent(root.transform, false);
-                var index = 0;
+                // One object per box, all named "Box": numbered names (Box_0, Box_1…) filled the Entities name table
+                // (16 384) with the old 24 837 shanty colliders. Several boxes on one object made the subscene bake
+                // hang (5 Nov 2026), so keep one each; CityForge keeps the counts low (shanties: one box per row).
                 foreach (var info in building.colliders ?? Array.Empty<ColliderInfo>())
                 {
-                    var box = new GameObject($"Box_{index++}") { isStatic = true };
+                    var box = new GameObject("Box") { isStatic = true };
                     box.transform.SetParent(colliders.transform, false);
                     box.transform.localPosition = Vector(info.centre);
                     box.transform.localRotation = Quaternion.Euler(0f, info.yaw, 0f);

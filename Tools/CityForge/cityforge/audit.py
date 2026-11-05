@@ -169,7 +169,7 @@ def check(b):
     grid = _Grid(b.colliders, lambda c: (c[0][0], c[0][2], 0.5 * math.hypot(c[1][0], c[1][2]) + UNCOVERED))
     thin = _Grid(b.thin, lambda t: (t[0], t[1], t[3] if len(t) > 3 else 1.3))
     uncovered = []
-    for p in points:
+    for p in ([] if getattr(b, "skip_uncovered", False) else points):
         if p.y < UNCOVERED:
             continue
         if any(math.hypot(p.x - t[0], p.z - t[1]) < (t[3] if len(t) > 3 else 1.3) and p.y <= t[2] for t in thin.near(p.x, p.z)):
