@@ -55,6 +55,7 @@ namespace Chopper.Presentation.Hangar
         private const string SkinKey = "Chopper.Hangar.Skin";
         private const string BuildKey = "Chopper.Hangar.Build.";
         private const string PresetsKey = "Chopper.Hangar.Presets.";
+        private const string TrainingMapKey = "Chopper.Hangar.TrainingMap";
         /// <summary>Longest preset name kept.</summary>
         public const int MaxPresetName = 24;
 
@@ -73,6 +74,17 @@ namespace Chopper.Presentation.Hangar
             _prefs.SetString(LoadoutKey, Encode(selection));
             _prefs.SetInt(SkinKey, skinId);
             SaveBuild(selection);
+        }
+
+        /// <summary>The scene of the last training map picked ("" = none yet).</summary>
+        public string TrainingMap
+        {
+            get => _prefs.GetString(TrainingMapKey, "");
+            set
+            {
+                _prefs.SetString(TrainingMapKey, value ?? "");
+                _prefs.Save();
+            }
         }
 
         /// <summary>The last build of one chassis (false when none was saved).</summary>

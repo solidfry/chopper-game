@@ -46,7 +46,8 @@ namespace Chopper.Presentation.Hangar
         [SerializeField, Tooltip("Scene presentation bridge; it owns the hangar model.")] private PresentationBridge bridge;
         [SerializeField] private UnityEngine.Camera viewCamera;
         [SerializeField, Tooltip("The chopper turns on this.")] private Transform turntable;
-        [SerializeField, Tooltip("Scene loaded by launch.")] private string matchScene = ChopperBootstrap.TrainingRangeScene;
+        [SerializeField, Tooltip("Scene loaded by launch when there is no map catalog, and for an online server that does not " +
+                                  "announce its map.")] private string matchScene = ChopperBootstrap.TrainingRangeScene;
 
         private sealed class Part
         {
@@ -1003,7 +1004,8 @@ namespace Chopper.Presentation.Hangar
             _launching = true;
             // False when worlds already run (a match scene opened the hangar): just load the scene.
             LocalSession.Start();
-            SceneManager.LoadScene(matchScene);
+            // Training: the map picked in the hangar (MAP list).
+            SceneManager.LoadScene(string.IsNullOrEmpty(_model.TrainingScene) ? matchScene : _model.TrainingScene);
         }
 
         private void OnMatchRequested() => FindMatchAsync().Forget();
@@ -1045,10 +1047,15 @@ namespace Chopper.Presentation.Hangar
                     return;
                 }
                 _launching = true;
-                SceneManager.LoadScene(matchScene);
+                // The server picked the map (random from the match pool); it tells us on connect.
+                _model.SetMatchStatus("LOADING MAP", true);
+                var scene = await AnnouncedMapScene(token);
+                SceneManager.LoadScene(scene);
             }
             catch (OperationCanceledException)
             {
+                if (_launching) LocalSession.Stop();       // cancelled while waiting for the map: leave the server
+                _launching = false;
                 if (this != null) _model.SetMatchStatus("", false);
             }
             catch (Exception e)
@@ -1056,6 +1063,34 @@ namespace Chopper.Presentation.Hangar
                 Debug.LogWarning($"Matchmaking failed: {e}");
                 if (this != null) _model.SetMatchStatus(e.Message.ToUpperInvariant(), false);
             }
+        }
+
+        /// <summary>Seconds to wait for the server's map before loading <see cref="matchScene"/> (an older server build).</summary>
+        private const float MapAnnouncementTimeout = 20f;
+
+        /// <summary>The scene of the map the joined server announced (<see cref="AnnouncedMap"/>, sent on connect).</summary>
+        private async UniTask<string> AnnouncedMapScene(CancellationToken token)
+        {
+            var maps = _context.Config != null ? _context.Config.Maps : null;
+            var until = Time.realtimeSinceStartup + MapAnnouncementTimeout;
+            while (Time.realtimeSinceStartup < until)
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (var world in Unity.Entities.World.All)
+                {
+                    if (!world.IsCreated || !Unity.NetCode.ClientServerWorldExtensions.IsClient(world)) continue;
+                    using var query = world.EntityManager.CreateEntityQuery(typeof(AnnouncedMap));
+                    if (query.IsEmpty) continue;
+                    var id = query.GetSingleton<AnnouncedMap>().MapId;
+                    var map = maps != null ? maps.Find(id) : null;
+                    if (map != null) return map.Scene;
+                    Debug.LogWarning($"Server map {id} is not in this build's map catalog; loading {matchScene}.");
+                    return matchScene;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+            Debug.LogWarning($"The server did not say its map in {MapAnnouncementTimeout} s; loading {matchScene}.");
+            return matchScene;
         }
 
         /// <summary>Wire octahedron (unit size) for empty sockets.</summary>

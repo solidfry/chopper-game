@@ -545,6 +545,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Bridge.PresentationBridge
   config: {fileID: 11400000, guid: 6bea1736c1fc47345a187ce3bece3873, type: 2}
   cameraRig: {fileID: 595009873}
+  music: 0
   musicOverride: {fileID: 0}
 --- !u!4 &251511199
 Transform:
@@ -1280,6 +1281,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1125906949}
   - component: {fileID: 1125906948}
+  - component: {fileID: 1125906950}
   m_Layer: 0
   m_Name: ChopperSpawner
   m_TagString: Untagged
@@ -1319,6 +1321,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1125906950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1125906947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b715e9346189c09489698e17c59d8ecf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Session.MatchMapAuthoring
+  mapId: 0
 --- !u!1001 &1147797073
 PrefabInstance:
   m_ObjectHideFlags: 0

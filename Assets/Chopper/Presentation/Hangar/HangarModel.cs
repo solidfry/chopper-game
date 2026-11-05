@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Visuals;
 using Chopper.Simulation.Loadout;
+using Chopper.Simulation.Session;
 
 namespace Chopper.Presentation.Hangar
 {
@@ -134,6 +135,8 @@ namespace Chopper.Presentation.Hangar
         private readonly SkinLibrary _skins;
         private readonly LoadoutChoiceStore _store;
         private readonly IPlayerUnlocks _unlocks;
+        private readonly List<MapCatalog.MapEntry> _trainingMaps = new();
+        private readonly List<string> _trainingMapNames = new();
         private readonly Dictionary<ushort, ModuleDefinition[]> _fitted = new();
         private readonly Dictionary<ushort, List<LoadoutPreset>> _presets = new();
         /// <summary>Choices for the focused slot; index 0 is "empty" (null).</summary>
@@ -154,12 +157,21 @@ namespace Chopper.Presentation.Hangar
         private float _minRefill = 1f;
         private int _hovered = -1;
 
-        public HangarModel(LoadoutCatalog catalog, SkinLibrary skins, LoadoutChoiceStore store, IPlayerUnlocks unlocks)
+        public HangarModel(LoadoutCatalog catalog, SkinLibrary skins, LoadoutChoiceStore store, IPlayerUnlocks unlocks,
+            MapCatalog maps = null)
         {
             _catalog = catalog;
             _skins = skins;
             _store = store;
             _unlocks = unlocks ?? new AllUnlocked();
+            if (maps != null)
+                foreach (var map in maps.Training())
+                {
+                    _trainingMaps.Add(map);
+                    _trainingMapNames.Add((string.IsNullOrEmpty(map.DisplayName) ? map.Scene : map.DisplayName).ToUpperInvariant());
+                }
+            var savedMap = _store?.TrainingMap;
+            TrainingMapIndex = Math.Max(0, _trainingMaps.FindIndex(m => m.Scene == savedMap));
 
             foreach (var chassis in _catalog.Chassis)
             {
@@ -214,6 +226,19 @@ namespace Chopper.Presentation.Hangar
         }
         /// <summary>Named builds of the current chassis.</summary>
         public IReadOnlyList<string> PresetNames => _presetNames;
+        /// <summary>Maps the player can train on (hangar MAP list); empty without a map catalog.</summary>
+        public IReadOnlyList<string> TrainingMapNames => _trainingMapNames;
+        public int TrainingMapIndex { get; private set; }
+        /// <summary>Scene of the picked training map; null without a map catalog (the scene's default then).</summary>
+        public string TrainingScene => TrainingMapIndex < _trainingMaps.Count ? _trainingMaps[TrainingMapIndex].Scene : null;
+
+        /// <summary>Picks the training map (saved for next time).</summary>
+        public void SetTrainingMap(int index)
+        {
+            if (index < 0 || index >= _trainingMaps.Count || index == TrainingMapIndex) return;
+            TrainingMapIndex = index;
+            if (_store != null) _store.TrainingMap = _trainingMaps[index].Scene;
+        }
         public float WeightFraction { get; private set; }
         public float PreviewWeightFraction { get; private set; }
         public string WeightText { get; private set; } = "";

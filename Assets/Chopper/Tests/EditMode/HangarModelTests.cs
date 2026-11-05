@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Chopper.Presentation.Hangar;
 using Chopper.Simulation.Flight;
 using Chopper.Simulation.Loadout;
+using Chopper.Simulation.Session;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -48,6 +49,39 @@ namespace Chopper.Tests
             _catalog = ScriptableObject.CreateInstance<LoadoutCatalog>();
             _created.Add(_catalog);
             _catalog.Initialise(new[] { scout, gunship }, new[] { _gun, _heavyGun, _laser, _rotor });
+        }
+
+        private MapCatalog Maps()
+        {
+            var maps = ScriptableObject.CreateInstance<MapCatalog>();
+            _created.Add(maps);
+            maps.Add("TrainingRange", "Training Range", inTraining: true, inMatchPool: false);
+            maps.Add("Map_City04", "City04", inTraining: true, inMatchPool: true);
+            maps.Add("Map_Hidden", "Hidden", inTraining: false, inMatchPool: true);
+            return maps;
+        }
+
+        [Test]
+        public void TrainingMaps_ListsTrainingMapsAndKeepsThePick()
+        {
+            var store = new LoadoutChoiceStore(new MemoryPrefs());
+            var model = new HangarModel(_catalog, null, store, null, Maps());
+            Assert.AreEqual(new[] { "TRAINING RANGE", "CITY04" }, model.TrainingMapNames);
+            Assert.AreEqual("TrainingRange", model.TrainingScene);
+
+            model.SetTrainingMap(1);
+            Assert.AreEqual("Map_City04", model.TrainingScene);
+            var again = new HangarModel(_catalog, null, store, null, Maps());
+            Assert.AreEqual(1, again.TrainingMapIndex, "the pick is saved");
+        }
+
+        [Test]
+        public void MapCatalog_RandomMatchMapOnlyFromThePool()
+        {
+            var maps = Maps();
+            for (var roll = 0f; roll < 1f; roll += 0.05f)
+                Assert.IsTrue(maps.RandomMatchMap(roll).InMatchPool);
+            Assert.AreEqual(3, new HashSet<byte> { maps.Maps[0].Id, maps.Maps[1].Id, maps.Maps[2].Id }.Count, "ids differ");
         }
 
         [TearDown]

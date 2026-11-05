@@ -97,6 +97,7 @@ namespace Chopper.UI.Hangar
         private VisualElement _tiles;
         private Label _error;
         private Button _launch;
+        private DropdownField _trainingMap;
         private Button _findMatch;
         private Label _matchStatus;
         /// <summary>Unscaled time the current search started; -1 when not searching.</summary>
@@ -197,6 +198,7 @@ namespace Chopper.UI.Hangar
             _tiles = _root.Q("tiles");
             _error = _root.Q<Label>("error");
             _launch = _root.Q<Button>("launch");
+            _trainingMap = _root.Q<DropdownField>("training-map");
             _findMatch = _root.Q<Button>("find-match");
             _matchStatus = _root.Q<Label>("match-status");
 
@@ -206,6 +208,7 @@ namespace Chopper.UI.Hangar
             _presetDelete.clicked += OnPresetDelete;
             _back.clicked += OnBack;
             _launch.clicked += OnLaunch;
+            _trainingMap?.RegisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked += OnFindMatch;
             _model.MatchStatusChanged += RefreshMatch;
             Refresh();
@@ -221,6 +224,7 @@ namespace Chopper.UI.Hangar
             _presetDelete.clicked -= OnPresetDelete;
             _back.clicked -= OnBack;
             _launch.clicked -= OnLaunch;
+            _trainingMap?.UnregisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked -= OnFindMatch;
             _model.MatchStatusChanged -= RefreshMatch;
             _cards.Clear();
@@ -303,6 +307,7 @@ namespace Chopper.UI.Hangar
             RefreshDetail();
 
             BuildSkins();
+            BuildTrainingMaps();
             _error.text = _model.Error;
             RefreshMatch();
         }
@@ -343,6 +348,20 @@ namespace Chopper.UI.Hangar
                 _chassisGrid.Add(card);
             }
         }
+
+        /// <summary>Training map list (online matches get a random map from the server). Hidden with no maps.</summary>
+        private void BuildTrainingMaps()
+        {
+            if (_trainingMap == null) return;
+            var names = _model.TrainingMapNames;
+            _trainingMap.style.display = names.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (names.Count == 0) return;
+            _trainingMap.choices = new List<string>(names);
+            _trainingMap.SetValueWithoutNotify(names[Mathf.Clamp(_model.TrainingMapIndex, 0, names.Count - 1)]);
+            _trainingMap.SetEnabled(!_model.Searching);
+        }
+
+        private void OnTrainingMapChanged(ChangeEvent<string> evt) => _model.SetTrainingMap(_trainingMap.index);
 
         private void BuildPresets()
         {

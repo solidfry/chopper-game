@@ -32,6 +32,8 @@ namespace Chopper.Editor.Setup
         public const TimeOfDay DefaultTime = TimeOfDay.Night;
         public const Weather DefaultWeather = Weather.Clear;
         private const string EnvironmentPath = "Assets/Chopper/Data/Rendering/EnvironmentSettings.asset";
+        public const string CatalogPath = "Assets/Chopper/Data/Maps/MapCatalog.asset";
+        private const string TrainingGameplayScene = "Assets/Scenes/TrainingRange/TrainingRange_Gameplay.unity";
         private const string SubSceneType = "Unity.Scenes.SubScene, Unity.Scenes";
         /// <summary>Spawn this high over the chosen mesa top (m).</summary>
         private const float SpawnHeight = 30f;
@@ -52,6 +54,7 @@ namespace Chopper.Editor.Setup
             }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             var environment = EnsureEnvironment(config);
+            var catalog = EnsureCatalog(config);
             var built = 0;
             var returnTo = SceneManager.GetActiveScene().path;
             foreach (var map in CityAssets.Maps())
@@ -61,7 +64,14 @@ namespace Chopper.Editor.Setup
                     Debug.LogWarning($"Setup: city {map.Kit} has no city scene. Press '8. Import city (CityForge)' first.");
                     continue;
                 }
-                Build(config, environment, map.Kit, map.Terrain);
+                // Load again each time: opening a scene can unload assets, which leaves an old handle dead.
+                catalog = AssetDatabase.LoadAssetAtPath<MapCatalog>(CatalogPath);
+                environment = AssetDatabase.LoadAssetAtPath<EnvironmentSettings>(EnvironmentPath);
+                var entry = catalog.Add(Path.GetFileNameWithoutExtension(ScenePath(map.Kit)), map.Kit, inTraining: true, inMatchPool: true);
+                var mapId = entry.Id;
+                EditorUtility.SetDirty(catalog);
+                AssetDatabase.SaveAssetIfDirty(catalog);
+                Build(config, environment, map.Kit, map.Terrain, mapId);
                 built++;
             }
             if (!string.IsNullOrEmpty(returnTo) && File.Exists(returnTo)) EditorSceneManager.OpenScene(returnTo, OpenSceneMode.Single);
@@ -74,13 +84,15 @@ namespace Chopper.Editor.Setup
             var config = ConfigAssets.Load();
             if (config != null && config.Environment == null)
                 yield return ("No environment settings (time of day, weather). Press '10. City match scenes'.", null);
-            var inBuild = EditorBuildSettings.scenes.Select(s => s.path).ToHashSet();
+            if (config != null && config.Maps == null)
+                yield return ("No map catalog (training maps, match pool). Press '10. City match scenes'.", null);
+            var inBuild = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToHashSet();
             foreach (var map in CityAssets.Maps())
             {
                 if (map.Terrain == null) continue;
                 var path = ScenePath(map.Kit);
                 if (!File.Exists(path)) yield return ($"City {map.Kit}: no match scene. Press '10. City match scenes'.", null);
-                else if (!inBuild.Contains(path)) yield return ($"{path} is not in the build settings. Press '10. City match scenes'.", null);
+                else if (!inBuild.Contains(path)) yield return ($"{path} is not on in the build settings. Press '10. City match scenes'.", null);
             }
         }
 
@@ -103,15 +115,72 @@ namespace Chopper.Editor.Setup
             {
                 config.SetEnvironment(settings);
                 EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssetIfDirty(config);
             }
             return settings;
         }
 
+        // -- map catalog ------------------------------------------------------------------------------------------
+
+        /// <summary>The map list: the training range first (training only: not a match map), then each city map as
+        /// it is built (training and match pool). Linked to the GameConfig. Hand edits (names, pool) stay.</summary>
+        internal static MapCatalog EnsureCatalog(GameConfig config)
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<MapCatalog>(CatalogPath);
+            if (catalog == null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(CatalogPath));
+                catalog = ScriptableObject.CreateInstance<MapCatalog>();
+                AssetDatabase.CreateAsset(catalog, CatalogPath);
+            }
+            var training = catalog.Add(ChopperBootstrap.TrainingRangeScene, "Training Range", inTraining: true, inMatchPool: false);
+            var trainingId = training.Id;
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssetIfDirty(catalog);
+            EnsureMapIdentity(TrainingGameplayScene, trainingId);
+            catalog = AssetDatabase.LoadAssetAtPath<MapCatalog>(CatalogPath);
+            if (config != null && config.Maps != catalog)
+            {
+                config.SetMaps(catalog);
+                EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssetIfDirty(config);
+            }
+            return catalog;
+        }
+
+        /// <summary>A <see cref="MatchMapAuthoring"/> with the map id on the scene's spawner (or a new object).</summary>
+        private static void EnsureMapIdentity(string scenePath, byte id)
+        {
+            if (!File.Exists(scenePath)) return;
+            var open = SceneManager.GetSceneByPath(scenePath);
+            var scene = open.isLoaded ? open : EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            try
+            {
+                var identity = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MatchMapAuthoring>(true)).FirstOrDefault();
+                if (identity != null && identity.MapId == id) return;
+                if (identity == null)
+                {
+                    var spawner = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)).FirstOrDefault();
+                    var host = spawner != null ? spawner.gameObject : new GameObject("Map Identity");
+                    if (spawner == null) SceneManager.MoveGameObjectToScene(host, scene);
+                    identity = host.AddComponent<MatchMapAuthoring>();
+                }
+                identity.Set(id);
+                EditorUtility.SetDirty(identity);
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+            }
+            finally
+            {
+                if (!open.isLoaded) EditorSceneManager.CloseScene(scene, removeScene: true);
+            }
+        }
+
         // -- scenes -------------------------------------------------------------------------------------------------
 
-        private static void Build(GameConfig config, EnvironmentSettings environment, string kit, CityAssets.TerrainData terrain)
+        private static void Build(GameConfig config, EnvironmentSettings environment, string kit, CityAssets.TerrainData terrain, byte mapId)
         {
-            var gameplayPath = BuildGameplayScene(kit, terrain);
+            var gameplayPath = BuildGameplayScene(kit, terrain, mapId);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             EditorSceneManager.SaveScene(scene, ScenePath(kit));
@@ -137,7 +206,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>The map's gameplay subscene: rebuilt each time (only generated content).</summary>
-        private static string BuildGameplayScene(string kit, CityAssets.TerrainData terrain)
+        private static string BuildGameplayScene(string kit, CityAssets.TerrainData terrain, byte mapId)
         {
             var path = GameplayScenePath(kit);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -149,6 +218,8 @@ namespace Chopper.Editor.Setup
                 SceneManager.MoveGameObjectToScene(spawner, scene);
                 spawner.transform.SetPositionAndRotation(spawn, facing);
                 spawner.AddComponent<ChopperSpawnerAuthoring>();
+                // Which map this is: the server tells online clients (MatchMapAnnounceSystem).
+                spawner.AddComponent<MatchMapAuthoring>().Set(mapId);
 
                 var settings = new GameObject("Gameplay Settings");
                 SceneManager.MoveGameObjectToScene(settings, scene);
@@ -266,8 +337,10 @@ namespace Chopper.Editor.Setup
         private static void AddToBuild(string path)
         {
             var scenes = EditorBuildSettings.scenes.ToList();
-            if (scenes.Any(s => s.path == path)) return;
-            scenes.Add(new EditorBuildSettingsScene(path, true));
+            var listed = scenes.FirstOrDefault(s => s.path == path);
+            if (listed != null && listed.enabled) return;
+            if (listed != null) listed.enabled = true;          // listed but off: training could not load it
+            else scenes.Add(new EditorBuildSettingsScene(path, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
     }

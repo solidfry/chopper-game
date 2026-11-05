@@ -49,7 +49,8 @@ namespace Chopper.Editor.Setup
                 return true;
             }
 
-            foreach (var path in SubScenePathsInOpenScenes())
+            // City scenes (step 8) never hold the spawner and are big to open: skip them.
+            foreach (var path in SubScenePathsInOpenScenes().Where(p => !IsCityScene(p)))
             {
                 var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
                 try
@@ -77,6 +78,11 @@ namespace Chopper.Editor.Setup
         private static string[] SubScenePathsInOpenScenes() => SubScenesInOpenScenes().Select(s => s.Path).Distinct().ToArray();
 
         /// <summary>Each SubScene in the open scenes: the scene that holds it and the path of its scene asset.</summary>
+        /// <summary>A city scene from step 8: Scenes/&lt;kit&gt;.unity with an Art/City/&lt;kit&gt; folder.</summary>
+        private static bool IsCityScene(string path) =>
+            System.IO.Directory.Exists($"{CityAssets.CityFolder}/{System.IO.Path.GetFileNameWithoutExtension(path)}") &&
+            string.Equals(CityAssets.ScenePath(System.IO.Path.GetFileNameWithoutExtension(path)), path, StringComparison.OrdinalIgnoreCase);
+
         internal static (Scene Host, string Path)[] SubScenesInOpenScenes()
         {
             return Enumerable.Range(0, SceneManager.sceneCount)

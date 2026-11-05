@@ -7,6 +7,7 @@ using Chopper.Presentation.Hud;
 using Chopper.Presentation.Visuals;
 using Chopper.Simulation.Config;
 using Chopper.Simulation.Loadout;
+using Chopper.Simulation.Session;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -49,6 +50,8 @@ namespace Chopper.Presentation.Config
         [SerializeField, Tooltip("Hangar wireframe look and camera. Setup step 7 links it.")] private HangarSettings hangar;
         [SerializeField, Tooltip("Look of each time of day and weather (city match scenes). Setup step 10 links it.")]
         private EnvironmentSettings environment;
+        [SerializeField, Tooltip("Every playable map (training list, match pool). Setup step 10 links it.")]
+        private MapCatalog maps;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
         public SkinLibrary Skins => skins;
@@ -65,6 +68,7 @@ namespace Chopper.Presentation.Config
         public PanelSettings CockpitScreensPanel => cockpitScreensPanel;
         public HangarSettings Hangar => hangar;
         public EnvironmentSettings Environment => environment;
+        public MapCatalog Maps => maps;
 
         public void CollectProblems(List<string> problems)
         {
@@ -92,6 +96,7 @@ namespace Chopper.Presentation.Config
             if (skins != null) skins.CollectProblems(problems);
             if (hangar != null) hangar.CollectProblems(problems);
             if (environment != null) environment.CollectProblems(problems);
+            if (maps != null) maps.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -128,6 +133,9 @@ namespace Chopper.Presentation.Config
 
         /// <summary>Editor only: used by the city match scene step.</summary>
         public void SetEnvironment(EnvironmentSettings settings) => environment = settings;
+
+        /// <summary>Editor only: used by the city match scene step.</summary>
+        public void SetMaps(MapCatalog catalog) => maps = catalog;
 
         private void Require(Object value, string label, List<string> problems)
         {

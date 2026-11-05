@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Chopper.Simulation;
 using UnityEditor;
 using UnityEditor.Build;
@@ -8,7 +9,9 @@ using UnityEngine;
 namespace Chopper.Editor.Setup
 {
     /// <summary>
-    /// "Build Linux server" (plan section 4, Edgegap): a Linux dedicated server (headless) with the gameplay scene only,
+    /// "Build Linux server" (plan section 4, Edgegap): a Linux dedicated server (headless): the boot scene
+    /// (<see cref="BootScene"/>, picks the match map: <c>-map</c> or random from the map catalog's match pool) and every
+    /// match-pool map scene (no catalog: the training range only),
     /// to <see cref="OutputFolder"/>, plus the Dockerfile from <c>Tools/Edgegap</c>. Needs the Unity Hub module "Linux
     /// Dedicated Server Build Support". The server makes only a server world and listens on port 7979
     /// (<see cref="ChopperBootstrap"/>).
@@ -25,6 +28,7 @@ namespace Chopper.Editor.Setup
         private const string Executable = "AirwingServer.x86_64";
         private const string Dockerfile = "Tools/Edgegap/Dockerfile";
         private const string GameplayScene = "Assets/Scenes/" + ChopperBootstrap.TrainingRangeScene + ".unity";
+        public const string BootScene = "Assets/Scenes/ServerBoot.unity";
         private const string PendingKey = "Chopper.ServerBuild.Pending";
         private const string ReturnTargetKey = "Chopper.ServerBuild.ReturnTarget";
         private const string ReturnSubtargetKey = "Chopper.ServerBuild.ReturnSubtarget";
@@ -91,6 +95,38 @@ namespace Chopper.Editor.Setup
             }
         }
 
+        /// <summary>The boot scene and the match maps; just the training range without a map catalog.</summary>
+        private static string[] ServerScenes()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<Chopper.Simulation.Session.MapCatalog>(MapSceneSetup.CatalogPath);
+            if (catalog == null) return new[] { GameplayScene };
+            var scenes = new System.Collections.Generic.List<string> { EnsureBootScene(catalog) };
+            foreach (var map in catalog.Maps)
+            {
+                if (map == null || !map.InMatchPool) continue;
+                var path = AssetDatabase.FindAssets($"t:Scene {map.Scene}")
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .FirstOrDefault(p => Path.GetFileNameWithoutExtension(p) == map.Scene);
+                if (path != null) scenes.Add(path);
+                else Debug.LogWarning($"Server build: map scene {map.Scene} not found; the server cannot run it.");
+            }
+            Debug.Log($"Server build: scenes {string.Join(", ", scenes)}.");
+            return scenes.ToArray();
+        }
+
+        /// <summary>The server's first scene: only a <see cref="Chopper.Simulation.Session.ServerMapLoader"/>.</summary>
+        private static string EnsureBootScene(Chopper.Simulation.Session.MapCatalog catalog)
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
+                UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+            var loader = new GameObject("Server Map Loader").AddComponent<Chopper.Simulation.Session.ServerMapLoader>();
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(loader.gameObject, scene);
+            loader.SetCatalog(catalog);
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, BootScene);
+            UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, removeScene: true);
+            return BootScene;
+        }
+
         private static bool IsOnLinuxServer() =>
             EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneLinux64 &&
             EditorUserBuildSettings.standaloneBuildSubtarget == StandaloneBuildSubtarget.Server;
@@ -107,7 +143,7 @@ namespace Chopper.Editor.Setup
                 PlayerSettings.productName = productName.Replace(":", "");
                 report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {
-                    scenes = new[] { GameplayScene },
+                    scenes = ServerScenes(),
                     locationPathName = Path.Combine(OutputFolder, Executable),
                     target = BuildTarget.StandaloneLinux64,
                     subtarget = (int)StandaloneBuildSubtarget.Server,

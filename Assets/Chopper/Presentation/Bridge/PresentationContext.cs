@@ -66,7 +66,7 @@ namespace Chopper.Presentation.Bridge
         public LoadoutChoiceStore LoadoutChoices { get; } = new();
         /// <summary>Hangar view model; made on first use (null without a loadout catalog). Only the hangar scene uses it.</summary>
         public HangarModel Hangar => _hangar ??= Config != null && Config.LoadoutCatalog != null
-            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked())
+            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked(), Config.Maps)
             : null;
         public bool IsDisposed { get; private set; }
 
