@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chopper.Presentation.Camera;
 using Chopper.Presentation.Effects;
 using Chopper.Simulation.Combat;
 using NUnit.Framework;
@@ -92,6 +93,27 @@ namespace Chopper.Tests
             Assert.That(points.Count, Is.EqualTo(DamageLook.MaxPoints));
             Assert.That(points[0].Point.x, Is.EqualTo(2f), "The oldest hole went.");
             Assert.That(DamageLook.LeavesMark(DamageKind.Landing), Is.False);
+        }
+    
+        [Test]
+        public void HitTrauma_MatchesTheImpact()
+        {
+            var settings = ScriptableObject.CreateInstance<CameraSettings>();
+            try
+            {
+                // Crashes shake by speed: a hard hit shakes hard even when the curve keeps its damage low.
+                Assert.That(settings.HitTrauma(DamageKind.Impact, 1f, 30f), Is.EqualTo(1f).Within(1e-4f));
+                Assert.That(settings.HitTrauma(DamageKind.Impact, 1f, 15f), Is.EqualTo(0.5f).Within(1e-4f));
+                Assert.That(settings.HitTrauma(DamageKind.Landing, 1f, 15f), Is.LessThan(settings.HitTrauma(DamageKind.Impact, 1f, 15f)));
+                // Guns and blasts shake by damage; a blast more than a bullet.
+                Assert.That(settings.HitTrauma(DamageKind.Bullet, 20f, 0f), Is.EqualTo(0.5f).Within(1e-4f));
+                Assert.That(settings.HitTrauma(DamageKind.Explosion, 20f, 0f), Is.GreaterThan(0.5f));
+                Assert.That(settings.HitTrauma(DamageKind.Bounds, 50f, 0f), Is.EqualTo(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(settings);
+            }
         }
     }
 }

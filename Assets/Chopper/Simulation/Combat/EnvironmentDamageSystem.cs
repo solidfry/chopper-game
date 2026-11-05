@@ -102,6 +102,7 @@ namespace Chopper.Simulation.Combat
                             Point = point,
                             Normal = normal,
                             Kind = landing ? DamageKind.Landing : DamageKind.Impact,
+                            ImpactSpeed = speed,
                         });
                     }
                 }

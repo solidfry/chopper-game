@@ -30,7 +30,17 @@ namespace Chopper.Presentation.Events
         /// <summary>False for crash and bounds damage.</summary>
         public readonly bool HasSource;
         public readonly Vector3 SourcePosition;
-        public DamageTaken(float amount, bool hasSource, Vector3 sourcePosition) { Amount = amount; HasSource = hasSource; SourcePosition = sourcePosition; }
+        public readonly DamageKind Kind;
+        /// <summary>Crashes and landings: impact speed (m/s). 0 for other hits.</summary>
+        public readonly float ImpactSpeed;
+        public DamageTaken(float amount, bool hasSource, Vector3 sourcePosition, DamageKind kind, float impactSpeed)
+        {
+            Amount = amount;
+            HasSource = hasSource;
+            SourcePosition = sourcePosition;
+            Kind = kind;
+            ImpactSpeed = impactSpeed;
+        }
     }
 
     public readonly struct ScoreChanged

@@ -53,6 +53,8 @@ namespace Chopper.Simulation.Combat
         /// <summary>World direction out of the victim's surface at <see cref="Point"/> (sparks fly this way).</summary>
         public float3 Normal;
         public DamageKind Kind;
+        /// <summary>Crashes and landings: the impact speed (m/s), for the victim's camera shake. 0 for other hits.</summary>
+        public float ImpactSpeed;
 
         public bool HasPoint => Kind is DamageKind.Bullet or DamageKind.Explosion or DamageKind.Impact or DamageKind.Landing;
     }
@@ -81,6 +83,10 @@ namespace Chopper.Simulation.Combat
         public float3 SourcePosition;
         /// <summary>False for crash and bounds damage.</summary>
         public bool HasSource;
+        /// <summary>A <see cref="DamageKind"/> as a byte: the camera shake matches the kind of hit.</summary>
+        public byte Kind;
+        /// <summary>Crashes and landings: impact speed (m/s). 0 for other hits.</summary>
+        public float ImpactSpeed;
     }
 
     /// <summary>Server to shooter: your shot hit. Drives the hit marker, so the client never shows a fake hit.</summary>

@@ -88,6 +88,8 @@ namespace Chopper.Simulation.Combat
                             Amount = hit.Amount,
                             SourcePosition = sourcePose.Position,
                             HasSource = hasSource,
+                            Kind = (byte)hit.Kind,
+                            ImpactSpeed = hit.ImpactSpeed,
                         });
                         ecb.AddComponent(taken, new SendRpcCommandRequest { TargetConnection = victimConnection.Value });
                     }

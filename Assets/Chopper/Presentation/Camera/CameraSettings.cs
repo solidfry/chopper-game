@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Chopper.Simulation.Combat;
 using Chopper.Simulation.Config;
 using UnityEngine;
 
@@ -128,6 +129,15 @@ namespace Chopper.Presentation.Camera
         private float maxShakeDegrees = 4f;
         [SerializeField, Tooltip("Trauma lost per second.")] private float shakeRecovery = 1.5f;
         [SerializeField] private float shakeFrequency = 18f;
+        [SerializeField, Tooltip("Gun and blast hits: damage that gives full trauma in one hit.")]
+        private float fullTraumaDamage = 40f;
+        [SerializeField, Tooltip("Blasts shake this much more than a gun hit of the same damage.")]
+        private float explosionShake = 1.3f;
+        [SerializeField, Tooltip("Crashes: impact speed (m/s) that gives full trauma. A crash shakes by its speed, so a hard " +
+                                 "hit shakes hard even when the damage curve keeps the damage low.")]
+        private float fullTraumaImpactSpeed = 30f;
+        [SerializeField, Tooltip("Hard landings shake this share of a wall hit at the same speed (the skids take some).")]
+        private float landingShake = 0.8f;
 
         [Header("Weight (inertia lag)")]
         [SerializeField, Tooltip("Metres the camera falls behind per m/s² of acceleration: the chopper pulls away when it speeds up, "
@@ -175,6 +185,26 @@ namespace Chopper.Presentation.Camera
         public float MaxShakeDegrees => maxShakeDegrees;
         public float ShakeRecovery => shakeRecovery;
         public float ShakeFrequency => shakeFrequency;
+
+        /// <summary>
+        /// Trauma (0..1) for one hit taken: guns and blasts by damage, crashes and landings by impact speed, out of
+        /// bounds none (it ticks every frame; the HUD warns instead).
+        /// </summary>
+        public float HitTrauma(DamageKind kind, float damage, float impactSpeed)
+        {
+            switch (kind)
+            {
+                case DamageKind.Bounds:
+                    return 0f;
+                case DamageKind.Impact:
+                case DamageKind.Landing:
+                    var share = fullTraumaImpactSpeed > 0f ? impactSpeed / fullTraumaImpactSpeed : 1f;
+                    return Mathf.Clamp01(share * (kind == DamageKind.Landing ? landingShake : 1f));
+                default:
+                    var scale = kind == DamageKind.Explosion ? explosionShake : 1f;
+                    return fullTraumaDamage > 0f ? Mathf.Clamp01(damage / fullTraumaDamage * scale) : 1f;
+            }
+        }
         public float AccelerationLag => accelerationLag;
         public float MaxLag => maxLag;
         public float LagSharpness => lagSharpness;

@@ -11,9 +11,6 @@ namespace Chopper.Presentation.Feedback
     /// </summary>
     public sealed class CombatFeedback : IDisposable
     {
-        /// <summary>Damage that gives full camera trauma in one hit.</summary>
-        private const float FullTraumaDamage = 40f;
-
         private readonly PresentationContext _context;
         private readonly IDisposable _hits;
         private readonly IDisposable _damage;
@@ -46,7 +43,8 @@ namespace Chopper.Presentation.Feedback
 
             var rig = _context.CameraRig;
             if (rig == null) return;
-            rig.AddShake(Mathf.Clamp01(damage.Amount / FullTraumaDamage));
+            // The shake matches the hit: guns and blasts by damage, crashes and landings by impact speed (CameraSettings).
+            rig.AddShake(rig.ActiveSettings.HitTrauma(damage.Kind, damage.Amount, damage.ImpactSpeed));
             if (damage.HasSource)
                 _context.Hud.ShowDamageFrom(DirectionFromCamera(rig.transform, damage.SourcePosition));
         }
