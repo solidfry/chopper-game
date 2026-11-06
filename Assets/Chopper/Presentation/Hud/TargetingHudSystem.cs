@@ -53,6 +53,7 @@ namespace Chopper.Presentation.Hud
             var needsLock = false;
             var pylonRounds = 0;
             var pylonMagazine = 0;
+            var pylonReload = 1f;
             if (SystemAPI.HasBuffer<PylonWeapon>(self))
             {
                 var weapons = SystemAPI.GetBuffer<PylonWeapon>(self);
@@ -61,7 +62,9 @@ namespace Chopper.Presentation.Hud
                 {
                     var weapon = weapons[selection.Selected];
                     pylonMagazine = weapon.MagazineSize;
-                    pylonRounds = Magazine.RoundsLeft(pylonStates[selection.Selected].RoundsUsed, weapon.MagazineSize);
+                    var pylonState = pylonStates[selection.Selected];
+                    pylonRounds = Magazine.RoundsLeft(pylonState.RoundsUsed, weapon.MagazineSize);
+                    pylonReload = Magazine.ReloadProgress(pylonState.RoundsUsed, pylonState.ReloadRemaining, weapon.ReloadSeconds);
                     if (weapon.Name != _pylonName)
                     {
                         _pylonName = weapon.Name;
@@ -75,12 +78,14 @@ namespace Chopper.Presentation.Hud
             var flaresReady = false;
             var flareRounds = 0;
             var flareMagazine = 0;
+            var flareReload = 1f;
             if (SystemAPI.HasComponent<CountermeasureConfig>(self))
             {
                 var config = SystemAPI.GetComponent<CountermeasureConfig>(self);
                 var flares = SystemAPI.GetComponent<CountermeasureState>(self);
                 flareMagazine = config.MagazineSize;
                 flareRounds = Magazine.RoundsLeft(flares.RoundsUsed, config.MagazineSize);
+                flareReload = Magazine.ReloadProgress(flares.RoundsUsed, flares.ReloadRemaining, config.ReloadSeconds);
                 flaresReady = config.Cooldown > 0f && flares.CooldownRemaining <= 0f && Magazine.HasRound(flares.RoundsUsed, config.MagazineSize);
             }
 
@@ -94,7 +99,8 @@ namespace Chopper.Presentation.Hud
                 gunHeat = gun.Heat;
                 gunOverheated = gun.Overheated;
             }
-            model.UpdateWeaponLimits(gunHasHeat, gunHeat, gunOverheated, pylonRounds, pylonMagazine, flareRounds, flareMagazine);
+            model.UpdateWeaponLimits(gunHasHeat, gunHeat, gunOverheated, pylonRounds, pylonMagazine, flareRounds, flareMagazine,
+                pylonReload, flareReload);
 
             var hasTarget = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target) && camera != null;
             var viewport = hasTarget

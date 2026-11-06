@@ -52,7 +52,14 @@
           <ui:VisualElement name="left" class="hud-frame__side hud-frame__side--left" picking-mode="Ignore">
             <ui:Label name="pylon" text="" class="hud-pylon" />
             <ui:Label name="pylon-ammo" text="" class="hud-pylon-ammo" />
+            <!-- Refill bars: they grow to the right edge, shown only while the magazine is not full -->
+            <ui:VisualElement name="pylon-reload" class="hud-reload hud-reload--hidden" picking-mode="Ignore">
+              <ui:VisualElement name="pylon-reload-fill" class="hud-reload__fill" picking-mode="Ignore" />
+            </ui:VisualElement>
             <ui:Label name="flares" text="FLARES" class="hud-flares" />
+            <ui:VisualElement name="flare-reload" class="hud-reload hud-reload--small hud-reload--hidden" picking-mode="Ignore">
+              <ui:VisualElement name="flare-reload-fill" class="hud-reload__fill" picking-mode="Ignore" />
+            </ui:VisualElement>
           </ui:VisualElement>
           <ui:VisualElement name="ring" class="hud-frame__ring" picking-mode="Ignore">
             <!-- Segmented arcs just outside the ring: boost tank (left, fills upward), hull (right, fills upward), gun heat (bottom, fills left to right) -->

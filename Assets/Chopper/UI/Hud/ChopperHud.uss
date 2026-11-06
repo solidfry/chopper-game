@@ -512,19 +512,45 @@
 }
 
 .hud-pylon-ammo {
-  font-size: 14px;
+  font-size: 24px;
   color: var(--chopper-green);
   padding: 0;
   -unity-text-align: middle-right;
+  text-shadow: 0 0 6px rgba(0, 255, 148, 0.35);
 }
 
 .hud-pylon-ammo--empty {
   color: var(--chopper-red);
+  text-shadow: 0 0 6px rgba(255, 66, 70, 0.5);
+}
+
+/* Magazine refill. Width of the fill is set from code. Cyan like the boost tank: it is a charge that fills up. */
+.hud-reload {
+  width: 110px;
+  height: 5px;
+  margin-top: 3px;
+  flex-direction: row;
+  justify-content: flex-end;
+  background-color: rgba(0, 240, 255, 0.14);
+}
+
+.hud-reload--small {
+  width: 70px;
+  height: 4px;
+}
+
+.hud-reload--hidden {
+  display: none;
+}
+
+.hud-reload__fill {
+  height: 100%;
+  background-color: var(--chopper-cyan);
 }
 
 .hud-flares {
-  margin-top: 4px;
-  font-size: 13px;
+  margin-top: 6px;
+  font-size: 15px;
   color: var(--chopper-green-dim);
   padding: 0;
 }

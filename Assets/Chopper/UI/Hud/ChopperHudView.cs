@@ -37,6 +37,7 @@ namespace Chopper.UI.Hud
         private const string PylonNeedsLockClass = "hud-pylon--needs-lock";
         private const string FlaresReadyClass = "hud-flares--ready";
         private const string PylonAmmoEmptyClass = "hud-pylon-ammo--empty";
+        private const string ReloadHiddenClass = "hud-reload--hidden";
         private const string HeatNoneClass = "hud-heat--none";
         private const string HeatLabelHotClass = "hud-heat-label--hot";
         /// <summary>Lock bracket size in pixels: wide when the lock starts, tight when locked.</summary>
@@ -59,6 +60,10 @@ namespace Chopper.UI.Hud
         private VisualElement _flares;
         private VisualElement _heatArc;
         private Label _heatLabel;
+        private VisualElement _pylonReload;
+        private VisualElement _pylonReloadFill;
+        private VisualElement _flareReload;
+        private VisualElement _flareReloadFill;
         private VisualElement _horizon;
         private VisualElement _banner;
         private VisualElement _boost;
@@ -123,6 +128,10 @@ namespace Chopper.UI.Hud
             _flares = _chopper.Q("flares");
             _heatArc = _chopper.Q("heat-arc");
             _heatLabel = _chopper.Q<Label>("heat-label");
+            _pylonReload = _chopper.Q("pylon-reload");
+            _pylonReloadFill = _chopper.Q("pylon-reload-fill");
+            _flareReload = _chopper.Q("flare-reload");
+            _flareReloadFill = _chopper.Q("flare-reload-fill");
             Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
             // Plain text: fixed-width digits squeeze the letters of RELOAD and FLARES at this size.
             Bind(_chopper.Q<Label>("pylon-ammo"), "text", nameof(ChopperHudModel.PylonAmmoText));
@@ -158,6 +167,7 @@ namespace Chopper.UI.Hud
             RefreshLock();
             RefreshThreats();
             RefreshWeapons();
+            RefreshReload();
             RefreshBanner();
         }
 
@@ -223,6 +233,9 @@ namespace Chopper.UI.Hud
                      args.propertyName == nameof(ChopperHudModel.GunHasHeat) ||
                      args.propertyName == nameof(ChopperHudModel.GunOverheated))
                 RefreshWeapons();
+            else if (args.propertyName == nameof(ChopperHudModel.PylonReload) ||
+                     args.propertyName == nameof(ChopperHudModel.FlareReload))
+                RefreshReload();
             else if (args.propertyName == nameof(ChopperHudModel.RollDegrees))
                 RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
@@ -290,6 +303,19 @@ namespace Chopper.UI.Hud
             _heatLabel.EnableInClassList(HeatNoneClass, !_model.GunHasHeat);
             _heatLabel.EnableInClassList(HeatLabelHotClass, _model.GunOverheated);
             _heatLabel.text = _model.GunOverheated ? "OVERHEAT" : "GUN";
+        }
+
+        private void RefreshReload()
+        {
+            SetReload(_pylonReload, _pylonReloadFill, _model.PylonReload);
+            SetReload(_flareReload, _flareReloadFill, _model.FlareReload);
+        }
+
+        /// <summary>A full magazine (1) shows no bar.</summary>
+        private static void SetReload(VisualElement bar, VisualElement fill, float progress)
+        {
+            bar.EnableInClassList(ReloadHiddenClass, progress >= 1f);
+            fill.style.width = Length.Percent(progress * 100f);
         }
 
         private void RefreshSway()

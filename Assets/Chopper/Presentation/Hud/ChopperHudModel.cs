@@ -63,6 +63,8 @@ namespace Chopper.Presentation.Hud
         private string _pylonText = "";
         private bool _pylonNeedsLock;
         private bool _flaresReady;
+        private float _pylonReload = 1f;
+        private float _flareReload = 1f;
         private bool _gunHasHeat;
         private float _gunHeat;
         private bool _gunOverheated;
@@ -248,6 +250,12 @@ namespace Chopper.Presentation.Hud
         /// <summary>The selected pylon weapon's magazine is empty.</summary>
         [CreateProperty] public bool PylonEmpty { get => _pylonEmpty; private set => Set(ref _pylonEmpty, value, nameof(PylonEmpty)); }
 
+        /// <summary>Refill of the selected pylon weapon's magazine: 0 = just fired, 1 = full. Steps of 2%.</summary>
+        [CreateProperty] public float PylonReload { get => _pylonReload; private set => Set(ref _pylonReload, value, nameof(PylonReload)); }
+
+        /// <summary>Refill of the flare magazine: 0 = just dropped, 1 = full. Steps of 2%.</summary>
+        [CreateProperty] public float FlareReload { get => _flareReload; private set => Set(ref _flareReload, value, nameof(FlareReload)); }
+
         /// <summary>"FLARES 2"; just "FLARES" with no magazine.</summary>
         [CreateProperty] public string FlaresText { get => _flaresText; private set => Set(ref _flaresText, value, nameof(FlaresText)); }
 
@@ -286,9 +294,13 @@ namespace Chopper.Presentation.Hud
         /// <param name="gunHasHeat">False: no gun, or a gun with no heat limit.</param>
         /// <param name="pylonMagazine">Magazine size of the selected pylon weapon; 0 = no magazine.</param>
         /// <param name="flareMagazine">0 = no magazine.</param>
+        /// <param name="pylonReload">Refill progress, 0..1; 1 = full.</param>
+        /// <param name="flareReload">Refill progress, 0..1; 1 = full.</param>
         public void UpdateWeaponLimits(bool gunHasHeat, float gunHeat, bool gunOverheated, int pylonRounds, int pylonMagazine,
-            int flareRounds, int flareMagazine)
+            int flareRounds, int flareMagazine, float pylonReload = 1f, float flareReload = 1f)
         {
+            PylonReload = MathF.Round(Math.Clamp(pylonReload, 0f, 1f) * 50f) / 50f;
+            FlareReload = MathF.Round(Math.Clamp(flareReload, 0f, 1f) * 50f) / 50f;
             var heat = gunHasHeat ? MathF.Round(Math.Clamp(gunHeat, 0f, 1f) * 20f) / 20f : 0f;
             var overheated = gunHasHeat && gunOverheated;
             var heatChanged = gunHasHeat != GunHasHeat || overheated != GunOverheated;

@@ -64,5 +64,9 @@ namespace Chopper.Simulation.Combat
         }
 
         public static int RoundsLeft(byte roundsUsed, byte size) => math.max(0, size - roundsUsed);
+
+        /// <summary>How far the refill has come: 0 = just fired, 1 = full (also for a full magazine or no limit).</summary>
+        public static float ReloadProgress(byte roundsUsed, float reloadRemaining, float reloadSeconds) =>
+            roundsUsed == 0 || reloadSeconds <= 0f ? 1f : math.saturate(1f - reloadRemaining / reloadSeconds);
     }
 }

@@ -136,6 +136,30 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Magazine_ReloadProgress_RunsFromShotToFull()
+        {
+            Assert.That(Magazine.ReloadProgress(0, 0f, 6f), Is.EqualTo(1f), "Full magazine");
+            Assert.That(Magazine.ReloadProgress(3, 6f, 6f), Is.Zero, "Just fired");
+            Assert.That(Magazine.ReloadProgress(3, 1.5f, 6f), Is.EqualTo(0.75f).Within(1e-4f));
+            Assert.That(Magazine.ReloadProgress(3, 1f, 0f), Is.EqualTo(1f), "No reload time");
+        }
+
+        [Test]
+        public void Hud_ReloadProgress_StepsAndDefaultsToFull()
+        {
+            var model = new ChopperHudModel();
+            Assert.That(model.PylonReload, Is.EqualTo(1f));
+
+            model.UpdateWeaponLimits(true, 0f, false, 9, 14, 2, 3, 0.503f, 0.25f);
+            Assert.That(model.PylonReload, Is.EqualTo(0.5f).Within(1e-4f));
+            Assert.That(model.FlareReload, Is.EqualTo(0.24f).Within(0.021f));
+
+            model.ClearChopper();
+            Assert.That(model.PylonReload, Is.EqualTo(1f));
+            Assert.That(model.FlareReload, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void Hud_ShowsRoundsReloadAndHeat()
         {
             var model = new ChopperHudModel();
