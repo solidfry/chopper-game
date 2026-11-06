@@ -202,7 +202,7 @@ def check(b):
     if counts[2] > budgets["lod2"]:
         problems.append(f"budget     LOD2 {counts[2]} triangles (limit {budgets['lod2']})")
     lod2 = [v.co.y for v in b.lods[2].bm.verts]
-    if lod2 and b.type != "props" and abs(max(lod2) - collider_top) > 1.5:
+    if lod2 and b.colliders and b.type != "props" and abs(max(lod2) - collider_top) > 1.5:
         problems.append(f"lod        LOD2 top {max(lod2):.1f} m, colliders reach {collider_top:.1f} m (skyline pop)")
     return problems
 

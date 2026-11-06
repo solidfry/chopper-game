@@ -275,6 +275,7 @@ def freeway(city, terrain, style):
         lift = f["height"] * (t * t * (3 - 2 * t))
         path.append((float(x), ground(x, fz) + 0.15 + lift, fz))
     w = f["width"]
+    b.path, b.deck_width = path, w                          # for the traffic lanes (traffic.py)
     sweep(b, path, w, f["thick"], ("dark", "concrete", "concrete", "concrete"), L01)
     sweep(b, path[::4] + [path[-1]], w, f["thick"], ("dark", "concrete", "concrete", "concrete"), L2)
     for side in (-1, 1):

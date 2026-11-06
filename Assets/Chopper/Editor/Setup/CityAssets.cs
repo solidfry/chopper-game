@@ -117,7 +117,26 @@ namespace Chopper.Editor.Setup
             public CityLight[] lights;
             public CityEmitter[] emitters;
             public HeightFogInfo heightFog;
+            public TrafficInfo traffic;
             public FlightBoundsInfo flightBounds;
+        }
+
+        /// <summary>Cosmetic traffic paths (CityForge traffic.py): ground lanes and air routes.</summary>
+        [Serializable]
+        internal sealed class TrafficInfo
+        {
+            public TrafficPathInfo[] lanes;
+            public TrafficPathInfo[] air;
+        }
+
+        [Serializable]
+        internal sealed class TrafficPathInfo
+        {
+            public string kind;
+            public bool closed;
+            public float speed;
+            /// <summary>Flat x, y, z list (JsonUtility cannot read nested arrays).</summary>
+            public float[] points;
         }
 
         /// <summary>The box players may fly in (centre and size, m).</summary>
@@ -321,7 +340,7 @@ namespace Chopper.Editor.Setup
                 var prefab = EnsurePrefab(folder, manifest, building);
                 if (prefab != null) prefabs[building.name] = prefab;
             }
-            if (terrain != null) BuildScene(folder, manifest, terrain, prefabs);
+            if (terrain != null) BuildScene(folder, manifest, terrain, prefabs, buildingMaterial);
         }
 
         // -- textures and materials ---------------------------------------------------------------------------------------
@@ -702,7 +721,8 @@ namespace Chopper.Editor.Setup
         /// The city scene (made anew every time): "Terrain" (chunks, mesh collider from each chunk's LOD0), "Backdrop" (no
         /// colliders), "Buildings" (prefab instances at the layout spots) and "Markers" (MesaTop). Meant to be a SubScene.
         /// </summary>
-        private static void BuildScene(string folder, Manifest manifest, TerrainData terrain, Dictionary<string, GameObject> prefabs)
+        private static void BuildScene(string folder, Manifest manifest, TerrainData terrain, Dictionary<string, GameObject> prefabs,
+            Material buildingMaterial)
         {
             var path = ScenePath(manifest.kit);
             if (SceneManager.GetSceneByPath(path).isLoaded)
@@ -767,6 +787,7 @@ namespace Chopper.Editor.Setup
                 PlaceEmitters(scene, terrain.emitters);
                 PlaceProbes(scene, terrain.size, manifest.kit);
                 PlaceAtmosphere(scene, terrain.heightFog);
+                PlaceTraffic(scene, folder, manifest.kit, terrain.traffic, prefabs, buildingMaterial);
 
                 Directory.CreateDirectory(SceneFolder);
                 EditorSceneManager.SaveScene(scene, path);
@@ -1076,6 +1097,73 @@ namespace Chopper.Editor.Setup
             var authoring = go.AddComponent<Chopper.Simulation.Visuals.CityAtmosphereAuthoring>();
             var colour = ColorUtility.TryParseHtmlString(fog.colour, out var parsed) ? parsed : new Color(0.29f, 0.24f, 0.22f);
             authoring.Set(colour, fog.density, fog.@base, fog.falloff, fog.most);
+        }
+
+        private const string TrafficSettingsPath = "Assets/Chopper/Data/Rendering/TrafficSettings.asset";
+        private static readonly string[] TrafficModels = { "Traffic_Car", "Traffic_Truck", "Traffic_Flyer", "Traffic_Drone" };
+
+        /// <summary>"Traffic": the map's cosmetic traffic (CityTrafficAuthoring: paths from "traffic", the vehicle models'
+        /// LOD0 meshes, an instanced copy of the building material, the shared TrafficSettings). The client's
+        /// CityTrafficSystem moves and draws the vehicles. The vehicle models are in the manifest (not placed).</summary>
+        private static void PlaceTraffic(Scene scene, string folder, string kit, TrafficInfo traffic, Dictionary<string, GameObject> prefabs,
+            Material buildingMaterial)
+        {
+            if (traffic == null || buildingMaterial == null) return;
+            var paths = new List<Chopper.Simulation.Visuals.CityTrafficAuthoring.PathData>();
+            foreach (var info in (traffic.lanes ?? Array.Empty<TrafficPathInfo>()).Concat(traffic.air ?? Array.Empty<TrafficPathInfo>()))
+            {
+                if (info?.points == null || info.points.Length < 6) continue;
+                if (!Enum.TryParse<Chopper.Simulation.Visuals.TrafficKind>(info.kind, ignoreCase: true, out var kind)) continue;
+                var points = new Vector3[info.points.Length / 3];
+                for (var i = 0; i < points.Length; i++)
+                    points[i] = new Vector3(info.points[i * 3], info.points[i * 3 + 1], info.points[i * 3 + 2]);
+                paths.Add(new Chopper.Simulation.Visuals.CityTrafficAuthoring.PathData { kind = kind, closed = info.closed, speed = info.speed, points = points });
+            }
+            var meshes = TrafficModels.Select(name => prefabs.TryGetValue(name, out var prefab) ? Lod0Mesh(prefab) : null).ToArray();
+            if (paths.Count == 0 || meshes[0] == null)
+            {
+                Debug.LogWarning($"Setup: city {kit} has no traffic paths or no Traffic_Car model. Export the city again from CityForge.");
+                return;
+            }
+            var go = new GameObject("Traffic");
+            SceneManager.MoveGameObjectToScene(go, scene);
+            go.AddComponent<Chopper.Simulation.Visuals.CityTrafficAuthoring>().Set(EnsureTrafficSettings(), meshes[0], meshes[1], meshes[2],
+                meshes[3], EnsureTrafficMaterial(folder, kit, buildingMaterial), paths);
+        }
+
+        private static Mesh Lod0Mesh(GameObject prefab) => prefab.GetComponentsInChildren<MeshFilter>(true)
+            .Where(f => f.sharedMesh != null)
+            .OrderBy(f => f.name.EndsWith("_LOD0", StringComparison.Ordinal) ? 0 : 1)
+            .Select(f => f.sharedMesh)
+            .FirstOrDefault();
+
+        /// <summary>The building material with GPU instancing on (traffic is drawn instanced). Follows the building
+        /// material: its properties are copied again on every import.</summary>
+        private static Material EnsureTrafficMaterial(string folder, string kit, Material building)
+        {
+            var path = $"{folder}/Materials/{kit}_Traffic.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(building) { name = $"{kit}_Traffic" };
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.shader = building.shader;
+            material.CopyPropertiesFromMaterial(building);
+            material.enableInstancing = true;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>Shared traffic numbers: made once, then left alone for tuning.</summary>
+        private static Chopper.Simulation.Visuals.TrafficSettings EnsureTrafficSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<Chopper.Simulation.Visuals.TrafficSettings>(TrafficSettingsPath);
+            if (settings != null) return settings;
+            settings = ScriptableObject.CreateInstance<Chopper.Simulation.Visuals.TrafficSettings>();
+            Directory.CreateDirectory(Path.GetDirectoryName(TrafficSettingsPath));
+            AssetDatabase.CreateAsset(settings, TrafficSettingsPath);
+            return settings;
         }
 
         private static void SetStatic(GameObject root)

@@ -156,6 +156,23 @@ kind, one wind for all; looks in `CityAssets.PlumeLooks`). Height fog: "heightFo
 adds to the URP renderer with SSAO, plus a post profile (bloom, ACES, contrast, vignette) on a Global Volume. Step 8
 also places baked reflection probes over the city (bake lighting to fill them).
 
+## Traffic (life)
+
+`cityforge/traffic.py` writes "traffic" into `<kit>.terrain.json` (Unity space; points as a flat x, y, z list about
+10 m apart; each path: kind, closed, speed m/s):
+- "lanes": one lane per direction (right-hand traffic) on the city streets and main roads (cut where they cross the
+  channel away from a bridge), the roads out to the tunnels and the canyon (`highway`), the freeway (2 lanes each way),
+  the sky-road loop (`sky`, closed) and its spiral ramp;
+- "air": flying-car lanes over the ring, radials and boulevard at 55, 95 and 135 m (one direction per height, lifted
+  where anything is nearer than 10 m, cut where lifting 60 m is not enough) and drone loops round the 16 tallest
+  buildings (left out where they pass nearer than 5 m to anything). The check uses one BVH of every placed mesh
+  (`build._clearance`).
+Vehicle models: `Traffic_Car`, `Traffic_Truck`, `Traffic_Flyer`, `Traffic_Drone` (kit palette, cyan head lights,
+pink tail lights, blinking red drone lights; no colliders, not placed). Step 8 puts a Traffic object in the city scene
+(`CityTrafficAuthoring`: paths, the models' LOD0 meshes, `<kit>_Traffic.mat` = the building material with GPU
+instancing); the client's `CityTrafficSystem` moves and draws them. Densities and look: `Data/Rendering/TrafficSettings.asset`.
+City01: about 42 km of street lanes, 6 km of freeway lanes, 13 km of air lanes, 13 drone loops.
+
 ## Building surfaces
 
 Shader work on top of the wear (BuildingWear.hlsl in the game, `wear._surfaces` in the previews):

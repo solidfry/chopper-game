@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, wear
+from . import audit, buildings, choppers, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, traffic, wear
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -172,6 +172,10 @@ def _make_roads(scene, state, city, export_collection, material):
         state.district.append(obj)
         state.placements.setdefault(b.name, (0.0, 0.0, 0.0))
     state.problems["City_Roads"] = state.problems["City_Roads"] + city.audit()
+    # Traffic vehicles (traffic.py): exported like buildings, not placed (Unity draws them along the traffic paths).
+    for b in traffic.models(state.style):
+        state.problems[b.name] = audit.check(b)
+        state.built[b.name] = _building_objects(b, export_collection, material, state.style)
 
 
 def _wall_hit(state, city):
@@ -201,6 +205,34 @@ def _wall_hit(state, city):
         ux, uy, uz = -point.x, point.z, -point.y                                         # Blender -> Unity
         return (px + ux * c + uz * s_, uy, pz - ux * s_ + uz * c)
     return hit
+
+
+def _clearance(state):
+    """distance(points, most): for Unity points (city space), the distance to the nearest placed mesh (buildings and
+    city parts, as placed in the district), at most `most`. One BVH of every district mesh in world space."""
+    import numpy as np
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+
+    bpy.context.view_layer.update()
+    vertices, polygons = [], []
+    for obj in state.district:
+        matrix = obj.matrix_world
+        base = len(vertices)
+        vertices.extend(matrix @ v.co for v in obj.data.vertices)
+        polygons.extend(tuple(base + i for i in p.vertices) for p in obj.data.polygons)
+    tree = BVHTree.FromPolygons(vertices, polygons) if polygons else None
+
+    def distance(points, most):
+        out = np.full(len(points), float(most))
+        if tree is None:
+            return out
+        for k, (x, y, z) in enumerate(points):
+            hit = tree.find_nearest(Vector((-x, -z, y)), most)
+            if hit[0] is not None:
+                out[k] = hit[3]
+        return out
+    return distance
 
 
 def _faces_up(objects, height):
@@ -645,6 +677,7 @@ def export_terrain(state, out_dir):
         "lights": _city_lights(state),
         "emitters": _city_emitters(state),
         "heightFog": _height_fog(state),
+        "traffic": traffic.paths(state, _clearance(state)),
         "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
         "audit": state.terrain_problems,
     }
