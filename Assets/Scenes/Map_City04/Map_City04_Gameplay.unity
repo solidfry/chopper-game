@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &125550221
+--- !u!1 &1630485636
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 125550222}
-  - component: {fileID: 125550223}
+  - component: {fileID: 1630485637}
+  - component: {fileID: 1630485638}
   m_Layer: 0
   m_Name: Arena Bounds
   m_TagString: Untagged
@@ -136,28 +136,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &125550222
+--- !u!4 &1630485637
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 125550221}
+  m_GameObject: {fileID: 1630485636}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 450, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1332815002}
+  m_Father: {fileID: 1754255546}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &125550223
+--- !u!114 &1630485638
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 125550221}
+  m_GameObject: {fileID: 1630485636}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c739d4ac75b004b418b622c667e14ba2, type: 3}
@@ -165,7 +165,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Combat.ArenaBoundsAuthoring
   size: {x: 2672, y: 900, z: 2672}
   damagePerSecond: 15
---- !u!1 &1332815001
+--- !u!1 &1754255545
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -173,8 +173,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1332815002}
-  - component: {fileID: 1332815003}
+  - component: {fileID: 1754255546}
+  - component: {fileID: 1754255547}
   m_Layer: 0
   m_Name: Gameplay Settings
   m_TagString: Untagged
@@ -182,29 +182,29 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1332815002
+--- !u!4 &1754255546
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1332815001}
+  m_GameObject: {fileID: 1754255545}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 125550222}
+  - {fileID: 1630485637}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1332815003
+--- !u!114 &1754255547
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1332815001}
+  m_GameObject: {fileID: 1754255545}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5bd6bf266b32e49ac8c5951317b6b250, type: 3}
@@ -217,7 +217,7 @@ MonoBehaviour:
   ClientNonGhostWorldIndex: 0
   DeepCopyDynamicColliders: 1
   DeepCopyStaticColliders: 0
---- !u!1 &1500966537
+--- !u!1 &1799194965
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -225,9 +225,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1500966540}
-  - component: {fileID: 1500966539}
-  - component: {fileID: 1500966538}
+  - component: {fileID: 1799194968}
+  - component: {fileID: 1799194967}
+  - component: {fileID: 1799194966}
   m_Layer: 0
   m_Name: ChopperSpawner
   m_TagString: Untagged
@@ -235,26 +235,26 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1500966538
+--- !u!114 &1799194966
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1500966537}
+  m_GameObject: {fileID: 1799194965}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b715e9346189c09489698e17c59d8ecf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Session.MatchMapAuthoring
   mapId: 2
---- !u!114 &1500966539
+--- !u!114 &1799194967
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1500966537}
+  m_GameObject: {fileID: 1799194965}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ce51df466355835448b11d0ae93b7c19, type: 3}
@@ -265,13 +265,13 @@ MonoBehaviour:
   respawnDelay: 3
   catalog: {fileID: 11400000, guid: eeaa8f9cfa5846048bd1e19381ece709, type: 2}
   missilePrefab: {fileID: 9053487813689996900, guid: f397188c652e20c448cd6cde57fd90ce, type: 3}
---- !u!4 &1500966540
+--- !u!4 &1799194968
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1500966537}
+  m_GameObject: {fileID: 1799194965}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.9975928, z: 0, w: -0.06934442}
   m_LocalPosition: {x: 130.004, y: 86, z: 930.604}
@@ -284,5 +284,5 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1500966540}
-  - {fileID: 1332815002}
+  - {fileID: 1799194968}
+  - {fileID: 1754255546}

@@ -97,7 +97,7 @@ namespace Chopper.Presentation.Effects
         private Vector3 CameraPosition()
         {
             if (TryGetContext(out var context) && context.CameraRig != null) return context.CameraRig.transform.position;
-            var main = Camera.main;
+            var main = UnityEngine.Camera.main;
             return main != null ? main.transform.position : Vector3.zero;
         }
 

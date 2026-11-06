@@ -159,10 +159,11 @@ namespace Chopper.Presentation.Effects
                     DamageLook.AddPoint(state.Points, hit.LocalPoint, outOfHull);
                 }
 
+                // Dust stays on the ground outside the canopy, so the pilot sees it even when the contact is right below.
+                if (hit.Kind is DamageKind.Impact or DamageKind.Landing) EmitDust(settings, point, settings.ImpactDust);
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
                 EmitSparks(settings, point, normal, DamageLook.Sparks(hit.Amount, hit.Kind, settings.SparksPerDamage, settings.SparkCount));
-                if (hit.Kind is DamageKind.Impact or DamageKind.Landing) EmitDust(settings, point, settings.ImpactDust);
             }
             _pending.Clear();
         }
