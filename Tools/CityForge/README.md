@@ -172,6 +172,11 @@ pink tail lights, blinking red drone lights; no colliders, not placed). Step 8 p
 (`CityTrafficAuthoring`: paths, the models' LOD0 meshes, `<kit>_Traffic.mat` = the building material with GPU
 instancing); the client's `CityTrafficSystem` moves and draws them. Densities and look: `Data/Rendering/TrafficSettings.asset`.
 City01: about 42 km of street lanes, 6 km of freeway lanes, 13 km of air lanes, 13 drone loops.
+Junctions: each street and main-road lane has "stops" (flat list: distance along the lane, signal phase) 2 m before
+every road it meets; the two roads at a junction get opposite phases (by direction), main roads do not stop for small
+streets (City01: 404 stops). Unity runs the signal cycle and the queues (`TrafficSettings`).
+"searchlights": sweeping lights on the roofs of the tallest towers (over 150 m, up to 8) and of 6 industrial plots:
+position, phase, sweep speed, colour (mostly cool white, a few Dream Cyan and Cruise Pink).
 
 ## Building surfaces
 

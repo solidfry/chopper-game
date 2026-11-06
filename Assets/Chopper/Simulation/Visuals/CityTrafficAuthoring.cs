@@ -33,13 +33,27 @@ namespace Chopper.Simulation.Visuals
         public BlobArray<float3> Points;
         /// <summary>Distance along the path at each point; a loop has one more (its full length, back at the start).</summary>
         public BlobArray<float> Distances;
+        /// <summary>Stop lines before junctions, sorted: x = distance along the path (m), y = signal phase (0 or 1).</summary>
+        public BlobArray<float2> Stops;
 
         public int SegmentCount => Closed ? Points.Length : Points.Length - 1;
+    }
+
+    /// <summary>A sweeping searchlight on a roof.</summary>
+    public struct Searchlight
+    {
+        public float3 Position;
+        /// <summary>Start angle (radians) and sweep speed, so no two lights move together.</summary>
+        public float Phase;
+        public float Speed;
+        /// <summary>Linear colour (multiplies the beam material's colour).</summary>
+        public float3 Colour;
     }
 
     public struct TrafficBlob
     {
         public BlobArray<TrafficPath> Paths;
+        public BlobArray<Searchlight> Searchlights;
     }
 
     /// <summary>
@@ -55,6 +69,9 @@ namespace Chopper.Simulation.Visuals
         public UnityObjectRef<Mesh> Flyer;
         public UnityObjectRef<Mesh> Drone;
         public UnityObjectRef<Material> Material;
+        /// <summary>Additive LightBeam materials: the flying cars' tail-light trails and the searchlight beams.</summary>
+        public UnityObjectRef<Material> Trail;
+        public UnityObjectRef<Material> Beam;
         public TrafficLook Look;
     }
 
@@ -71,6 +88,18 @@ namespace Chopper.Simulation.Visuals
         public float FlyerBank;
         /// <summary>Open paths: vehicles grow from nothing over this distance at the start and shrink at the end (m).</summary>
         public float EndFade;
+        /// <summary>Signal cycle (s): phase 0 is green for <see cref="SignalGreen"/> s from the start, phase 1 the same
+        /// from the middle; the rest is red for both.</summary>
+        public float SignalCycle;
+        public float SignalGreen;
+        public float Acceleration;
+        public float Braking;
+        /// <summary>Gap kept to the vehicle in front (m, nose to nose: a car length and a bit).</summary>
+        public float MinGap;
+        /// <summary>Flying cars' tail-light trails: seconds of flight they show (0 = none).</summary>
+        public float TrailSeconds;
+        public float BeamLength;
+        public float BeamRadius;
     }
 
     [DisallowMultipleComponent]
@@ -83,6 +112,17 @@ namespace Chopper.Simulation.Visuals
             public bool closed;
             public float speed;
             public Vector3[] points;
+            /// <summary>x = distance along the path, y = signal phase.</summary>
+            public Vector2[] stops;
+        }
+
+        [Serializable]
+        public sealed class SearchlightData
+        {
+            public Vector3 position;
+            public float phase;
+            public float speed;
+            public Color colour = Color.white;
         }
 
         [SerializeField, Tooltip("Shared traffic numbers (Data/Rendering/TrafficSettings.asset). Empty: the defaults.")]
@@ -92,14 +132,20 @@ namespace Chopper.Simulation.Visuals
         [SerializeField] private Mesh flyer;
         [SerializeField] private Mesh drone;
         [SerializeField, Tooltip("The city palette material with GPU instancing on.")] private Material material;
+        [SerializeField, Tooltip("LightBeam material for the flying cars' tail-light trails.")] private Material trail;
+        [SerializeField, Tooltip("LightBeam material for the searchlight beams.")] private Material beam;
         [SerializeField, HideInInspector] private List<PathData> paths = new();
+        [SerializeField] private List<SearchlightData> searchlights = new();
 
         public int PathCount => paths.Count;
 
         /// <summary>Editor only: used by the setup tool (CityForge import).</summary>
         public void Set(TrafficSettings trafficSettings, Mesh carMesh, Mesh truckMesh, Mesh flyerMesh, Mesh droneMesh, Material instanced,
-            List<PathData> pathData)
+            Material trailMaterial, Material beamMaterial, List<PathData> pathData, List<SearchlightData> lights)
         {
+            trail = trailMaterial;
+            beam = beamMaterial;
+            searchlights = lights;
             settings = trafficSettings;
             car = carMesh;
             truck = truckMesh;
@@ -116,7 +162,7 @@ namespace Chopper.Simulation.Visuals
                 if (authoring.material == null || authoring.paths == null || authoring.paths.Count == 0) return;
                 if (authoring.settings != null) DependsOn(authoring.settings);
                 var entity = GetEntity(TransformUsageFlags.None);
-                var blob = Build(authoring.paths);
+                var blob = Build(authoring.paths, authoring.searchlights);
                 AddBlobAsset(ref blob, out _);
                 AddComponent(entity, new CityTraffic
                 {
@@ -126,11 +172,13 @@ namespace Chopper.Simulation.Visuals
                     Flyer = authoring.flyer != null ? authoring.flyer : authoring.car,
                     Drone = authoring.drone != null ? authoring.drone : authoring.flyer,
                     Material = authoring.material,
+                    Trail = authoring.trail,
+                    Beam = authoring.beam,
                     Look = authoring.settings != null ? authoring.settings.ToLook() : TrafficSettings.DefaultLook(),
                 });
             }
 
-            private static BlobAssetReference<TrafficBlob> Build(List<PathData> source)
+            private static BlobAssetReference<TrafficBlob> Build(List<PathData> source, List<SearchlightData> lights)
             {
                 var builder = new BlobBuilder(Allocator.Temp);
                 ref var root = ref builder.ConstructRoot<TrafficBlob>();
@@ -159,6 +207,22 @@ namespace Chopper.Simulation.Visuals
                         distances[count] = run;
                     }
                     path.Length = math.max(run, 0.01f);
+                    var stopCount = data.stops?.Length ?? 0;
+                    var stops = builder.Allocate(ref path.Stops, stopCount);
+                    for (var k = 0; k < stopCount; k++) stops[k] = data.stops[k];
+                }
+                var lightCount = lights?.Count ?? 0;
+                var beams = builder.Allocate(ref root.Searchlights, lightCount);
+                for (var i = 0; i < lightCount; i++)
+                {
+                    var linear = lights[i].colour.linear;
+                    beams[i] = new Searchlight
+                    {
+                        Position = lights[i].position,
+                        Phase = lights[i].phase,
+                        Speed = lights[i].speed,
+                        Colour = new float3(linear.r, linear.g, linear.b),
+                    };
                 }
                 var blob = builder.CreateBlobAssetReference<TrafficBlob>(Allocator.Persistent);
                 builder.Dispose();

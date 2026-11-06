@@ -127,6 +127,16 @@ namespace Chopper.Editor.Setup
         {
             public TrafficPathInfo[] lanes;
             public TrafficPathInfo[] air;
+            public SearchlightInfo[] searchlights;
+        }
+
+        [Serializable]
+        internal sealed class SearchlightInfo
+        {
+            public float[] position;
+            public float phase;
+            public float speed;
+            public string colour;
         }
 
         [Serializable]
@@ -137,6 +147,8 @@ namespace Chopper.Editor.Setup
             public float speed;
             /// <summary>Flat x, y, z list (JsonUtility cannot read nested arrays).</summary>
             public float[] points;
+            /// <summary>Flat list: distance along the lane (m), signal phase.</summary>
+            public float[] stops;
         }
 
         /// <summary>The box players may fly in (centre and size, m).</summary>
@@ -1117,8 +1129,21 @@ namespace Chopper.Editor.Setup
                 var points = new Vector3[info.points.Length / 3];
                 for (var i = 0; i < points.Length; i++)
                     points[i] = new Vector3(info.points[i * 3], info.points[i * 3 + 1], info.points[i * 3 + 2]);
-                paths.Add(new Chopper.Simulation.Visuals.CityTrafficAuthoring.PathData { kind = kind, closed = info.closed, speed = info.speed, points = points });
+                var stops = new Vector2[(info.stops?.Length ?? 0) / 2];
+                for (var i = 0; i < stops.Length; i++) stops[i] = new Vector2(info.stops[i * 2], info.stops[i * 2 + 1]);
+                paths.Add(new Chopper.Simulation.Visuals.CityTrafficAuthoring.PathData
+                    { kind = kind, closed = info.closed, speed = info.speed, points = points, stops = stops });
             }
+            var lights = (traffic.searchlights ?? Array.Empty<SearchlightInfo>())
+                .Where(l => l?.position is { Length: >= 3 })
+                .Select(l => new Chopper.Simulation.Visuals.CityTrafficAuthoring.SearchlightData
+                {
+                    position = Vector(l.position),
+                    phase = l.phase,
+                    speed = l.speed,
+                    colour = ColorUtility.TryParseHtmlString(l.colour, out var parsed) ? parsed : Color.white,
+                })
+                .ToList();
             var meshes = TrafficModels.Select(name => prefabs.TryGetValue(name, out var prefab) ? Lod0Mesh(prefab) : null).ToArray();
             if (paths.Count == 0 || meshes[0] == null)
             {
@@ -1128,7 +1153,38 @@ namespace Chopper.Editor.Setup
             var go = new GameObject("Traffic");
             SceneManager.MoveGameObjectToScene(go, scene);
             go.AddComponent<Chopper.Simulation.Visuals.CityTrafficAuthoring>().Set(EnsureTrafficSettings(), meshes[0], meshes[1], meshes[2],
-                meshes[3], EnsureTrafficMaterial(folder, kit, buildingMaterial), paths);
+                meshes[3], EnsureTrafficMaterial(folder, kit, buildingMaterial),
+                EnsureBeamMaterial(TrailMaterialPath, new Color(3.2f, 0.8f, 1.7f), facing: 0f, falloff: 1.2f, soft: 0.5f, near: 2f),
+                EnsureBeamMaterial(BeamMaterialPath, new Color(0.22f, 0.24f, 0.28f), facing: 1f, falloff: 1.6f, soft: 6f, near: 25f),
+                paths, lights);
+        }
+
+        private const string LightBeamShader = "Chopper/LightBeam";
+        private const string TrailMaterialPath = "Assets/Chopper/Data/Rendering/TrafficTrail.mat";
+        private const string BeamMaterialPath = "Assets/Chopper/Data/Rendering/SearchlightBeam.mat";
+
+        /// <summary>Additive LightBeam material (Art/Shaders/LightBeam.shader), instanced: made once, then left alone
+        /// for tuning. Null when the shader is missing (then no trails or beams).</summary>
+        private static Material EnsureBeamMaterial(string path, Color colour, float facing, float falloff, float soft, float near)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            var shader = Shader.Find(LightBeamShader);
+            if (shader == null)
+            {
+                Debug.LogWarning($"Setup: shader '{LightBeamShader}' not found (Art/Shaders/LightBeam.shader does not compile?). " +
+                                 "No traffic trails or searchlight beams.");
+                return null;
+            }
+            material = new Material(shader) { name = Path.GetFileNameWithoutExtension(path), enableInstancing = true };
+            material.SetColor("_Colour", colour);
+            material.SetFloat("_Facing", facing);
+            material.SetFloat("_Falloff", falloff);
+            material.SetFloat("_Soft", soft);
+            material.SetFloat("_Near", near);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static Mesh Lod0Mesh(GameObject prefab) => prefab.GetComponentsInChildren<MeshFilter>(true)

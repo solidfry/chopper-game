@@ -33,6 +33,21 @@ namespace Chopper.Simulation.Visuals
         [SerializeField, Min(0f), Tooltip("Open paths: vehicles grow in and shrink out over this distance at the ends (m).")]
         private float endFade = 6f;
 
+        [Header("Junctions and queues")]
+        [SerializeField, Min(2f), Tooltip("Signal cycle (s): phase 0 green from the start, phase 1 from the middle.")]
+        private float signalCycle = 24f;
+        [SerializeField, Min(1f), Tooltip("Green time of each phase (s); at most half the cycle. The rest is red for both.")]
+        private float signalGreen = 10f;
+        [SerializeField, Min(0.5f), Tooltip("m/s² when pulling away.")] private float acceleration = 3f;
+        [SerializeField, Min(0.5f), Tooltip("m/s² when stopping for a red light or a queue.")] private float braking = 6f;
+        [SerializeField, Min(2f), Tooltip("Gap kept to the vehicle in front, nose to nose (m).")] private float minGap = 9f;
+
+        [Header("Moving lights")]
+        [SerializeField, Min(0f), Tooltip("Flying cars' tail-light trails: seconds of flight they show (0 = none).")]
+        private float trailSeconds = 0.35f;
+        [SerializeField, Min(10f), Tooltip("Searchlight beam length (m).")] private float beamLength = 650f;
+        [SerializeField, Min(1f), Tooltip("Searchlight beam radius at its far end (m).")] private float beamRadius = 30f;
+
         public TrafficLook ToLook()
         {
             var look = new TrafficLook
@@ -44,6 +59,14 @@ namespace Chopper.Simulation.Visuals
                 DroneBob = droneBob,
                 FlyerBank = flyerBank,
                 EndFade = endFade,
+                SignalCycle = signalCycle,
+                SignalGreen = Mathf.Min(signalGreen, signalCycle * 0.5f),
+                Acceleration = acceleration,
+                Braking = braking,
+                MinGap = minGap,
+                TrailSeconds = trailSeconds,
+                BeamLength = beamLength,
+                BeamRadius = beamRadius,
             };
             foreach (var value in new[] { street, main, highway, freeway, sky, spiral, air, drone }) look.PerKm.Add(value);
             return look;

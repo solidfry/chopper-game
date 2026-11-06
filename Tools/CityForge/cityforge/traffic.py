@@ -38,6 +38,9 @@ SHORTEST = 30.0                             # lanes shorter than this are left o
 AIR = dict(roads=("ring", "radial", "boulevard"), heights=(55.0, 95.0, 135.0), clear=10.0, lift_step=5.0,
            lift_most=60.0)
 DRONES = dict(count=16, clear=5.0, gap=16.0, points=28)
+SIGNALS = dict(before=2.0)   # stop line this far (m) before the crossing road's edge
+SEARCHLIGHTS = dict(tall=150.0, most_tall=8, most_industrial=6, colours=("#dfe8ff", "#dfe8ff", "#dfe8ff", "#00f0ff",
+                                                                          "#ff4289"))
 
 
 def paths(state, clearance):
@@ -53,19 +56,24 @@ def paths(state, clearance):
     if "City_SkyRoads" in parts:
         lanes += _sky_lanes(parts["City_SkyRoads"])
     air = _air_lanes(city, t, clearance) + _drone_loops(city, state.building_tops, t, clearance)
+    lights = _searchlights(city, state.building_tops)
     return {
         "note": "Cosmetic traffic, client only. Unity space, metres. Lanes: one per direction, right-hand traffic, "
                 "points (flat x, y, z list) about 10 m apart along the lane centre. closed = a loop (the last point joins the first). "
                 "Open lanes: vehicles leave at the end and come back at the start.",
         "lanes": [_record(lane) for lane in lanes],
         "air": [_record(route) for route in air],
+        "signals": {"note": "Lane stops (flat list): distance along the lane (m), phase (0 or 1). The two roads at a "
+                            "junction have opposite phases. Cycle and green times: Unity TrafficSettings."},
+        "searchlights": lights,
         "stats": {kind: sum(1 for p in lanes + air if p["kind"] == kind) for kind in SPEED},
     }
 
 
 def _record(path):
     return {"kind": path["kind"], "closed": path["closed"], "speed": SPEED[path["kind"]],
-            "points": [round(float(v), 2) for p in path["points"] for v in p]}
+            "points": [round(float(v), 2) for p in path["points"] for v in p],
+            "stops": [round(float(v), 2) for stop in path.get("stops", ()) for v in stop]}
 
 
 # -- ground ------------------------------------------------------------------------------------------------------------
@@ -83,8 +91,53 @@ def _street_lanes(city):
             if part.geom_type != "LineString" or part.length < SHORTEST:
                 continue
             points = [(x, LANE_Y, z) for x, z in _spaced(part, closed)]
-            out += _both_ways(points, road.width / 4.0, kind, closed)
+            lanes = _both_ways(points, road.width / 4.0, kind, closed)
+            if len(lanes) == 2:
+                forward, back = _junctions(part, road, city)
+                lanes[0]["stops"] = _on_lane(lanes[0], [(part.interpolate(d), phase) for d, phase in forward], closed)
+                lanes[1]["stops"] = _on_lane(lanes[1], [(part.interpolate(d), phase) for d, phase in back], closed)
+            out += lanes
     return out
+
+
+def _junctions(part, road, city):
+    """Stop lines on a road part, before every road it meets (crossings and T junctions): (distance along the part
+    where a vehicle going forward stops, phase) and the same for the way back (as a distance along the part).
+    Main roads have priority: they do not stop where a small street meets them."""
+    forward, back = [], []
+    before = SIGNALS["before"]
+    for other in city.roads:
+        if other is road or (road.kind in MAIN and other.kind not in MAIN):
+            continue
+        inside = part.intersection(other.line.buffer(other.width / 2 + 1.0))
+        for piece in layout_module._parts(inside):
+            if piece.geom_type != "LineString" or piece.length < 0.5:
+                continue
+            ends = [part.project(_point(*piece.coords[0])), part.project(_point(*piece.coords[-1]))]
+            low, high = min(ends), max(ends)
+            phase = _phase(part, (low + high) / 2, other.line)
+            if low - before > 1.0:
+                forward.append((low - before, phase))
+            if part.length - (high + before) > 1.0:
+                back.append((high + before, phase))
+    return forward, back
+
+
+def _phase(line, at, other):
+    """Signal phase of a road at a junction: the road whose direction (mod 180 degrees) is smaller goes first."""
+    def angle(geometry, distance):
+        p, q = geometry.interpolate(max(0.0, distance - 2.0)), geometry.interpolate(min(geometry.length, distance + 2.0))
+        return math.atan2(q.y - p.y, q.x - p.x) % math.pi
+    here = line.interpolate(at)
+    return 0 if angle(line, at) < angle(other, other.project(here)) else 1
+
+
+def _on_lane(lane, stops, closed):
+    """(distance along the lane, phase) for stop points given on the centre line: projected onto the lane itself
+    (offset lanes on a curve are longer or shorter than the centre line), sorted."""
+    xz = [(p[0], p[2]) for p in lane["points"]]
+    line = LineString(xz + ([xz[0]] if closed else []))
+    return sorted((line.project(point), phase) for point, phase in stops)
 
 
 def _highway_lanes(terrain):
@@ -348,3 +401,25 @@ def _drone(b):
             b.cylinder((tip[0], 0.5, tip[2]), (tip[0], 0.56, tip[2]), 0.38, "rubber", segments=10, at=L01)
             b.box((tip[0], 0.44, tip[2]), (0.08, 0.08, 0.08), "warning", L01)   # nav light (blinks)
     b.span(-1.1, 1.1, 0.25, 0.56, -1.1, 1.1, "dark", L2)
+
+
+# -- searchlights ------------------------------------------------------------------------------------------------------
+
+def _searchlights(city, tops):
+    """Sweeping searchlights on the roofs: the tallest towers (over `tall` m) and a few industrial plots. Position =
+    the roof (the highest point over the footprint's centre), a phase and a sweep speed so they never move together,
+    a colour (mostly cool white, a few in the neon colours)."""
+    s = SEARCHLIGHTS
+    rng = np.random.default_rng(11)
+    ranked = sorted(range(len(tops)), key=lambda k: -tops[k][1])
+    tall = [k for k in ranked if tops[k][1] >= s["tall"]][:s["most_tall"]]
+    industrial = [k for k in ranked if city.instances[k][0].startswith("Ind_")][:s["most_industrial"]]
+    out = []
+    for k in tall + industrial:
+        shape, top = tops[k]
+        centre = shape.centroid
+        out.append({"position": [round(centre.x, 2), round(top + 1.0, 2), round(centre.y, 2)],
+                    "phase": round(float(rng.uniform(0.0, math.tau)), 3),
+                    "speed": round(float(rng.uniform(0.15, 0.35)), 3),
+                    "colour": s["colours"][int(rng.integers(len(s["colours"])))]})
+    return out
