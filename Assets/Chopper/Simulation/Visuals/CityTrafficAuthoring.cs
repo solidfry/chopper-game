@@ -50,10 +50,33 @@ namespace Chopper.Simulation.Visuals
         public float3 Colour;
     }
 
+    /// <summary>A tower crane: the jib turns round <see cref="Pivot"/> (the mast top), swinging back and forth.</summary>
+    public struct Crane
+    {
+        public float3 Pivot;
+        /// <summary>Centre angle of the swing (radians, Unity yaw).</summary>
+        public float Phase;
+        /// <summary>Slew rate (radians of the sine per second).</summary>
+        public float Speed;
+        /// <summary>Swing each way (radians).</summary>
+        public float Swing;
+    }
+
+    /// <summary>A lava centre line for the heat shimmer.</summary>
+    public struct LavaPath
+    {
+        public BlobArray<float3> Points;
+        public float Width;
+    }
+
     public struct TrafficBlob
     {
+        public BlobArray<LavaPath> Lava;
         public BlobArray<TrafficPath> Paths;
         public BlobArray<Searchlight> Searchlights;
+        public BlobArray<Crane> Cranes;
+        /// <summary>Floodlights under every jib: distance out along the jib (m).</summary>
+        public BlobArray<float> Floods;
     }
 
     /// <summary>
@@ -72,6 +95,10 @@ namespace Chopper.Simulation.Visuals
         /// <summary>Additive LightBeam materials: the flying cars' tail-light trails and the searchlight beams.</summary>
         public UnityObjectRef<Material> Trail;
         public UnityObjectRef<Material> Beam;
+        /// <summary>The cranes' turning top (Crane_Jib, LOD0).</summary>
+        public UnityObjectRef<Mesh> Jib;
+        /// <summary>HeatHaze material (shimmer over the lava); null on maps without lava.</summary>
+        public UnityObjectRef<Material> Haze;
         public TrafficLook Look;
     }
 
@@ -100,6 +127,9 @@ namespace Chopper.Simulation.Visuals
         public float TrailSeconds;
         public float BeamLength;
         public float BeamRadius;
+        public float FloodRadius;
+        /// <summary>Linear colour of the crane floodlights.</summary>
+        public float3 FloodColour;
     }
 
     [DisallowMultipleComponent]
@@ -114,6 +144,22 @@ namespace Chopper.Simulation.Visuals
             public Vector3[] points;
             /// <summary>x = distance along the path, y = signal phase.</summary>
             public Vector2[] stops;
+        }
+
+        [Serializable]
+        public sealed class LavaData
+        {
+            public Vector3[] points;
+            public float width;
+        }
+
+        [Serializable]
+        public sealed class CraneData
+        {
+            public Vector3 pivot;
+            public float phase;
+            public float speed;
+            public float swing;
         }
 
         [Serializable]
@@ -136,13 +182,24 @@ namespace Chopper.Simulation.Visuals
         [SerializeField, Tooltip("LightBeam material for the searchlight beams.")] private Material beam;
         [SerializeField, HideInInspector] private List<PathData> paths = new();
         [SerializeField] private List<SearchlightData> searchlights = new();
+        [SerializeField] private Mesh jib;
+        [SerializeField] private List<CraneData> cranes = new();
+        [SerializeField] private float[] floods = Array.Empty<float>();
+        [SerializeField, Tooltip("HeatHaze material for the shimmer over the lava.")] private Material haze;
+        [SerializeField, HideInInspector] private List<LavaData> lava = new();
 
         public int PathCount => paths.Count;
 
         /// <summary>Editor only: used by the setup tool (CityForge import).</summary>
         public void Set(TrafficSettings trafficSettings, Mesh carMesh, Mesh truckMesh, Mesh flyerMesh, Mesh droneMesh, Material instanced,
-            Material trailMaterial, Material beamMaterial, List<PathData> pathData, List<SearchlightData> lights)
+            Material trailMaterial, Material beamMaterial, List<PathData> pathData, List<SearchlightData> lights, Mesh jibMesh,
+            List<CraneData> craneData, float[] floodSpots, Material hazeMaterial, List<LavaData> lavaData)
         {
+            haze = hazeMaterial;
+            lava = lavaData;
+            jib = jibMesh;
+            cranes = craneData;
+            floods = floodSpots;
             trail = trailMaterial;
             beam = beamMaterial;
             searchlights = lights;
@@ -162,7 +219,8 @@ namespace Chopper.Simulation.Visuals
                 if (authoring.material == null || authoring.paths == null || authoring.paths.Count == 0) return;
                 if (authoring.settings != null) DependsOn(authoring.settings);
                 var entity = GetEntity(TransformUsageFlags.None);
-                var blob = Build(authoring.paths, authoring.searchlights);
+                var blob = Build(authoring.paths, authoring.searchlights, authoring.jib != null ? authoring.cranes : null, authoring.floods,
+                    authoring.haze != null ? authoring.lava : null);
                 AddBlobAsset(ref blob, out _);
                 AddComponent(entity, new CityTraffic
                 {
@@ -174,11 +232,14 @@ namespace Chopper.Simulation.Visuals
                     Material = authoring.material,
                     Trail = authoring.trail,
                     Beam = authoring.beam,
+                    Jib = authoring.jib,
+                    Haze = authoring.haze,
                     Look = authoring.settings != null ? authoring.settings.ToLook() : TrafficSettings.DefaultLook(),
                 });
             }
 
-            private static BlobAssetReference<TrafficBlob> Build(List<PathData> source, List<SearchlightData> lights)
+            private static BlobAssetReference<TrafficBlob> Build(List<PathData> source, List<SearchlightData> lights,
+                List<CraneData> craneData, float[] floodSpots, List<LavaData> lavaData)
             {
                 var builder = new BlobBuilder(Allocator.Temp);
                 ref var root = ref builder.ConstructRoot<TrafficBlob>();
@@ -224,6 +285,24 @@ namespace Chopper.Simulation.Visuals
                         Colour = new float3(linear.r, linear.g, linear.b),
                     };
                 }
+                var craneCount = craneData?.Count ?? 0;
+                var craneArray = builder.Allocate(ref root.Cranes, craneCount);
+                for (var i = 0; i < craneCount; i++)
+                    craneArray[i] = new Crane
+                        { Pivot = craneData[i].pivot, Phase = craneData[i].phase, Speed = craneData[i].speed, Swing = craneData[i].swing };
+                var lavaCount = lavaData?.Count ?? 0;
+                var lavaArray = builder.Allocate(ref root.Lava, lavaCount);
+                for (var i = 0; i < lavaCount; i++)
+                {
+                    ref var lavaPath = ref lavaArray[i];
+                    lavaPath.Width = lavaData[i].width;
+                    var count = lavaData[i].points?.Length ?? 0;
+                    var lavaPoints = builder.Allocate(ref lavaPath.Points, count);
+                    for (var k = 0; k < count; k++) lavaPoints[k] = lavaData[i].points[k];
+                }
+                var floodCount = floodSpots?.Length ?? 0;
+                var floodArray = builder.Allocate(ref root.Floods, floodCount);
+                for (var i = 0; i < floodCount; i++) floodArray[i] = floodSpots[i];
                 var blob = builder.CreateBlobAssetReference<TrafficBlob>(Allocator.Persistent);
                 builder.Dispose();
                 return blob;

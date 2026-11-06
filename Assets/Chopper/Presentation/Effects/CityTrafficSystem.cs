@@ -54,10 +54,15 @@ namespace Chopper.Presentation.Effects
         private Mesh _trailMesh;
         private Mesh _beamMesh;
         private MaterialPropertyBlock _beamColour;
+        private MaterialPropertyBlock _floodColour;
+        private Matrix4x4[] _jibs = new Matrix4x4[1];
+        private Matrix4x4[] _floods = new Matrix4x4[1];
+        private Mesh _hazeMesh;
 
         protected override void OnDestroy()
         {
             if (_trailMesh != null) Object.Destroy(_trailMesh);
+            if (_hazeMesh != null) Object.Destroy(_hazeMesh);
             if (_beamMesh != null) Object.Destroy(_beamMesh);
         }
 
@@ -85,6 +90,8 @@ namespace Chopper.Presentation.Effects
                 DrawTrails(traffic.Trail.Value);
             }
             DrawBeams(ref traffic.Paths.Value, traffic.Look, traffic.Beam.Value, time);
+            DrawCranes(ref traffic.Paths.Value, traffic.Look, material, traffic.Jib.Value, traffic.Beam.Value, time);
+            DrawHaze(traffic.Haze.Value);
         }
 
         private Vector3 CameraPosition()
@@ -103,6 +110,8 @@ namespace Chopper.Presentation.Effects
         private void Spawn(in CityTraffic traffic)
         {
             _blob = traffic.Paths;
+            if (_hazeMesh != null) Object.Destroy(_hazeMesh);
+            _hazeMesh = HazeMesh(ref traffic.Paths.Value.Lava);
             ref var paths = ref traffic.Paths.Value.Paths;
             var look = traffic.Look;
             var wanted = 0f;
@@ -343,6 +352,97 @@ namespace Chopper.Presentation.Effects
                 parameters.matProps = _beamColour;
                 Graphics.RenderMeshInstanced(parameters, _beamMesh, 0, _beams, 1);
             }
+        }
+
+        /// <summary>
+        /// Tower cranes: each jib swings slowly round its mast top (a sine about its centre angle); the floodlights under
+        /// it throw warm cones down to the ground (y 0, the city floor).
+        /// </summary>
+        private void DrawCranes(ref TrafficBlob blob, in TrafficLook look, Material material, Mesh jib, Material beam, float time)
+        {
+            ref var cranes = ref blob.Cranes;
+            if (cranes.Length == 0 || material == null || jib == null) return;
+            ref var floods = ref blob.Floods;
+            if (_jibs.Length < cranes.Length) _jibs = new Matrix4x4[cranes.Length];
+            if (_floods.Length < cranes.Length * math.max(1, floods.Length)) _floods = new Matrix4x4[cranes.Length * math.max(1, floods.Length)];
+            var floodCount = 0;
+            var down = quaternion.LookRotationSafe(new float3(0f, -1f, 0f), new float3(0f, 0f, 1f));
+            for (var i = 0; i < cranes.Length; i++)
+            {
+                var crane = cranes[i];
+                var yaw = crane.Phase + crane.Swing * math.sin(time * crane.Speed);
+                var rotation = quaternion.RotateY(yaw);
+                _jibs[i] = Matrix4x4.TRS(crane.Pivot, rotation, Vector3.one);
+                for (var k = 0; k < floods.Length; k++)
+                {
+                    var spot = crane.Pivot + math.mul(rotation, new float3(0f, 0.75f, floods[k]));
+                    var height = math.max(1f, spot.y);
+                    _floods[floodCount++] = Matrix4x4.TRS(spot, down, new Vector3(look.FloodRadius, look.FloodRadius, height));
+                }
+            }
+            Graphics.RenderMeshInstanced(Params(material, shadows: true), jib, 0, _jibs, cranes.Length);
+            if (beam == null || floodCount == 0) return;
+            _beamMesh ??= BeamMesh();
+            _floodColour ??= new MaterialPropertyBlock();
+            _floodColour.SetColor(ColourId, beam.GetColor(ColourId) * new Color(look.FloodColour.x, look.FloodColour.y, look.FloodColour.z, 1f) * 2f);
+            var parameters = Params(beam, shadows: false);
+            parameters.matProps = _floodColour;
+            Graphics.RenderMeshInstanced(parameters, _beamMesh, 0, _floods, floodCount);
+        }
+
+        private void DrawHaze(Material material)
+        {
+            if (material == null || _hazeMesh == null) return;
+            var parameters = Params(material, shadows: false);
+            parameters.worldBounds = _hazeMesh.bounds;
+            Graphics.RenderMesh(parameters, _hazeMesh, 0, Matrix4x4.identity);
+        }
+
+        /// <summary>
+        /// Heat shimmer quads along the lava (HeatHaze shader): one upright billboard every point (8 m), as wide as the
+        /// lava plus 6 m and 10 m + a tenth of the width high. POSITION = the foot on the lava, UV1 = the corner offset
+        /// (m) that the shader turns to face the camera. Null when the map has no lava.
+        /// </summary>
+        private static Mesh HazeMesh(ref BlobArray<LavaPath> lava)
+        {
+            var vertices = new System.Collections.Generic.List<Vector3>();
+            var uvs = new System.Collections.Generic.List<Vector2>();
+            var corners = new System.Collections.Generic.List<Vector2>();
+            var triangles = new System.Collections.Generic.List<int>();
+            var bounds = new Bounds();
+            var first = true;
+            for (var i = 0; i < lava.Length; i++)
+            {
+                ref var path = ref lava[i];
+                var half = path.Width * 0.5f + 3f;
+                var height = 10f + path.Width * 0.1f;
+                for (var k = 0; k < path.Points.Length; k++)
+                {
+                    Vector3 foot = path.Points[k];
+                    var start = vertices.Count;
+                    for (var c = 0; c < 4; c++)
+                    {
+                        var u = c % 2;
+                        var v = c / 2;
+                        vertices.Add(foot);
+                        uvs.Add(new Vector2(u, v));
+                        corners.Add(new Vector2((u * 2 - 1) * half, v * height));
+                    }
+                    triangles.AddRange(new[] { start, start + 2, start + 1, start + 1, start + 2, start + 3 });
+                    var box = new Bounds(foot + Vector3.up * height * 0.5f, new Vector3(half * 2f, height, half * 2f));
+                    if (first) bounds = box;
+                    else bounds.Encapsulate(box);
+                    first = false;
+                }
+            }
+            if (vertices.Count == 0) return null;
+            var mesh = new Mesh { name = "Heat Haze", indexFormat = IndexFormat.UInt32 };
+            mesh.SetVertices(vertices);
+            mesh.SetUVs(0, uvs);
+            mesh.SetUVs(1, corners);
+            mesh.SetTriangles(triangles, 0);
+            mesh.bounds = bounds;
+            return mesh;
         }
 
         /// <summary>Two crossed strips (flat and upright) behind each tail light, z 0 to -1; uv.x across, uv.y along.</summary>

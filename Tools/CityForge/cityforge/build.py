@@ -14,7 +14,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import audit, buildings, choppers, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, traffic, wear
+from . import audit, buildings, choppers, cranes, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, traffic, wear
 from .pf import geo, palette
 
 EXPORT_COLLECTION = "CityForge: export"
@@ -162,6 +162,19 @@ def _make_roads(scene, state, city, export_collection, material):
             shanties.shanties(city, state.terrain, state.style)]
     made = [b for b in made if b is not None]
     collection = _collection(scene, DISTRICT_COLLECTION)
+    _add_parts(state, made, export_collection, material, collection)
+    # Tower cranes last: they need the finished district to stay clear of it (cranes.py).
+    if state.terrain is not None:
+        _add_parts(state, [cranes.cranes(city, state, _clearance(state))], export_collection, material, collection)
+    state.problems["City_Roads"] = state.problems["City_Roads"] + city.audit()
+    # Traffic vehicles (traffic.py) and the crane jib: exported like buildings, not placed (Unity moves them).
+    for b in traffic.models(state.style) + [cranes.jib_model(state.style)]:
+        state.problems[b.name] = audit.check(b)
+        state.built[b.name] = _building_objects(b, export_collection, material, state.style)
+
+
+def _add_parts(state, made, export_collection, material, collection):
+    """City parts placed once at the origin: audit, export objects, a district copy."""
     for b in made:
         state.problems[b.name] = audit.check(b)
         state.built[b.name] = _building_objects(b, export_collection, material, state.style)
@@ -171,11 +184,6 @@ def _make_roads(scene, state, city, export_collection, material):
         collection.objects.link(obj)
         state.district.append(obj)
         state.placements.setdefault(b.name, (0.0, 0.0, 0.0))
-    state.problems["City_Roads"] = state.problems["City_Roads"] + city.audit()
-    # Traffic vehicles (traffic.py): exported like buildings, not placed (Unity draws them along the traffic paths).
-    for b in traffic.models(state.style):
-        state.problems[b.name] = audit.check(b)
-        state.built[b.name] = _building_objects(b, export_collection, material, state.style)
 
 
 def _wall_hit(state, city):
@@ -585,6 +593,23 @@ def _placed(state, attribute):
             yield from getattr(state.built[name]["building"], attribute)
 
 
+def _lava_paths(state):
+    """Lava centre lines for the heat shimmer in the game (CityTrafficSystem): points every 8 m on the lava surface
+    (flat x, y, z list: JsonUtility cannot read nested arrays) and the width. Empty on maps without lava."""
+    import numpy as np
+    from shapely.geometry import LineString
+    t = state.terrain
+    out = []
+    for path, width in getattr(t, "lava", None) or []:
+        line = LineString(path)
+        points = []
+        for d in np.arange(0.0, line.length + 0.1, 8.0):
+            p = line.interpolate(float(d))
+            points += [round(p.x, 2), round(float(t.sample(p.x, p.y)) + 0.3, 2), round(p.y, 2)]
+        out.append({"points": points, "width": round(float(width), 2)})
+    return out
+
+
 def _city_emitters(state):
     """Steam, smoke and heat outlets in city space (CityAssets.PlaceEmitters makes particle systems there)."""
     return [{"kind": kind, "position": _r(p), "radius": round(radius, 2)} for kind, p, radius in _placed(state, "emitters")]
@@ -678,6 +703,7 @@ def export_terrain(state, out_dir):
         "emitters": _city_emitters(state),
         "heightFog": _height_fog(state),
         "traffic": traffic.paths(state, _clearance(state)),
+        "lava": _lava_paths(state),
         "flightBounds": {"centre": [0.0, 450.0, 0.0], "size": [t.values["size"] - 400.0, 900.0, t.values["size"] - 400.0]},
         "audit": state.terrain_problems,
     }

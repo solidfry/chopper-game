@@ -177,6 +177,13 @@ every road it meets; the two roads at a junction get opposite phases (by directi
 streets (City01: 404 stops). Unity runs the signal cycle and the queues (`TrafficSettings`).
 "searchlights": sweeping lights on the roofs of the tallest towers (over 150 m, up to 8) and of 6 industrial plots:
 position, phase, sweep speed, colour (mostly cool white, a few Dream Cyan and Cruise Pink).
+"cranes": tower cranes (`cityforge/cranes.py`): `City_Cranes` (a city part: yellow lattice masts on concrete pads, one
+box collider each) and `Crane_Jib` (the turning top, not placed: jib, counter jib, cab, tower head, trolley and hook,
+three sodium floodlights, blinking red lights). Up to 6, 160 m apart, off roads and footprints, the mast and the
+jib's swept circle checked clear of every placed mesh; the mast is as tall as the buildings in reach need (40 to
+180 m). Each: pivot, centre angle, slew speed, swing. Unity swings the jib and draws the floodlight cones.
+"lava" (top level): lava centre lines (points every 8 m on the surface, width) for the heat shimmer
+(`Art/Shaders/HeatHaze.shader`, drawn by `CityTrafficSystem`; needs the URP opaque texture, set by step 9).
 
 ## Building surfaces
 

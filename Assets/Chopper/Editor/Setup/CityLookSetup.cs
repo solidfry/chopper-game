@@ -43,7 +43,30 @@ namespace Chopper.Editor.Setup
             }
             var profile = EnsureProfile();
             EnsureVolume(profile);
+            EnsureOpaqueTexture();
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>The heat shimmer over the lava (Art/Shaders/HeatHaze.shader) reads the screen behind it: turn on the
+        /// opaque texture (and the depth texture, for the soft edges) on every URP asset in use.</summary>
+        private static void EnsureOpaqueTexture()
+        {
+            foreach (var asset in PipelineAssets())
+            {
+                if (asset.supportsCameraOpaqueTexture && asset.supportsCameraDepthTexture) continue;
+                asset.supportsCameraOpaqueTexture = true;
+                asset.supportsCameraDepthTexture = true;
+                EditorUtility.SetDirty(asset);
+            }
+        }
+
+        private static HashSet<UniversalRenderPipelineAsset> PipelineAssets()
+        {
+            var assets = new HashSet<UniversalRenderPipelineAsset>();
+            if (GraphicsSettings.defaultRenderPipeline is UniversalRenderPipelineAsset main) assets.Add(main);
+            for (var i = 0; i < QualitySettings.names.Length; i++)
+                if (QualitySettings.GetRenderPipelineAssetAt(i) is UniversalRenderPipelineAsset level) assets.Add(level);
+            return assets;
         }
 
         public static IEnumerable<(string Message, Object Context)> Problems()
@@ -56,6 +79,9 @@ namespace Chopper.Editor.Setup
                     yield return ($"Renderer {data.name}: no city height fog pass. Press '9. City look'.", data);
             if (AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath) == null)
                 yield return ("No city post profile. Press '9. City look'.", null);
+            foreach (var asset in PipelineAssets())
+                if (!asset.supportsCameraOpaqueTexture)
+                    yield return ($"URP asset {asset.name}: opaque texture off, so the lava has no heat shimmer. Press '9. City look'.", asset);
         }
 
         /// <summary>The renderer data of every URP asset in use (default and per quality level).</summary>

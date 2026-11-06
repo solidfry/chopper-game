@@ -66,6 +66,7 @@ def paths(state, clearance):
         "signals": {"note": "Lane stops (flat list): distance along the lane (m), phase (0 or 1). The two roads at a "
                             "junction have opposite phases. Cycle and green times: Unity TrafficSettings."},
         "searchlights": lights,
+        "cranes": _cranes(state),
         "stats": {kind: sum(1 for p in lanes + air if p["kind"] == kind) for kind in SPEED},
     }
 
@@ -401,6 +402,19 @@ def _drone(b):
             b.cylinder((tip[0], 0.5, tip[2]), (tip[0], 0.56, tip[2]), 0.38, "rubber", segments=10, at=L01)
             b.box((tip[0], 0.44, tip[2]), (0.08, 0.08, 0.08), "warning", L01)   # nav light (blinks)
     b.span(-1.1, 1.1, 0.25, 0.56, -1.1, 1.1, "dark", L2)
+
+
+# -- cranes ------------------------------------------------------------------------------------------------------------
+
+def _cranes(state):
+    """Tower cranes (cranes.py): the jib's pivot on the mast top, start angle (radians), slew speed (rad/s) and how far
+    it swings each way (radians). Unity turns Crane_Jib there and draws its floodlight beams down to the ground."""
+    from . import cranes
+    entry = state.built.get("City_Cranes")
+    placed = getattr(entry["building"], "cranes", []) if entry else []
+    return {"floods": list(cranes.FLOODS),
+            "items": [{"pivot": [round(v, 2) for v in pivot], "phase": round(phase, 3), "speed": round(speed, 3),
+                       "swing": round(swing, 3)} for pivot, phase, speed, swing in placed]}
 
 
 # -- searchlights ------------------------------------------------------------------------------------------------------

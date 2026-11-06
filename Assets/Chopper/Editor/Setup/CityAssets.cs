@@ -118,7 +118,16 @@ namespace Chopper.Editor.Setup
             public CityEmitter[] emitters;
             public HeightFogInfo heightFog;
             public TrafficInfo traffic;
+            public LavaInfo[] lava;
             public FlightBoundsInfo flightBounds;
+        }
+
+        /// <summary>A lava centre line (flat x, y, z points every 8 m on the surface) and its width (m).</summary>
+        [Serializable]
+        internal sealed class LavaInfo
+        {
+            public float[] points;
+            public float width;
         }
 
         /// <summary>Cosmetic traffic paths (CityForge traffic.py): ground lanes and air routes.</summary>
@@ -128,6 +137,24 @@ namespace Chopper.Editor.Setup
             public TrafficPathInfo[] lanes;
             public TrafficPathInfo[] air;
             public SearchlightInfo[] searchlights;
+            public CraneInfo cranes;
+        }
+
+        /// <summary>Tower cranes: floodlight spots under the jib (local z, m) and each crane's pivot and slew.</summary>
+        [Serializable]
+        internal sealed class CraneInfo
+        {
+            public float[] floods;
+            public CraneItem[] items;
+        }
+
+        [Serializable]
+        internal sealed class CraneItem
+        {
+            public float[] pivot;
+            public float phase;
+            public float speed;
+            public float swing;
         }
 
         [Serializable]
@@ -799,7 +826,7 @@ namespace Chopper.Editor.Setup
                 PlaceEmitters(scene, terrain.emitters);
                 PlaceProbes(scene, terrain.size, manifest.kit);
                 PlaceAtmosphere(scene, terrain.heightFog);
-                PlaceTraffic(scene, folder, manifest.kit, terrain.traffic, prefabs, buildingMaterial);
+                PlaceTraffic(scene, folder, manifest.kit, terrain.traffic, terrain.lava, prefabs, buildingMaterial);
 
                 Directory.CreateDirectory(SceneFolder);
                 EditorSceneManager.SaveScene(scene, path);
@@ -1117,8 +1144,8 @@ namespace Chopper.Editor.Setup
         /// <summary>"Traffic": the map's cosmetic traffic (CityTrafficAuthoring: paths from "traffic", the vehicle models'
         /// LOD0 meshes, an instanced copy of the building material, the shared TrafficSettings). The client's
         /// CityTrafficSystem moves and draws the vehicles. The vehicle models are in the manifest (not placed).</summary>
-        private static void PlaceTraffic(Scene scene, string folder, string kit, TrafficInfo traffic, Dictionary<string, GameObject> prefabs,
-            Material buildingMaterial)
+        private static void PlaceTraffic(Scene scene, string folder, string kit, TrafficInfo traffic, LavaInfo[] lava,
+            Dictionary<string, GameObject> prefabs, Material buildingMaterial)
         {
             if (traffic == null || buildingMaterial == null) return;
             var paths = new List<Chopper.Simulation.Visuals.CityTrafficAuthoring.PathData>();
@@ -1144,6 +1171,21 @@ namespace Chopper.Editor.Setup
                     colour = ColorUtility.TryParseHtmlString(l.colour, out var parsed) ? parsed : Color.white,
                 })
                 .ToList();
+            var cranes = (traffic.cranes?.items ?? Array.Empty<CraneItem>())
+                .Where(c => c?.pivot is { Length: >= 3 })
+                .Select(c => new Chopper.Simulation.Visuals.CityTrafficAuthoring.CraneData
+                    { pivot = Vector(c.pivot), phase = c.phase, speed = c.speed, swing = c.swing })
+                .ToList();
+            var jib = prefabs.TryGetValue("Crane_Jib", out var jibPrefab) ? Lod0Mesh(jibPrefab) : null;
+            var heat = (lava ?? Array.Empty<LavaInfo>())
+                .Where(l => l?.points != null && l.points.Length >= 6)
+                .Select(l => new Chopper.Simulation.Visuals.CityTrafficAuthoring.LavaData
+                {
+                    width = l.width,
+                    points = Enumerable.Range(0, l.points.Length / 3)
+                        .Select(i => new Vector3(l.points[i * 3], l.points[i * 3 + 1], l.points[i * 3 + 2])).ToArray(),
+                })
+                .ToList();
             var meshes = TrafficModels.Select(name => prefabs.TryGetValue(name, out var prefab) ? Lod0Mesh(prefab) : null).ToArray();
             if (paths.Count == 0 || meshes[0] == null)
             {
@@ -1156,7 +1198,29 @@ namespace Chopper.Editor.Setup
                 meshes[3], EnsureTrafficMaterial(folder, kit, buildingMaterial),
                 EnsureBeamMaterial(TrailMaterialPath, new Color(3.2f, 0.8f, 1.7f), facing: 0f, falloff: 1.2f, soft: 0.5f, near: 2f),
                 EnsureBeamMaterial(BeamMaterialPath, new Color(0.22f, 0.24f, 0.28f), facing: 1f, falloff: 1.6f, soft: 6f, near: 25f),
-                paths, lights);
+                paths, lights, jib, cranes, traffic.cranes?.floods ?? Array.Empty<float>(),
+                heat.Count > 0 ? EnsureHazeMaterial() : null, heat);
+        }
+
+        private const string HazeShader = "Chopper/HeatHaze";
+        private const string HazeMaterialPath = "Assets/Chopper/Data/Rendering/HeatHaze.mat";
+
+        /// <summary>Heat shimmer over the lava (Art/Shaders/HeatHaze.shader; needs the URP opaque texture, which
+        /// step 9 turns on). Made once, then left alone for tuning.</summary>
+        private static Material EnsureHazeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(HazeMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find(HazeShader);
+            if (shader == null)
+            {
+                Debug.LogWarning($"Setup: shader '{HazeShader}' not found (Art/Shaders/HeatHaze.shader does not compile?). No heat shimmer.");
+                return null;
+            }
+            material = new Material(shader) { name = "HeatHaze" };
+            Directory.CreateDirectory(Path.GetDirectoryName(HazeMaterialPath));
+            AssetDatabase.CreateAsset(material, HazeMaterialPath);
+            return material;
         }
 
         private const string LightBeamShader = "Chopper/LightBeam";

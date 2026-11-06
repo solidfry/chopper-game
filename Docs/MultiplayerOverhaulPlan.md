@@ -553,7 +553,7 @@ were tried and removed: they looked broken. Now: map-wide surface textures, mask
 1.5 m per texel, read by the shader; big gullies in the mesh); 2. connecting
 detail (refinery pipe network, stairs and walkways, cables, yard vehicles, street props, more footprints); 3. building
 surfaces (interior-mapped windows, per-copy variation, panel detail, wet roads); 4. light and air (steam and smoke VFX,
-heat haze, height fog, SSAO, reflection probes, local and animated lights); 5. life (traffic, drones) last. Life first version (6 Nov, Unity side not compiled): CityForge traffic paths and vehicle models, `CityTrafficSystem` draws them instanced (see the CityForge README, "Traffic"). Then (6 Nov, not compiled): signals and queues at junctions, pink tail-light trails on the flying cars, sweeping searchlights on the roofs (`Art/Shaders/LightBeam.shader`). Next for life: cranes with work lights, pedestrians on the sky walks.
+heat haze, height fog, SSAO, reflection probes, local and animated lights); 5. life (traffic, drones) last. Life first version (6 Nov, Unity side not compiled): CityForge traffic paths and vehicle models, `CityTrafficSystem` draws them instanced (see the CityForge README, "Traffic"). Then (6 Nov, not compiled): signals and queues at junctions, pink tail-light trails on the flying cars, sweeping searchlights on the roofs (`Art/Shaders/LightBeam.shader`). Then tower cranes (slewing jibs, floodlight cones) and heat shimmer over the lava (`HeatHaze.shader`). Next for life: pedestrians on the sky walks (owner: not worth it yet).
 
 
 A procedural generator for **city buildings**, like PartForge for the choppers (`Tools/PartForge`): code + numbers in Blender (Python and geometry nodes), so a change is a re-run, not a re-model.

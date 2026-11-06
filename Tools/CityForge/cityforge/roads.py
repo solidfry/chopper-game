@@ -25,7 +25,7 @@ from . import layout as layout_module
 from . import kit
 from .kit import ALL, L0, L01, L2, Building, sw
 
-CITY_PARTS = ("City_Roads", "City_Freeway", "City_SkyRoads", "City_Utilities", "City_Shanties")   # placed once at the city origin
+CITY_PARTS = ("City_Roads", "City_Freeway", "City_SkyRoads", "City_Utilities", "City_Shanties", "City_Cranes")   # placed once at the city origin
 ROAD_BUDGETS = dict(lod0=400000, lod1=0.95, lod2=60000)
 SURFACE_Y = 0.05
 

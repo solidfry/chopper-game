@@ -47,6 +47,9 @@ namespace Chopper.Simulation.Visuals
         private float trailSeconds = 0.35f;
         [SerializeField, Min(10f), Tooltip("Searchlight beam length (m).")] private float beamLength = 650f;
         [SerializeField, Min(1f), Tooltip("Searchlight beam radius at its far end (m).")] private float beamRadius = 30f;
+        [SerializeField, Min(0.5f), Tooltip("Crane floodlight cone radius on the ground (m).")] private float floodRadius = 8f;
+        [SerializeField, Tooltip("Crane floodlight colour (multiplies the beam material's colour).")]
+        private Color floodColour = new(1f, 0.68f, 0.26f);
 
         public TrafficLook ToLook()
         {
@@ -67,6 +70,8 @@ namespace Chopper.Simulation.Visuals
                 TrailSeconds = trailSeconds,
                 BeamLength = beamLength,
                 BeamRadius = beamRadius,
+                FloodRadius = floodRadius,
+                FloodColour = new Unity.Mathematics.float3(floodColour.linear.r, floodColour.linear.g, floodColour.linear.b),
             };
             foreach (var value in new[] { street, main, highway, freeway, sky, spiral, air, drone }) look.PerKm.Add(value);
             return look;
