@@ -50,6 +50,7 @@ namespace Chopper.Editor.Setup
         /// <summary>Starts the steps (also for scripts and batch mode). Builds at once when the editor is on Linux Server already.</summary>
         public static void Start()
         {
+            NetcodeSettingsSetup.EnsureServerBaking();
             if (IsOnLinuxServer())
             {
                 BuildNow();

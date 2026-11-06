@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Unity.NetCode;
 using Unity.NetCode.Hybrid;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace Chopper.Editor.Setup
@@ -23,9 +25,37 @@ namespace Chopper.Editor.Setup
         private const string ConfigPath = "Assets/Chopper/Data/NetcodeConfig.asset";
         private const int StepsPerFrame = 4;
         private const int ClientReceiveQueue = 256;
+        private const string ServerExcludedBaking = "Unity.Entities.Graphics";
+
+        /// <summary>
+        /// The server draws nothing, so it does not bake render data (meshes, materials, lights, LODs): those bakers are in
+        /// this assembly. Colliders come from Unity Physics and stay. Changing this rebakes the server's subscenes.
+        /// </summary>
+        public static void EnsureServerBaking()
+        {
+            var filter = NetCodeServerSettings.instance.GetFilterSettings();
+            if (filter.ExcludedBakingSystemAssemblies.Exists(a => a.asset != null && a.asset.name == ServerExcludedBaking)) return;
+
+            var path = AssetDatabase.FindAssets($"t:asmdef {ServerExcludedBaking}")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .FirstOrDefault(p => Path.GetFileNameWithoutExtension(p) == ServerExcludedBaking);
+            var assembly = path != null ? AssetDatabase.LoadAssetAtPath<AssemblyDefinitionAsset>(path) : null;
+            if (assembly == null)
+            {
+                Debug.LogWarning($"Setup: assembly {ServerExcludedBaking} not found; the server build keeps its render data.");
+                return;
+            }
+
+            filter.ExcludedBakingSystemAssemblies.Add(assembly);
+            // Save is internal to Netcode (see Ensure).
+            typeof(NetCodeServerSettings).GetMethod("Save", BindingFlags.Instance | BindingFlags.NonPublic, null,
+                System.Type.EmptyTypes, null)?.Invoke(NetCodeServerSettings.instance, null);
+            Debug.Log($"Setup: server baking now skips {ServerExcludedBaking}.");
+        }
 
         public static void Ensure()
         {
+            EnsureServerBaking();
             var config = AssetDatabase.LoadAssetAtPath<NetCodeConfig>(ConfigPath);
             if (config == null)
             {
@@ -62,6 +92,9 @@ namespace Chopper.Editor.Setup
 
         public static IEnumerable<string> Problems()
         {
+            if (!NetCodeServerSettings.instance.GetFilterSettings().ExcludedBakingSystemAssemblies.Exists(a => a.asset != null && a.asset.name == ServerExcludedBaking))
+                yield return $"Server baking does not skip {ServerExcludedBaking}: server builds carry render data. Press '1. Create / repair config'.";
+
             var config = NetCodeClientAndServerSettings.instance.GlobalNetCodeConfig;
             if (config == null)
                 yield return "No global Netcode config: slow frames batch server ticks. Press '1. Create / repair config'.";

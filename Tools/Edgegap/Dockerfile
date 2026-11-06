@@ -6,7 +6,7 @@
 # In the Edgegap app version, add a port named "gameport", 7979/UDP: the server listens on its internal port
 # (ARBITRIUM_PORT_GAMEPORT_INTERNAL; "-port" overrides it; default 7979). It stops itself when idle
 # (ServerLifecycleSystem; "-idleStart" / "-idleEmpty" seconds, e.g. as extra "docker run" arguments).
-FROM ubuntu:22.04
+FROM debian:bookworm-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
