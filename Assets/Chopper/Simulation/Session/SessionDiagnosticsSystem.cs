@@ -18,13 +18,13 @@ namespace Chopper.Simulation.Session
         private const double CheckAfterSeconds = 5.0;
         /// <summary>
         /// Netcode averages batched ticks over 4 frames, so one editor hitch (an editor GC of about 20 ms) is a
-        /// warning. Measured 29 Oct: 0.2 % of frames batched, each alone. Over this many frames (about 0.3-1 s in the
+        /// warning. Measured 29 Oct: 0.2 % of frames batched, each alone. Measured 6 Nov (Map_City04, RTX 5090): server sim 1.2 ms, frames 10 ms, none over 18 ms in the worst views; with a 60 frame window one 200 ms stall (editor compile, focus change) still warned. Over this many frames (about 1-4 s in the
         /// editor) the warning means the server really falls behind. A window set in Play Mode Tools wins.
         /// </summary>
-        private const int BatchWarningWindowFrames = 60;
+        private const int BatchWarningWindowFrames = 240;
         private const int NetcodeDefaultWindowFrames = 4;
         /// <summary>Loading the subscene stalls a frame or two and the server catches up once; that is not a problem.</summary>
-        private const double LoadGraceSeconds = 5.0;
+        private const double LoadGraceSeconds = 15.0;
 
         private bool _done;
         private bool _batchWindowSet;

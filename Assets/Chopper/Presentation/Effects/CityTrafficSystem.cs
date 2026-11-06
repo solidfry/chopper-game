@@ -399,8 +399,8 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>
-        /// Heat shimmer quads along the lava (HeatHaze shader): one upright billboard every point (8 m), as wide as the
-        /// lava plus 6 m and 10 m + a tenth of the width high. POSITION = the foot on the lava, UV1 = the corner offset
+        /// Heat shimmer quads along the lava (HeatHaze shader): one billboard every third point (24 m), as wide as the
+        /// lava plus 6 m and 22 m + 0.6 of the width high. POSITION = the foot on the lava, UV1 = the corner offset
         /// (m) that the shader turns to face the camera. Null when the map has no lava.
         /// </summary>
         private static Mesh HazeMesh(ref BlobArray<LavaPath> lava)
@@ -415,8 +415,8 @@ namespace Chopper.Presentation.Effects
             {
                 ref var path = ref lava[i];
                 var half = path.Width * 0.5f + 3f;
-                var height = 10f + path.Width * 0.1f;
-                for (var k = 0; k < path.Points.Length; k++)
+                var height = 22f + path.Width * 0.6f;
+                for (var k = 0; k < path.Points.Length; k += 3)
                 {
                     Vector3 foot = path.Points[k];
                     var start = vertices.Count;

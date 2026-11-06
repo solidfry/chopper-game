@@ -187,6 +187,8 @@ namespace Chopper.Editor.Setup
             AddSubScene(scene, "Gameplay (SubScene)", gameplayPath);
             AddSubScene(scene, "City (SubScene)", CityAssets.ScenePath(kit));
 
+            // Load again: opening a scene can unload assets, and an old handle gave the HUD no panel settings or layout.
+            config = ConfigAssets.Load();
             SceneSetup.Apply(config);                        // bridge, HUD, options, cockpit screens, camera rig
             var look = environment.Look(DefaultTime);
             var camera = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Camera>(true)).FirstOrDefault();

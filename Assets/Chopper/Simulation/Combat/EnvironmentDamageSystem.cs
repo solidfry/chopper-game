@@ -59,7 +59,7 @@ namespace Chopper.Simulation.Combat
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PhysicsWorldSingleton>();
-            _sensors = state.GetComponentLookup<CrashSensor>(isReadOnly: true);
+            _sensors = state.GetComponentLookup<CrashSensor>();
             _poses = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
             _owners = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
         }
@@ -86,11 +86,13 @@ namespace Chopper.Simulation.Combat
                 var sensor = _sensors[chopper];
                 if (sensor.HasVelocity)
                 {
-                    var speed = CrashDamage.ImpactSpeed(sensor.VelocityBefore, velocity.ValueRO.Linear, out var normal);
+                    var change = velocity.ValueRO.Linear - sensor.VelocityBefore;
+                    var contact = CrashDamage.Track(ref sensor, change, deltaTime, out var speed, out var added, out var normal);
                     var landing = CrashDamage.IsLanding(normal);
-                    var amount = CrashDamage.Damage(config.ValueRO, speed, landing, health.ValueRO.Max);
+                    var amount = contact ? CrashDamage.Damage(config.ValueRO, speed, landing, health.ValueRO.Max) - sensor.ContactDealt : 0f;
                     if (amount > 0f)
                     {
+                        sensor.ContactDealt += amount;
                         var radius = SystemAPI.HasComponent<PhysicsCollider>(chopper)
                             ? Radius(SystemAPI.GetComponent<PhysicsCollider>(chopper))
                             : FallbackRadius;
@@ -102,9 +104,10 @@ namespace Chopper.Simulation.Combat
                             Point = point,
                             Normal = normal,
                             Kind = landing ? DamageKind.Landing : DamageKind.Impact,
-                            ImpactSpeed = speed,
+                            ImpactSpeed = added,
                         });
                     }
+                    _sensors[chopper] = sensor;
                 }
 
                 if (hasBounds && !bounds.Contains(position))

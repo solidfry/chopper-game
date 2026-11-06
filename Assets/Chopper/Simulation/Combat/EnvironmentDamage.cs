@@ -37,6 +37,13 @@ namespace Chopper.Simulation.Combat
         public float3 VelocityBefore;
         /// <summary>False until the first snapshot (a new chopper takes no crash damage on its first tick).</summary>
         public bool HasVelocity;
+        /// <summary>Velocity the contacts took away since this contact started (see <see cref="CrashDamage.Track"/>).</summary>
+        public float3 ContactChange;
+        /// <summary>Seconds since this contact started.</summary>
+        public float ContactAge;
+        /// <summary>Damage this contact already did.</summary>
+        public float ContactDealt;
+        public bool InContact;
     }
 
     /// <summary>Crash damage maths, shared by the server system and the tests.</summary>
@@ -44,6 +51,41 @@ namespace Chopper.Simulation.Combat
     {
         /// <summary>A contact whose normal points up this much (cos 45°) is ground or a roof: a landing.</summary>
         public const float GroundNormalY = 0.7f;
+        /// <summary>Physics spreads one hit over a few ticks (21.8 m/s came as 18.4 + 3.4): they count as one impact.</summary>
+        public const float ContactWindow = 0.1f;
+        /// <summary>A velocity change below this (m/s per tick) is gravity and drag, not a contact.</summary>
+        public const float ContactMinChange = 1f;
+
+        /// <summary>
+        /// Adds this tick's velocity change to the contact. Returns false when there is no contact this tick. Else
+        /// <paramref name="total"/> = the whole impact speed so far, <paramref name="added"/> = the part new this tick
+        /// (the camera shake adds up, so it takes only the new part) and <paramref name="normal"/> = the contact normal.
+        /// </summary>
+        public static bool Track(ref CrashSensor sensor, float3 change, float deltaTime, out float total, out float added, out float3 normal)
+        {
+            total = added = 0f;
+            normal = new float3(0f, 1f, 0f);
+            if (sensor.InContact)
+            {
+                sensor.ContactAge += deltaTime;
+                if (sensor.ContactAge > ContactWindow) sensor.InContact = false;
+            }
+            if (math.length(change) < ContactMinChange) return false;
+            if (!sensor.InContact)
+            {
+                sensor.InContact = true;
+                sensor.ContactAge = 0f;
+                sensor.ContactChange = float3.zero;
+                sensor.ContactDealt = 0f;
+            }
+            var before = math.length(sensor.ContactChange);
+            sensor.ContactChange += change;
+            total = math.length(sensor.ContactChange);
+            added = math.max(0f, total - before);
+            if (total > 1e-4f) normal = sensor.ContactChange / total;
+            return true;
+        }
+
 
         /// <summary>
         /// Speed change the physics step made (after minus before). The contact pushed the chopper along its normal,

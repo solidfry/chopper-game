@@ -96,6 +96,33 @@ namespace Chopper.Tests
         }
     
         [Test]
+        public void Track_CountsOneHitOverSeveralTicksAsOneImpact()
+        {
+            var sensor = new CrashSensor();
+            const float tick = 1f / 60f;
+            // Measured 6 Nov: a 21.8 m/s hit on the ground came as 18.4 m/s, then 3.4 m/s.
+            Assert.That(CrashDamage.Track(ref sensor, new float3(0f, 18.4f, 0f), tick, out var total, out var added, out var normal), Is.True);
+            Assert.That(total, Is.EqualTo(18.4f).Within(1e-3f));
+            Assert.That(added, Is.EqualTo(18.4f).Within(1e-3f));
+            Assert.That(CrashDamage.IsLanding(normal), Is.True);
+            Assert.That(CrashDamage.Track(ref sensor, new float3(0f, 3.4f, 0f), tick, out total, out added, out _), Is.True);
+            Assert.That(total, Is.EqualTo(21.8f).Within(1e-3f));
+            Assert.That(added, Is.EqualTo(3.4f).Within(1e-3f), "The shake takes only the new part.");
+        }
+
+        [Test]
+        public void Track_IgnoresGravityAndStartsANewImpactAfterTheWindow()
+        {
+            var sensor = new CrashSensor();
+            const float tick = 1f / 60f;
+            Assert.That(CrashDamage.Track(ref sensor, new float3(0f, -0.27f, 0f), tick, out _, out _, out _), Is.False);
+            CrashDamage.Track(ref sensor, new float3(10f, 0f, 0f), tick, out _, out _, out _);
+            for (var i = 0; i < 10; i++) CrashDamage.Track(ref sensor, float3.zero, tick, out _, out _, out _);
+            CrashDamage.Track(ref sensor, new float3(0f, 0f, 6f), tick, out var total, out _, out _);
+            Assert.That(total, Is.EqualTo(6f).Within(1e-3f), "A later hit does not add to the old one.");
+        }
+
+        [Test]
         public void HitTrauma_MatchesTheImpact()
         {
             var settings = ScriptableObject.CreateInstance<CameraSettings>();

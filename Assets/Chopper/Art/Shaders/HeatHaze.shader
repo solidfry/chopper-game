@@ -9,9 +9,9 @@ Shader "Chopper/HeatHaze"
 {
     Properties
     {
-        _Strength ("Distortion (screen share at 10 m)", Range(0, 0.05)) = 0.012
-        _Scale ("Ripple size (1/m)", Range(0.05, 3)) = 0.6
-        _Rise ("Rise speed (m/s)", Range(0, 10)) = 2.5
+        _Strength ("Distortion (screen share at 10 m)", Range(0, 0.1)) = 0.035
+        _Scale ("Ripple size (1/m)", Range(0.02, 3)) = 0.18
+        _Rise ("Rise speed (m/s)", Range(0, 30)) = 7
         [HDR] _Glow ("Warm glow", Color) = (0.08, 0.025, 0.005, 1)
         _Far ("Fade out by (m)", Range(50, 3000)) = 900
     }
@@ -65,7 +65,10 @@ Shader "Chopper/HeatHaze"
                 float3 toCamera = _WorldSpaceCameraPos - foot;
                 toCamera.y = 0.0;
                 float3 right = normalize(cross(float3(0.0, 1.0, 0.0), toCamera + float3(1e-4, 0.0, 0.0)));
-                float3 world = foot + right * input.corner.x + float3(0.0, input.corner.y, 0.0);
+                // Lean the quad toward a camera above it: seen from high up an upright quad is a thin line.
+                float3 toEye = normalize(_WorldSpaceCameraPos - foot);
+                float3 up = normalize(float3(0.0, 1.0, 0.0) + normalize(cross(right, float3(0.0, 1.0, 0.0))) * max(toEye.y, 0.0) * 2.0);
+                float3 world = foot + right * input.corner.x + up * input.corner.y;
                 output.positionCS = TransformWorldToHClip(world);
                 output.positionWS = world;
                 output.uv = input.uv;
