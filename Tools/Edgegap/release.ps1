@@ -46,8 +46,9 @@ if ($InPlace) {
 else {
     $source = Invoke-RestMethod -Uri "$api/$current" -Headers $headers
     $body = @{}
-    foreach ($property in $source.PSObject.Properties) { $body[$property.Name] = $property.Value }
-    foreach ($readOnly in 'create_time', 'last_updated', 'id') { $body.Remove($readOnly) }
+    # Unset settings come back as null, and the API refuses null when they are sent.
+    foreach ($property in $source.PSObject.Properties) { if ($null -ne $property.Value) { $body[$property.Name] = $property.Value } }
+    foreach ($readOnly in 'create_time', 'last_updated', 'id', 'caching_percent', 'kind') { $body.Remove($readOnly) }
     $body.name = $Version
     $body.docker_tag = $Version
     # Edgegap returns the registry login masked; send the real one.
