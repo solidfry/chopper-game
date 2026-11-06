@@ -19,6 +19,8 @@ namespace Chopper.UI.Cockpit
         private const string LockedClass = "tactical__lock--locked";
         private const string LowClass = "systems--low";
         private const string FlaresReadyClass = "systems__flares--ready";
+        private const string AmmoEmptyClass = "systems__ammo--empty";
+        private const string HeatHotClass = "systems__heat--hot";
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the view models and the camera rig.")]
         private PresentationBridge bridge;
@@ -32,6 +34,8 @@ namespace Chopper.UI.Cockpit
         private Label _lock;
         private Label _threat;
         private Label _flares;
+        private Label _ammo;
+        private Label _gunHeat;
         private Label _warning;
         private RadarScope _radar;
         private bool _visible = true;
@@ -74,6 +78,8 @@ namespace Chopper.UI.Cockpit
             _lock = _root.Q<Label>("lock");
             _threat = _root.Q<Label>("threat");
             _flares = _root.Q<Label>("flares");
+            _ammo = _root.Q<Label>("ammo");
+            _gunHeat = _root.Q<Label>("gun-heat");
             _warning = _root.Q<Label>("warning");
             _systems = _root.Q("systems");
             _radar = _root.Q<RadarScope>("radar");
@@ -82,6 +88,10 @@ namespace Chopper.UI.Cockpit
             BindNumber(_root.Q<Label>("altitude"), nameof(ChopperHudModel.AltitudeText));
             BindNumber(_root.Q<Label>("hull-value"), nameof(ChopperHudModel.HealthText));
             Bind(_root.Q<Label>("weapon"), "text", nameof(ChopperHudModel.PylonText));
+            // Plain text: fixed-width digits squeeze the letters of these labels.
+            Bind(_ammo, "text", nameof(ChopperHudModel.PylonAmmoText));
+            Bind(_flares, "text", nameof(ChopperHudModel.FlaresText));
+            Bind(_gunHeat, "text", nameof(ChopperHudModel.GunHeatText));
             var attitude = _root.Q<AttitudeIndicator>("attitude");
             Bind(attitude, nameof(AttitudeIndicator.roll), nameof(ChopperHudModel.RollDegrees));
             Bind(attitude, nameof(AttitudeIndicator.pitch), nameof(ChopperHudModel.PitchDegrees));
@@ -134,8 +144,9 @@ namespace Chopper.UI.Cockpit
                 : _model.ThreatLocking ? "RWR" : "";
             _radar?.SetMissile(_model.MissileInbound, _model.MissileDirectionDegrees);
             _systems.EnableInClassList(LowClass, _model.HealthLow);
-            _flares.text = _model.FlaresReady ? "FLR READY" : "FLR ---";
             _flares.EnableInClassList(FlaresReadyClass, _model.FlaresReady);
+            _ammo.EnableInClassList(AmmoEmptyClass, _model.PylonEmpty);
+            _gunHeat.EnableInClassList(HeatHotClass, _model.GunOverheated);
             _warning.text = _model.OutOfBounds ? "BOUNDS" : _model.HealthLow ? "HULL LOW" : "";
         }
 

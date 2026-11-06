@@ -28,12 +28,15 @@ namespace Chopper.Simulation.Combat
                 ref var flares = ref countermeasure.ValueRW;
                 flares.CooldownRemaining = math.max(0f, flares.CooldownRemaining - deltaTime);
                 flares.DecoyRemaining = math.max(0f, flares.DecoyRemaining - deltaTime);
+                Magazine.Tick(ref flares.RoundsUsed, ref flares.ReloadRemaining, deltaTime);
 
                 // Cooldown 0 = this loadout has no flares.
                 if (config.ValueRO.Cooldown <= 0f || !input.ValueRO.Countermeasure.IsSet || flares.CooldownRemaining > 0f) continue;
+                if (!Magazine.HasRound(flares.RoundsUsed, config.ValueRO.MagazineSize)) continue;
                 flares.CooldownRemaining = config.ValueRO.Cooldown;
                 flares.DecoyRemaining = config.ValueRO.DecoyDuration;
                 flares.FlareCount++;
+                Magazine.Spend(ref flares.RoundsUsed, ref flares.ReloadRemaining, config.ValueRO.MagazineSize, config.ValueRO.ReloadSeconds);
             }
         }
     }

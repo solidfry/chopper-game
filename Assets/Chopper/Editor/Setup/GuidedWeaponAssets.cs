@@ -34,6 +34,7 @@ namespace Chopper.Editor.Setup
                 // Agile, needs a lock: a dogfight missile.
                 d.Initialise(prefab, TargetClass.Air, needsLock: true, cone: 15f, range: 600f, lockSeconds: 1.2f, missileSpeed: 160f,
                     turnDegreesPerSecond: 120f, gain: 3f, fuse: 6f, direct: 45f, splash: 20f, radius: 6f, interval: 2.5f, life: 6f);
+                d.SetMagazine(size: 4, reload: 12f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
             var airToGround = Definition<GuidedMissileDefinition>("Weapon_HeatSeekerAG", d =>
@@ -41,6 +42,7 @@ namespace Chopper.Editor.Setup
                 // Slower and heavier; can dumb-fire at the ground.
                 d.Initialise(prefab, TargetClass.Ground, needsLock: false, cone: 10f, range: 800f, lockSeconds: 1.5f, missileSpeed: 110f,
                     turnDegreesPerSecond: 60f, gain: 2f, fuse: 3f, direct: 60f, splash: 35f, radius: 9f, interval: 3f, life: 8f);
+                d.SetMagazine(size: 2, reload: 14f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
             var cluster = Definition<GuidedMissileDefinition>("Weapon_ClusterMissile", d =>
@@ -50,6 +52,7 @@ namespace Chopper.Editor.Setup
                     turnDegreesPerSecond: 45f, gain: 2f, fuse: 3f, direct: 30f, splash: 15f, radius: 6f, interval: 5f, life: 6f);
                 d.SetCluster(count: 8, distance: 60f, time: 1.8f, subSpeed: 90f, spread: 14f, subLifetime: 2.5f, direct: 20f, splash: 18f,
                     radius: 6f);
+                d.SetMagazine(size: 2, reload: 16f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
             var swarm = Definition<GuidedMissileDefinition>("Weapon_SwarmMissiles", d =>
@@ -58,6 +61,7 @@ namespace Chopper.Editor.Setup
                 d.Initialise(prefab, TargetClass.Air, needsLock: true, cone: 20f, range: 500f, lockSeconds: 1f, missileSpeed: 140f,
                     turnDegreesPerSecond: 150f, gain: 3f, fuse: 4f, direct: 8f, splash: 5f, radius: 3f, interval: 6f, life: 4f);
                 d.SetSalvo(count: 10, interval: 0.06f, spreadDegrees: 20f, resistance: 0.3f);
+                d.SetMagazine(size: 2, reload: 18f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
             var flares = Definition<CountermeasureDefinition>("Ability_Flares", _ => { });

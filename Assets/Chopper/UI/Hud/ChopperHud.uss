@@ -321,6 +321,40 @@
   --arc-track: rgba(255, 66, 70, 0.15);
 }
 
+/* Gun heat: bottom arc. Yellow while it heats, red when the gun is locked out. */
+.hud-heat-arc {
+  --arc-fill: var(--chopper-yellow);
+  --arc-track: rgba(255, 223, 107, 0.12);
+}
+
+.hud-heat-arc.hud-arc--low {
+  --arc-fill: var(--chopper-red);
+  --arc-track: rgba(255, 66, 70, 0.15);
+}
+
+.hud-heat-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -46px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-green-dim);
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.hud-heat-label--hot {
+  font-size: 16px;
+  color: var(--chopper-red);
+  text-shadow: 0 0 6px rgba(255, 66, 70, 0.5);
+}
+
+/* No gun, or a gun with no heat limit */
+.hud-heat--none {
+  display: none;
+}
+
 .hud-arc__label {
   position: absolute;
   bottom: 52px;
@@ -475,6 +509,17 @@
 
 .hud-pylon--needs-lock {
   color: var(--chopper-yellow);
+}
+
+.hud-pylon-ammo {
+  font-size: 14px;
+  color: var(--chopper-green);
+  padding: 0;
+  -unity-text-align: middle-right;
+}
+
+.hud-pylon-ammo--empty {
+  color: var(--chopper-red);
 }
 
 .hud-flares {

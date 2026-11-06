@@ -36,6 +36,9 @@ namespace Chopper.UI.Hud
         private const string ThreatsDimClass = "hud-threats--dim";
         private const string PylonNeedsLockClass = "hud-pylon--needs-lock";
         private const string FlaresReadyClass = "hud-flares--ready";
+        private const string PylonAmmoEmptyClass = "hud-pylon-ammo--empty";
+        private const string HeatNoneClass = "hud-heat--none";
+        private const string HeatLabelHotClass = "hud-heat-label--hot";
         /// <summary>Lock bracket size in pixels: wide when the lock starts, tight when locked.</summary>
         private const float LockStartSize = 140f;
         private const float LockEndSize = 56f;
@@ -52,7 +55,10 @@ namespace Chopper.UI.Hud
         private Label _lockWarning;
         private VisualElement _missileRing;
         private VisualElement _pylon;
+        private VisualElement _pylonAmmo;
         private VisualElement _flares;
+        private VisualElement _heatArc;
+        private Label _heatLabel;
         private VisualElement _horizon;
         private VisualElement _banner;
         private VisualElement _boost;
@@ -113,8 +119,15 @@ namespace Chopper.UI.Hud
             _lockWarning = _chopper.Q<Label>("lock-warning");
             _missileRing = _chopper.Q("missile-ring");
             _pylon = _chopper.Q("pylon");
+            _pylonAmmo = _chopper.Q("pylon-ammo");
             _flares = _chopper.Q("flares");
+            _heatArc = _chopper.Q("heat-arc");
+            _heatLabel = _chopper.Q<Label>("heat-label");
             Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
+            // Plain text: fixed-width digits squeeze the letters of RELOAD and FLARES at this size.
+            Bind(_chopper.Q<Label>("pylon-ammo"), "text", nameof(ChopperHudModel.PylonAmmoText));
+            Bind(_chopper.Q<Label>("flares"), "text", nameof(ChopperHudModel.FlaresText));
+            Bind(_chopper.Q<ArcGauge>("heat-arc"), nameof(ArcGauge.value), nameof(ChopperHudModel.GunHeat));
             _horizon = _chopper.Q("horizon");
             _markers = new WorldMarkerView(bridge.Context.Markers, _chopper.Q("markers"), _chopper.Q("lead"));
 
@@ -205,7 +218,10 @@ namespace Chopper.UI.Hud
                      args.propertyName == nameof(ChopperHudModel.WarningBlink))
                 RefreshThreats();
             else if (args.propertyName == nameof(ChopperHudModel.PylonNeedsLock) ||
-                     args.propertyName == nameof(ChopperHudModel.FlaresReady))
+                     args.propertyName == nameof(ChopperHudModel.FlaresReady) ||
+                     args.propertyName == nameof(ChopperHudModel.PylonEmpty) ||
+                     args.propertyName == nameof(ChopperHudModel.GunHasHeat) ||
+                     args.propertyName == nameof(ChopperHudModel.GunOverheated))
                 RefreshWeapons();
             else if (args.propertyName == nameof(ChopperHudModel.RollDegrees))
                 RefreshHorizon();
@@ -268,6 +284,12 @@ namespace Chopper.UI.Hud
         {
             _pylon.EnableInClassList(PylonNeedsLockClass, _model.PylonNeedsLock && !_model.Locked);
             _flares.EnableInClassList(FlaresReadyClass, _model.FlaresReady);
+            _pylonAmmo.EnableInClassList(PylonAmmoEmptyClass, _model.PylonEmpty);
+            _heatArc.EnableInClassList(HeatNoneClass, !_model.GunHasHeat);
+            _heatArc.EnableInClassList(ArcLowClass, _model.GunOverheated);
+            _heatLabel.EnableInClassList(HeatNoneClass, !_model.GunHasHeat);
+            _heatLabel.EnableInClassList(HeatLabelHotClass, _model.GunOverheated);
+            _heatLabel.text = _model.GunOverheated ? "OVERHEAT" : "GUN";
         }
 
         private void RefreshSway()

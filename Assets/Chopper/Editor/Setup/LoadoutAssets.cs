@@ -47,9 +47,9 @@ namespace Chopper.Editor.Setup
             var lifter = Chassis(4, "Lifter", "Heaviest. Winch, repair, best nuke carrier: slow to turn, strongest climb.", 110f, 100f, 6,
                 LifterSlots, Scaled(gunshipFlight, Handlings.Lifter));
 
-            var minigun = Hitscan("Minigun", rpm: 750f, damage: 8f, range: 600f);
-            var autocannon = Hitscan("Autocannon", rpm: 240f, damage: 25f, range: 700f);
-            var laser = Hitscan("PulseLaser", rpm: 600f, damage: 10f, range: 500f);
+            var minigun = Hitscan("Minigun", rpm: 750f, damage: 8f, range: 600f, heatSeconds: 6f, coolSeconds: 4f);
+            var autocannon = Hitscan("Autocannon", rpm: 240f, damage: 25f, range: 700f, heatSeconds: 5f, coolSeconds: 4.5f);
+            var laser = Hitscan("PulseLaser", rpm: 600f, damage: 10f, range: 500f, heatSeconds: 4f, coolSeconds: 3f);
             var rocketPod = Rockets("RocketPod");
 
             var modules = new List<ModuleDefinition>
@@ -205,10 +205,11 @@ namespace Chopper.Editor.Setup
             return asset;
         }
 
-        private static HitscanWeaponDefinition Hitscan(string name, float rpm, float damage, float range)
+        private static HitscanWeaponDefinition Hitscan(string name, float rpm, float damage, float range, float heatSeconds, float coolSeconds)
         {
             var asset = ScriptableObject.CreateInstance<HitscanWeaponDefinition>();
             asset.Initialise(rpm, damage, range);
+            asset.SetHeat(heatSeconds, coolSeconds);
             asset.SetMuzzleOffset(new Vector3(0f, -0.6f, 2.5f));
             AssetDatabase.CreateAsset(asset, $"{Folder}/Weapon_{name}.asset");
             return asset;

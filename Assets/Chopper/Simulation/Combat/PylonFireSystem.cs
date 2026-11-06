@@ -74,6 +74,7 @@ namespace Chopper.Simulation.Combat
                 {
                     var cooldown = cooldowns[i];
                     cooldown.CooldownRemaining = math.max(0f, cooldown.CooldownRemaining - deltaTime);
+                    Magazine.Tick(ref cooldown.RoundsUsed, ref cooldown.ReloadRemaining, deltaTime);
 
                     // The rest of a salvo: one missile per interval, whatever the trigger does now.
                     if (cooldown.SalvoRemaining > 0 && i < weapons.Length)
@@ -101,14 +102,15 @@ namespace Chopper.Simulation.Combat
 
                 var weapon = weapons[selected];
                 if (weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock && lockTarget == Entity.Null) continue;
+                var fired = cooldowns[selected];
+                if (!Magazine.HasRound(fired.RoundsUsed, weapon.MagazineSize)) continue;
 
                 var salvo = weapon.Behaviour == PylonBehaviour.Guided && weapon.SalvoCount > 1;
-                cooldowns[selected] = new PylonWeaponState
-                {
-                    CooldownRemaining = weapon.FireInterval,
-                    SalvoRemaining = salvo ? (byte)(weapon.SalvoCount - 1) : (byte)0,
-                    SalvoTimer = salvo ? weapon.SalvoInterval : 0f,
-                };
+                fired.CooldownRemaining = weapon.FireInterval;
+                fired.SalvoRemaining = salvo ? (byte)(weapon.SalvoCount - 1) : (byte)0;
+                fired.SalvoTimer = salvo ? weapon.SalvoInterval : 0f;
+                Magazine.Spend(ref fired.RoundsUsed, ref fired.ReloadRemaining, weapon.MagazineSize, weapon.ReloadSeconds);
+                cooldowns[selected] = fired;
 
                 if (weapon.Behaviour == PylonBehaviour.Rocket)
                 {

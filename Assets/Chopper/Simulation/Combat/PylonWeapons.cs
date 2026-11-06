@@ -31,6 +31,10 @@ namespace Chopper.Simulation.Combat
         public float SplashDamage;
         public float SplashRadius;
         public float3 MuzzleOffset;
+        /// <summary>Rounds before a reload; a salvo is one round. 0 = no limit. See <see cref="Magazine"/>.</summary>
+        public byte MagazineSize;
+        /// <summary>Seconds after the last shot until the magazine is full again.</summary>
+        public float ReloadSeconds;
 
         // Guided only.
         public SeekerType Seeker;
@@ -71,6 +75,9 @@ namespace Chopper.Simulation.Combat
         /// <summary>Missiles of the current salvo still to fire.</summary>
         [GhostField] public byte SalvoRemaining;
         [GhostField] public float SalvoTimer;
+        /// <summary>Rounds used from the magazine, so the default is full (<see cref="Magazine"/>).</summary>
+        [GhostField] public byte RoundsUsed;
+        [GhostField] public float ReloadRemaining;
     }
 
     /// <summary>Salvo maths shared by the fire system and tests.</summary>

@@ -13,7 +13,11 @@ namespace Chopper.Simulation.Definitions
         [SerializeField] private float directDamage = 30f;
         [SerializeField] private float splashDamage = 25f;
         [SerializeField] private float splashRadius = 8f;
+        [SerializeField, Range(0, 255), Tooltip("Rockets before a reload. 0 = no limit.")] private int magazineSize = 14;
+        [SerializeField, Tooltip("Seconds after the last rocket until the magazine is full again.")] private float reloadSeconds = 6f;
 
+        public byte MagazineSize => (byte)Mathf.Clamp(magazineSize, 0, 255);
+        public float ReloadSeconds => reloadSeconds;
         public float FireInterval => fireInterval;
         public float Speed => speed;
         public float Lifetime => lifetime;
@@ -26,6 +30,8 @@ namespace Chopper.Simulation.Definitions
             if (fireInterval <= 0f) problems.Add($"{name}: fire interval must be above 0.");
             if (speed <= 0f) problems.Add($"{name}: speed must be above 0.");
             if (lifetime <= 0f) problems.Add($"{name}: lifetime must be above 0.");
+            if (magazineSize > 0 && reloadSeconds <= fireInterval)
+                problems.Add($"{name}: reload must be longer than the fire interval, or the magazine never empties.");
         }
     }
 }

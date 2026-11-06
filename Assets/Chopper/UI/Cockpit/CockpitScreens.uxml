@@ -39,8 +39,14 @@
           <ui:Label text="BOOST" class="systems__label" />
         </ui:VisualElement>
         <cockpit:SegmentBar name="boost" class="systems__bar systems__bar--boost" segments="10" />
-        <ui:Label name="weapon" text="" class="systems__weapon chopper-title" />
-        <ui:Label name="flares" text="FLR" class="systems__flares" />
+        <ui:VisualElement class="systems__row" picking-mode="Ignore">
+          <ui:Label name="weapon" text="" class="systems__weapon chopper-title" />
+          <ui:Label name="ammo" text="" class="systems__ammo" />
+        </ui:VisualElement>
+        <ui:VisualElement class="systems__row" picking-mode="Ignore">
+          <ui:Label name="flares" text="FLARES" class="systems__flares" />
+          <ui:Label name="gun-heat" text="" class="systems__heat" />
+        </ui:VisualElement>
       </ui:VisualElement>
       <ui:Label name="warning" text="" class="systems__warning chopper-title" />
     </ui:VisualElement>

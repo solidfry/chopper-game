@@ -68,9 +68,11 @@ namespace Chopper.Simulation.Combat
                 if (config.ValueRO.FireInterval <= 0f) continue;
                 ref var weaponState = ref weapon.ValueRW;
                 weaponState.CooldownRemaining = math.max(0f, weaponState.CooldownRemaining - deltaTime);
-                if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f) continue;
+                GunHeat.Tick(ref weaponState, config.ValueRO, deltaTime);
+                if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f || !GunHeat.CanFire(weaponState)) continue;
                 weaponState.CooldownRemaining = config.ValueRO.FireInterval;
                 weaponState.ShotCount++;
+                GunHeat.AddShot(ref weaponState, config.ValueRO);
 
                 // Clients only predict the fire rate and shot count; presentation draws tracers from the count.
                 if (!isServer) continue;

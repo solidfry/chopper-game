@@ -11,15 +11,23 @@ namespace Chopper.Simulation.Definitions
         [SerializeField] private float damagePerShot = 8f;
         [SerializeField] private float range = 600f;
 
+        [Header("Heat")]
+        [SerializeField, Tooltip("Seconds of steady fire until it overheats. 0 = no heat limit.")] private float heatSeconds = 6f;
+        [SerializeField, Tooltip("Seconds to cool from full heat to cold. An overheated gun fires again at 40% heat.")]
+        private float coolSeconds = 4f;
+
         public float FireInterval => 60f / Mathf.Max(1f, roundsPerMinute);
         public float DamagePerShot => damagePerShot;
         public float Range => range;
+        public float HeatPerShot => heatSeconds > 0f ? FireInterval / heatSeconds : 0f;
+        public float CoolRate => coolSeconds > 0f ? 1f / coolSeconds : 0f;
 
         public override void CollectProblems(List<string> problems)
         {
             if (roundsPerMinute <= 0f) problems.Add($"{name}: rounds per minute must be above 0.");
             if (damagePerShot <= 0f) problems.Add($"{name}: damage per shot must be above 0.");
             if (range <= 0f) problems.Add($"{name}: range must be above 0.");
+            if (heatSeconds > 0f && coolSeconds <= 0f) problems.Add($"{name}: a gun with a heat limit must have a cool time above 0.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -28,6 +36,13 @@ namespace Chopper.Simulation.Definitions
             roundsPerMinute = rpm;
             damagePerShot = damage;
             range = maxRange;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetHeat(float secondsToOverheat, float secondsToCool)
+        {
+            heatSeconds = secondsToOverheat;
+            coolSeconds = secondsToCool;
         }
     }
 }

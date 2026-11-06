@@ -63,6 +63,18 @@ namespace Chopper.Presentation.Hud
         private string _pylonText = "";
         private bool _pylonNeedsLock;
         private bool _flaresReady;
+        private bool _gunHasHeat;
+        private float _gunHeat;
+        private bool _gunOverheated;
+        private string _gunHeatText = "";
+        private int _gunHeatPercent;
+        private string _pylonAmmoText = "";
+        private bool _pylonEmpty;
+        private int _pylonRounds;
+        private int _pylonMagazine;
+        private string _flaresText = "FLARES";
+        private int _flareRounds;
+        private int _flareMagazine;
         private bool _threatLocking;
         private bool _threatLocked;
         private bool _missileInbound;
@@ -218,6 +230,27 @@ namespace Chopper.Presentation.Hud
 
         [CreateProperty] public bool FlaresReady { get => _flaresReady; private set => Set(ref _flaresReady, value, nameof(FlaresReady)); }
 
+        /// <summary>The gun has a heat limit. False with no gun.</summary>
+        [CreateProperty] public bool GunHasHeat { get => _gunHasHeat; private set => Set(ref _gunHasHeat, value, nameof(GunHasHeat)); }
+
+        /// <summary>0 = cold, 1 = overheated. Steps of 5%.</summary>
+        [CreateProperty] public float GunHeat { get => _gunHeat; private set => Set(ref _gunHeat, value, nameof(GunHeat)); }
+
+        /// <summary>The gun is locked out until it cools.</summary>
+        [CreateProperty] public bool GunOverheated { get => _gunOverheated; private set => Set(ref _gunOverheated, value, nameof(GunOverheated)); }
+
+        /// <summary>"GUN 40%" or "GUN HOT"; empty with no heat limit.</summary>
+        [CreateProperty] public string GunHeatText { get => _gunHeatText; private set => Set(ref _gunHeatText, value, nameof(GunHeatText)); }
+
+        /// <summary>Rounds in the selected pylon weapon: "9/14" or "RELOAD"; empty with no magazine.</summary>
+        [CreateProperty] public string PylonAmmoText { get => _pylonAmmoText; private set => Set(ref _pylonAmmoText, value, nameof(PylonAmmoText)); }
+
+        /// <summary>The selected pylon weapon's magazine is empty.</summary>
+        [CreateProperty] public bool PylonEmpty { get => _pylonEmpty; private set => Set(ref _pylonEmpty, value, nameof(PylonEmpty)); }
+
+        /// <summary>"FLARES 2"; just "FLARES" with no magazine.</summary>
+        [CreateProperty] public string FlaresText { get => _flaresText; private set => Set(ref _flaresText, value, nameof(FlaresText)); }
+
         /// <summary>An enemy seeker is building a lock on you.</summary>
         [CreateProperty] public bool ThreatLocking { get => _threatLocking; private set => Set(ref _threatLocking, value, nameof(ThreatLocking)); }
 
@@ -247,6 +280,30 @@ namespace Chopper.Presentation.Hud
             PylonText = pylonName ?? "";
             PylonNeedsLock = needsLock;
             FlaresReady = flaresReady;
+        }
+
+        /// <summary>Gun heat and rounds left. Texts are made again only when a shown number changes.</summary>
+        /// <param name="gunHasHeat">False: no gun, or a gun with no heat limit.</param>
+        /// <param name="pylonMagazine">Magazine size of the selected pylon weapon; 0 = no magazine.</param>
+        /// <param name="flareMagazine">0 = no magazine.</param>
+        public void UpdateWeaponLimits(bool gunHasHeat, float gunHeat, bool gunOverheated, int pylonRounds, int pylonMagazine,
+            int flareRounds, int flareMagazine)
+        {
+            var heat = gunHasHeat ? MathF.Round(Math.Clamp(gunHeat, 0f, 1f) * 20f) / 20f : 0f;
+            var overheated = gunHasHeat && gunOverheated;
+            var heatChanged = gunHasHeat != GunHasHeat || overheated != GunOverheated;
+            GunHasHeat = gunHasHeat;
+            GunHeat = heat;
+            GunOverheated = overheated;
+            if (Changed(ref _gunHeatPercent, (int)MathF.Round(heat * 100f)) | heatChanged)
+                GunHeatText = !gunHasHeat ? "" : overheated ? "GUN HOT" : $"GUN {_gunHeatPercent}%";
+
+            if (Changed(ref _pylonRounds, pylonRounds) | Changed(ref _pylonMagazine, pylonMagazine))
+                PylonAmmoText = pylonMagazine <= 0 ? "" : pylonRounds <= 0 ? "RELOAD" : $"{pylonRounds}/{pylonMagazine}";
+            PylonEmpty = pylonMagazine > 0 && pylonRounds <= 0;
+
+            if (Changed(ref _flareRounds, flareRounds) | Changed(ref _flareMagazine, flareMagazine))
+                FlaresText = flareMagazine > 0 ? $"FLARES {flareRounds}" : "FLARES";
         }
 
         /// <param name="missileDistance">Distance to the closest missile chasing you; ignored when none.</param>
@@ -399,6 +456,7 @@ namespace Chopper.Presentation.Hud
             OutOfBounds = false;
             _swayTarget = Vector2.zero;
             UpdateTargeting(false, Vector3.back, 0f, false, "", false, false);
+            UpdateWeaponLimits(false, 0f, false, 0, 0, 0, 0);
             UpdateThreats(false, false, false, 0f, 0f);
         }
 

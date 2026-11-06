@@ -124,13 +124,21 @@ namespace Chopper.Simulation.Loadout
                         Damage = gun.DamagePerShot,
                         Range = gun.Range,
                         MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, module.Muzzle, gun.MuzzleOffset, mirror: false),
+                        HeatPerShot = gun.HeatPerShot,
+                        CoolRate = gun.CoolRate,
                     };
                 }
 
                 if (!flaresFound && module.Ability is CountermeasureDefinition flares)
                 {
                     flaresFound = true;
-                    built.Countermeasure = new CountermeasureConfig { Cooldown = flares.Cooldown, DecoyDuration = flares.DecoyDuration };
+                    built.Countermeasure = new CountermeasureConfig
+                    {
+                        Cooldown = flares.Cooldown,
+                        DecoyDuration = flares.DecoyDuration,
+                        MagazineSize = flares.MagazineSize,
+                        ReloadSeconds = flares.ReloadSeconds,
+                    };
                 }
 
                 if (slotType != SlotType.Pylon) continue;
@@ -170,6 +178,8 @@ namespace Chopper.Simulation.Loadout
             SplashDamage = rocket.SplashDamage,
             SplashRadius = rocket.SplashRadius,
             MuzzleOffset = muzzle,
+            MagazineSize = rocket.MagazineSize,
+            ReloadSeconds = rocket.ReloadSeconds,
         };
 
         private static PylonWeapon MissilePylon(ModuleDefinition module, GuidedMissileDefinition missile, float3 muzzle,
@@ -184,6 +194,8 @@ namespace Chopper.Simulation.Loadout
             SplashDamage = missile.SplashDamage,
             SplashRadius = missile.SplashRadius,
             MuzzleOffset = muzzle,
+            MagazineSize = missile.MagazineSize,
+            ReloadSeconds = missile.ReloadSeconds,
             Seeker = missile.Seeker,
             Targets = missile.Targets,
             LockConeCos = missile.LockConeCos,

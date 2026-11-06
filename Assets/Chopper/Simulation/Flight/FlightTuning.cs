@@ -42,7 +42,7 @@ namespace Chopper.Simulation.Flight
         public float MaxYawRate = 70f;
         public float MaxRollRate = 140f;
         [Tooltip("How fast rotation reaches the requested rate. Higher = snappier.")]
-        public float TurnResponse = 12f;
+        public float TurnResponse = 7f;
 
         [Header("Drag (local axes: x sideways, y vertical, z forward)")]
         public Vector3 QuadraticDrag = new(0.004f, 0.003f, 0.0016f);

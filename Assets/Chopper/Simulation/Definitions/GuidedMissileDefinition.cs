@@ -19,6 +19,8 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Seconds before it steers, so it clears the launcher.")] private float armTime = 0.15f;
         [SerializeField, Tooltip("Missile ghost prefab (GhostAuthoringComponent + GuidedMissileAuthoring).")]
         private GameObject missilePrefab;
+        [SerializeField, Range(0, 255), Tooltip("Rounds before a reload; a salvo is one round. 0 = no limit.")] private int magazineSize = 4;
+        [SerializeField, Tooltip("Seconds after the last launch until the magazine is full again.")] private float reloadSeconds = 12f;
 
         [Header("Seeker")]
         [SerializeField] private SeekerType seeker = SeekerType.Heat;
@@ -61,6 +63,8 @@ namespace Chopper.Simulation.Definitions
         public float Lifetime => lifetime;
         public float ArmTime => armTime;
         public GameObject MissilePrefab => missilePrefab;
+        public byte MagazineSize => (byte)Mathf.Clamp(magazineSize, 0, 255);
+        public float ReloadSeconds => reloadSeconds;
         public SeekerType Seeker => seeker;
         public TargetClass Targets => targets;
         public float LockConeCos => Mathf.Cos(lockConeDegrees * Mathf.Deg2Rad);
@@ -99,6 +103,8 @@ namespace Chopper.Simulation.Definitions
                 problems.Add($"{name}: missile prefab has no GuidedMissileAuthoring.");
             if (seeker != SeekerType.None && targets == TargetClass.None) problems.Add($"{name}: seeker has no target classes.");
             if (speed <= 0f || lifetime <= 0f || fireInterval <= 0f) problems.Add($"{name}: speed, lifetime and fire interval must be above 0.");
+            if (magazineSize > 0 && reloadSeconds <= fireInterval)
+                problems.Add($"{name}: reload must be longer than the fire interval, or the magazine never empties.");
             if (salvoCount > 1 && salvoInterval < 1f / 60f)
                 problems.Add($"{name}: salvo interval below one tick (1/60 s); missiles of one tick would mismatch their predicted spawns.");
             if (salvoCount > 1 && fireInterval < salvoCount * salvoInterval)
@@ -127,6 +133,13 @@ namespace Chopper.Simulation.Definitions
             splashRadius = radius;
             fireInterval = interval;
             lifetime = life;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetMagazine(int size, float reload)
+        {
+            magazineSize = size;
+            reloadSeconds = reload;
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
