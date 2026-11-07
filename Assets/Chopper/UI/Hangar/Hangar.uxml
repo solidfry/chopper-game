@@ -14,7 +14,7 @@
       <!-- Decoration only (segment readout): no information. -->
       <ui:Label text="0451-K7" class="chopper-deco-seven hangar__bar-deco" picking-mode="Ignore" />
       <ui:VisualElement class="hangar__bar-nav" picking-mode="Ignore" />
-      <ui:Label text="ESC = BACK" class="hangar__bar-text" />
+      <ui:Label text="{Back} = BACK" class="hangar__bar-text input-prompt" />
     </ui:VisualElement>
 
     <ui:VisualElement class="hangar__main" picking-mode="Ignore">
@@ -103,7 +103,7 @@
       <ui:VisualElement class="pilot-select__header" picking-mode="Ignore">
         <ui:Label text="// SELECT PILOT" class="pilot-select__title chopper-title" />
         <ui:Label text="ANY PILOT FLIES ANY CHASSIS" class="pilot-select__hint" />
-        <ui:Label text="ESC = BACK" class="hangar__bar-text" />
+        <ui:Label text="{Back} = BACK" class="hangar__bar-text input-prompt" />
       </ui:VisualElement>
       <ui:VisualElement class="pilot-select__body" picking-mode="Ignore">
         <ui:VisualElement name="pilot-feature" class="pilot-feature" picking-mode="Ignore">
@@ -119,7 +119,7 @@
             <ui:Label name="pilot-passive" class="pilot-feature__passive chopper-body" />
             <ui:VisualElement name="pilot-effects" class="pilot-feature__effects" picking-mode="Ignore" />
             <ui:VisualElement class="pilot-ability" picking-mode="Ignore">
-              <ui:Label text="ABILITY // F OR D-PAD UP" class="pilot-ability__label" />
+              <ui:Label text="ABILITY // {Ability}" class="pilot-ability__label input-prompt" />
               <ui:Label name="pilot-ability-name" class="pilot-ability__name chopper-title" />
               <ui:Label name="pilot-ability-text" class="pilot-ability__text chopper-body" />
               <ui:Label name="pilot-ability-meta" text="" class="pilot-ability__soon" />

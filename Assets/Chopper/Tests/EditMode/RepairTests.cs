@@ -112,7 +112,12 @@ namespace Chopper.Tests
 
             model.UpdateRepair(RepairPhase.Idle, 0f, 0.5f);
             Assert.That(model.Repair, Is.EqualTo(HudRepair.Hint));
-            Assert.That(model.RepairText, Is.EqualTo(ChopperHudModel.RepairHint));
+            Assert.That(model.RepairText, Is.EqualTo("HOLD R  REPAIR"));
+            model.SetPromptKeys("X", "D-PAD UP");
+            model.UpdateRepair(RepairPhase.Idle, 0f, 0.5f);
+            Assert.That(model.RepairText, Is.EqualTo("HOLD X  REPAIR"), "the key of the device in use");
+            model.UpdateAbility("AEGIS", 0f, 0f, 0f);
+            Assert.That(model.AbilityText, Is.EqualTo("[D-PAD UP] AEGIS"));
 
             model.UpdateRepair(RepairPhase.Repairing, 0f, 0.634f);
             Assert.That(model.Repair, Is.EqualTo(HudRepair.Active));
@@ -126,6 +131,26 @@ namespace Chopper.Tests
             Assert.That(model.RepairLockProgress, Is.EqualTo(0.8f).Within(1e-4f), "the bar fills as the lock runs out");
             model.UpdateRepair(RepairPhase.Idle, 0f, 0.6f, lockSeconds: 5f);
             Assert.That(model.RepairLockProgress, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Prompts_ShowOnlyTheDeviceInUse()
+        {
+            var controls = new Chopper.Simulation.Input.PlayerControls();
+            var prompts = new InputPrompts(controls);
+            prompts.Use(PromptDevice.KeyboardMouse);
+            Assert.That(prompts.Fill("HOLD {Repair}"), Is.EqualTo("HOLD R"));
+            Assert.That(prompts.Fill("{Back} = BACK"), Is.EqualTo("ESC = BACK"));
+            Assert.That(prompts.Key("Ability"), Is.EqualTo("F"));
+
+            var changes = 0;
+            prompts.Changed += () => changes++;
+            prompts.Use(PromptDevice.Gamepad);
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(prompts.Key("Repair"), Is.Not.EqualTo("R").And.Not.Empty);
+            Assert.That(prompts.Key("Back"), Is.Not.EqualTo("ESC").And.Not.Empty);
+            Assert.That(prompts.Key("Ability"), Does.Contain("UP"));
+            UnityEngine.Object.DestroyImmediate(controls.asset);
         }
 
         [Test]

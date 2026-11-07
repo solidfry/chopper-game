@@ -35,6 +35,7 @@ namespace Chopper.UI.Options
         private Toggle _reduceEffects;
         private Button _resume;
         private Button _hangar;
+        private InputPromptLabels _prompts;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
@@ -95,6 +96,7 @@ namespace Chopper.UI.Options
             AddVolume("volume-ui", AudioChannel.UI);
             AddVolume("volume-ambient", AudioChannel.Ambient);
 
+            _prompts = new InputPromptLabels(_root, _context.Prompts);
             SetOpen(IsOpen);
         }
 
@@ -109,6 +111,8 @@ namespace Chopper.UI.Options
         private void Unbind()
         {
             if (_root == null) return;
+            _prompts?.Dispose();
+            _prompts = null;
             _mouseSteer.UnregisterValueChangedCallback(OnMouseSteerChanged);
             _mouseSensitivity.UnregisterValueChangedCallback(OnSensitivityChanged);
             _invertPitch.UnregisterValueChangedCallback(OnInvertPitchChanged);

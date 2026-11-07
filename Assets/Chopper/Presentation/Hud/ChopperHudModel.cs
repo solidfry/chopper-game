@@ -38,7 +38,8 @@ namespace Chopper.Presentation.Hud
         private const float LowHealthFraction = 0.3f;
         /// <summary>Below this hull share the HUD shows how to repair.</summary>
         public const float RepairHintBelow = 0.75f;
-        public const string RepairHint = "HOLD R / X  REPAIR";
+        /// <summary>The key hint, for the device in use (<see cref="SetPromptKeys"/>).</summary>
+        public string RepairHint => $"HOLD {_repairKey}  REPAIR";
         /// <summary>How long a hit marker shows, seconds.</summary>
         public const float HitMarkerDuration = 0.15f;
         public const float KillMarkerDuration = 0.6f;
@@ -111,6 +112,8 @@ namespace Chopper.Presentation.Hud
         private HudRepair _repair;
         private string _repairText = "";
         private int _repairShown = -1;
+        private string _repairKey = "R";
+        private string _abilityKey = "F";
         private float _repairLockProgress;
         private HudAbility _ability;
         private string _abilityText = "";
@@ -498,6 +501,15 @@ namespace Chopper.Presentation.Hud
 
         [CreateProperty] public string RepairText { get => _repairText; private set => Set(ref _repairText, value, nameof(RepairText)); }
 
+        /// <summary>Key names in the repair hint and the ability line. The next update shows them.</summary>
+        public void SetPromptKeys(string repair, string ability)
+        {
+            _repairKey = repair;
+            _abilityKey = ability;
+            _repairShown = -1;
+            _abilityShown = -1;
+        }
+
         /// <summary>The lock after damage: 0 = it just started, 1 = repair is ready (a bar fills up).</summary>
         [CreateProperty] public float RepairLockProgress { get => _repairLockProgress; private set => Set(ref _repairLockProgress, value, nameof(RepairLockProgress)); }
 
@@ -567,7 +579,7 @@ namespace Chopper.Presentation.Hud
                 {
                     HudAbility.Active => name + " " + ((number - 100000) / 10f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture),
                     HudAbility.Cooldown => $"{name} {number - 200000}",
-                    HudAbility.Ready => "[F] " + name,
+                    HudAbility.Ready => $"[{_abilityKey}] {name}",
                     _ => "",
                 };
             Ability = state;

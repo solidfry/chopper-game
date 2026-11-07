@@ -12,5 +12,17 @@ namespace Chopper.UI
         private const string Close = "</mspace>";
 
         public static string Wrap(string text) => string.IsNullOrEmpty(text) ? text : Open + text + Close;
+
+        /// <summary>
+        /// Only the last word, when it is a number: "REPAIR LOCKED 2.4", "AEGIS 12". The fixed advance overrides
+        /// letter-spacing, so words stay out of it; only the changing digits need it.
+        /// </summary>
+        public static string WrapLastNumber(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var start = text.LastIndexOf(' ') + 1;
+            if (start >= text.Length || !char.IsDigit(text[start])) return text;
+            return text.Substring(0, start) + Open + text.Substring(start) + Close;
+        }
     }
 }

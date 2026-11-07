@@ -80,16 +80,21 @@
 /* Field repair line, just above the hull readout */
 .hud-repair {
   position: absolute;
-  bottom: 74px;
+  bottom: 86px;
   left: 50%;
   translate: 212px 0;
-  font-size: 13px;
-  letter-spacing: 3px;
-  padding: 2px 8px;
-  color: var(--chopper-green-dim);
+  padding: 3px 10px 5px 10px;
   border-width: 0;
   transition-property: opacity, translate;
   transition-duration: 0.15s;
+}
+
+.hud-repair__text {
+  font-size: 14px;
+  letter-spacing: 6px;
+  padding: 0;
+  margin: 0;
+  color: var(--chopper-green-dim);
 }
 
 .hud-repair--hidden {
@@ -98,18 +103,24 @@
 }
 
 .hud-repair--active {
-  color: var(--chopper-cyan);
   background-color: rgba(0, 40, 48, 0.6);
   border-left-width: 2px;
   border-color: var(--chopper-cyan);
+}
+
+.hud-repair--active .hud-repair__text {
+  color: var(--chopper-cyan);
   text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
 }
 
 .hud-repair--locked {
-  color: var(--chopper-yellow);
   background-color: rgba(48, 40, 0, 0.6);
   border-left-width: 2px;
   border-color: var(--chopper-yellow);
+}
+
+.hud-repair--locked .hud-repair__text {
+  color: var(--chopper-yellow);
 }
 
 /* Lock after damage: fills along the bottom of the line until repair is ready */

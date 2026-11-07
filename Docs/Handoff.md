@@ -253,6 +253,8 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 - **Cockpit boot-up** (`HudLook.shader`, `HudLookSettings` → Reactions; **Replay cockpit boot-up** button): big pixels that resolve in patches, few colours, dead blocks, and a repeating honeycomb in the screen corners. `HexGridRest` above 0 keeps the honeycomb on after the boot-up. Hits still give the analog noise.
 - **Bright flash in the cockpit after boost (owner, 7 Nov): cause found on a paused frame, fixed.** With a server world in the same process (training, local sessions, the editor), the server's copy of your chopper had real Lights too. It is behind the predicted chopper, more so at boost speed, so its nose lights (green, red, white spot at 500) shone inside the cockpit. `Presentation/Visuals/ServerLightsOffSystem.cs` turns off every Light in the server world. A dedicated-server client never had the flash. This also stops the city's lights counting twice against the Forward+ limit (259 were doubled to 518), so more lamps may show now.
 
+- **Input prompts:** `Presentation/Hud/InputPrompts.cs` shows the keys of the device used last (saved), with the connected pad's own button names; flight keys come from the input actions. The HUD gets them through `ChopperHudModel.SetPromptKeys`. In UXML, a label with the class `input-prompt` holds a template such as "{Back} = BACK" (`UI/Theme/InputPromptLabels.cs`). Not yet tested with a real pad.
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |

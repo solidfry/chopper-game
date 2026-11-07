@@ -127,7 +127,7 @@ namespace Chopper.UI.Hud
             _boost = _chopper.Q("boost");
             _health = _chopper.Q("health");
             _hullArc = _chopper.Q("hull-arc");
-            _repair = _chopper.Q("repair");
+            _repair = _chopper.Q("repair-line");
             _repairBar = _chopper.Q("repair-bar");
             _ability = _chopper.Q("ability");
             _jamWarning = _chopper.Q("jam-warning");
@@ -159,8 +159,8 @@ namespace Chopper.UI.Hud
 
             _chopper.dataSource = _model;
             BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));
-            BindNumber(_chopper.Q<Label>("repair"), nameof(ChopperHudModel.RepairText));
-            BindNumber(_chopper.Q<Label>("ability"), nameof(ChopperHudModel.AbilityText));
+            BindLastNumber(_chopper.Q<Label>("repair"), nameof(ChopperHudModel.RepairText));
+            BindLastNumber(_chopper.Q<Label>("ability"), nameof(ChopperHudModel.AbilityText));
             BindNumber(_chopper.Q<Label>("speed-value"), nameof(ChopperHudModel.SpeedText));
             BindNumber(_chopper.Q<Label>("altitude-value"), nameof(ChopperHudModel.AltitudeText));
             Bind(_chopper.Q<ArcGauge>("boost"), nameof(ArcGauge.value), nameof(ChopperHudModel.BoostEnergy));
@@ -230,6 +230,18 @@ namespace Chopper.UI.Hud
                 bindingMode = BindingMode.ToTarget,
             };
             binding.sourceToUiConverters.AddConverter((ref string value) => TabularText.Wrap(value));
+            label.SetBinding("text", binding);
+        }
+
+        /// <summary>Words with a number at the end: only the number has fixed-width digits, so the words keep their letter-spacing.</summary>
+        private static void BindLastNumber(Label label, string modelProperty)
+        {
+            var binding = new DataBinding
+            {
+                dataSourcePath = new PropertyPath(modelProperty),
+                bindingMode = BindingMode.ToTarget,
+            };
+            binding.sourceToUiConverters.AddConverter((ref string value) => TabularText.WrapLastNumber(value));
             label.SetBinding("text", binding);
         }
 

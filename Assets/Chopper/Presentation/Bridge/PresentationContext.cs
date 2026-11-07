@@ -54,7 +54,15 @@ namespace Chopper.Presentation.Bridge
             _owned.Add(new MatchFeedback(this));
             _owned.Add(new TargetingFeedback(this));
             _controls.Flight.Scoreboard.Enable();
+            Prompts = new InputPrompts(_controls);
+            Prompts.Changed += ApplyPromptKeys;
+            ApplyPromptKeys();
         }
+
+        /// <summary>Key names for on-screen prompts, for the input device in use.</summary>
+        public InputPrompts Prompts { get; }
+
+        private void ApplyPromptKeys() => Hud.SetPromptKeys(Prompts.Key("Repair"), Prompts.Key("Ability"));
 
         public GameConfig Config { get; }
         public IAudioService Audio => _audio;
@@ -206,6 +214,7 @@ namespace Chopper.Presentation.Bridge
             Effects.Tick(deltaTime);
             ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);
+            Prompts.Tick();
             Match.SetScoreboardHeld(!MenuOpen && _controls.Flight.Scoreboard.IsPressed());
             Match.Tick(deltaTime);
             HudLook.CockpitView = CameraRig != null && CameraRig.HidesOwnChopper;

@@ -132,6 +132,7 @@ namespace Chopper.UI.Hangar
         public void SetStage(HangarStage value) => stage = value;
 
         private PilotSelectView _pilots;
+        private InputPromptLabels _prompts;
 
         private void OnEnable()
         {
@@ -215,6 +216,7 @@ namespace Chopper.UI.Hangar
             _findMatch.clicked += OnFindMatch;
             _model.MatchStatusChanged += RefreshMatch;
             _pilots = new PilotSelectView(_root, _model.Pilots, bridge.Context);
+            _prompts = new InputPromptLabels(_root, bridge.Context.Prompts);
             Refresh();
             _launch.Focus();
         }
@@ -233,6 +235,8 @@ namespace Chopper.UI.Hangar
             _model.MatchStatusChanged -= RefreshMatch;
             _pilots?.Dispose();
             _pilots = null;
+            _prompts?.Dispose();
+            _prompts = null;
             _cards.Clear();
             _root = null;
         }
