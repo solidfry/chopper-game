@@ -598,6 +598,11 @@ Built (7 Nov, written without the editor, not compiled):
 - **Server-authoritative grants:** dedicated server posts match results to Cloud Code (service account); Cloud Code writes XP/currency/stats. Client can only read.
 - **Leaderboards:** per season, per mode. Skill rating (Glicko-2 or TrueSkill-style) stored in Cloud Save, used by Matchmaker.
 - **Steam:** achievements + stats via Steamworks (mirrors key milestones). Steam avatar/name for profiles (`UI/PlayerAvatarImage.cs`, `ProfileLoader.cs`).
+- **Player names in the kill feed and scoreboard (owner, 7 Nov):** with Steam and profiles, show each player's own name.
+  - Format: `NAME [VIPER]`, so the call sign stays visible.
+  - The server gets the name with the profile (not from the client's word alone), keeps it on the connection, and sends it to every client next to the network id (like `ScoreRpc`).
+  - `MatchHudModel.PilotName` is the one place that builds names today ("YOU", "VIPER 3", "PILOT 3"); add a name table there like the call-sign table (`SetCallSign`).
+  - Clean the names: length cap and no control characters (`LoadoutChoiceStore.CleanName` does this for preset names).
 - **Remote Config** for XP rates, unlock costs, weapon tuning without new builds.
 
 ## 7. Game modes
