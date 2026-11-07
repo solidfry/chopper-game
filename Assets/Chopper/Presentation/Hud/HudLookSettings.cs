@@ -106,13 +106,13 @@ namespace Chopper.Presentation.Hud
 
         [SerializeField] private HudLookProfile vector = new()
         {
-            Glow = 0.7f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, SphereAngle = 32f,
+            Glow = 0.7f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, SphereAngle = 42f,
             Chromatic = 0.5f, Vignette = 0f, Noise = 0.015f, Flicker = 0f, Persistence = 0.1f, PersistenceTime = 0.03f,
         };
 
         [SerializeField] private HudLookProfile crt84 = new()
         {
-            Glow = 0.8f, GlowRadius = 2f, Scanlines = 0.15f, ScanlineCount = 540f, SphereAngle = 32f,
+            Glow = 0.8f, GlowRadius = 2f, Scanlines = 0.15f, ScanlineCount = 540f, SphereAngle = 42f,
             Chromatic = 1f, Vignette = 0.2f, Noise = 0.03f, Flicker = 0.02f, Persistence = 0.15f, PersistenceTime = 0.04f,
         };
 

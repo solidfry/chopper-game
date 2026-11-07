@@ -54,27 +54,30 @@
   width: 80px;
 }
 
+/* Side text stands well out from the ring: the middle of the view stays clear. The gap is the padding. */
 .hud-frame__side {
-  width: 220px;
+  width: 460px;
 }
 
 .hud-frame__side--left {
   align-items: flex-end;
-  padding-right: 24px;
+  padding-right: 264px;
 }
 
 .hud-frame__side--right {
   align-items: flex-start;
-  padding-left: 24px;
+  padding-left: 264px;
+  /* Away from the horizon line: on the sphere, the further from it, the more the text tilts. */
+  translate: 0 -100px;
 }
 
-/* Hull readout: beside the low end of the hull arc, clear of the chopper */
+/* Hull readout: in line with speed and altitude (ring radius 200 + side gap 264) */
 .hud-frame__hull {
   position: absolute;
   bottom: 20px;
   left: 50%;
-  translate: 212px 0;
-  min-width: 120px;
+  translate: 464px 0;
+  min-width: 170px;
 }
 
 /* Field repair line, just above the hull readout */
@@ -82,7 +85,7 @@
   position: absolute;
   bottom: 86px;
   left: 50%;
-  translate: 212px 0;
+  translate: 464px 0;
   padding: 3px 10px 5px 10px;
   border-width: 0;
   transition-property: opacity, translate;
@@ -99,7 +102,7 @@
 
 .hud-repair--hidden {
   opacity: 0;
-  translate: 200px 0;
+  translate: 452px 0;
 }
 
 .hud-repair--active {
@@ -762,8 +765,9 @@
   background-color: var(--chopper-cyan);
 }
 
+/* The gap splits the left side: weapon above the horizon line, flares and ability below it (more tilt on the sphere) */
 .hud-flares {
-  margin-top: 6px;
+  margin-top: 170px;
   font-size: 15px;
   color: var(--chopper-green-dim);
   padding: 0;
