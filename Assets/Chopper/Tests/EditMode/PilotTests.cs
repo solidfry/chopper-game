@@ -63,7 +63,7 @@ namespace Chopper.Tests
             Assert.That(built.Code.PilotId, Is.EqualTo(3));
             Assert.That(built.Health, Is.EqualTo(90f).Within(1e-3f));
             Assert.That(built.Repair.Seconds, Is.EqualTo(6f).Within(1e-3f));
-            Assert.That(built.Repair.InterruptCooldown, Is.EqualTo(1.5f).Within(1e-3f));
+            Assert.That(built.Repair.InterruptCooldown, Is.EqualTo(2.5f).Within(1e-3f));
             Assert.That(built.Gun.Damage, Is.EqualTo(9.5f).Within(1e-3f));
             Assert.That(built.Flight.BoostRechargeTime, Is.EqualTo(2.6f).Within(1e-3f));
             Assert.That(built.Pylons[0].LockTime, Is.EqualTo(1.4f).Within(1e-3f));

@@ -112,6 +112,21 @@
   border-color: var(--chopper-yellow);
 }
 
+/* Lock after damage: fills along the bottom of the line until repair is ready */
+.hud-repair__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  display: none;
+  background-color: var(--chopper-yellow);
+}
+
+.hud-repair--locked .hud-repair__bar {
+  display: flex;
+}
+
 /* While repairing the hull arc and readout run cyan (more specific than the low-health red) */
 .hud-arc.hud-hull-arc.hud-arc--repairing {
   --arc-fill: var(--chopper-cyan);

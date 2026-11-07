@@ -171,7 +171,7 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
   - Change speed 4 s. This is on top of the player's music volume.
 - **Field repair:**
   - Hold **R** or gamepad **X** (`Flight/Repair` action since 7 Nov, see 4e). The hull mends from empty to full in 10 s.
-  - Any damage (shot, wall, landing, bounds) stops it and locks it for 3 s. When the lock ends, a key still held starts the repair again.
+  - Any damage (shot, wall, landing, bounds) locks it for 5 s, also when it was not running; each new hit starts the lock again, damage over time too. When the lock ends, a key still held starts the repair. The HUD shows "REPAIR LOCKED 4.2" and a yellow bar that fills.
   - Server: `Simulation/Combat/Repair.cs` (rules, `ChopperRepair` ghost state, `RepairConfig`), `RepairSystem`. `ApplyDamageSystem` interrupts the repair.
   - Per chassis: `RepairTuning` on `ChassisDefinition` (pilots will scale it).
   - Client:

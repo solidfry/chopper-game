@@ -105,8 +105,8 @@ namespace Chopper.Simulation.Flight
     {
         [Tooltip("Seconds of holding the repair key from empty to full health.")]
         public float Seconds = 10f;
-        [Tooltip("Seconds the repair is locked after a hit (shot, crash, bounds) stops it.")]
-        public float InterruptCooldown = 3f;
+        [Tooltip("Seconds with no repair after any damage (shot, crash, bounds). Each hit starts it again.")]
+        public float InterruptCooldown = 5f;
 
         public Combat.RepairConfig ToConfig() => new()
         {

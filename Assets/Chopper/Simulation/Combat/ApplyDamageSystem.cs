@@ -15,7 +15,7 @@ namespace Chopper.Simulation.Combat
     /// hit (<see cref="HitConfirmRpc"/>), each victim where the hit came from (<see cref="DamageTakenRpc"/>), and
     /// reports kills (<see cref="KillEvent"/>), and tells every client where each victim was hit
     /// (<see cref="ChopperHitRpc"/>: the strongest hit with a point, at most one per victim per tick). No damage after
-    /// the match ends. Damage stops a field repair in progress and locks it (<see cref="Repair.Interrupt"/>). Pilot traits
+    /// the match ends. Damage locks the field repair for a cooldown (<see cref="Repair.Interrupt"/>). Pilot traits
     /// (<see cref="PilotTraits"/>): damage taken scales, gun and blast hits start damage over time, kills heal, hits jam.
     /// Death is handled by <see cref="ChopperRespawnSystem"/>.
     /// </summary>
@@ -184,13 +184,14 @@ namespace Chopper.Simulation.Combat
             return through;
         }
 
-        /// <summary>Shot, hit a wall, out of bounds: a repair in progress stops and locks for a moment.</summary>
+        /// <summary>Shot, hit a wall, out of bounds: no repair for the cooldown, running or not.</summary>
         private void InterruptRepair(Entity victim)
         {
             if (!_repairLookup.HasComponent(victim)) return;
             var config = _repairConfigLookup.TryGetComponent(victim, out var own) ? own : RepairConfig.Default;
             var repair = _repairLookup[victim];
-            if (Repair.Interrupt(ref repair, config)) _repairLookup[victim] = repair;
+            Repair.Interrupt(ref repair, config);
+            _repairLookup[victim] = repair;
         }
 
         /// <summary>To every client: where the victim was hit, in the victim's own space.</summary>

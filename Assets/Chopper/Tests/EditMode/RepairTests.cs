@@ -47,12 +47,12 @@ namespace Chopper.Tests
             var health = new Health { Current = 50f, Max = 100f };
             Repair.Step(ref repair, Config, ref health, held: true, 0.1f);
 
-            Assert.That(Repair.Interrupt(ref repair, Config), Is.True);
+            Repair.Interrupt(ref repair, Config);
             Assert.That(repair.State, Is.EqualTo(RepairPhase.Locked));
             var locked = health.Current;
 
-            // Still held, but locked for 3 s: no healing.
-            for (var i = 0; i < 29; i++) Repair.Step(ref repair, Config, ref health, held: true, 0.1f);
+            // Still held, but locked for 5 s: no healing.
+            for (var i = 0; i < 49; i++) Repair.Step(ref repair, Config, ref health, held: true, 0.1f);
             Assert.That(health.Current, Is.EqualTo(locked));
             Assert.That(repair.State, Is.EqualTo(RepairPhase.Locked));
 
@@ -63,11 +63,33 @@ namespace Chopper.Tests
         }
 
         [Test]
-        public void AHit_WhenNotRepairing_ChangesNothing()
+        public void AHit_WhenNotRepairing_AlsoLocks_ForFiveSeconds()
         {
             var repair = new ChopperRepair();
-            Assert.That(Repair.Interrupt(ref repair, Config), Is.False);
-            Assert.That(repair.State, Is.EqualTo(RepairPhase.Idle));
+            var health = new Health { Current = 50f, Max = 100f };
+            Repair.Interrupt(ref repair, Config);
+            Assert.That(repair.State, Is.EqualTo(RepairPhase.Locked));
+            Assert.That(repair.LockLeft, Is.EqualTo(5f));
+
+            Repair.Step(ref repair, Config, ref health, held: true, 4.9f);
+            Assert.That(health.Current, Is.EqualTo(50f), "the key does nothing yet");
+            Repair.Step(ref repair, Config, ref health, held: true, 0.2f);
+            Assert.That(health.Current, Is.GreaterThan(50f), "ready after 5 s");
+        }
+
+        [Test]
+        public void ANewHit_StartsTheLockAgain()
+        {
+            var repair = new ChopperRepair();
+            var health = new Health { Current = 50f, Max = 100f };
+            Repair.Interrupt(ref repair, Config);
+            Repair.Step(ref repair, Config, ref health, held: false, 4f);
+            Assert.That(repair.LockLeft, Is.EqualTo(1f).Within(1e-4f));
+
+            Repair.Interrupt(ref repair, Config);
+            Assert.That(repair.LockLeft, Is.EqualTo(5f));
+            Repair.Step(ref repair, Config, ref health, held: false, 4f);
+            Assert.That(repair.State, Is.EqualTo(RepairPhase.Locked));
         }
 
         [Test]
@@ -99,6 +121,11 @@ namespace Chopper.Tests
             model.UpdateRepair(RepairPhase.Locked, 2.41f, 0.6f);
             Assert.That(model.Repair, Is.EqualTo(HudRepair.Locked));
             Assert.That(model.RepairText, Is.EqualTo("REPAIR LOCKED 2.5"));
+
+            model.UpdateRepair(RepairPhase.Locked, 1f, 0.6f, lockSeconds: 5f);
+            Assert.That(model.RepairLockProgress, Is.EqualTo(0.8f).Within(1e-4f), "the bar fills as the lock runs out");
+            model.UpdateRepair(RepairPhase.Idle, 0f, 0.6f, lockSeconds: 5f);
+            Assert.That(model.RepairLockProgress, Is.EqualTo(0f));
         }
 
         [Test]

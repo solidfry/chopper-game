@@ -22,7 +22,7 @@ namespace Chopper.Simulation.Loadout
 
         [Header("Repair")]
         [Tooltip("Repair time (below 1 = faster).")] public float RepairTimeMultiplier = 1f;
-        [Tooltip("Lock after a hit stops a repair.")] public float RepairLockMultiplier = 1f;
+        [Tooltip("Repair lock after damage.")] public float RepairLockMultiplier = 1f;
 
         [Header("Weapons")]
         public float GunDamageMultiplier = 1f;

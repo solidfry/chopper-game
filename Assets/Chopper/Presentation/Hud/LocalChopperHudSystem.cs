@@ -54,7 +54,8 @@ namespace Chopper.Presentation.Hud
                 model.UpdateHealth(health.ValueRO.Current, health.ValueRO.Max);
                 var repair = SystemAPI.HasComponent<ChopperRepair>(entity) ? SystemAPI.GetComponent<ChopperRepair>(entity) : default;
                 var share = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f;
-                model.UpdateRepair(repair.State, repair.LockLeft, health.ValueRO.IsDead ? 1f : share);
+                var repairConfig = SystemAPI.HasComponent<RepairConfig>(entity) ? SystemAPI.GetComponent<RepairConfig>(entity) : RepairConfig.Default;
+                model.UpdateRepair(repair.State, repair.LockLeft, health.ValueRO.IsDead ? 1f : share, repairConfig.InterruptCooldown);
                 var abilityConfig = SystemAPI.HasComponent<AbilityConfig>(entity) ? SystemAPI.GetComponent<AbilityConfig>(entity) : default;
                 var ability = SystemAPI.HasComponent<AbilityState>(entity) ? SystemAPI.GetComponent<AbilityState>(entity) : default;
                 model.UpdateAbility(AbilityNames.Of(abilityConfig.Kind), ability.ActiveLeft, ability.CooldownLeft, ability.JammedLeft);

@@ -111,6 +111,7 @@ namespace Chopper.Presentation.Hud
         private HudRepair _repair;
         private string _repairText = "";
         private int _repairShown = -1;
+        private float _repairLockProgress;
         private HudAbility _ability;
         private string _abilityText = "";
         private int _abilityShown = -1;
@@ -497,12 +498,20 @@ namespace Chopper.Presentation.Hud
 
         [CreateProperty] public string RepairText { get => _repairText; private set => Set(ref _repairText, value, nameof(RepairText)); }
 
+        /// <summary>The lock after damage: 0 = it just started, 1 = repair is ready (a bar fills up).</summary>
+        [CreateProperty] public float RepairLockProgress { get => _repairLockProgress; private set => Set(ref _repairLockProgress, value, nameof(RepairLockProgress)); }
+
         /// <summary>
-        /// Repairing: "REPAIRING 63%" (the hull share). Locked by a hit: "REPAIR LOCKED 2.4". Idle and below
+        /// Repairing: "REPAIRING 63%" (the hull share). Locked by damage: "REPAIR LOCKED 2.4" and a bar. Idle and below
         /// <see cref="RepairHintBelow"/>: the key hint. Strings are made only when the shown number changes.
         /// </summary>
-        public void UpdateRepair(Simulation.Combat.RepairPhase phase, float lockLeft, float healthFraction)
+        /// <param name="lockSeconds">The whole lock (for the bar). 0 = not known: the bar stays empty.</param>
+        public void UpdateRepair(Simulation.Combat.RepairPhase phase, float lockLeft, float healthFraction, float lockSeconds = 0f)
         {
+            RepairLockProgress = phase == Simulation.Combat.RepairPhase.Locked && lockSeconds > 0f
+                ? Math.Clamp(1f - lockLeft / lockSeconds, 0f, 1f)
+                : 0f;
+
             var state = phase switch
             {
                 Simulation.Combat.RepairPhase.Repairing => HudRepair.Active,

@@ -78,6 +78,7 @@ namespace Chopper.UI.Hud
         private VisualElement _health;
         private VisualElement _hullArc;
         private VisualElement _repair;
+        private VisualElement _repairBar;
         private VisualElement _ability;
         private VisualElement _jamWarning;
         private VisualElement _aim;
@@ -127,6 +128,7 @@ namespace Chopper.UI.Hud
             _health = _chopper.Q("health");
             _hullArc = _chopper.Q("hull-arc");
             _repair = _chopper.Q("repair");
+            _repairBar = _chopper.Q("repair-bar");
             _ability = _chopper.Q("ability");
             _jamWarning = _chopper.Q("jam-warning");
             _aim = _chopper.Q("aim");
@@ -263,6 +265,8 @@ namespace Chopper.UI.Hud
                 RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.Repair))
                 RefreshRepair();
+            else if (args.propertyName == nameof(ChopperHudModel.RepairLockProgress))
+                RefreshRepairLock();
             else if (args.propertyName == nameof(ChopperHudModel.Ability) || args.propertyName == nameof(ChopperHudModel.Jammed))
                 RefreshAbility();
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
@@ -312,6 +316,12 @@ namespace Chopper.UI.Hud
             _repair.EnableInClassList(RepairLockedClass, state == HudRepair.Locked);
             _health.EnableInClassList(HullRepairingClass, state == HudRepair.Active);
             _hullArc.EnableInClassList(ArcRepairingClass, state == HudRepair.Active);
+            RefreshRepairLock();
+        }
+
+        private void RefreshRepairLock()
+        {
+            if (_repairBar != null) _repairBar.style.width = Length.Percent(_model.RepairLockProgress * 100f);
         }
 
         private void RefreshLock()

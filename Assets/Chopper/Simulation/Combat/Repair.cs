@@ -6,24 +6,25 @@ namespace Chopper.Simulation.Combat
 {
     /// <summary>
     /// Field repair of one chopper (owner, 7 Nov): hold the repair key to mend the hull, full health in
-    /// <see cref="Seconds"/>. Any damage while repairing stops it and locks it for <see cref="InterruptCooldown"/>.
+    /// <see cref="Seconds"/>. Any damage (shot, wall, landing, bounds) stops it and locks it for
+    /// <see cref="InterruptCooldown"/>, also when it was not running; each new hit starts the lock again.
     /// From the chassis (<see cref="Flight.RepairTuning"/>); pilots will scale it (plan: Pilots).
     /// </summary>
     public struct RepairConfig : IComponentData
     {
         /// <summary>Seconds from 0 to full health (the rate is Max / Seconds per second).</summary>
         public float Seconds;
-        /// <summary>Seconds locked after a hit stops a repair.</summary>
+        /// <summary>Seconds with no repair after any damage.</summary>
         public float InterruptCooldown;
 
-        public static RepairConfig Default => new() { Seconds = 10f, InterruptCooldown = 3f };
+        public static RepairConfig Default => new() { Seconds = 10f, InterruptCooldown = 5f };
     }
 
     public enum RepairPhase : byte
     {
         Idle = 0,
         Repairing = 1,
-        /// <summary>A hit stopped the repair; it can start again when the cooldown ends.</summary>
+        /// <summary>Damage was taken; the repair can start again when the cooldown ends.</summary>
         Locked = 2,
     }
 
@@ -70,14 +71,11 @@ namespace Chopper.Simulation.Combat
             return health.Current - before;
         }
 
-        /// <summary>Damage arrived. A repair in progress stops and locks; otherwise nothing changes.</summary>
-        public static bool Interrupt(ref ChopperRepair repair, in RepairConfig config)
+        /// <summary>Damage arrived: no repair for the whole cooldown from now, running or not. Each hit starts it again.</summary>
+        public static void Interrupt(ref ChopperRepair repair, in RepairConfig config)
         {
-            if (repair.State != RepairPhase.Repairing) return false;
-            repair.Phase = (byte)RepairPhase.Locked;
             repair.LockLeft = math.max(0f, config.InterruptCooldown);
-            if (repair.LockLeft <= 0f) repair.Phase = (byte)RepairPhase.Idle;
-            return true;
+            repair.Phase = (byte)(repair.LockLeft > 0f ? RepairPhase.Locked : RepairPhase.Idle);
         }
     }
 }
