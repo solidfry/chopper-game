@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a058d8201fac416580f36e5f5fa3ec68, type: 3}
+  m_Name: Pilot_HEX
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.PilotDefinition
+  id: 8
+  callSign: HEX
+  role: ELECTRONIC WAR
+  passive: Every hit glitches the victim's HUD. Gun hits are a little weaker.
+  abilityName: BLACKOUT
+  abilityText: 'A 150 m pulse: enemy locks drop and cannot start for 3 s.'
+  accent: {r: 0.85, g: 0.2, b: 1, a: 1}
+  portrait: {fileID: 0}
+  unlockLevel: 0
+  selectLine: {fileID: 8300000, guid: 2528d1c65caa9514c8f74a028342857c, type: 3}
+  abilityLine: {fileID: 8300000, guid: a48df5cc3baedef4fa91378cdcdf7a5b, type: 3}
+  modifiers:
+    HealthMultiplier: 1
+    TurnRateMultiplier: 1
+    LiftMultiplier: 1
+    BoostRechargeMultiplier: 1
+    RepairTimeMultiplier: 1
+    RepairLockMultiplier: 1
+    GunDamageMultiplier: 0.95
+    LockTimeMultiplier: 1
+    MagazineMultiplier: 1
+    BulletDotShare: 0
+    BulletDotSeconds: 3
+    ExplosiveDotShare: 0
+    ExplosiveDotSeconds: 4
+    JamOnHit: 1
+    DamageTakenMultiplier: 1
+    CrashDamageMultiplier: 1
+    EnemyLockTimeMultiplier: 1
+    HeatMultiplier: 1
+    RamDamageMultiplier: 1
+    KillHeal: 0
+  ability:
+    Kind: 8
+    Cooldown: 35
+    Duration: 0.5
+    Strength: 3
+    Radius: 150

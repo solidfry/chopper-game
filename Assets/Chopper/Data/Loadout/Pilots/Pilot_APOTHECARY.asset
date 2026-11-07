@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a058d8201fac416580f36e5f5fa3ec68, type: 3}
+  m_Name: Pilot_APOTHECARY
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.PilotDefinition
+  id: 1
+  callSign: APOTHECARY
+  role: FIELD MEDIC
+  passive: Repairs 40% faster, and a hit locks the repair for half as long. The boost tank refills a little slower.
+  abilityName: NANITE CLOUD
+  abilityText: Heal 30% of the hull over 5 s. Hits do not stop it.
+  accent: {r: 0, g: 1, b: 0.58, a: 1}
+  portrait: {fileID: 0}
+  unlockLevel: 0
+  selectLine: {fileID: 8300000, guid: cd9240614aba56a40bbbff30e3d1dc39, type: 3}
+  abilityLine: {fileID: 8300000, guid: 00de748eb7bcd8146a6b17c1bb22d008, type: 3}
+  modifiers:
+    HealthMultiplier: 1
+    TurnRateMultiplier: 1
+    LiftMultiplier: 1
+    BoostRechargeMultiplier: 1.15
+    RepairTimeMultiplier: 0.6
+    RepairLockMultiplier: 0.5
+    GunDamageMultiplier: 1
+    LockTimeMultiplier: 1
+    MagazineMultiplier: 1
+    BulletDotShare: 0
+    BulletDotSeconds: 3
+    ExplosiveDotShare: 0
+    ExplosiveDotSeconds: 4
+    JamOnHit: 0
+    DamageTakenMultiplier: 1
+    CrashDamageMultiplier: 1
+    EnemyLockTimeMultiplier: 1
+    HeatMultiplier: 1
+    RamDamageMultiplier: 1
+    KillHeal: 0
+  ability:
+    Kind: 1
+    Cooldown: 30
+    Duration: 5
+    Strength: 0.3
+    Radius: 150

@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a058d8201fac416580f36e5f5fa3ec68, type: 3}
+  m_Name: Pilot_HOTWIRE
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.PilotDefinition
+  id: 6
+  callSign: HOTWIRE
+  role: ENGINES
+  passive: The boost tank refills 35% faster. Crashes hurt more.
+  abilityName: OVERCLOCK
+  abilityText: 4 s of endless boost.
+  accent: {r: 1, g: 0.26, b: 0.54, a: 1}
+  portrait: {fileID: 0}
+  unlockLevel: 0
+  selectLine: {fileID: 8300000, guid: f5f7ed9069ac64b4e8fbae550c2b6362, type: 3}
+  abilityLine: {fileID: 8300000, guid: 6fc1bedaea34c8a47acadf8594f05be8, type: 3}
+  modifiers:
+    HealthMultiplier: 1
+    TurnRateMultiplier: 1
+    LiftMultiplier: 1
+    BoostRechargeMultiplier: 0.65
+    RepairTimeMultiplier: 1
+    RepairLockMultiplier: 1
+    GunDamageMultiplier: 1
+    LockTimeMultiplier: 1
+    MagazineMultiplier: 1
+    BulletDotShare: 0
+    BulletDotSeconds: 3
+    ExplosiveDotShare: 0
+    ExplosiveDotSeconds: 4
+    JamOnHit: 0
+    DamageTakenMultiplier: 1
+    CrashDamageMultiplier: 1.2
+    EnemyLockTimeMultiplier: 1
+    HeatMultiplier: 1
+    RamDamageMultiplier: 1
+    KillHeal: 0
+  ability:
+    Kind: 6
+    Cooldown: 25
+    Duration: 4
+    Strength: 1
+    Radius: 150
