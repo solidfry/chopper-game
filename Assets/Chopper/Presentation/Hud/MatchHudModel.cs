@@ -63,6 +63,8 @@ namespace Chopper.Presentation.Hud
         private string _killFeedText = "";
         private string _bannerText = "";
         private bool _bannerVisible;
+        private string _deathAlertText = "";
+        private bool _deathAlertVisible;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -150,6 +152,24 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _bannerVisible, value, nameof(BannerVisible));
         }
 
+        /// <summary>"YOU CRASHED" or "SHOT DOWN BY ...": from your death until you respawn. With a red tint on the screen.</summary>
+        [CreateProperty]
+        public string DeathAlertText
+        {
+            get => _deathAlertText;
+            private set => Set(ref _deathAlertText, value, nameof(DeathAlertText));
+        }
+
+        [CreateProperty]
+        public bool DeathAlertVisible
+        {
+            get => _deathAlertVisible;
+            private set => Set(ref _deathAlertVisible, value, nameof(DeathAlertVisible));
+        }
+
+        /// <summary>You have a chopper again.</summary>
+        public void ClearDeathAlert() => DeathAlertVisible = false;
+
         public void SetLocalPlayer(int networkId)
         {
             if (_localNetworkId == networkId) return;
@@ -176,9 +196,16 @@ namespace Chopper.Presentation.Hud
         public void AddKill(int killerNetworkId, int victimNetworkId)
         {
             var victim = PilotName(victimNetworkId);
-            var text = killerNetworkId == 0 || killerNetworkId == victimNetworkId
+            var crashed = killerNetworkId == 0 || killerNetworkId == victimNetworkId;
+            var text = crashed
                 ? $"{victim} CRASHED"
                 : $"{PilotName(killerNetworkId)} > {victim}";
+
+            if (victimNetworkId == _localNetworkId && _phase != MatchPhase.PostGame)
+            {
+                DeathAlertText = crashed ? "YOU CRASHED" : $"SHOT DOWN BY {PilotName(killerNetworkId)}";
+                DeathAlertVisible = true;
+            }
 
             _killFeed.Add((text, KillFeedEntrySeconds));
             if (_killFeed.Count > MaxKillFeedEntries)
@@ -321,6 +348,7 @@ namespace Chopper.Presentation.Hud
         {
             RefreshScoreboardVisible();
             BannerVisible = _phase == MatchPhase.PostGame;
+            if (BannerVisible) DeathAlertVisible = false;
             BannerText = !BannerVisible ? ""
                 : _winnerNetworkId == 0 ? "DRAW"
                 : _winnerNetworkId == _localNetworkId ? "VICTORY"

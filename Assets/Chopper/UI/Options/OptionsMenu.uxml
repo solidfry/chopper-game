@@ -20,6 +20,14 @@
         <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
         <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
 
+        <ui:Label text="// HUD OPACITY" class="options__section chopper-title" />
+        <ui:Slider name="hud-opacity-horizon" label="HORIZON" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="hud-opacity-ring" label="FLIGHT RING" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="hud-opacity-readouts" label="SPEED / ALT / HULL" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="hud-opacity-weapons" label="WEAPONS" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="hud-opacity-targeting" label="RETICLE / MARKERS" low-value="0" high-value="1" class="options__row" />
+        <ui:Slider name="hud-opacity-match" label="SCORE / TIMER" low-value="0" high-value="1" class="options__row" />
+
         <ui:Label text="// AUDIO" class="options__section chopper-title" />
         <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
         <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />

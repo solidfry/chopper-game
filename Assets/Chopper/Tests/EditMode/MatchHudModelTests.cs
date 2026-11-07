@@ -47,6 +47,30 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void DeathAlert_ShowsOnlyForYourOwnDeath_UntilCleared()
+        {
+            var model = new MatchHudModel();
+            model.SetLocalPlayer(1);
+            model.SetMatch(MatchPhase.InProgress, 100f, 0);
+
+            model.AddKill(killerNetworkId: 0, victimNetworkId: 2);
+            Assert.That(model.DeathAlertVisible, Is.False, "someone else");
+
+            model.AddKill(killerNetworkId: 0, victimNetworkId: 1);
+            Assert.That(model.DeathAlertVisible, Is.True);
+            Assert.That(model.DeathAlertText, Is.EqualTo("YOU CRASHED"));
+
+            model.ClearDeathAlert();
+            Assert.That(model.DeathAlertVisible, Is.False);
+
+            model.AddKill(killerNetworkId: 2, victimNetworkId: 1);
+            Assert.That(model.DeathAlertText, Is.EqualTo("SHOT DOWN BY PILOT 2"));
+
+            model.SetMatch(MatchPhase.PostGame, 0f, 2);
+            Assert.That(model.DeathAlertVisible, Is.False, "the results take over");
+        }
+
+        [Test]
         public void KillFeed_KeepsNewestEntriesAndExpires()
         {
             var model = new MatchHudModel();

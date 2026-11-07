@@ -28,6 +28,11 @@
   justify-content: center;
 }
 
+.hud-frame__centre {
+  width: 400px;
+  height: 400px;
+}
+
 .hud-frame__ring {
   width: 400px;
   height: 400px;
@@ -235,6 +240,48 @@
 
 .hud-match__banner--hidden {
   display: none;
+}
+
+/* Your death: red tint on the whole screen, and an alert in the centre. The look pass makes low alpha read much stronger: tune by eye. */
+.hud-death-tint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 20, 30, 0.04);
+  transition-property: opacity;
+  transition-duration: 0.15s;
+}
+
+.hud-death-tint--hidden {
+  opacity: 0;
+}
+
+.hud-death-alert {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-death-alert--hidden {
+  display: none;
+}
+
+.hud-death-alert__text {
+  font-size: 64px;
+  letter-spacing: 6px;
+  color: var(--chopper-red);
+  padding: 10px 36px;
+  background-color: rgba(30, 4, 6, 0.85);
+  border-width: 3px;
+  border-color: var(--chopper-red);
+  text-shadow: 0 0 14px rgba(255, 66, 70, 0.8);
+  -unity-text-align: middle-center;
 }
 
 /* Results: the banner moves up over the scoreboard */

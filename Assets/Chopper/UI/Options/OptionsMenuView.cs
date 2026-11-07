@@ -37,6 +37,7 @@ namespace Chopper.UI.Options
         private Button _hangar;
         private InputPromptLabels _prompts;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
+        private readonly List<(Slider Slider, HudGroup Group)> _hudOpacity = new();
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
         /// <summary>Same order as <see cref="InputOptions.MouseSteerIndex"/>.</summary>
@@ -96,6 +97,14 @@ namespace Chopper.UI.Options
             AddVolume("volume-ui", AudioChannel.UI);
             AddVolume("volume-ambient", AudioChannel.Ambient);
 
+            _hudOpacity.Clear();
+            AddHudOpacity("hud-opacity-horizon", HudGroup.Horizon);
+            AddHudOpacity("hud-opacity-ring", HudGroup.FlightRing);
+            AddHudOpacity("hud-opacity-readouts", HudGroup.Readouts);
+            AddHudOpacity("hud-opacity-weapons", HudGroup.Weapons);
+            AddHudOpacity("hud-opacity-targeting", HudGroup.Targeting);
+            AddHudOpacity("hud-opacity-match", HudGroup.MatchInfo);
+
             _prompts = new InputPromptLabels(_root, _context.Prompts);
             SetOpen(IsOpen);
         }
@@ -122,6 +131,7 @@ namespace Chopper.UI.Options
             _resume.clicked -= Close;
             if (_hangar != null) _hangar.clicked -= OpenHangar;
             foreach (var (slider, _) in _volumes) slider.UnregisterValueChangedCallback(OnVolumeChanged);
+            foreach (var (slider, _) in _hudOpacity) slider.UnregisterValueChangedCallback(OnHudOpacityChanged);
             _root = null;
         }
 
@@ -158,6 +168,7 @@ namespace Chopper.UI.Options
             _hudLook.SetValueWithoutNotify(_presetNames[Mathf.Clamp((int)_context.HudLook.Preset, 0, _presetNames.Count - 1)]);
             _reduceEffects.SetValueWithoutNotify(_context.HudLook.ReduceEffects);
             foreach (var (slider, channel) in _volumes) slider.SetValueWithoutNotify(_context.Audio.GetVolume(channel));
+            foreach (var (slider, group) in _hudOpacity) slider.SetValueWithoutNotify(_context.HudOpacity.Get(group));
             _hangar?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHangar);
             _resume.Focus();
         }
@@ -169,6 +180,21 @@ namespace Chopper.UI.Options
             slider.userData = channel;
             slider.RegisterValueChangedCallback(OnVolumeChanged);
             _volumes.Add((slider, channel));
+        }
+
+        private void AddHudOpacity(string elementName, HudGroup group)
+        {
+            var slider = _root.Q<Slider>(elementName);
+            if (slider == null) return;
+            slider.userData = group;
+            slider.RegisterValueChangedCallback(OnHudOpacityChanged);
+            _hudOpacity.Add((slider, group));
+        }
+
+        private void OnHudOpacityChanged(ChangeEvent<float> evt)
+        {
+            if (evt.target is Slider { userData: HudGroup group })
+                _context.HudOpacity.Set(group, evt.newValue);
         }
 
         private void OnMouseSteerChanged(ChangeEvent<string> evt)

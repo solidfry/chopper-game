@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Hud;
 using Chopper.UI.Cockpit;
@@ -87,6 +88,9 @@ namespace Chopper.UI.Hud
         private ScoreboardView _scoreboard;
         private VisualElement _matchScores;
         private VisualElement _killFeed;
+        private VisualElement _deathTint;
+        private VisualElement _deathAlert;
+        private readonly List<(HudGroup Group, VisualElement Element)> _opacityGroups = new();
         private Vector2 _panelInset;
         private bool _subscribed;
 
@@ -186,11 +190,24 @@ namespace Chopper.UI.Hud
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
             Bind(_banner, "text", nameof(MatchHudModel.BannerText));
+            _deathTint = match.Q("death-tint");
+            _deathAlert = match.Q("death-alert");
+            Bind(match.Q<Label>("death-alert-text"), "text", nameof(MatchHudModel.DeathAlertText));
             _scoreboard = new ScoreboardView(match, _match);
+
+            _opacityGroups.Clear();
+            AddToGroup(HudGroup.Horizon, attitude);
+            AddToGroup(HudGroup.FlightRing, _chopper.Q("ring"));
+            AddToGroup(HudGroup.Readouts, _chopper.Q("readouts"), _health);
+            AddToGroup(HudGroup.Weapons, _chopper.Q("left"));
+            AddToGroup(HudGroup.Targeting, _chopper.Q("aim-layer"), _chopper.Q("markers"));
+            AddToGroup(HudGroup.MatchInfo, _matchScores, _killFeed, match.Q("timer"));
 
             _model.propertyChanged += OnModelChanged;
             _match.propertyChanged += OnMatchChanged;
+            bridge.Context.HudOpacity.Changed += RefreshOpacity;
             _subscribed = true;
+            RefreshOpacity();
             RefreshClasses();
             RefreshAim();
             RefreshDamageDirection();
@@ -202,6 +219,7 @@ namespace Chopper.UI.Hud
             RefreshRepair();
             RefreshAbility();
             RefreshBanner();
+            RefreshDeathAlert();
         }
 
         /// <summary>Drops the old tree's elements and model events (before a rebuild, or on disable).</summary>
@@ -215,10 +233,23 @@ namespace Chopper.UI.Hud
             {
                 _model.propertyChanged -= OnModelChanged;
                 _match.propertyChanged -= OnMatchChanged;
+                bridge.Context.HudOpacity.Changed -= RefreshOpacity;
                 _subscribed = false;
             }
             _chopper = null;
         }
+
+        private void AddToGroup(HudGroup group, params VisualElement[] elements)
+        {
+            foreach (var element in elements) _opacityGroups.Add((group, element));
+        }
+
+        private void RefreshOpacity()
+        {
+            var opacity = bridge.Context.HudOpacity;
+            foreach (var (group, element) in _opacityGroups) element.style.opacity = opacity.Get(group);
+        }
+
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetBridge(PresentationBridge value) => bridge = value;
 
@@ -259,6 +290,8 @@ namespace Chopper.UI.Hud
         {
             // Also when the panel dropped the tree (rebuild) before the reload callback rebinds: no styles on dead elements.
             if (_chopper == null || _chopper.panel == null) return;
+            // Respawned. This event fires only on a change, so a kill that arrives just before the chopper goes stays shown.
+            if (args.propertyName == nameof(ChopperHudModel.HasChopper) && _model.HasChopper) _match.ClearDeathAlert();
             if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
@@ -413,9 +446,17 @@ namespace Chopper.UI.Hud
             if (_chopper == null || _chopper.panel == null) return;
             if (args.propertyName == nameof(MatchHudModel.BannerVisible))
                 RefreshBanner();
+            else if (args.propertyName == nameof(MatchHudModel.DeathAlertVisible))
+                RefreshDeathAlert();
         }
 
         private void RefreshBanner() => _banner.EnableInClassList(BannerHiddenClass, !_match.BannerVisible);
+
+        private void RefreshDeathAlert()
+        {
+            _deathTint.EnableInClassList("hud-death-tint--hidden", !_match.DeathAlertVisible);
+            _deathAlert.EnableInClassList("hud-death-alert--hidden", !_match.DeathAlertVisible);
+        }
 
         /// <summary>Viewport y goes up, panel top goes down.</summary>
         private void RefreshAim()

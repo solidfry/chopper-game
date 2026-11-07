@@ -84,6 +84,9 @@ namespace Chopper.Presentation.Bridge
         public bool MenuOpen { get; set; }
         /// <summary>Saved control options (mouse steer, sensitivity, invert).</summary>
         public InputOptions InputOptions { get; } = new();
+
+        /// <summary>Player option: how solid each part of the HUD is. Saved.</summary>
+        public HudOpacity HudOpacity { get; } = new();
         /// <summary>The hangar's saved loadout and skin (read again by the client world when a match starts).</summary>
         public LoadoutChoiceStore LoadoutChoices { get; } = new();
         /// <summary>Hangar view model; made on first use (null without a loadout catalog). Only the hangar scene uses it.</summary>
