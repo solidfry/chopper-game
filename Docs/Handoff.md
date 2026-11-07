@@ -257,6 +257,9 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 
 - **Sphere HUD:** `SphereAngle` on the look presets (`HudLookSettings`, 42 degrees; tune it live in play mode) bends the HUD like the inside of a sphere round the pilot. Text tilts more the further it is from the screen's horizontal centre line, so the side text stands away from it on purpose: speed and altitude above, hull below, weapon above, flares and ability below. It replaces the barrel curvature. `HudSphere.ToHud` (C#) and `HudLook.shader` hold the same formula: change them together. Anything placed on a world point goes through `HudLook.ToHud` (reticle, lock, lead, markers). The panel's corners go past the screen, so `ChopperHudView` moves the scores and kill feed in by `HudSphere.Inset`; other text must stay out of the corners too. Checked in play mode: probes placed with `ToHud` landed on their expected screen pixels. The Clean preset stays flat.
 
+- **Horizon on the HUD:** `ChopperHud.uxml` uses the cockpit's `AttitudeIndicator`, clipped to the ring; colours are in USS (`.hud-attitude`).
+- **No boost while repairing (owner, 7 Nov):** `Repair.BlocksBoost`, read by `ChopperFlightSystem`. A boost in progress stops, also with an endless-boost ability; the tank still refills. The HUD shows the boost arc as not ready. Only the server writes the repair phase, so online the client's boost stops a moment late and is corrected. Rules tested; not yet tried in flight.
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |

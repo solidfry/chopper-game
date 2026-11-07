@@ -1,5 +1,6 @@
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Hud;
+using Chopper.UI.Cockpit;
 using Unity.Properties;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -72,7 +73,6 @@ namespace Chopper.UI.Hud
         private VisualElement _pylonReloadFill;
         private VisualElement _flareReload;
         private VisualElement _flareReloadFill;
-        private VisualElement _horizon;
         private VisualElement _banner;
         private VisualElement _boost;
         private VisualElement _health;
@@ -160,7 +160,9 @@ namespace Chopper.UI.Hud
             Bind(_chopper.Q<Label>("pylon-ammo"), "text", nameof(ChopperHudModel.PylonAmmoText));
             Bind(_chopper.Q<Label>("flares"), "text", nameof(ChopperHudModel.FlaresText));
             Bind(_chopper.Q<ArcGauge>("heat-arc"), nameof(ArcGauge.value), nameof(ChopperHudModel.GunHeat));
-            _horizon = _chopper.Q("horizon");
+            var attitude = _chopper.Q<AttitudeIndicator>("attitude");
+            Bind(attitude, nameof(AttitudeIndicator.roll), nameof(ChopperHudModel.RollDegrees));
+            Bind(attitude, nameof(AttitudeIndicator.pitch), nameof(ChopperHudModel.PitchDegrees));
             _markers = new WorldMarkerView(bridge.Context.Markers, bridge.Context.HudLook, _chopper.Q("markers"), _chopper.Q("lead"));
 
             _chopper.dataSource = _model;
@@ -193,7 +195,6 @@ namespace Chopper.UI.Hud
             RefreshAim();
             RefreshDamageDirection();
             RefreshSway();
-            RefreshHorizon();
             RefreshLock();
             RefreshThreats();
             RefreshWeapons();
@@ -282,8 +283,6 @@ namespace Chopper.UI.Hud
             else if (args.propertyName == nameof(ChopperHudModel.PylonReload) ||
                      args.propertyName == nameof(ChopperHudModel.FlareReload))
                 RefreshReload();
-            else if (args.propertyName == nameof(ChopperHudModel.RollDegrees))
-                RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.Repair))
                 RefreshRepair();
             else if (args.propertyName == nameof(ChopperHudModel.RepairLockProgress))
@@ -402,9 +401,6 @@ namespace Chopper.UI.Hud
             var sway = _model.Sway;
             _frame.style.translate = new Translate(sway.x, sway.y);
         }
-
-        /// <summary>UI rotation is clockwise; a left bank turns the horizon clockwise.</summary>
-        private void RefreshHorizon() => _horizon.style.rotate = new Rotate(Angle.Degrees(_model.RollDegrees));
 
         private void RefreshDamageDirection()
         {

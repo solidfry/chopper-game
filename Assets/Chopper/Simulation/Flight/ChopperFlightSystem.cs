@@ -44,6 +44,7 @@ namespace Chopper.Simulation.Flight
                 CollisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld,
                 AbilityConfigs = SystemAPI.GetComponentLookup<Combat.AbilityConfig>(isReadOnly: true),
                 AbilityStates = SystemAPI.GetComponentLookup<Combat.AbilityState>(isReadOnly: true),
+                Repairs = SystemAPI.GetComponentLookup<Combat.ChopperRepair>(isReadOnly: true),
             }.ScheduleParallel(state.Dependency);
         }
 
@@ -61,6 +62,8 @@ namespace Chopper.Simulation.Flight
             /// <summary>Pilot abilities with endless boost (Overclock, Strip Down, Battering Ram).</summary>
             [ReadOnly] public ComponentLookup<Combat.AbilityConfig> AbilityConfigs;
             [ReadOnly] public ComponentLookup<Combat.AbilityState> AbilityStates;
+            /// <summary>No boost while repairing.</summary>
+            [ReadOnly] public ComponentLookup<Combat.ChopperRepair> Repairs;
 
             private void Execute(
                 Entity entity,
@@ -119,7 +122,8 @@ namespace Chopper.Simulation.Flight
                 var endless = AbilityConfigs.TryGetComponent(entity, out var abilityConfig) &&
                               AbilityStates.TryGetComponent(entity, out var abilityState) &&
                               Combat.Abilities.EndlessBoost(abilityConfig, abilityState);
-                Boost(input, config, noseAxis, ref velocity, ref state, endless);
+                var blocked = Repairs.TryGetComponent(entity, out var repair) && Combat.Repair.BlocksBoost(repair);
+                Boost(input, config, noseAxis, ref velocity, ref state, endless, blocked);
 
                 // Drag in the heading frame (yaw only: x = sideways, y = world up, z = flat nose), so sideways and
                 // vertical slides stop faster than forward flight. Not the tilted body frame: there, fast forward
@@ -201,10 +205,10 @@ namespace Chopper.Simulation.Flight
             /// once the button is released.
             /// </summary>
             private void Boost(in ChopperInput input, in ChopperFlightConfig config, float3 noseAxis, ref PhysicsVelocity velocity,
-                ref ChopperFlightState state, bool endless)
+                ref ChopperFlightState state, bool endless, bool blocked)
             {
                 var canBoost = endless || (state.Boosting ? state.BoostUsed < 1f : state.BoostUsed <= 1f - config.BoostStartEnergy);
-                var boosting = input.Boost && canBoost && config.BoostDuration > 0f;
+                var boosting = input.Boost && canBoost && !blocked && config.BoostDuration > 0f;
                 var direction = math.normalizesafe(noseAxis, math.forward());
 
                 if (boosting)

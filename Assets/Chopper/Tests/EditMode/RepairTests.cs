@@ -134,6 +134,39 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Repairing_BlocksBoost_OnlyWhileItRuns()
+        {
+            var repair = new ChopperRepair();
+            var health = new Health { Current = 50f, Max = 100f };
+            Assert.That(Repair.BlocksBoost(repair), Is.False, "idle");
+
+            Repair.Step(ref repair, Config, ref health, held: true, 0.1f);
+            Assert.That(Repair.BlocksBoost(repair), Is.True, "repairing");
+
+            Repair.Step(ref repair, Config, ref health, held: false, 0.1f);
+            Assert.That(Repair.BlocksBoost(repair), Is.False, "released");
+
+            Repair.Interrupt(ref repair, Config);
+            Assert.That(Repair.BlocksBoost(repair), Is.False, "the lock only stops the repair");
+        }
+
+        [Test]
+        public void Hud_ShowsBoostAsNotReady_WhileRepairing()
+        {
+            var model = new ChopperHudModel();
+            model.Update(0f, 0f, boostEnergy: 1f, boosting: false, boostStartEnergy: 0.2f);
+            Assert.That(model.BoostReady, Is.True);
+
+            model.UpdateRepair(RepairPhase.Repairing, 0f, 0.5f);
+            model.Update(0f, 0f, boostEnergy: 1f, boosting: false, boostStartEnergy: 0.2f);
+            Assert.That(model.BoostReady, Is.False);
+
+            model.UpdateRepair(RepairPhase.Idle, 0f, 0.5f);
+            model.Update(0f, 0f, boostEnergy: 1f, boosting: false, boostStartEnergy: 0.2f);
+            Assert.That(model.BoostReady, Is.True);
+        }
+
+        [Test]
         public void Prompts_ShowOnlyTheDeviceInUse()
         {
             var controls = new Chopper.Simulation.Input.PlayerControls();

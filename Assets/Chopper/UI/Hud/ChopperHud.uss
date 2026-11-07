@@ -38,20 +38,18 @@
   justify-content: center;
 }
 
-.hud-frame__horizon {
-  flex-direction: row;
-  align-items: center;
-  width: 320px;
-}
-
-.hud-frame__horizon-line {
-  flex-grow: 1;
-  height: 2px;
-  background-color: var(--chopper-green-dim);
-}
-
-.hud-frame__horizon-gap {
-  width: 80px;
+/* Artificial horizon: pitch ladder, bank scale and aircraft mark, clipped to the ring. No ground fill: the view stays clear. */
+.hud-attitude {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 200px;
+  overflow: hidden;
+  --attitude-line: var(--chopper-green-dim);
+  --attitude-ground: rgba(0, 0, 0, 0);
+  --attitude-mark: var(--chopper-green);
 }
 
 /* Side text stands well out from the ring: the middle of the view stays clear. The gap is the padding. */

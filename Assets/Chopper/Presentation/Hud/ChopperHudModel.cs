@@ -425,7 +425,8 @@ namespace Chopper.Presentation.Hud
             var energy = Math.Clamp(boostEnergy, 0f, 1f);
             BoostEnergy = MathF.Round(energy * 100f) / 100f;
             Boosting = boosting;
-            BoostReady = boosting || energy >= boostStartEnergy;
+            // No boost while repairing: the tank shows as not ready.
+            BoostReady = boosting || (energy >= boostStartEnergy && Repair != HudRepair.Active);
         }
 
         public void UpdateHealth(float current, float max)

@@ -46,6 +46,12 @@ namespace Chopper.Simulation.Combat
     public static class Repair
     {
         /// <summary>
+        /// No boost while repairing (a boost in progress stops), also with an endless-boost ability. The flight code runs
+        /// on the client too, but only the server writes the phase: online, the client's boost stops a moment late and is corrected.
+        /// </summary>
+        public static bool BlocksBoost(in ChopperRepair repair) => repair.State == RepairPhase.Repairing;
+
+        /// <summary>
         /// One tick. Held, alive, not full and not locked: heal at Max / Seconds per second. Released or full: idle.
         /// Locked: count down; when it ends, a key still held starts again. Returns the health added.
         /// </summary>

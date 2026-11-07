@@ -83,17 +83,14 @@
             </ui:VisualElement>
           </ui:VisualElement>
           <ui:VisualElement name="ring" class="hud-frame__ring" picking-mode="Ignore">
+            <!-- Same artificial horizon as the cockpit flight page, clipped to the ring. First child: drawn under the arcs. -->
+            <Chopper.UI.Cockpit.AttitudeIndicator name="attitude" class="hud-attitude" degrees-visible="50" />
             <!-- Segmented arcs just outside the ring: boost tank (left, fills upward), hull (right, fills upward), gun heat (bottom, fills left to right) -->
             <Chopper.UI.Hud.ArcGauge name="boost" class="hud-arc hud-boost" start-angle="148" sweep="64" segments="16" thickness="7" />
             <Chopper.UI.Hud.ArcGauge name="hull-arc" class="hud-arc hud-hull-arc" start-angle="32" sweep="-64" segments="16" thickness="7" />
             <Chopper.UI.Hud.ArcGauge name="heat-arc" class="hud-arc hud-heat-arc" start-angle="122" sweep="-64" segments="16" thickness="7" />
             <ui:Label text="BOOST" class="hud-arc__label hud-arc__label--left" />
             <ui:Label name="heat-label" text="GUN" class="hud-heat-label" />
-            <ui:VisualElement name="horizon" class="hud-frame__horizon" picking-mode="Ignore">
-              <ui:VisualElement class="hud-frame__horizon-line" picking-mode="Ignore" />
-              <ui:VisualElement class="hud-frame__horizon-gap" picking-mode="Ignore" />
-              <ui:VisualElement class="hud-frame__horizon-line" picking-mode="Ignore" />
-            </ui:VisualElement>
           </ui:VisualElement>
           <ui:VisualElement name="readouts" class="hud-frame__side hud-frame__side--right" picking-mode="Ignore">
             <ui:Label name="boost-tag" text="&gt;&gt; BOOST" class="hud-boost-tag chopper-title" />
