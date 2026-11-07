@@ -27,9 +27,12 @@ namespace Chopper.Services.Matchmaking
         public string Queue { get; }
         public ushort ChassisId { get; }
         public IReadOnlyList<ushort> Modules { get; }
+        /// <summary>The pilot (0 = none). In the ticket so rules can later balance teams by pilot.</summary>
+        public ushort PilotId { get; }
 
-        public MatchRequest(string queue, ushort chassisId, IReadOnlyList<ushort> modules)
+        public MatchRequest(string queue, ushort chassisId, IReadOnlyList<ushort> modules, ushort pilotId = 0)
         {
+            PilotId = pilotId;
             Queue = queue;
             ChassisId = chassisId;
             Modules = modules ?? Array.Empty<ushort>();

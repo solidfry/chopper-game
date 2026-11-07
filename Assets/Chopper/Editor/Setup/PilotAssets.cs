@@ -113,6 +113,28 @@ namespace Chopper.Editor.Setup
             };
         }
 
+        private const string VoiceFolder = "Assets/Sound/Voice/Pilots";
+
+        /// <summary>
+        /// Voice lines (generated placeholders: espeak-ng with a radio filter): <c>CALLSIGN_Select.ogg</c> (announcer)
+        /// and <c>CALLSIGN_Ability.ogg</c> (the pilot on the radio). Fills empty slots only.
+        /// </summary>
+        private static bool LinkVoices(IEnumerable<PilotDefinition> pilots)
+        {
+            var changed = false;
+            foreach (var pilot in pilots)
+            {
+                if (pilot.SelectLine != null && pilot.AbilityLine != null) continue;
+                var select = pilot.SelectLine != null ? pilot.SelectLine : AssetDatabase.LoadAssetAtPath<AudioClip>($"{VoiceFolder}/{pilot.CallSign}_Select.ogg");
+                var ability = pilot.AbilityLine != null ? pilot.AbilityLine : AssetDatabase.LoadAssetAtPath<AudioClip>($"{VoiceFolder}/{pilot.CallSign}_Ability.ogg");
+                if (select == pilot.SelectLine && ability == pilot.AbilityLine) continue;
+                pilot.SetVoice(select, ability);
+                EditorUtility.SetDirty(pilot);
+                changed = true;
+            }
+            return changed;
+        }
+
         public static void Ensure(LoadoutCatalog catalog)
         {
             if (catalog == null) return;
@@ -145,6 +167,7 @@ namespace Chopper.Editor.Setup
                 pilots.Add(asset);
                 changed = true;
             }
+            changed |= LinkVoices(pilots);
             if (!changed) return;
             catalog.SetPilots(pilots.OrderBy(p => p.Id).ToArray());
             EditorUtility.SetDirty(catalog);

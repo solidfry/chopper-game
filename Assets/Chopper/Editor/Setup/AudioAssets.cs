@@ -165,6 +165,8 @@ namespace Chopper.Editor.Setup
                 Slot(library.Jammed, () => Cue("Jammed", Clips(SciFi + "/Impact/explosion_lightning.wav"), ui, 0.55f, blend: 0f,
                     voices: 1, cooldown: 0.5f, pitch: 0.8f)));
 
+            if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
+
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();

@@ -22,6 +22,8 @@ namespace Chopper.Presentation.Hangar
         /// <summary>The big letter(s) on the portrait until there is art: the call sign's first two letters.</summary>
         public readonly string Monogram;
         public readonly Texture2D Portrait;
+        public readonly AudioClip SelectLine;
+        public readonly AudioClip AbilityLine;
         public readonly bool Locked;
         public readonly int UnlockLevel;
 
@@ -41,6 +43,8 @@ namespace Chopper.Presentation.Hangar
             Effects = pilot.Modifiers.Effects();
             Monogram = CallSign.Length >= 2 ? CallSign.Substring(0, 2) : CallSign;
             Portrait = pilot.Portrait;
+            SelectLine = pilot.SelectLine;
+            AbilityLine = pilot.AbilityLine;
             Locked = locked;
             UnlockLevel = pilot.UnlockLevel;
         }

@@ -108,6 +108,8 @@
       <ui:VisualElement class="pilot-select__body" picking-mode="Ignore">
         <ui:VisualElement name="pilot-feature" class="pilot-feature" picking-mode="Ignore">
           <ui:VisualElement name="pilot-portrait" class="pilot-feature__portrait" picking-mode="Ignore">
+            <!-- Drawn helmet portrait until there is art (PilotPortrait); hidden when the pilot has a portrait texture -->
+            <hangar:PilotPortrait name="pilot-drawn" class="pilot-feature__drawn" />
             <ui:Label name="pilot-monogram" class="pilot-feature__monogram chopper-title" picking-mode="Ignore" />
             <ui:Label name="pilot-serial" class="pilot-feature__serial chopper-deco-dot" picking-mode="Ignore" />
           </ui:VisualElement>

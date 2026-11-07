@@ -489,7 +489,7 @@ handling and their own ability, in the same role:
   - **Focus views (3 Nov, checked in play):** automatic per slot, no hand-tuned poses: frame the module's bounds in the gap between the panels, distance from its size, side / 3/4 / whole-chopper (armour) views, rotor = the overview angle zoomed to fit (no turn), camera under the rotor disc for modules below it, and a clear-view test (body and module mesh colliders from readable copies in the `WireframeLibrary`) that picks the first unblocked view. `SocketAuthoring` poses (`useSocketPoses`) stay as a manual override. Lifter: the engine module mounts at the back of both side pods (two Engine sockets, the second repeats the module).
   - Not yet: module icons on tiles and cards (the tile shows a text mark: +, X, EQUIPPED, LOCKED); idea: Setup step 7 renders each module's wireframe to a small texture (`ModuleDefinition` icon field).
 
-## 5b. Pilots (owner TODO, 7 Nov 2026 — steps 1 to 4 built 7 Nov, not compiled)
+## 5b. Pilots (owner TODO, 7 Nov 2026 — steps 1 to 5 built 7 Nov, not compiled)
 
 The player picks a pilot as well as a chopper. Any pilot flies any chassis. A pilot gives one passive bonus (with a small cost) and one active ability.
 
@@ -530,7 +530,7 @@ Build order:
 2. The select screen. **Built 7 Nov.**
 3. The `StatusEffect` buffer and damage over time (Viper, Pyre). **Built 7 Nov** as `DamageOverTime` (shield, stealth and overclock join it in step 4).
 4. Active abilities (key, cooldown, HUD). **Built 7 Nov** (see below).
-5. Portraits and voice lines.
+5. Portraits and voice lines. **Built 7 Nov, placeholders** (see below).
 
 Built (7 Nov, written without the editor, not compiled):
 - **Data:**
@@ -580,10 +580,14 @@ Built (7 Nov, written without the editor, not compiled):
   - Looks that everyone sees: a blue shield shell, green nanites, a glow at the guns, pink tail sparks for endless boost, and a cyan Blackout ring.
   - Own sounds: on use, when ready again, and when jammed.
   - Tests: `AbilityTests`.
+- **Portraits and voices (step 5, built 7 Nov, placeholders):**
+  - `UI/Hangar/PilotPortrait.cs` draws a neon helmet per pilot (helmet, visor and extras chosen from the pilot id) on the big card and the tiles. A `portrait` texture on the pilot asset replaces it.
+  - Voice lines `Assets/Sound/Voice/Pilots/<CALLSIGN>_Select.ogg` (announcer) and `_Ability.ogg` (radio call) are made by `Tools/Voice/make_pilot_voices.sh` (espeak-ng with radio and announcer filters). Setup step 1 links them.
+  - Where they play: the select screen says the call sign on each new pilot shown, and plays the radio call on LOCK IN. In a match, your pilot's radio call plays when the ability starts (`IAudioService.PlayVoice`: one voice at a time, `SoundLibrary.VoiceGroup`).
+  - Swap in real art and voices later on the pilot assets.
+- **Names:** call signs show in the kill feed and the leader line ("VIPER 3"; `PilotNamesSystem`), and your own call sign shows under your score. The pilot id is in the matchmaking ticket (`pilot`).
 - **Not yet:**
-  - portraits (step 5);
-  - the pilot in the matchmaking ticket;
-  - the pilot's call sign on the HUD, kill feed and scoreboard.
+  - a full scoreboard (there is none yet).
 
 ## 6. Account progression
 

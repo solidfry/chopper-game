@@ -21,6 +21,8 @@ namespace Chopper.Presentation.Hud
         private readonly StringBuilder _builder = new();
 
         private int _localNetworkId;
+        private readonly Dictionary<int, string> _callSigns = new();
+        private string _localPilotText = "";
         private MatchPhase _phase;
         private float _timeRemaining;
         private int _winnerNetworkId;
@@ -82,6 +84,7 @@ namespace Chopper.Presentation.Hud
         {
             if (_localNetworkId == networkId) return;
             _localNetworkId = networkId;
+            LocalPilotText = _callSigns.TryGetValue(networkId, out var sign) ? sign : "";
             RefreshScores();
             RefreshBanner();
         }
@@ -145,7 +148,32 @@ namespace Chopper.Presentation.Hud
             if (removed) RefreshKillFeed();
         }
 
-        private string PilotName(int networkId) => networkId == _localNetworkId ? "YOU" : $"PILOT {networkId}";
+        /// <summary>"YOU" for the local player; "VIPER 3" with a pilot (several players may fly the same pilot); else "PILOT 3".</summary>
+        private string PilotName(int networkId) =>
+            networkId == _localNetworkId ? "YOU"
+            : _callSigns.TryGetValue(networkId, out var sign) && !string.IsNullOrEmpty(sign) ? $"{sign} {networkId}"
+            : $"PILOT {networkId}";
+
+        /// <summary>
+        /// A player's pilot call sign (from their chopper's loadout; <see cref="PilotNamesSystem"/>). Empty = no pilot.
+        /// The local player's own call sign shows under the score.
+        /// </summary>
+        public void SetCallSign(int networkId, string callSign)
+        {
+            callSign ??= "";
+            if (_callSigns.TryGetValue(networkId, out var known) && known == callSign) return;
+            _callSigns[networkId] = callSign;
+            if (networkId == _localNetworkId) LocalPilotText = callSign;
+            RefreshScores();
+        }
+
+        /// <summary>The local player's call sign ("" without a pilot).</summary>
+        [CreateProperty]
+        public string LocalPilotText
+        {
+            get => _localPilotText;
+            private set => Set(ref _localPilotText, value, nameof(LocalPilotText));
+        }
 
         private void RefreshTimer()
         {

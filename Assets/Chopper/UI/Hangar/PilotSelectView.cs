@@ -33,6 +33,7 @@ namespace Chopper.UI.Hangar
         private readonly VisualElement _scan;
         private readonly VisualElement _portrait;
         private readonly Label _monogram;
+        private readonly PilotPortrait _drawn;
         private readonly Label _serial;
         private readonly Label _role;
         private readonly Label _callSign;
@@ -58,6 +59,7 @@ namespace Chopper.UI.Hangar
             _scan = _screen?.Q(className: "pilot-select__scan");
             _portrait = root.Q("pilot-portrait");
             _monogram = root.Q<Label>("pilot-monogram");
+            _drawn = root.Q<PilotPortrait>("pilot-drawn");
             _serial = root.Q<Label>("pilot-serial");
             _role = root.Q<Label>("pilot-role");
             _callSign = root.Q<Label>("pilot-callsign");
@@ -94,9 +96,13 @@ namespace Chopper.UI.Hangar
             _model.Open();
         }
 
+        /// <summary>Picked: the scan sound and the pilot's own radio call.</summary>
         private void OnLockIn()
         {
-            if (_model.LockIn()) Play(_context.Sounds != null ? _context.Sounds.ChassisScan : null);
+            var shown = _model.Shown;
+            if (!_model.LockIn()) return;
+            Play(_context.Sounds != null ? _context.Sounds.ChassisScan : null);
+            if (shown != null) _context.Audio.PlayVoice(shown.Value.AbilityLine);
         }
 
         private void Refresh()
@@ -126,9 +132,12 @@ namespace Chopper.UI.Hangar
             ShowPilot(slam: !wasOpen);
         }
 
+        /// <summary>A new pilot on the big card: the announcer says the call sign (fighting-game style).</summary>
         private void OnShownChanged()
         {
             Play(_context.Sounds != null ? _context.Sounds.UINavigate : null);
+            var shown = _model.Shown;
+            if (shown != null) _context.Audio.PlayVoice(shown.Value.SelectLine);
             ShowPilot(slam: true);
         }
 
@@ -152,9 +161,10 @@ namespace Chopper.UI.Hangar
                 tile.RegisterCallback<PointerEnterEvent>(_ => _model.Show(index));
                 tile.RegisterCallback<FocusInEvent>(_ => _model.Show(index));
 
-                var mono = Text(card.Monogram, "pilot-tile__mono", title: true);
-                mono.style.color = card.Accent;
-                tile.Add(mono);
+                var face = new PilotPortrait();
+                face.AddToClassList("pilot-tile__drawn");
+                face.Set(card.Id, card.Accent);
+                tile.Add(face);
                 tile.Add(Text(card.CallSign, "pilot-tile__sign", title: true));
                 if (card.Locked) tile.Add(Text($"LEVEL {card.UnlockLevel}", "pilot-tile__tag"));
                 _grid.Add(tile);
@@ -169,7 +179,15 @@ namespace Chopper.UI.Hangar
             var card = shown.Value;
             for (var i = 0; i < _tiles.Count; i++) _tiles[i].EnableInClassList(ShownTileClass, i == _model.ShownIndex);
 
+            // Art when the pilot has a portrait; else the drawn helmet with the monogram as a corner tag.
+            var drawn = card.Portrait == null && _drawn != null;
+            if (_drawn != null)
+            {
+                _drawn.style.display = drawn ? DisplayStyle.Flex : DisplayStyle.None;
+                _drawn.Set(card.Id, card.Accent);
+            }
             _monogram.text = card.Portrait != null ? "" : card.Monogram;
+            _monogram.EnableInClassList("pilot-feature__monogram--tag", drawn);
             _monogram.style.color = card.Accent;
             _portrait.style.borderTopColor = _portrait.style.borderBottomColor =
                 _portrait.style.borderLeftColor = _portrait.style.borderRightColor = card.Accent;

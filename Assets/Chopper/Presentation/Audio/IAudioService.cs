@@ -45,6 +45,12 @@ namespace Chopper.Presentation.Audio
         /// <summary>One-shot at the listener (UI, own feedback).</summary>
         void Play(SoundCue cue);
 
+        /// <summary>
+        /// A voice line at the listener (pilot call signs, radio calls). A new line cuts the one playing, so calls never
+        /// pile up. Null does nothing.
+        /// </summary>
+        void PlayVoice(AudioClip clip, float volume = 1f);
+
         /// <summary>Returns null for a null or empty cue.</summary>
         SoundLoop StartLoop(SoundCue cue, Vector3 position);
 

@@ -31,7 +31,7 @@ namespace Chopper.Services.Matchmaking
                 throw new InvalidOperationException("Not signed in to Unity services: online play needs a sign-in.");
 
             progress?.Report(MatchmakingStatus.Searching);
-            var customData = new Dictionary<string, object> { ["chassis"] = request.ChassisId };
+            var customData = new Dictionary<string, object> { ["chassis"] = request.ChassisId, ["pilot"] = request.PilotId };
             var ip = await PublicIpAsync(cancellationToken);
             if (!string.IsNullOrEmpty(ip)) customData[PlayerIpKey] = ip;
 

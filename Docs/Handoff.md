@@ -191,13 +191,14 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
      - Take damage and hold R: check the hint, the progress, the sparks and the sounds. Get shot while repairing: check the lock.
   5. Tune `SceneTransitionSettings` and the `MusicLibrary` levels.
 
-## 4d. Pilots, steps 1 to 4 (7 Nov, written without the editor, not compiled)
+## 4d. Pilots, steps 1 to 5 (7 Nov, written without the editor, not compiled)
 
 - See plan section 5b, "Built".
   - There are 10 call-sign pilots. Each has a passive with a cost and an active ability: **F or D-pad up** (step 4).
   - The pilot id travels with the loadout.
   - Damage over time: VIPER corrodes, PYRE burns.
   - The hangar has a fighting-game style select screen (PILOT card, then the full-screen picker).
+  - Step 5 placeholders: drawn helmet portraits, and generated voice lines (`Tools/Voice/make_pilot_voices.sh`; the announcer says the call sign, the pilot calls the ability). Call signs show in the kill feed and under your score.
 - **Protocol change** (new ghost fields `ChopperLoadout.PilotId`, `StatusLook` and `AbilityState`, new input and RPC fields): rebuild and push the Edgegap server and change the allocator's `Version`.
 - Editor steps:
   1. Compile.

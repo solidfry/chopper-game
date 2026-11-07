@@ -142,6 +142,8 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Card and tile accent.")] private Color accent = new(0f, 1f, 0.58f);
         [SerializeField, Tooltip("Optional. Empty = the call sign's monogram.")] private Texture2D portrait;
         [SerializeField] private int unlockLevel;
+        [SerializeField, Tooltip("The announcer says the call sign (select screen).")] private AudioClip selectLine;
+        [SerializeField, Tooltip("The pilot on the radio when the ability starts (own chopper).")] private AudioClip abilityLine;
         [SerializeField] private PilotModifiers modifiers = new();
         [SerializeField, Tooltip("The active ability's kind and numbers (the text is above).")]
         private PilotAbilitySettings ability = new();
@@ -155,6 +157,15 @@ namespace Chopper.Simulation.Loadout
         public Color Accent => accent;
         public Texture2D Portrait => portrait;
         public int UnlockLevel => unlockLevel;
+        public AudioClip SelectLine => selectLine;
+        public AudioClip AbilityLine => abilityLine;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetVoice(AudioClip select, AudioClip abilityStart)
+        {
+            selectLine = select;
+            abilityLine = abilityStart;
+        }
         public PilotModifiers Modifiers => modifiers ??= new PilotModifiers();
         public PilotAbilitySettings Ability => ability ??= new PilotAbilitySettings();
 

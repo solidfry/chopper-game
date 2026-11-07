@@ -1032,7 +1032,7 @@ namespace Chopper.Presentation.Hangar
             var token = CancellationTokenSource.CreateLinkedTokenSource(_search.Token, destroyCancellationToken).Token;
             var modules = new List<ushort>();
             foreach (var module in _model.Fitted) modules.Add(module != null ? module.Id : (ushort)0);
-            var request = new MatchRequest(_settings.MatchQueue, _model.Chassis.Id, modules);
+            var request = new MatchRequest(_settings.MatchQueue, _model.Chassis.Id, modules, _model.Pilots.SelectedId);
             var progress = new Progress<MatchmakingStatus>(status => _model.SetMatchStatus(status switch
             {
                 MatchmakingStatus.ServerStarting => "MATCH FOUND - SERVER STARTING",

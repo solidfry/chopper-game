@@ -27,6 +27,7 @@ namespace Chopper.Presentation.Audio
         private readonly List<SoundLoop> _activeLoops = new();
         private readonly Dictionary<SoundCue, float> _lastPlayed = new();
         private MusicPlayer _music;
+        private AudioSource _voice;
         private MixerVolumes _volumes;
         private bool _ownsMusic = true;
 
@@ -52,6 +53,7 @@ namespace Chopper.Presentation.Audio
             if (music != null && music != _music)
             {
                 if (_ownsMusic) _music.Dispose();
+            if (_voice != null) Object.Destroy(_voice.gameObject);
                 _music = music;
                 _ownsMusic = false;
                 _music.SetOutput(_library != null ? _library.MusicGroup : null);
@@ -65,6 +67,21 @@ namespace Chopper.Presentation.Audio
         public void Play(SoundCue cue, Vector3 position) => PlayAt(cue, position, atListener: false);
 
         public void Play(SoundCue cue) => PlayAt(cue, Vector3.zero, atListener: true);
+
+        public void PlayVoice(AudioClip clip, float volume = 1f)
+        {
+            if (clip == null) return;
+            if (_voice == null)
+            {
+                _voice = CreateSource("Voice");
+                _voice.spatialBlend = 0f;
+                _voice.outputAudioMixerGroup = _library != null ? _library.VoiceGroup : null;
+            }
+            _voice.Stop();
+            _voice.clip = clip;
+            _voice.volume = Mathf.Clamp01(volume);
+            _voice.Play();
+        }
 
         public SoundLoop StartLoop(SoundCue cue, Vector3 position)
         {

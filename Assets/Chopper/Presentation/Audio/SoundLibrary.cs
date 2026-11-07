@@ -16,6 +16,8 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("Needs exposed volume parameters named <Channel>Volume (MasterVolume, MusicVolume, ...).")]
         private AudioMixer mixer;
         [SerializeField] private AudioMixerGroup musicGroup;
+        [SerializeField, Tooltip("Voice lines (pilot call signs, ability radio calls). Empty = straight to the listener.")]
+        private AudioMixerGroup voiceGroup;
 
         [Header("Chopper")]
         [SerializeField, Tooltip("Loop. Own chopper, mostly 2D (cockpit).")] private SoundCue rotorLocal;
@@ -64,6 +66,10 @@ namespace Chopper.Presentation.Audio
 
         public AudioMixer Mixer => mixer;
         public AudioMixerGroup MusicGroup => musicGroup;
+        public AudioMixerGroup VoiceGroup => voiceGroup;
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void SetVoiceGroup(AudioMixerGroup group) => voiceGroup = group;
         public SoundCue RotorLocal => rotorLocal;
         public SoundCue RotorRemote => rotorRemote;
         public SoundCue BoostStart => boostStart;

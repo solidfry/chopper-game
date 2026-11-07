@@ -15,7 +15,8 @@ namespace Chopper.Presentation.Audio
     /// Client only. A rotor loop on every chopper (own one mostly 2D, others 3D): pitch rises with speed, and the rotor
     /// strains (louder, higher) with collective and boost. Boost: a kick when it starts and an engine roar while it lasts,
     /// on every chopper. An alarm loop while the own chopper is outside the arena. Field repair (own chopper): a servo
-    /// hum while it repairs (pitch rises as the hull fills), a chime when full, a cut-off when a hit stops it.
+    /// hum while it repairs (pitch rises as the hull fills), a chime when full, a cut-off when a hit stops it. Pilot
+    /// ability (own chopper): a sound and the pilot's radio call when it starts, a sound when it is ready again.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -179,7 +180,11 @@ namespace Chopper.Presentation.Audio
             // The first frame only records (a respawned chopper is not a new use).
             if (voices.AbilitySeen)
             {
-                if (ability.Uses != voices.AbilityUses) audio.Play(library.AbilityActivate);
+                if (ability.Uses != voices.AbilityUses)
+                {
+                    audio.Play(library.AbilityActivate);
+                    audio.PlayVoice(AbilityLine(entity));
+                }
                 else if (voices.AbilityCooling && !cooling) audio.Play(library.AbilityReady);
                 if (ability.Jammed && !voices.Jammed) audio.Play(library.Jammed);
             }
@@ -187,6 +192,15 @@ namespace Chopper.Presentation.Audio
             voices.AbilityUses = ability.Uses;
             voices.AbilityCooling = cooling;
             voices.Jammed = ability.Jammed;
+        }
+
+        /// <summary>The own pilot's radio call for the ability (null without a pilot or a line).</summary>
+        private AudioClip AbilityLine(Entity entity)
+        {
+            if (!SystemAPI.HasComponent<Chopper.Simulation.Loadout.ChopperLoadout>(entity) || !SystemAPI.HasSingleton<Chopper.Simulation.Session.LoadoutCatalogRef>()) return null;
+            var catalog = SystemAPI.GetSingleton<Chopper.Simulation.Session.LoadoutCatalogRef>().Catalog.Value;
+            var pilot = catalog != null ? catalog.FindPilot(SystemAPI.GetComponent<Chopper.Simulation.Loadout.ChopperLoadout>(entity).PilotId) : null;
+            return pilot != null ? pilot.AbilityLine : null;
         }
 
         private void StopAll()
