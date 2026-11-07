@@ -25,8 +25,8 @@ namespace Chopper.Presentation.Hud
         public float Scanlines;
         [Tooltip("Scanlines from the top to the bottom of the screen.")]
         public float ScanlineCount;
-        [Range(0f, 0.3f), Tooltip("Barrel distortion of the HUD (the game view is not bent).")]
-        public float Curvature;
+        [Range(0f, 60f), Tooltip("The HUD is drawn on the inside of a sphere: degrees from the screen centre to the top edge. Higher = numbers fan out more, and the middle gets smaller. 0 = flat. The game view is not bent.")]
+        public float SphereAngle;
         [Range(0f, 6f), Tooltip("Colour split at the screen edge, in HUD texture pixels.")]
         public float Chromatic;
         [Range(0f, 1f), Tooltip("HUD gets darker towards the corners.")]
@@ -106,13 +106,13 @@ namespace Chopper.Presentation.Hud
 
         [SerializeField] private HudLookProfile vector = new()
         {
-            Glow = 0.7f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, Curvature = 0f,
+            Glow = 0.7f, GlowRadius = 2f, Scanlines = 0f, ScanlineCount = 540f, SphereAngle = 32f,
             Chromatic = 0.5f, Vignette = 0f, Noise = 0.015f, Flicker = 0f, Persistence = 0.1f, PersistenceTime = 0.03f,
         };
 
         [SerializeField] private HudLookProfile crt84 = new()
         {
-            Glow = 0.8f, GlowRadius = 2f, Scanlines = 0.15f, ScanlineCount = 540f, Curvature = 0.03f,
+            Glow = 0.8f, GlowRadius = 2f, Scanlines = 0.15f, ScanlineCount = 540f, SphereAngle = 32f,
             Chromatic = 1f, Vignette = 0.2f, Noise = 0.03f, Flicker = 0.02f, Persistence = 0.15f, PersistenceTime = 0.04f,
         };
 

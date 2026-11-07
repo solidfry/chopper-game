@@ -1,5 +1,5 @@
 // Retro 80s HUD look (plan section 3b). Full-screen pass from HudLookRendererFeature: draws the HUD render texture
-// over the camera colour with phosphor glow, scanlines, barrel distortion, colour split, vignette, noise, flicker and
+// over the camera colour with phosphor glow, scanlines, a sphere projection, colour split, vignette, noise, flicker and
 // glitch bands, and a phosphor trail (pass 1 keeps a fading history of the HUD). The game view underneath stays clean,
 // except for the world feed (cockpit view): static, roll, line jitter, a tracking band, colour split and scanlines on
 // the world, masked by depth so the cockpit near the eye is not changed.
@@ -23,7 +23,7 @@ Shader "Hidden/Chopper/HudLook"
         TEXTURE2D_X_FLOAT(_ChopperFeedDepth);
         float4 _ChopperHudSize;     // width, height, 1/width, 1/height
         float4 _ChopperHudParams0;  // glow, glow radius (px), scanlines, scanline count
-        float4 _ChopperHudParams1;  // curvature, chromatic (px), vignette, noise
+        float4 _ChopperHudParams1;  // sphere angle (radians), chromatic (px), vignette, noise
         float4 _ChopperHudParams2;  // brightness, glitch, glitch seed, unused
         float4 _ChopperHudParams3;  // trail decay per frame, trail strength, world feed 0..1, cockpit depth (m)
         float4 _ChopperHudParams4;  // feed boot 0..1, biggest pixel size, colour steps, dropout
@@ -195,7 +195,7 @@ Shader "Hidden/Chopper/HudLook"
                 float glowRadius = _ChopperHudParams0.y;
                 float scanlines = _ChopperHudParams0.z;
                 float scanlineCount = _ChopperHudParams0.w;
-                float curvature = _ChopperHudParams1.x;
+                float sphere = _ChopperHudParams1.x;
                 float chromatic = _ChopperHudParams1.y;
                 float vignette = _ChopperHudParams1.z;
                 float noise = _ChopperHudParams1.w;
@@ -203,10 +203,21 @@ Shader "Hidden/Chopper/HudLook"
                 float glitch = _ChopperHudParams2.y;
                 float seed = _ChopperHudParams2.z;
 
-                // Barrel distortion: the HUD bulges like a curved tube.
                 float2 centred = uv * 2.0 - 1.0;
                 float edge = dot(centred, centred);
-                float2 hudUv = uv + centred * edge * curvature * 0.5;
+
+                // The inside of a sphere round the pilot: the HUD grows towards the screen edge.
+                // Same formula as HudSphere.ToHud (C#), which puts markers on their targets: change them together.
+                float2 hudUv = uv;
+                if (sphere > 0.001)
+                {
+                    float2 aspect = float2(_ChopperHudSize.x * _ChopperHudSize.w, 1.0);
+                    float2 point2 = centred * aspect;
+                    float radius = length(point2);
+                    float slope = tan(sphere);
+                    float scale = radius > 0.0001 ? atan(radius * slope) / (sphere * radius) : slope / sphere;
+                    hudUv = point2 * scale / aspect * 0.5 + 0.5;
+                }
 
                 // Glitch: some horizontal bands tear sideways; the band pattern jumps with the seed.
                 float band = floor(hudUv.y * 28.0);

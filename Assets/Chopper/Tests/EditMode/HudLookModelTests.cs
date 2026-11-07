@@ -7,7 +7,7 @@ namespace Chopper.Tests
     {
         private static readonly HudLookProfile Profile = new()
         {
-            Glow = 1f, GlowRadius = 2f, Scanlines = 0.3f, ScanlineCount = 400f, Curvature = 0.05f,
+            Glow = 1f, GlowRadius = 2f, Scanlines = 0.3f, ScanlineCount = 400f, SphereAngle = 32f,
             Chromatic = 1f, Vignette = 0.3f, Noise = 0.05f, Flicker = 0.1f,
         };
 

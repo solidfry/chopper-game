@@ -4,7 +4,7 @@
     <!-- Match info stays visible while dead -->
     <ui:VisualElement name="match" class="hud-layer hud-match" picking-mode="Ignore">
       <ui:VisualElement class="hud-match__top" picking-mode="Ignore">
-        <ui:VisualElement class="hud-match__scores" picking-mode="Ignore">
+        <ui:VisualElement name="match-scores" class="hud-match__scores" picking-mode="Ignore">
           <ui:Label name="local-score" text="0 K / 0 D" class="hud-match__score" />
           <!-- Own pilot call sign (empty without a pilot) -->
           <ui:Label name="local-pilot" text="" class="hud-match__pilot chopper-title" />

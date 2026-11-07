@@ -85,7 +85,13 @@ namespace Chopper.UI.Hud
         private PanelRenderer _renderer;
         private WorldMarkerView _markers;
         private ScoreboardView _scoreboard;
+        private VisualElement _matchScores;
+        private VisualElement _killFeed;
+        private Vector2 _panelInset;
         private bool _subscribed;
+
+        /// <summary>Corner text stays this far (part of the panel) inside the screen corners: about 32 px at 1080p.</summary>
+        private static readonly Vector2 CornerMargin = new(0.017f, 0.03f);
 
         private void OnEnable()
         {
@@ -155,7 +161,7 @@ namespace Chopper.UI.Hud
             Bind(_chopper.Q<Label>("flares"), "text", nameof(ChopperHudModel.FlaresText));
             Bind(_chopper.Q<ArcGauge>("heat-arc"), nameof(ArcGauge.value), nameof(ChopperHudModel.GunHeat));
             _horizon = _chopper.Q("horizon");
-            _markers = new WorldMarkerView(bridge.Context.Markers, _chopper.Q("markers"), _chopper.Q("lead"));
+            _markers = new WorldMarkerView(bridge.Context.Markers, bridge.Context.HudLook, _chopper.Q("markers"), _chopper.Q("lead"));
 
             _chopper.dataSource = _model;
             BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));
@@ -167,6 +173,9 @@ namespace Chopper.UI.Hud
             Bind(_chopper.Q<ArcGauge>("hull-arc"), nameof(ArcGauge.value), nameof(ChopperHudModel.HealthFraction));
 
             var match = root.Q("match");
+            _matchScores = match.Q("match-scores");
+            _killFeed = match.Q("kill-feed");
+            _panelInset = Vector2.zero;
             _banner = match.Q("banner");
             match.dataSource = _match;
             BindNumber(match.Q<Label>("timer"), nameof(MatchHudModel.TimerText));
@@ -343,7 +352,7 @@ namespace Chopper.UI.Hud
             _lock.EnableInClassList(LockedClass, _model.Locked);
             if (!_model.LockVisible) return;
 
-            var viewport = _model.LockViewport;
+            var viewport = bridge.Context.HudLook.ToHud(_model.LockViewport);
             _lock.style.left = Length.Percent(viewport.x * 100f);
             _lock.style.top = Length.Percent((1f - viewport.y) * 100f);
             var size = Mathf.Lerp(LockStartSize, LockEndSize, _model.LockProgress);
@@ -415,9 +424,32 @@ namespace Chopper.UI.Hud
         /// <summary>Viewport y goes up, panel top goes down.</summary>
         private void RefreshAim()
         {
-            var viewport = _model.AimViewport;
+            var viewport = bridge.Context.HudLook.ToHud(_model.AimViewport);
             _aim.style.left = Length.Percent(viewport.x * 100f);
             _aim.style.top = Length.Percent((1f - viewport.y) * 100f);
+        }
+
+        /// <summary>
+        /// The sphere look cuts off the panel's corners: the corner text moves in by that much, for any bend and window shape.
+        /// Each frame, so tuning the angle in the inspector and changing the window work at once. Writes only on a change.
+        /// </summary>
+        private void Update()
+        {
+            if (_matchScores == null || _matchScores.panel == null) return;
+            var look = bridge.Context.HudLook;
+            var inset = look.PanelInset;
+            if (inset == _panelInset) return;
+            _panelInset = inset;
+
+            var sideways = inset.x > 0f ? Length.Percent((inset.x + CornerMargin.x) * 100f) : new StyleLength(StyleKeyword.Null);
+            var down = inset.y > 0f ? Length.Percent((inset.y + CornerMargin.y) * 100f) : new StyleLength(StyleKeyword.Null);
+            _matchScores.style.left = sideways;
+            _matchScores.style.top = down;
+            _killFeed.style.right = sideways;
+            _killFeed.style.top = down;
+
+            RefreshAim();
+            RefreshLock();
         }
     }
 }

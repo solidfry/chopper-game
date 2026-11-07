@@ -16,7 +16,7 @@ namespace Chopper.Presentation.Hud
         public static readonly int Size = Shader.PropertyToID("_ChopperHudSize");
         /// <summary>(glow, glow radius, scanlines, scanline count).</summary>
         public static readonly int Params0 = Shader.PropertyToID("_ChopperHudParams0");
-        /// <summary>(curvature, chromatic, vignette, noise).</summary>
+        /// <summary>(sphere angle in radians, chromatic, vignette, noise).</summary>
         public static readonly int Params1 = Shader.PropertyToID("_ChopperHudParams1");
         /// <summary>(brightness, glitch, glitch seed, unused).</summary>
         public static readonly int Params2 = Shader.PropertyToID("_ChopperHudParams2");
@@ -97,6 +97,17 @@ namespace Chopper.Presentation.Hud
         /// <summary>Set each frame by the context: the camera is in a cockpit view (the world is a camera feed).</summary>
         public bool CockpitView { get; set; }
 
+        /// <summary>Where to draw a HUD element in the panel, so it shows at this screen point (a world marker on its target).</summary>
+        public Vector2 ToHud(Vector2 viewport) => HudSphere.ToHud(viewport, SphereRadians, Aspect);
+
+        /// <summary>The part of the panel, on each side, that the screen corners cut off. Zero for plain UI.</summary>
+        public Vector2 PanelInset => HudSphere.Inset(SphereRadians, Aspect);
+
+        private float Aspect => _texture != null ? (float)_texture.width / _texture.height : 1f;
+
+        private float SphereRadians =>
+            _texture != null && _settings.TryGetProfile(_preset, out var profile) ? profile.SphereAngle * Mathf.Deg2Rad : 0f;
+
         /// <summary>For EMP and hack effects (not built yet): hold a glitch for a time.</summary>
         public void Disrupt(float strength, float seconds) => _model.Disrupt(strength, seconds);
 
@@ -136,7 +147,7 @@ namespace Chopper.Presentation.Hud
             Shader.SetGlobalVector(HudLookShaderIds.Params0,
                 new Vector4(profile.Glow * (1f + _model.Pulse), profile.GlowRadius, profile.Scanlines, profile.ScanlineCount));
             Shader.SetGlobalVector(HudLookShaderIds.Params1,
-                new Vector4(profile.Curvature, _model.Chromatic, profile.Vignette, _model.Noise));
+                new Vector4(SphereRadians, _model.Chromatic, profile.Vignette, _model.Noise));
             Shader.SetGlobalVector(HudLookShaderIds.Params2, new Vector4(_model.Brightness, _model.Glitch, _model.GlitchSeed, 0f));
             // Frame-rate independent fade: after PersistenceTime seconds the trail is at 1/e.
             var decay = profile.PersistenceTime > 0f ? Mathf.Exp(-deltaTime / profile.PersistenceTime) : 0f;

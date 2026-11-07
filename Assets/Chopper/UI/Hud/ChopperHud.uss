@@ -162,13 +162,21 @@
   padding: 32px;
 }
 
+/* Scores and kill feed sit in the corners. The sphere look cuts the panel's corners, so ChopperHudView moves them in. */
 .hud-match__top {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  align-items: center;
+  padding-top: 32px;
 }
 
 .hud-match__scores {
+  position: absolute;
+  left: 32px;
+  top: 32px;
   width: 360px;
 }
 
@@ -203,6 +211,9 @@
 }
 
 .hud-match__feed {
+  position: absolute;
+  right: 32px;
+  top: 32px;
   width: 360px;
   font-size: 16px;
   color: var(--chopper-text);

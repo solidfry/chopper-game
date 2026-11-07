@@ -21,6 +21,7 @@ namespace Chopper.UI.Hud
         private const string LeadHiddenClass = "hud-lead--hidden";
 
         private readonly WorldMarkerModel _model;
+        private readonly HudLook _look;
         private readonly VisualElement _layer;
         private readonly VisualElement _lead;
         private readonly Slot[] _slots = new Slot[WorldMarkerModel.Capacity];
@@ -34,9 +35,10 @@ namespace Chopper.UI.Hud
             public int ShownDistance = -1;
         }
 
-        public WorldMarkerView(WorldMarkerModel model, VisualElement layer, VisualElement lead)
+        public WorldMarkerView(WorldMarkerModel model, HudLook look, VisualElement layer, VisualElement lead)
         {
             _model = model;
+            _look = look;
             _layer = layer;
             _lead = lead;
             for (var i = 0; i < _slots.Length; i++)
@@ -87,16 +89,18 @@ namespace Chopper.UI.Hud
 
             _lead.EnableInClassList(LeadHiddenClass, !_model.LeadVisible);
             if (!_model.LeadVisible) return;
-            _lead.style.left = Length.Percent(_model.LeadViewport.x * 100f);
-            _lead.style.top = Length.Percent((1f - _model.LeadViewport.y) * 100f);
+            var lead = _look.ToHud(_model.LeadViewport);
+            _lead.style.left = Length.Percent(lead.x * 100f);
+            _lead.style.top = Length.Percent((1f - lead.y) * 100f);
         }
 
         /// <summary>Viewport y goes up, panel top goes down.</summary>
-        private static void Show(Slot slot, in WorldMarker marker)
+        private void Show(Slot slot, in WorldMarker marker)
         {
             var root = slot.Root;
-            root.style.left = Length.Percent(marker.Viewport.x * 100f);
-            root.style.top = Length.Percent((1f - marker.Viewport.y) * 100f);
+            var point = _look.ToHud(marker.Viewport);
+            root.style.left = Length.Percent(point.x * 100f);
+            root.style.top = Length.Percent((1f - point.y) * 100f);
             root.EnableInClassList(GroundClass, marker.Kind == WorldMarkerKind.Ground);
             root.EnableInClassList(OffScreenClass, !marker.OnScreen);
             root.EnableInClassList(LockedClass, marker.IsLockTarget);
