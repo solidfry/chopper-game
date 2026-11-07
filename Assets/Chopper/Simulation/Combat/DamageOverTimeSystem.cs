@@ -20,9 +20,11 @@ namespace Chopper.Simulation.Combat
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;
-            foreach (var (effects, damage, look, health) in SystemAPI
+            foreach (var (buffer, damage, look, health) in SystemAPI
                          .Query<DynamicBuffer<DamageOverTime>, DynamicBuffer<DamageEvent>, RefRW<StatusLook>, RefRO<Health>>())
             {
+                // A foreach variable cannot use the buffer's indexer to write; the copy is the same buffer.
+                var effects = buffer;
                 if (effects.Length == 0 || health.ValueRO.IsDead)
                 {
                     effects.Clear();
