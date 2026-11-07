@@ -22,7 +22,7 @@ namespace Chopper.Presentation.Audio
         internal AudioSource Source;
         internal float BaseVolume;
         internal float BasePitch;
-        internal bool Outside;
+        internal CueMuffle Muffle;
         internal AudioLowPassFilter Filter;
 
         public bool IsPlaying => Source != null && Source.isPlaying;

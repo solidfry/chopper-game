@@ -2,9 +2,21 @@ using System.Collections.Generic;
 using Chopper.Simulation.Config;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.Serialization;
 
 namespace Chopper.Presentation.Audio
 {
+    /// <summary>How a sound changes in a cockpit view. Order matters: assets store the number.</summary>
+    public enum CueMuffle
+    {
+        /// <summary>No filter (UI, voices).</summary>
+        None = 0,
+        /// <summary>From outside the chopper, heard through the canopy: other choppers, guns, hits, the city.</summary>
+        Outside = 1,
+        /// <summary>The own chopper, heard from inside: rotor, boost, hull hits. Softer top end only.</summary>
+        Cabin = 2,
+    }
+
     /// <summary>
     /// One sound the game can play: a few clip variations plus how to play them (volume, pitch, 2D/3D, mixer group,
     /// voice limit). Play it through <see cref="IAudioService"/>.
@@ -30,8 +42,8 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private float minDistance = 5f;
         [SerializeField] private float maxDistance = 400f;
 
-        [SerializeField, Tooltip("A sound from outside the chopper: muffled in a cockpit view (SoundLibrary, Outside sounds).")]
-        private bool outside;
+        [SerializeField, FormerlySerializedAs("outside"), Tooltip("What it sounds like from a cockpit view (cutoffs: SoundLibrary, Cockpit muffling).")]
+        private CueMuffle muffle;
 
         [Header("Limits")]
         [SerializeField, Tooltip("Most copies playing at once. A new one replaces the oldest.")]
@@ -42,7 +54,7 @@ namespace Chopper.Presentation.Audio
         [System.NonSerialized] private int _lastClip = -1;
 
         public AudioMixerGroup Output => output;
-        public bool Outside => outside;
+        public CueMuffle Muffle => muffle;
         public float SpatialBlend => spatialBlend;
         public float MinDistance => minDistance;
         public float MaxDistance => maxDistance;
@@ -94,9 +106,9 @@ namespace Chopper.Presentation.Audio
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void Initialise(AudioClip[] clipList, AudioMixerGroup group, float cueVolume, float blend, int voices, float minimumGap = 0f,
-            float cuePitch = 1f, bool outsideSound = false)
+            float cuePitch = 1f, CueMuffle cueMuffle = CueMuffle.None)
         {
-            outside = outsideSound;
+            muffle = cueMuffle;
             clips = clipList;
             output = group;
             volume = cueVolume;

@@ -24,11 +24,11 @@ namespace Chopper.Presentation.Audio
     {
         /// <summary>Speed (m/s) at which the rotor reaches its highest pitch.</summary>
         private const float FullPitchSpeed = 80f;
-        private const float MinRotorPitch = 0.9f;
-        private const float MaxRotorPitch = 1.2f;
+        private const float MinRotorPitch = 0.92f;
+        private const float MaxRotorPitch = 1.06f;
         /// <summary>Extra rotor pitch and volume at full collective / while boosting.</summary>
-        private const float CollectivePitch = 0.08f;
-        private const float BoostRotorPitch = 0.12f;
+        private const float CollectivePitch = 0.03f;
+        private const float BoostRotorPitch = 0.05f;
         private const float BoostRotorVolume = 0.25f;
         /// <summary>How fast the boost roar fades in and out (1/s).</summary>
         private const float BoostFadeIn = 14f;

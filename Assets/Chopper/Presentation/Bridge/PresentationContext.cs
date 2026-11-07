@@ -31,7 +31,8 @@ namespace Chopper.Presentation.Bridge
         private bool _musicStarted;
         private float _musicLevel = -1f;
         private SoundLoop _ambience;
-        private float _outsideCutoff = AudioService.OpenCutoff;
+        /// <summary>0 = chase view, 1 = cockpit view; moves slowly, so the sound changes with the camera blend.</summary>
+        private float _cockpitMuffle;
         /// <summary>Only <c>Flight/Scoreboard</c> is on here; the flight actions are read by the simulation.</summary>
         private readonly Simulation.Input.PlayerControls _controls = new();
 
@@ -182,17 +183,18 @@ namespace Chopper.Presentation.Bridge
             _audio.SetMusicLevel(level, music.LevelFadeSeconds);
         }
 
-        /// <summary>In a cockpit view, sounds from outside come through the canopy: muffled. Moves in log steps, as hearing does.</summary>
+        /// <summary>In a cockpit view, sounds are heard from inside (<see cref="CueMuffle"/>). Blends in log steps, as hearing does.</summary>
         private void UpdateOutsideSounds(float deltaTime)
         {
             var sounds = Sounds;
             if (sounds == null) return;
-            var inCockpit = CameraRig != null && CameraRig.HidesOwnChopper;
-            var target = inCockpit ? sounds.CockpitCutoff : sounds.ChaseCutoff;
-            var blend = 1f - Mathf.Exp(-sounds.CutoffSpeed * deltaTime);
-            _outsideCutoff = Mathf.Exp(Mathf.Lerp(Mathf.Log(_outsideCutoff), Mathf.Log(target), blend));
-            _audio.SetOutsideCutoff(_outsideCutoff);
+            var target = CameraRig != null && CameraRig.HidesOwnChopper ? 1f : 0f;
+            _cockpitMuffle = Mathf.Lerp(_cockpitMuffle, target, 1f - Mathf.Exp(-sounds.CutoffSpeed * deltaTime));
+            _audio.SetCutoffs(LogLerp(sounds.ChaseCutoff, sounds.CockpitCutoff, _cockpitMuffle),
+                LogLerp(sounds.ChaseCutoff, sounds.CabinCutoff, _cockpitMuffle));
         }
+
+        private static float LogLerp(float from, float to, float t) => Mathf.Exp(Mathf.Lerp(Mathf.Log(from), Mathf.Log(to), t));
 
         public void Tick(float deltaTime, float unscaledDeltaTime)
         {

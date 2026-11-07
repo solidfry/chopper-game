@@ -47,10 +47,12 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue groundCrash;
         [SerializeField] private SoundCue waterCrash;
 
-        [Header("Outside sounds (cues marked Outside): a low-pass, as if heard through the canopy")]
-        [SerializeField, Range(200f, 22000f), Tooltip("Cutoff in a cockpit view (Hz). Lower = more muffled.")]
-        private float cockpitCutoff = 1200f;
-        [SerializeField, Range(200f, 22000f), Tooltip("Cutoff in a chase view (Hz). 22000 = not muffled.")]
+        [Header("Cockpit muffling (each cue's Muffle): a low-pass, as if heard from inside")]
+        [SerializeField, Range(200f, 22000f), Tooltip("Outside cues in a cockpit view (Hz): through the canopy. Lower = more muffled.")]
+        private float cockpitCutoff = 800f;
+        [SerializeField, Range(200f, 22000f), Tooltip("Cabin cues in a cockpit view (Hz): the own rotor and boost. Lower = duller.")]
+        private float cabinCutoff = 1500f;
+        [SerializeField, Range(200f, 22000f), Tooltip("All muffled cues in a chase view (Hz). 22000 = not muffled.")]
         private float chaseCutoff = 22000f;
         [SerializeField, Min(0.1f), Tooltip("How fast it changes between views (1/s).")]
         private float cutoffSpeed = 6f;
@@ -130,6 +132,7 @@ namespace Chopper.Presentation.Audio
         }
 
         public float CockpitCutoff => cockpitCutoff;
+        public float CabinCutoff => cabinCutoff;
         public float ChaseCutoff => chaseCutoff;
         public float CutoffSpeed => cutoffSpeed;
         public SoundCue CityAmbience => cityAmbience;

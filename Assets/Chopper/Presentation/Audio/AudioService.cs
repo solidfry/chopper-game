@@ -35,6 +35,7 @@ namespace Chopper.Presentation.Audio
         private MixerVolumes _volumes;
         private bool _ownsMusic = true;
         private float _outsideCutoff = OpenCutoff;
+        private float _cabinCutoff = OpenCutoff;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -101,8 +102,8 @@ namespace Chopper.Presentation.Audio
             source.loop = true;
             loop.BaseVolume = cue.PickVolume();
             loop.BasePitch = cue.PickPitch();
-            loop.Outside = cue.Outside;
-            Muffle(source, ref loop.Filter, cue.Outside);
+            loop.Muffle = cue.Muffle;
+            Muffle(source, ref loop.Filter, cue.Muffle);
             loop.Set(position);
             // Start at a random point, so many choppers do not play the same loop in step.
             source.time = source.clip.length * UnityEngine.Random.value;
@@ -139,17 +140,21 @@ namespace Chopper.Presentation.Audio
             _volumes.ApplyAll();
         }
 
-        /// <summary>Low-pass (Hz) on sounds from outside the chopper (<see cref="SoundCue.Outside"/>), playing ones too.</summary>
-        public void SetOutsideCutoff(float hertz)
+        /// <summary>Low-pass (Hz) for each kind of <see cref="CueMuffle"/>, on playing sounds too.</summary>
+        public void SetCutoffs(float outside, float cabin)
         {
-            hertz = Mathf.Clamp(hertz, 100f, OpenCutoff);
-            if (Mathf.Approximately(hertz, _outsideCutoff)) return;
-            _outsideCutoff = hertz;
+            outside = Mathf.Clamp(outside, 100f, OpenCutoff);
+            cabin = Mathf.Clamp(cabin, 100f, OpenCutoff);
+            if (Mathf.Approximately(outside, _outsideCutoff) && Mathf.Approximately(cabin, _cabinCutoff)) return;
+            _outsideCutoff = outside;
+            _cabinCutoff = cabin;
             foreach (var voice in _voices)
-                if (voice.Filter != null && voice.Filter.enabled) voice.Filter.cutoffFrequency = hertz;
+                if (voice.Cue != null && voice.Filter != null && voice.Filter.enabled) voice.Filter.cutoffFrequency = Cutoff(voice.Cue.Muffle);
             foreach (var loop in _activeLoops)
-                if (loop.Outside && loop.Filter != null) loop.Filter.cutoffFrequency = hertz;
+                if (loop.Muffle != CueMuffle.None && loop.Filter != null) loop.Filter.cutoffFrequency = Cutoff(loop.Muffle);
         }
+
+        private float Cutoff(CueMuffle muffle) => muffle == CueMuffle.Cabin ? _cabinCutoff : _outsideCutoff;
 
         public void Tick(float deltaTime)
         {
@@ -184,7 +189,7 @@ namespace Chopper.Presentation.Audio
             var voice = PickVoice(cue);
             var source = voice.Source;
             cue.Apply(source);
-            Muffle(source, ref voice.Filter, cue.Outside);
+            Muffle(source, ref voice.Filter, cue.Muffle);
             // 2D: position does not matter.
             if (atListener)
                 source.spatialBlend = 0f;
@@ -199,10 +204,10 @@ namespace Chopper.Presentation.Audio
             voice.StartTime = now;
         }
 
-        /// <summary>Pooled sources are reused: the filter is on only for outside sounds. It is added the first time it is needed.</summary>
-        private void Muffle(AudioSource source, ref AudioLowPassFilter filter, bool outside)
+        /// <summary>Pooled sources are reused: the filter is on only for muffled cues. It is added the first time it is needed.</summary>
+        private void Muffle(AudioSource source, ref AudioLowPassFilter filter, CueMuffle muffle)
         {
-            if (!outside)
+            if (muffle == CueMuffle.None)
             {
                 if (filter != null) filter.enabled = false;
                 return;
@@ -212,7 +217,7 @@ namespace Chopper.Presentation.Audio
                 filter = source.gameObject.AddComponent<AudioLowPassFilter>();
                 filter.lowpassResonanceQ = 1f;
             }
-            filter.cutoffFrequency = _outsideCutoff;
+            filter.cutoffFrequency = Cutoff(muffle);
             filter.enabled = true;
         }
 

@@ -105,16 +105,16 @@ namespace Chopper.Editor.Setup
                 library.Mixer != null ? library.Mixer : mixer,
                 library.MusicGroup != null ? library.MusicGroup : Group(mixer, "Music"),
                 // Rotor_Interior_Loop: inside-of-a-helicopter with its level raised 17 dB (the original is at -33 dB) and a seamless loop.
-                localRotor: Slot(library.RotorLocal, () => Cue("RotorLocal", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), ambient, 0.9f, blend: 0.2f, voices: 1)),
-                remoteRotor: Slot(library.RotorRemote, () => Cue("RotorRemote", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), effects, 1f, blend: 1f, voices: 16, outside: true)),
+                localRotor: Slot(library.RotorLocal, () => Cue("RotorLocal", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), ambient, 0.6f, blend: 0.2f, voices: 1, muffle: CueMuffle.Cabin)),
+                remoteRotor: Slot(library.RotorRemote, () => Cue("RotorRemote", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), effects, 1f, blend: 1f, voices: 16, muffle: CueMuffle.Outside)),
                 // The old game's gun: a close explosion pitched up (it was on the BulletRed prefab). Gritty and kinetic.
-                gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f, outside: true)),
+                gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f, muffle: CueMuffle.Outside)),
                 hit: Slot(library.HitConfirm, () => Cue("HitConfirm", Clips("Assets/Sound/UI/Switch/Switch (1).wav", "Assets/Sound/UI/Switch/Switch (2).wav",
                     "Assets/Sound/UI/Switch/Switch (4).wav"), ui, 0.5f, blend: 0f, voices: 2, cooldown: 0.06f)),
                 kill: Slot(library.KillConfirm, () => Cue("KillConfirm", Clips("Assets/Sound/UI/Switch/Switch (5).wav", "Assets/Sound/UI/Switch/Switch (6).wav"),
                     ui, 0.9f, blend: 0f, voices: 1, pitch: 0.8f)),
                 damage: Slot(library.DamageTaken, () => Cue("DamageTaken", Clips(Explosions + "01.wav", Explosions + "02.wav", Explosions + "03.wav"),
-                    effects, 0.25f, blend: 0f, voices: 2, cooldown: 0.15f, pitch: 1.4f)),
+                    effects, 0.25f, blend: 0f, voices: 2, cooldown: 0.15f, pitch: 1.4f, muffle: CueMuffle.Cabin)),
                 alarm: Slot(library.OutOfBoundsAlarm, () => Cue("OutOfBoundsAlarm", Clips(SciFi + "/Loops/loop_energy.wav"), ui, 0.4f, blend: 0f, voices: 1)),
                 end: Slot(library.MatchEnd, () => Cue("MatchEnd", Clips("Assets/Sound/UI/273736__squashy555__computer-startup.wav"), ui, 0.8f, blend: 0f, voices: 1)),
                 click: Slot(library.UIClick, () => Cue("UIClick", ClipsIn("Assets/Sound/UI/KeyboardSounds"), ui, 0.7f, blend: 0f, voices: 2)),
@@ -126,15 +126,15 @@ namespace Chopper.Editor.Setup
                 Slot(library.LockedTone, () => Cue("LockedTone", Clips(SciFi + "/Loops/loop_laser2.wav"), ui, 0.45f, blend: 0f, voices: 1, pitch: 1.3f)),
                 Slot(library.LockWarning, () => Cue("LockWarning", Clips(SciFi + "/Loops/loop_energy.wav"), ui, 0.4f, blend: 0f, voices: 1, pitch: 1.2f)),
                 Slot(library.MissileWarning, () => Cue("MissileWarning", Clips(SciFi + "/Loops/loop_lightning.wav"), ui, 0.55f, blend: 0f, voices: 1)),
-                Slot(library.Flares, () => Cue("Flares", Clips(SciFi + "/Impact/shoot_fireball.wav"), effects, 0.7f, blend: 1f, voices: 4)));
+                Slot(library.Flares, () => Cue("Flares", Clips(SciFi + "/Impact/shoot_fireball.wav"), effects, 0.7f, blend: 1f, voices: 4, muffle: CueMuffle.Outside)));
 
             // Boost: deep, rolling distant explosions (and one sci-fi blast) for the kick; the loudest, bassiest rocket loop,
             // pitched well down, for the roar. Chosen by low-frequency content; the close explosions crackle (tinny).
             library.InitialiseBoost(
                 Slot(library.BoostStart, () => Cue("BoostStart", Clips(DistantExplosions + "15.wav", DistantExplosions + "16.wav",
-                    DistantExplosions + "06.wav", SciFiGuns + "/Sci Fi Explosion 06.wav"), effects, 1f, blend: 0.3f, voices: 3, pitch: 0.8f)),
-                Slot(library.BoostLoop, () => Cue("BoostLoop", Clips(SciFi + "/Loops/loop_rocket2.wav"), effects, 0.8f, blend: 0.3f, voices: 8,
-                    pitch: 0.5f)));
+                    DistantExplosions + "06.wav", SciFiGuns + "/Sci Fi Explosion 06.wav"), effects, 0.6f, blend: 0.3f, voices: 3, pitch: 0.8f, muffle: CueMuffle.Cabin)),
+                Slot(library.BoostLoop, () => Cue("BoostLoop", Clips(SciFi + "/Loops/loop_rocket2.wav"), effects, 0.5f, blend: 0.3f, voices: 8,
+                    pitch: 0.5f, muffle: CueMuffle.Cabin)));
 
             // Hangar (placeholders): mechanical reload clunks for fit and remove, short laser charges for focus and scan.
             library.InitialiseHangar(
@@ -172,7 +172,7 @@ namespace Chopper.Editor.Setup
             SoundCue SurfaceCue(SoundCue current, string surface, string kind, int count, float volume, int voices, float cooldown) =>
                 Slot(current, () => Cue($"{surface}{kind}",
                     Clips(Enumerable.Range(1, count).Select(n => $"{impacts}{surface}_{kind}_{n}.ogg").ToArray()),
-                    effects, volume, blend: 1f, voices: voices, cooldown: cooldown, outside: kind == "Hit"));
+                    effects, volume, blend: 1f, voices: voices, cooldown: cooldown, muffle: kind == "Hit" ? CueMuffle.Outside : CueMuffle.Cabin));
             library.InitialiseSurfaces(
                 new[]
                 {
@@ -190,7 +190,7 @@ namespace Chopper.Editor.Setup
                 });
 
             library.InitialiseAmbience(Slot(library.CityAmbience, () => Cue("CityAmbience",
-                Clips("Assets/Sound/Ambient/City/city din at night (off big street).wav"), ambient, 0.18f, blend: 0f, voices: 1, outside: true)));
+                Clips("Assets/Sound/Ambient/City/city din at night (off big street).wav"), ambient, 0.18f, blend: 0f, voices: 1, muffle: CueMuffle.Outside)));
 
             if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
 
@@ -203,14 +203,14 @@ namespace Chopper.Editor.Setup
         private static SoundCue Slot(SoundCue current, System.Func<SoundCue> make) => current != null ? current : make();
 
         internal static SoundCue Cue(string name, AudioClip[] clips, AudioMixerGroup group, float volume, float blend, int voices,
-            float cooldown = 0f, float pitch = 1f, bool outside = false)
+            float cooldown = 0f, float pitch = 1f, CueMuffle muffle = CueMuffle.None)
         {
             var path = $"{Folder}/Cue_{name}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<SoundCue>(path);
             if (existing != null) return existing;
 
             var cue = ScriptableObject.CreateInstance<SoundCue>();
-            cue.Initialise(clips, group, volume, blend, voices, cooldown, pitch, outside);
+            cue.Initialise(clips, group, volume, blend, voices, cooldown, pitch, muffle);
             AssetDatabase.CreateAsset(cue, path);
             return cue;
         }
