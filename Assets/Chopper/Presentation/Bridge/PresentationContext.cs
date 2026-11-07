@@ -6,6 +6,7 @@ using Chopper.Presentation.Config;
 using Chopper.Presentation.Effects;
 using Chopper.Presentation.Events;
 using Chopper.Presentation.Feedback;
+using Chopper.Presentation.Flow;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
 using UnityEngine;
@@ -22,11 +23,18 @@ namespace Chopper.Presentation.Bridge
     {
         private readonly AudioService _audio;
         private readonly List<IDisposable> _owned = new();
+        private readonly UnityEngine.SceneManagement.Scene _scene;
         private HangarModel _hangar;
+        private SceneFlow _flow;
+        private MusicLibrary.Set _musicSet;
+        private AudioClip _musicOverride;
+        private bool _musicStarted;
+        private float _musicLevel = -1f;
 
         public PresentationContext(GameConfig config, Transform root, ChopperCameraRig cameraRig)
         {
             Config = config;
+            _scene = root != null ? root.gameObject.scene : default;
             CameraRig = cameraRig;
             Events = new PresentationEvents();
             _audio = new AudioService(config != null ? config.Audio : null, root);
@@ -79,8 +87,42 @@ namespace Chopper.Presentation.Bridge
         {
             if (!CanOpenHangar) return;
             MenuOpen = false;
-            Simulation.Session.LocalSession.Stop();
-            UnityEngine.SceneManagement.SceneManager.LoadScene(HangarStage.SceneName);
+            // Stopped once the screen is covered, so the match does not vanish before the transition.
+            LoadScene(HangarStage.SceneName, Simulation.Session.LocalSession.Stop);
+        }
+
+        /// <summary>A scene of the match pool or training list: the hangar is the only menu scene so far.</summary>
+        public bool IsMatchScene => _musicSet == MusicLibrary.Set.Match;
+
+        /// <summary>
+        /// Every scene change goes through here: with the scene flow, the screen breaks up into blocks, then
+        /// <paramref name="whenCovered"/> runs and the scene loads; without it (no root scope) both happen at once.
+        /// False when a transition already runs.
+        /// </summary>
+        /// <param name="label">Shown on the transition; empty = the scene name.</param>
+        public bool LoadScene(string scene, Action whenCovered = null, string label = null)
+        {
+            if (_flow != null && !_flow.IsDisposed)
+            {
+                if (_flow.Busy) return false;
+                if (_flow.Load(scene, whenCovered, label)) return true;
+            }
+            whenCovered?.Invoke();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
+            return true;
+        }
+
+        /// <summary>
+        /// The game's scene flow (root scope; it outlives this scene): music and volumes move to it, and this scene tells
+        /// it when it is ready to show. Called when the scene loads; music already started moves over.
+        /// </summary>
+        public void UseSceneFlow(SceneFlow flow)
+        {
+            if (flow == null || flow == _flow || flow.IsDisposed) return;
+            _flow = flow;
+            flow.Attach(Sounds);
+            _audio.UseShared(flow.Music, flow.Volumes);
+            if (_musicStarted) StartMusic();
         }
 
         /// <summary>
@@ -89,17 +131,47 @@ namespace Chopper.Presentation.Bridge
         /// </summary>
         public void Start(MusicLibrary.Set musicSet, AudioClip musicOverride)
         {
+            _musicSet = musicSet;
+            _musicOverride = musicOverride;
+            _musicStarted = true;
             _audio.ApplySavedVolumes();
+            StartMusic();
+        }
+
+        private void StartMusic()
+        {
+            _musicLevel = -1f;
             var music = Config != null ? Config.Music : null;
-            if (musicOverride != null) _audio.PlayMusic(musicOverride);
+            // Across a scene change the old scene's music is still playing: cross-fade into this scene's set.
+            var fade = music != null && _flow != null ? music.SceneCrossFadeSeconds : 1.5f;
+            if (_musicOverride != null) _audio.PlayMusic(_musicOverride, fade);
             else if (music == null) return;
-            else if (musicSet == MusicLibrary.Set.Menu) _audio.PlayMusic(music.Menu);
+            else if (_musicSet == MusicLibrary.Set.Menu) _audio.PlayMusic(music.Menu, fade);
             else _audio.PlayPlaylist(music.Match, music.CrossFadeSeconds);
+            UpdateMusicLevel();
+        }
+
+        /// <summary>
+        /// Menus: full level. Matches: down while you fly, so the rotors and guns come through; up a little while you
+        /// wait to spawn and on the results.
+        /// </summary>
+        private void UpdateMusicLevel()
+        {
+            var music = Config != null ? Config.Music : null;
+            if (music == null || !_musicStarted) return;
+            var flying = Hud.HasChopper && !Match.BannerVisible;
+            var level = _musicSet == MusicLibrary.Set.Menu ? music.MenuLevel : flying ? music.CombatLevel : music.IdleLevel;
+            if (Mathf.Approximately(level, _musicLevel)) return;
+            _musicLevel = level;
+            _audio.SetMusicLevel(level, music.LevelFadeSeconds);
         }
 
         public void Tick(float deltaTime, float unscaledDeltaTime)
         {
             _audio.Tick(unscaledDeltaTime);
+            UpdateMusicLevel();
+            // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.
+            if (_flow != null && _flow.WaitingFor(_scene) && (!IsMatchScene || Hud.HasChopper)) _flow.SceneReady(_scene);
             Effects.Tick(deltaTime);
             ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);

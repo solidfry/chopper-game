@@ -1,4 +1,4 @@
-# Chopper game — handoff (updated 6 Nov 2026, weapon limits)
+# Chopper game — handoff (updated 7 Nov 2026, scene flow and repair)
 
 Read this first, then `Docs/MultiplayerOverhaulPlan.md` (full plan + progress log) and `CLAUDE.md` (rules for AI sessions).
 
@@ -153,6 +153,43 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 10. Console (29 Oct): 0 errors, 0 warnings after a clean compile and in play. Legacy assets with deleted scripts moved out of `Resources` to `Assets/Legacy` (builds packed them); the old Cinemachine camera scripts joined the retired legacy code in `Assets/Scripts/_LegacyNGO~`; TextMesh Pro font metas upgraded; Shapes patched (UAC0005). Note: the MCP console reader shows Burst `Debug.Log` lines ("[Client] Connected") as errors; Unity counts them as logs.
 11. Hangar: Chopper → Setup → **7. Build hangar** (or Do all) after new kit models; "Open hangar scene", press Play, pick a loadout, LAUNCH.
 12. Restart the editor once after pulling: incremental GC (Player settings) starts with the editor. If Burst "not a known entry point" messages come back: clear `Library/BurstCache`.
+
+## 4c. Newest work (7 Nov, written without the editor, not compiled)
+
+- **Scene flow** (`Presentation/Flow/SceneFlow.cs`, run by `App/SceneFlowEntryPoint.cs` in the root scope, players' builds only):
+  - Scene changes go through `PresentationContext.LoadScene`. Flow: the screen breaks into blocks (`UI/Transitions/DigitalWipe.cs`), a callback runs (start or stop the local session), the scene loads async, the blocks clear.
+  - A match scene stays covered until your chopper spawns (12 s at most).
+  - The game's first scene also clears in from blocks.
+  - World sounds (Effects and Ambient mixer channels) fade with the cover (`MixerVolumes.WorldFade`).
+  - Music lives on the flow (`MusicPlayer`), so it plays on through the load and cross-fades into the new scene's set. The same playlist again keeps playing.
+  - Settings: `Data/UI/SceneTransitionSettings.asset` (timing, colours, sounds). Its own panel is `UI/Settings/TransitionPanelSettings.asset` (sort order 1000). It is linked on `App/RootLifetimeScope.prefab`, not on the GameConfig.
+  - Without the root scope (tests), scenes load at once as before.
+- **Music level** (`MusicLibrary`):
+  - Menus 1.0.
+  - In a match while you fly 0.4, so the rotors and guns come through.
+  - Before spawn, while you wait to respawn and on the results 0.8.
+  - Change speed 4 s. This is on top of the player's music volume.
+- **Field repair:**
+  - Hold **R** or gamepad **X** (read from the devices; TODO: an input action). The hull mends from empty to full in 10 s.
+  - Any damage (shot, wall, landing, bounds) stops it and locks it for 3 s. When the lock ends, a key still held starts the repair again.
+  - Server: `Simulation/Combat/Repair.cs` (rules, `ChopperRepair` ghost state, `RepairConfig`), `RepairSystem`. `ApplyDamageSystem` interrupts the repair.
+  - Per chassis: `RepairTuning` on `ChassisDefinition` (pilots will scale it).
+  - Client:
+    - The HUD line above the hull: hint below 75%, "REPAIRING 63%", "REPAIR LOCKED 2.4". The hull arc and readout run cyan while repairing.
+    - Blue-white welding sparks that everyone sees (`DamageEffectsSystem`, `CombatEffectsSettings` repair spark rate and colour).
+    - Own sounds: a servo hum, a chime when full, a cut-off on a hit (`SoundLibrary` repair cues).
+  - Tests: `RepairTests`.
+  - **New ghost fields and a new input field: rebuild and push the Edgegap server and change the allocator's `Version`.** If the chopper ignores input after the compile, delete `Library/BurstCache` (see the Burst note above).
+- **Pilots:** design only, plan section 5b (call signs, select screen, abilities).
+- Editor steps:
+  1. Compile.
+  2. Chopper → Setup → **1** (makes the transition settings, panel and sounds, links them on the root prefab, adds the repair cues), then Validate.
+  3. Re-bake the chopper prefab (step 3 or Do all), because the ghost has new components.
+  4. Play from the Hangar:
+     - LAUNCH: check the blocks, the music cross-fade, the map name and the reveal when the chopper spawns.
+     - Escape → hangar: the same, the other way.
+     - Take damage and hold R: check the hint, the progress, the sparks and the sounds. Get shot while repairing: check the lock.
+  5. Tune `SceneTransitionSettings` and the `MusicLibrary` levels.
 
 ## 5. Open problems
 

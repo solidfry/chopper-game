@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+  <Style src="SceneTransition.uss" />
+  <!-- Scene change overlay (SceneTransitionView): the block wipe, and the destination over it while covered. -->
+  <ui:VisualElement name="transition" class="transition transition--hidden" picking-mode="Ignore">
+    <Chopper.UI.Transitions.DigitalWipe name="wipe" class="transition__wipe" />
+    <ui:VisualElement name="info" class="transition__info" picking-mode="Ignore">
+      <ui:Label name="status" text="LINKING" class="transition__status" />
+      <ui:Label name="label" text="" class="transition__label chopper-title" />
+      <ui:VisualElement class="transition__rule" picking-mode="Ignore" />
+    </ui:VisualElement>
+    <ui:Label name="code" text="" class="transition__code chopper-deco-dot" />
+  </ui:VisualElement>
+</ui:UXML>

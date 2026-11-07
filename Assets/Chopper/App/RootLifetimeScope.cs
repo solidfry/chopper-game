@@ -1,6 +1,8 @@
+using Chopper.Presentation.Flow;
 using Chopper.Services.Auth;
 using Chopper.Services.Matchmaking;
 using Chopper.Services.Platform;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 #if CHOPPER_STEAM
@@ -16,6 +18,13 @@ namespace Chopper.App
     /// </summary>
     public sealed class RootLifetimeScope : LifetimeScope
     {
+        [SerializeField, Tooltip("Scene change look and timing (Setup step 1 links it). Players' builds only.")]
+        private SceneTransitionSettings sceneTransitions;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetSceneTransitions(SceneTransitionSettings settings) => sceneTransitions = settings;
+        public SceneTransitionSettings SceneTransitions => sceneTransitions;
+
         protected override void Configure(IContainerBuilder builder)
         {
 #if UNITY_SERVER
@@ -34,6 +43,9 @@ namespace Chopper.App
 #if !UNITY_SERVER
             // A dedicated server does not sign in as a player (later: a service account for Cloud Code, Phase 3).
             builder.RegisterEntryPoint<SignInOnStart>();
+            // Scene changes: music across scenes, the block transition, world sound fade.
+            builder.RegisterInstance(sceneTransitions != null ? sceneTransitions : ScriptableObject.CreateInstance<SceneTransitionSettings>());
+            builder.RegisterEntryPoint<SceneFlowEntryPoint>();
 #endif
         }
     }

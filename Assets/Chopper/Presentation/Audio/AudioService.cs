@@ -6,15 +6,13 @@ using Object = UnityEngine.Object;
 namespace Chopper.Presentation.Audio
 {
     /// <summary>
-    /// <see cref="IAudioService"/> with a fixed pool of one-shot voices (oldest is replaced when all are busy), a pool of
-    /// loop voices, two music sources for cross-fades, and mixer volumes saved in PlayerPrefs.
+    /// <see cref="IAudioService"/> with a fixed pool of one-shot voices (oldest is replaced when all are busy) and a pool
+    /// of loop voices. Music and mixer volumes go to a <see cref="MusicPlayer"/> and <see cref="MixerVolumes"/>: the
+    /// scene flow's (they live across scenes, see <see cref="UseShared"/>), else this service's own.
     /// Call <see cref="Tick"/> once per frame.
     /// </summary>
     public sealed class AudioService : IAudioService, IDisposable
     {
-        private const string VolumeKeyPrefix = "chopper.volume.";
-        private const float MinDecibels = -80f;
-
         private sealed class Voice
         {
             public AudioSource Source;
@@ -28,13 +26,9 @@ namespace Chopper.Presentation.Audio
         private readonly Stack<SoundLoop> _freeLoops = new();
         private readonly List<SoundLoop> _activeLoops = new();
         private readonly Dictionary<SoundCue, float> _lastPlayed = new();
-        private readonly AudioSource[] _music = new AudioSource[2];
-        private readonly float[] _musicTarget = new float[2];
-        private readonly float[] _musicFadeSpeed = new float[2];
-        private int _musicCurrent;
-        private readonly List<AudioClip> _playlist = new();
-        private int _playlistIndex;
-        private float _playlistFade;
+        private MusicPlayer _music;
+        private MixerVolumes _volumes;
+        private bool _ownsMusic = true;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -44,16 +38,29 @@ namespace Chopper.Presentation.Audio
             for (var i = 0; i < voiceCount; i++)
                 _voices[i] = new Voice { Source = CreateSource($"Voice {i}") };
 
-            for (var i = 0; i < _music.Length; i++)
-            {
-                var source = CreateSource($"Music {i}");
-                source.loop = true;
-                source.spatialBlend = 0f;
-                source.volume = 0f;
-                source.outputAudioMixerGroup = library != null ? library.MusicGroup : null;
-                _music[i] = source;
-            }
+            _music = new MusicPlayer(root);
+            _music.SetOutput(library != null ? library.MusicGroup : null);
+            _volumes = new MixerVolumes();
         }
+
+        /// <summary>
+        /// Music and volumes from the scene flow, which outlive this scene. The own music player is dropped (call before
+        /// any music starts, or the scene's music starts again on the shared player).
+        /// </summary>
+        public void UseShared(MusicPlayer music, MixerVolumes volumes)
+        {
+            if (music != null && music != _music)
+            {
+                if (_ownsMusic) _music.Dispose();
+                _music = music;
+                _ownsMusic = false;
+                _music.SetOutput(_library != null ? _library.MusicGroup : null);
+            }
+            if (volumes != null) _volumes = volumes;
+            _volumes.UseMixer(_library != null ? _library.Mixer : null);
+        }
+
+        public MusicPlayer Music => _music;
 
         public void Play(SoundCue cue, Vector3 position) => PlayAt(cue, position, atListener: false);
 
@@ -85,113 +92,30 @@ namespace Chopper.Presentation.Audio
             _freeLoops.Push(loop);
         }
 
-        public void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f)
-        {
-            if (clip == null) return;
-            _playlist.Clear();
-            var current = _music[_musicCurrent];
-            if (current.clip == clip && _musicTarget[_musicCurrent] > 0f) return;
-            StartTrack(clip, fadeSeconds, loop: true);
-        }
+        public void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f) => _music.Play(clip, fadeSeconds);
 
-        public void PlayPlaylist(IReadOnlyList<AudioClip> clips, float fadeSeconds = 3f)
-        {
-            _playlist.Clear();
-            if (clips != null)
-                foreach (var clip in clips)
-                    if (clip != null) _playlist.Add(clip);
-            if (_playlist.Count == 0) return;
-            if (_playlist.Count == 1)
-            {
-                PlayMusic(_playlist[0], fadeSeconds);
-                return;
-            }
+        public void PlayPlaylist(IReadOnlyList<AudioClip> clips, float fadeSeconds = 3f) => _music.PlayPlaylist(clips, fadeSeconds);
 
-            _playlistFade = Mathf.Max(0.1f, fadeSeconds);
-            Shuffle(null);
-            _playlistIndex = 0;
-            StartTrack(_playlist[0], _playlistFade, loop: false);
-        }
+        public void StopMusic(float fadeSeconds = 1.5f) => _music.Stop(fadeSeconds);
 
-        public void StopMusic(float fadeSeconds = 1.5f)
-        {
-            _playlist.Clear();
-            FadeMusic(0, 0f, fadeSeconds);
-            FadeMusic(1, 0f, fadeSeconds);
-        }
+        public void SetMusicLevel(float level, float seconds) => _music.SetLevel(level, seconds);
 
-        private void StartTrack(AudioClip clip, float fadeSeconds, bool loop)
-        {
-            FadeMusic(_musicCurrent, 0f, fadeSeconds);
-            _musicCurrent = 1 - _musicCurrent;
-            var next = _music[_musicCurrent];
-            next.clip = clip;
-            next.loop = loop;
-            next.volume = 0f;
-            next.Play();
-            FadeMusic(_musicCurrent, 1f, fadeSeconds);
-        }
+        public float GetVolume(AudioChannel channel) => _volumes.Get(channel);
 
-        /// <summary>Playlist: when the track is near its end, cross-fade to the next one (shuffle again after the last).</summary>
-        private void AdvancePlaylist()
-        {
-            if (_playlist.Count < 2) return;
-            var current = _music[_musicCurrent];
-            if (current == null || current.clip == null) return;
-            if (current.isPlaying && current.time < current.clip.length - _playlistFade) return;
-
-            _playlistIndex++;
-            if (_playlistIndex >= _playlist.Count)
-            {
-                // A new order, but never the track that just played first.
-                Shuffle(current.clip);
-                _playlistIndex = 0;
-            }
-            StartTrack(_playlist[_playlistIndex], _playlistFade, loop: false);
-        }
-
-        private void Shuffle(AudioClip notFirst)
-        {
-            for (var i = _playlist.Count - 1; i > 0; i--)
-            {
-                var j = UnityEngine.Random.Range(0, i + 1);
-                (_playlist[i], _playlist[j]) = (_playlist[j], _playlist[i]);
-            }
-            if (notFirst != null && _playlist[0] == notFirst) (_playlist[0], _playlist[^1]) = (_playlist[^1], _playlist[0]);
-        }
-
-        public float GetVolume(AudioChannel channel) => PlayerPrefs.GetFloat(VolumeKeyPrefix + channel, DefaultVolume(channel));
-
-        /// <summary>Until the player sets it: music at half, so it sits under the effects (owner, 31 Oct).</summary>
-        private static float DefaultVolume(AudioChannel channel) => channel == AudioChannel.Music ? 0.5f : 1f;
-
-        public void SetVolume(AudioChannel channel, float volume)
-        {
-            volume = Mathf.Clamp01(volume);
-            PlayerPrefs.SetFloat(VolumeKeyPrefix + channel, volume);
-            ApplyVolume(channel, volume);
-        }
+        public void SetVolume(AudioChannel channel, float volume) => _volumes.Set(channel, volume);
 
         /// <summary>
         /// Sets the mixer from the saved volumes. Call from Start or later: the mixer ignores SetFloat during Awake.
         /// </summary>
         public void ApplySavedVolumes()
         {
-            foreach (AudioChannel channel in Enum.GetValues(typeof(AudioChannel)))
-                ApplyVolume(channel, GetVolume(channel));
+            _volumes.UseMixer(_library != null ? _library.Mixer : null);
+            _volumes.ApplyAll();
         }
 
         public void Tick(float deltaTime)
         {
-            AdvancePlaylist();
-            for (var i = 0; i < _music.Length; i++)
-            {
-                var source = _music[i];
-                if (source == null || Mathf.Approximately(source.volume, _musicTarget[i])) continue;
-                source.volume = Mathf.MoveTowards(source.volume, _musicTarget[i], _musicFadeSpeed[i] * deltaTime);
-                if (source.volume <= 0f && _musicTarget[i] <= 0f)
-                    source.Stop();
-            }
+            if (_ownsMusic) _music.Tick(deltaTime);
         }
 
         public void Dispose()
@@ -202,14 +126,13 @@ namespace Chopper.Presentation.Audio
                 if (loop.Source != null) Object.Destroy(loop.Source.gameObject);
             foreach (var loop in _freeLoops)
                 if (loop.Source != null) Object.Destroy(loop.Source.gameObject);
-            foreach (var source in _music)
-                if (source != null) Object.Destroy(source.gameObject);
+            if (_ownsMusic) _music.Dispose();
             _activeLoops.Clear();
             _freeLoops.Clear();
         }
 
         /// <summary>Linear 0..1 to mixer decibels.</summary>
-        public static float ToDecibels(float volume) => volume <= 0.0001f ? MinDecibels : Mathf.Log10(volume) * 20f;
+        public static float ToDecibels(float volume) => MixerVolumes.ToDecibels(volume);
 
         private void PlayAt(SoundCue cue, Vector3 position, bool atListener)
         {
@@ -259,19 +182,6 @@ namespace Chopper.Presentation.Audio
 
             if (copies >= cue.MaxVoices) return oldestOfCue;
             return free ?? oldest;
-        }
-
-        private void FadeMusic(int index, float target, float seconds)
-        {
-            _musicTarget[index] = target;
-            _musicFadeSpeed[index] = seconds > 0f ? 1f / seconds : float.MaxValue;
-        }
-
-        private void ApplyVolume(AudioChannel channel, float volume)
-        {
-            var mixer = _library != null ? _library.Mixer : null;
-            if (mixer != null && !mixer.SetFloat(channel + "Volume", ToDecibels(volume)))
-                Debug.LogWarning($"Audio mixer '{mixer.name}' has no exposed parameter '{channel}Volume'.");
         }
 
         private AudioSource CreateSource(string name)

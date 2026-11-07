@@ -77,6 +77,56 @@
   min-width: 120px;
 }
 
+/* Field repair line, just above the hull readout */
+.hud-repair {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  translate: 212px 0;
+  font-size: 13px;
+  letter-spacing: 3px;
+  padding: 2px 8px;
+  color: var(--chopper-green-dim);
+  border-width: 0;
+  transition-property: opacity, translate;
+  transition-duration: 0.15s;
+}
+
+.hud-repair--hidden {
+  opacity: 0;
+  translate: 200px 0;
+}
+
+.hud-repair--active {
+  color: var(--chopper-cyan);
+  background-color: rgba(0, 40, 48, 0.6);
+  border-left-width: 2px;
+  border-color: var(--chopper-cyan);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+}
+
+.hud-repair--locked {
+  color: var(--chopper-yellow);
+  background-color: rgba(48, 40, 0, 0.6);
+  border-left-width: 2px;
+  border-color: var(--chopper-yellow);
+}
+
+/* While repairing the hull arc and readout run cyan (more specific than the low-health red) */
+.hud-arc.hud-hull-arc.hud-arc--repairing {
+  --arc-fill: var(--chopper-cyan);
+  --arc-track: rgba(0, 240, 255, 0.14);
+}
+
+.hud-readout.hud-readout--repairing {
+  border-color: var(--chopper-cyan);
+}
+
+.hud-readout.hud-readout--repairing .hud-readout__value {
+  color: var(--chopper-cyan);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
 .hud--hidden {
   opacity: 0;
 }

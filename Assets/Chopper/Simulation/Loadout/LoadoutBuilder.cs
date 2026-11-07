@@ -18,6 +18,7 @@ namespace Chopper.Simulation.Loadout
         public ChopperFlightConfig Flight;
         public float Health;
         public CrashDamageConfig Crash;
+        public RepairConfig Repair;
         /// <summary>FireInterval 0 = no gun.</summary>
         public HitscanWeaponConfig Gun;
         public readonly List<PylonWeapon> Pylons = new();
@@ -74,6 +75,7 @@ namespace Chopper.Simulation.Loadout
             };
             built.Health = stats.Health;
             built.Crash = crash.ToConfig();
+            built.Repair = chassis != null ? chassis.Repair.ToConfig() : RepairConfig.Default;
 
             BuildWeapons(chassis, modulesBySlot, sockets, resolveMissilePrefab, built);
             return built;

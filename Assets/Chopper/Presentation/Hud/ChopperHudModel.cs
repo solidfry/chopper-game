@@ -6,6 +6,17 @@ using UnityEngine.UIElements;
 
 namespace Chopper.Presentation.Hud
 {
+    /// <summary>What the field repair line under the hull shows.</summary>
+    public enum HudRepair
+    {
+        Hidden,
+        /// <summary>Damaged and not repairing: how to start.</summary>
+        Hint,
+        Active,
+        /// <summary>A hit stopped the repair: locked for a moment.</summary>
+        Locked,
+    }
+
     /// <summary>
     /// View model for the in-flight HUD. <see cref="LocalChopperHudSystem"/> writes it once per frame; UI Toolkit
     /// reads it through data binding. Raises change events only when a shown value changes, so bindings do no work
@@ -15,6 +26,9 @@ namespace Chopper.Presentation.Hud
     {
         private const float MetresPerSecondToKilometresPerHour = 3.6f;
         private const float LowHealthFraction = 0.3f;
+        /// <summary>Below this hull share the HUD shows how to repair.</summary>
+        public const float RepairHintBelow = 0.75f;
+        public const string RepairHint = "HOLD R / X  REPAIR";
         /// <summary>How long a hit marker shows, seconds.</summary>
         public const float HitMarkerDuration = 0.15f;
         public const float KillMarkerDuration = 0.6f;
@@ -84,6 +98,9 @@ namespace Chopper.Presentation.Hud
         private float _missileUrgency;
         private bool _warningBlink;
         private float _blinkTime;
+        private HudRepair _repair;
+        private string _repairText = "";
+        private int _repairShown = -1;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -461,9 +478,45 @@ namespace Chopper.Presentation.Hud
             WarningBlink = !WarningBlink;
         }
 
+        /// <summary>Field repair line under the hull readout: hint, progress or lock.</summary>
+        [CreateProperty] public HudRepair Repair { get => _repair; private set => Set(ref _repair, value, nameof(Repair)); }
+
+        [CreateProperty] public string RepairText { get => _repairText; private set => Set(ref _repairText, value, nameof(RepairText)); }
+
+        /// <summary>
+        /// Repairing: "REPAIRING 63%" (the hull share). Locked by a hit: "REPAIR LOCKED 2.4". Idle and below
+        /// <see cref="RepairHintBelow"/>: the key hint. Strings are made only when the shown number changes.
+        /// </summary>
+        public void UpdateRepair(Simulation.Combat.RepairPhase phase, float lockLeft, float healthFraction)
+        {
+            var state = phase switch
+            {
+                Simulation.Combat.RepairPhase.Repairing => HudRepair.Active,
+                Simulation.Combat.RepairPhase.Locked => HudRepair.Locked,
+                _ => healthFraction < RepairHintBelow ? HudRepair.Hint : HudRepair.Hidden,
+            };
+            var number = state switch
+            {
+                HudRepair.Active => 1000 + (int)MathF.Floor(healthFraction * 100f),
+                HudRepair.Locked => 2000 + (int)MathF.Ceiling(lockLeft * 10f),
+                HudRepair.Hint => 3000,
+                _ => 0,
+            };
+            if (Changed(ref _repairShown, number))
+                RepairText = state switch
+                {
+                    HudRepair.Active => $"REPAIRING {number - 1000}%",
+                    HudRepair.Locked => "REPAIR LOCKED " + ((number - 2000) / 10f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture),
+                    HudRepair.Hint => RepairHint,
+                    _ => "",
+                };
+            Repair = state;
+        }
+
         public void ClearChopper()
         {
             HasChopper = false;
+            Repair = HudRepair.Hidden;
             AimVisible = false;
             OutOfBounds = false;
             _swayTarget = Vector2.zero;

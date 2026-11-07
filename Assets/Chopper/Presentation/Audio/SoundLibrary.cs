@@ -47,6 +47,11 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue uiNavigate;
 
         [Header("Hangar")]
+        [Header("Field repair (own chopper)")]
+        [SerializeField, Tooltip("Loop while repairing; pitch rises as the hull fills.")] private SoundCue repairLoop;
+        [SerializeField, Tooltip("The hull is full.")] private SoundCue repairDone;
+        [SerializeField, Tooltip("A hit stopped the repair (it locks for a moment).")] private SoundCue repairInterrupted;
+
         [SerializeField, Tooltip("A module locks onto its socket.")] private SoundCue moduleFit;
         [SerializeField, Tooltip("A socket is emptied.")] private SoundCue moduleRemove;
         [SerializeField, Tooltip("The camera moves to a slot or back to the overview.")] private SoundCue slotFocus;
@@ -71,6 +76,9 @@ namespace Chopper.Presentation.Audio
         public SoundCue Flares => flares;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
+        public SoundCue RepairLoop => repairLoop;
+        public SoundCue RepairDone => repairDone;
+        public SoundCue RepairInterrupted => repairInterrupted;
         public SoundCue ModuleFit => moduleFit;
         public SoundCue ModuleRemove => moduleRemove;
         public SoundCue SlotFocus => slotFocus;
@@ -101,6 +109,9 @@ namespace Chopper.Presentation.Audio
             Check(moduleRemove, nameof(moduleRemove), problems);
             Check(slotFocus, nameof(slotFocus), problems);
             Check(chassisScan, nameof(chassisScan), problems);
+            Check(repairLoop, nameof(repairLoop), problems);
+            Check(repairDone, nameof(repairDone), problems);
+            Check(repairInterrupted, nameof(repairInterrupted), problems);
         }
 
         private void Check(SoundCue cue, string slot, List<string> problems)
@@ -114,6 +125,14 @@ namespace Chopper.Presentation.Audio
         {
             boostStart = start;
             boostLoop = loop;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseRepair(SoundCue loop, SoundCue done, SoundCue interrupted)
+        {
+            repairLoop = loop;
+            repairDone = done;
+            repairInterrupted = interrupted;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

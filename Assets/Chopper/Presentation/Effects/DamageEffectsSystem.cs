@@ -50,6 +50,7 @@ namespace Chopper.Presentation.Effects
         private readonly List<ChopperHit> _pending = new();
         private readonly HashSet<Entity> _seen = new();
         private readonly List<Entity> _gone = new();
+        private readonly Dictionary<Entity, float> _repairCarry = new();
         private readonly List<(Vector3 Point, Vector3 Normal)> _centre = new() { (new Vector3(0f, 0.5f, 0f), Vector3.up) };
         private PresentationContext _context;
         private IDisposable _subscription;
@@ -87,6 +88,9 @@ namespace Chopper.Presentation.Effects
             foreach (var (health, pose, entity) in SystemAPI.Query<RefRO<Health>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
                 _seen.Add(entity);
+                if (!health.ValueRO.IsDead && SystemAPI.HasComponent<ChopperRepair>(entity) &&
+                    SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing)
+                    EmitRepair(settings, entity, pose.ValueRO, deltaTime, cockpit, eye);
                 var max = health.ValueRO.Max;
                 var share = max > 0f ? health.ValueRO.Current / max : 1f;
                 var smoke = DamageLook.Smoke(share, settings.SmokeBelow);
@@ -130,7 +134,13 @@ namespace Chopper.Presentation.Effects
             _gone.Clear();
             foreach (var entity in _damaged.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
-            foreach (var entity in _gone) _damaged.Remove(entity);
+            foreach (var entity in _repairCarry.Keys)
+                if (!_seen.Contains(entity)) _gone.Add(entity);
+            foreach (var entity in _gone)
+            {
+                _damaged.Remove(entity);
+                _repairCarry.Remove(entity);
+            }
         }
 
         /// <summary>Sparks (and crash dust) for this frame's hits; keeps the hit points for the smoke.</summary>
@@ -180,6 +190,49 @@ namespace Chopper.Presentation.Effects
                 emit.velocity = direction * (settings.SparkSpeed * Random.Range(0.35f, 1.1f));
                 emit.startLifetime = Random.Range(0.25f, 0.7f);
                 emit.startSize = Random.Range(0.05f, 0.12f);
+                _sparks.Emit(emit, 1);
+            }
+        }
+
+        /// <summary>
+        /// Field repair: short blue-white welding sparks at the hit points (or round the hull when there are none),
+        /// skipped next to the eye in the cockpit view.
+        /// </summary>
+        private void EmitRepair(CombatEffectsSettings settings, Entity entity, in LocalToWorld pose, float deltaTime, bool cockpit,
+            Vector3 eye)
+        {
+            if (_sparks == null || settings.RepairSparkRate <= 0f) return;
+            _repairCarry.TryGetValue(entity, out var carry);
+            carry += settings.RepairSparkRate * deltaTime;
+            var count = (int)carry;
+            _repairCarry[entity] = carry - count;
+            if (count <= 0) return;
+
+            var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+            var matrix = (Matrix4x4)pose.Value;
+            var points = _damaged.TryGetValue(entity, out var state) && state.Points.Count > 0 ? state.Points : null;
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = settings.RepairSparkColour };
+            for (var i = 0; i < count; i++)
+            {
+                Vector3 local, localNormal;
+                if (points != null)
+                {
+                    var pick = points[Random.Range(0, points.Count)];
+                    local = pick.Point + Random.insideUnitSphere * 0.2f;
+                    localNormal = pick.Normal;
+                }
+                else
+                {
+                    localNormal = Random.onUnitSphere;
+                    local = new Vector3(localNormal.x * 1.1f, 0.5f + localNormal.y * 0.6f, localNormal.z * 2f);
+                }
+                var point = matrix.MultiplyPoint3x4(local);
+                if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
+                var normal = matrix.MultiplyVector(localNormal).normalized;
+                emit.position = point + normal * 0.05f;
+                emit.velocity = (normal + Random.insideUnitSphere * 1.2f).normalized * (settings.SparkSpeed * Random.Range(0.1f, 0.35f));
+                emit.startLifetime = Random.Range(0.12f, 0.3f);
+                emit.startSize = Random.Range(0.03f, 0.07f);
                 _sparks.Emit(emit, 1);
             }
         }

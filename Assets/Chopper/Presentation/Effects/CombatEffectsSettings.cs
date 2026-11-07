@@ -90,6 +90,10 @@ namespace Chopper.Presentation.Effects
         [SerializeField] private Color heavySmokeColour = new(0.05f, 0.05f, 0.05f, 0.8f);
         [SerializeField, Tooltip("Dust puffs thrown up by a crash or a hard landing (downwash material and map dust colour).")]
         private int impactDust = 24;
+        [SerializeField, Tooltip("Field repair: welding sparks per second while a chopper repairs (everyone sees them).")]
+        private float repairSparkRate = 26f;
+        [SerializeField, Tooltip("Repair spark colour (multiplies the spark material; HDR for bloom).")]
+        private Color repairSparkColour = new(0.55f, 0.95f, 1f, 1f);
 
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
@@ -133,6 +137,8 @@ namespace Chopper.Presentation.Effects
         public Color LightSmokeColour => lightSmokeColour;
         public Color HeavySmokeColour => heavySmokeColour;
         public int ImpactDust => impactDust;
+        public float RepairSparkRate => repairSparkRate;
+        public Color RepairSparkColour => repairSparkColour;
 
         public void CollectProblems(List<string> problems)
         {

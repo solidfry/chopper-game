@@ -10,7 +10,7 @@ using Unity.Transforms;
 namespace Chopper.Presentation.Hud
 {
     /// <summary>
-    /// Writes the local player's chopper values (speed, altitude, boost, health, attitude, gun aim, out of bounds) into the HUD
+    /// Writes the local player's chopper values (speed, altitude, boost, health, repair, attitude, gun aim, out of bounds) into the HUD
     /// model. Hit markers come from messages (<see cref="Feedback.CombatFeedback"/>).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -49,6 +49,9 @@ namespace Chopper.Presentation.Hud
                     state.ValueRO.Boosting,
                     config.ValueRO.BoostStartEnergy);
                 model.UpdateHealth(health.ValueRO.Current, health.ValueRO.Max);
+                var repair = SystemAPI.HasComponent<ChopperRepair>(entity) ? SystemAPI.GetComponent<ChopperRepair>(entity) : default;
+                var share = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f;
+                model.UpdateRepair(repair.State, repair.LockLeft, health.ValueRO.IsDead ? 1f : share);
                 model.OutOfBounds = hasBounds && !bounds.Contains(localToWorld.ValueRO.Position);
                 UpdateAttitude(model, localToWorld.ValueRO, velocity.ValueRO, mass.ValueRO);
 

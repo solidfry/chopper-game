@@ -23,6 +23,7 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Base flight feel. Modules scale it (lift, turn rate, dash).")]
         private FlightTuning flight = new();
         [SerializeField] private CrashTuning crash = new();
+        [SerializeField, Tooltip("Hold-to-repair: time to full health, lock after a hit.")] private RepairTuning repair = new();
         [SerializeField, Tooltip("Loadout used when a player has not chosen one, or theirs is not valid. One module per slot.")]
         private ModuleDefinition[] defaultModules = System.Array.Empty<ModuleDefinition>();
 
@@ -38,6 +39,7 @@ namespace Chopper.Simulation.Loadout
         public GameObject Prefab => prefab;
         public FlightTuning Flight => flight;
         public CrashTuning Crash => crash;
+        public RepairTuning Repair => repair ??= new RepairTuning();
         public IReadOnlyList<SlotType> Slots => slots;
         public IReadOnlyList<ModuleDefinition> DefaultModules => defaultModules;
         public GameObject Cockpit => cockpit;

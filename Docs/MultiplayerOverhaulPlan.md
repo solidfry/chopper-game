@@ -489,6 +489,49 @@ handling and their own ability, in the same role:
   - **Focus views (3 Nov, checked in play):** automatic per slot, no hand-tuned poses: frame the module's bounds in the gap between the panels, distance from its size, side / 3/4 / whole-chopper (armour) views, rotor = the overview angle zoomed to fit (no turn), camera under the rotor disc for modules below it, and a clear-view test (body and module mesh colliders from readable copies in the `WireframeLibrary`) that picks the first unblocked view. `SocketAuthoring` poses (`useSocketPoses`) stay as a manual override. Lifter: the engine module mounts at the back of both side pods (two Engine sockets, the second repeats the module).
   - Not yet: module icons on tiles and cards (the tile shows a text mark: +, X, EQUIPPED, LOCKED); idea: Setup step 7 renders each module's wireframe to a small texture (`ModuleDefinition` icon field).
 
+## 5b. Pilots (owner TODO, 7 Nov 2026 — design, not built)
+
+The player picks a pilot as well as a chopper. Any pilot flies any chassis. A pilot gives one passive bonus (with a small cost) and one active ability.
+
+- **Names:** call signs that say what the pilot does. No personal names (no "Greg", no "John").
+- **Select screen:** fighting-game style (owner).
+  - A grid of portrait tiles. The picked pilot shows large on one side.
+  - The call sign slams in with a glitch flash, then the passive and ability cards and a few stat bars.
+  - "LOCK IN" ends the pick.
+  - Placement: a PILOT step before the hangar's chassis cards (or a tab beside them). Same UI Toolkit style as the hangar (Karnivore, neon on dark, scan-line build-in, hangar sound cues).
+  - Online: the pilot id goes in the matchmaking request and the go-in-game request, next to the loadout. The server checks it.
+- **Data (systemic, plan 1c):**
+  - Each pilot is a `PilotDefinition` asset: id, call sign, portrait, one-line role, `PilotModifiers` and one ability definition.
+  - The pilots are listed in a `PilotCatalog` on the `GameConfig`.
+  - `LoadoutBuilder` applies the modifiers, so there is one code path for the baker and for runtime (like modules). Example: repair time = chassis `RepairTuning.Seconds` × the pilot's repair multiplier. `RepairConfig` is already per chopper.
+- **Shared building block:** a server-side `StatusEffect` buffer on each chopper, for damage over time, a shield, stealth, overclock and jam.
+  - One server system ticks the buffer.
+  - Damage over time goes in as normal `DamageEvent`s with the source. So kill credit, hit markers, hit sparks and the repair interrupt all work with no extra code.
+  - Replicate only what the HUD and effects need (kind, time left).
+- **Abilities:** one key: F, and D-pad up on a gamepad. Each ability has a cooldown, shown on the HUD beside flares. The server runs it; the client predicts only its look.
+
+Starting roster (passive / active ability; numbers are first guesses):
+
+| Call sign | Role | Passive (cost) | Active ability |
+|---|---|---|---|
+| APOTHECARY | Field medic | Repair 40% faster; the lock after a hit is 1.5 s (less boost energy) | **Nanite Cloud**: heal 30% over 5 s, and a hit does not stop it |
+| VIPER | Poison rounds | Gun hits corrode: +30% of the hit as damage over 3 s (a little more gun spread) | **Venom Belt**: 8 s of double corrosion |
+| PYRE | Incendiary | Rocket and missile hits burn: +25% over 4 s (fewer rockets per pod) | **Napalm Salvo**: the next salvo leaves fire on the ground for 6 s |
+| WRAITH | Stealth | Lower heat signature: enemy locks take 40% longer (less hull) | **Ghost**: 4 s where seekers cannot lock you, and missiles in flight lose you |
+| BULWARK | Tank | 15% less damage taken (slower turns) | **Aegis**: a 4 s shield that takes the next 50 damage |
+| HOTWIRE | Engines | Boost recharges 35% faster (more crash damage) | **Overclock**: 4 s of endless boost |
+| OVERWATCH | Sensors | Locks build 30% faster; enemy markers at longer range (gun damage −10%) | **Ping**: shows every enemy through walls for 5 s |
+| HEX | Electronic war | Your hits glitch the victim's HUD (HUD look) | **Blackout**: a 150 m EMP; enemy locks drop and cannot start for 3 s |
+| SCRAPPER | Salvage | A kill gives back 25% hull (repair is 20% slower) | **Strip Down**: drop flares and armour for a short burst of speed |
+| RAMJET | Brawler | Ram damage x2 to others, half to you (heavier: slower climb) | **Battering Ram**: 2 s armoured dash; impacts do not hurt you |
+
+Build order:
+1. `PilotDefinition`, the catalog and modifiers in `LoadoutBuilder` (repair, boost, lock and damage multipliers). The pilot id goes on the loadout.
+2. The select screen.
+3. The `StatusEffect` buffer and damage over time (Viper, Pyre).
+4. Active abilities (key, cooldown, HUD).
+5. Portraits and voice lines.
+
 ## 6. Account progression
 
 - **Player level (XP)** from match play: kill, assist, objective (nuke carry/arm/defuse), win, match complete.

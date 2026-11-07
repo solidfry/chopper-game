@@ -95,6 +95,7 @@ namespace Chopper.Simulation.Loadout
         {
             EntityManager.SetComponentData(entity, built.Flight);
             EntityManager.SetComponentData(entity, built.Crash);
+            if (EntityManager.HasComponent<RepairConfig>(entity)) EntityManager.SetComponentData(entity, built.Repair);
             EntityManager.SetComponentData(entity, built.Gun);
             EntityManager.SetComponentData(entity, built.Countermeasure);
 

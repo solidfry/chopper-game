@@ -1,0 +1,60 @@
+/* Scene change overlay: drawn over every panel (own panel settings, high sort order). */
+.transition {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.transition--hidden {
+  display: none;
+}
+
+.transition__wipe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.transition__info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44%;
+  align-items: center;
+}
+
+.transition__status {
+  font-size: 14px;
+  letter-spacing: 6px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.transition__label {
+  font-size: 44px;
+  letter-spacing: 6px;
+  color: var(--chopper-green);
+  padding: 0;
+  text-shadow: 0 0 14px rgba(0, 255, 148, 0.55);
+}
+
+.transition__rule {
+  width: 320px;
+  height: 1px;
+  margin-top: 10px;
+  background-color: var(--chopper-green-dim);
+}
+
+.transition__code {
+  position: absolute;
+  left: 32px;
+  bottom: 28px;
+  font-size: 13px;
+  color: rgba(0, 240, 255, 0.45);
+  padding: 0;
+}

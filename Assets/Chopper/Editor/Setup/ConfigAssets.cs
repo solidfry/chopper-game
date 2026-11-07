@@ -68,6 +68,7 @@ namespace Chopper.Editor.Setup
 
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
+            TransitionAssets.Ensure(config.PanelSettings, mixer);
             return config;
         }
 

@@ -43,7 +43,7 @@ namespace Chopper.Editor.Setup
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
         private const string DistantExplosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_DistantExplosion_";
-        private const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
+        internal const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
 
         public const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
 
@@ -146,6 +146,16 @@ namespace Chopper.Editor.Setup
                 Slot(library.ChassisScan, () => Cue("ChassisScan", Clips(SciFiGuns + "/Weapon 08 Reload 1 (Laser).wav"), ui, 0.5f, blend: 0f,
                     voices: 1, cooldown: 0.2f, pitch: 0.85f)));
 
+            // Field repair (placeholders): the laser weapon's loop pitched down as a servo hum; a laser charge when full;
+            // the laser's stop sound when a hit cuts it off.
+            library.InitialiseRepair(
+                Slot(library.RepairLoop, () => Cue("RepairLoop", Clips(SciFiGuns + "/Weapon 05 Loop (Laser).wav"), effects, 0.35f, blend: 0f,
+                    voices: 1, pitch: 0.6f)),
+                Slot(library.RepairDone, () => Cue("RepairDone", Clips(SciFiGuns + "/Weapon 12 Load (Laser).wav"), ui, 0.5f, blend: 0f,
+                    voices: 1, cooldown: 0.5f, pitch: 1.2f)),
+                Slot(library.RepairInterrupted, () => Cue("RepairInterrupted", Clips(SciFiGuns + "/Weapon 12 Stop (Laser).wav"), ui, 0.6f,
+                    blend: 0f, voices: 1, cooldown: 0.3f, pitch: 0.8f)));
+
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
@@ -154,7 +164,7 @@ namespace Chopper.Editor.Setup
 
         private static SoundCue Slot(SoundCue current, System.Func<SoundCue> make) => current != null ? current : make();
 
-        private static SoundCue Cue(string name, AudioClip[] clips, AudioMixerGroup group, float volume, float blend, int voices,
+        internal static SoundCue Cue(string name, AudioClip[] clips, AudioMixerGroup group, float volume, float blend, int voices,
             float cooldown = 0f, float pitch = 1f)
         {
             var path = $"{Folder}/Cue_{name}.asset";
@@ -167,7 +177,7 @@ namespace Chopper.Editor.Setup
             return cue;
         }
 
-        private static AudioClip[] Clips(params string[] paths)
+        internal static AudioClip[] Clips(params string[] paths)
         {
             var clips = new List<AudioClip>();
             foreach (var path in paths)
@@ -179,7 +189,7 @@ namespace Chopper.Editor.Setup
             return clips.ToArray();
         }
 
-        private static AudioClip[] ClipsIn(string folder) => AssetDatabase
+        internal static AudioClip[] ClipsIn(string folder) => AssetDatabase
             .FindAssets("t:AudioClip", new[] { folder })
             .Select(guid => AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid)))
             .Where(clip => clip != null)

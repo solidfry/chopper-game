@@ -24,5 +24,7 @@ namespace Chopper.Simulation.Flight
         public InputEvent CyclePylon;
         /// <summary>Drop flares.</summary>
         public InputEvent Countermeasure;
+        /// <summary>Held: field repair (R / gamepad X). Any hit stops it for a moment.</summary>
+        public bool Repair;
     }
 }

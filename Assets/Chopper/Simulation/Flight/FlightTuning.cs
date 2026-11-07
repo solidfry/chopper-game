@@ -98,4 +98,20 @@ namespace Chopper.Simulation.Flight
             Curve = Curve,
         };
     }
+
+    /// <summary>Field repair of one chassis. See <see cref="Combat.RepairConfig"/>.</summary>
+    [Serializable]
+    public sealed class RepairTuning
+    {
+        [Tooltip("Seconds of holding the repair key from empty to full health.")]
+        public float Seconds = 10f;
+        [Tooltip("Seconds the repair is locked after a hit (shot, crash, bounds) stops it.")]
+        public float InterruptCooldown = 3f;
+
+        public Combat.RepairConfig ToConfig() => new()
+        {
+            Seconds = Seconds,
+            InterruptCooldown = InterruptCooldown,
+        };
+    }
 }

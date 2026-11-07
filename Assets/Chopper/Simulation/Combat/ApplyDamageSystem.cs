@@ -14,7 +14,7 @@ namespace Chopper.Simulation.Combat
     /// hit (<see cref="HitConfirmRpc"/>), each victim where the hit came from (<see cref="DamageTakenRpc"/>), and
     /// reports kills (<see cref="KillEvent"/>), and tells every client where each victim was hit
     /// (<see cref="ChopperHitRpc"/>: the strongest hit with a point, at most one per victim per tick). No damage after
-    /// the match ends.
+    /// the match ends. Damage stops a field repair in progress and locks it (<see cref="Repair.Interrupt"/>).
     /// Death is handled by <see cref="ChopperRespawnSystem"/>.
     /// </summary>
     [BurstCompile]
@@ -31,6 +31,8 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<LastAttacker> _lastAttackerLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
         private ComponentLookup<GhostInstance> _ghostLookup;
+        private ComponentLookup<ChopperRepair> _repairLookup;
+        private ComponentLookup<RepairConfig> _repairConfigLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -40,6 +42,8 @@ namespace Chopper.Simulation.Combat
             _lastAttackerLookup = state.GetComponentLookup<LastAttacker>();
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
             _ghostLookup = state.GetComponentLookup<GhostInstance>(isReadOnly: true);
+            _repairLookup = state.GetComponentLookup<ChopperRepair>();
+            _repairConfigLookup = state.GetComponentLookup<RepairConfig>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -54,6 +58,8 @@ namespace Chopper.Simulation.Combat
             _lastAttackerLookup.Update(ref state);
             _transformLookup.Update(ref state);
             _ghostLookup.Update(ref state);
+            _repairLookup.Update(ref state);
+            _repairConfigLookup.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (health, damage, victim) in SystemAPI.Query<RefRW<Health>, DynamicBuffer<DamageEvent>>().WithEntityAccess())
@@ -69,6 +75,7 @@ namespace Chopper.Simulation.Combat
                 {
                     if (health.ValueRO.IsDead) break;
                     if (hit.HasPoint && hit.Amount > strongest.Amount) strongest = hit;
+                    if (hit.Amount > 0f) InterruptRepair(victim);
                     var killed = health.ValueRW.TakeDamage(hit.Amount);
                     var attacker = RememberAttacker(victim, hit.Source, now);
 
@@ -103,6 +110,15 @@ namespace Chopper.Simulation.Combat
                 if (strongest.HasPoint) BroadcastHit(ecb, victim, strongest);
             }
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>Shot, hit a wall, out of bounds: a repair in progress stops and locks for a moment.</summary>
+        private void InterruptRepair(Entity victim)
+        {
+            if (!_repairLookup.HasComponent(victim)) return;
+            var config = _repairConfigLookup.TryGetComponent(victim, out var own) ? own : RepairConfig.Default;
+            var repair = _repairLookup[victim];
+            if (Repair.Interrupt(ref repair, config)) _repairLookup[victim] = repair;
         }
 
         /// <summary>To every client: where the victim was hit, in the victim's own space.</summary>

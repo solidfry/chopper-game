@@ -69,6 +69,7 @@ namespace Chopper.Simulation.Flight
             var fireSecondary = flight.Fire2.IsPressed();
             var countermeasure = flight.Fire3.WasPressedThisFrame();
             var cyclePylon = CyclePylonPressed();
+            var repair = RepairHeld();
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
@@ -95,12 +96,24 @@ namespace Chopper.Simulation.Flight
                     Dive = dive,
                     Fire = fire,
                     FireSecondary = fireSecondary,
+                    Repair = repair,
                 };
                 if (countermeasure)
                     input.ValueRW.Countermeasure.Set();
                 if (cyclePylon)
                     input.ValueRW.CyclePylon.Set();
             }
+        }
+
+        /// <summary>
+        /// Field repair: R or gamepad X (west button), held. Read from the devices for now.
+        /// TODO: add a Repair action to PlayerControls.inputactions (needs the editor to regenerate the class).
+        /// </summary>
+        private static bool RepairHeld()
+        {
+            var key = Keyboard.current != null && Keyboard.current.rKey.isPressed;
+            var pad = Gamepad.current != null && Gamepad.current.buttonWest.isPressed;
+            return key || pad;
         }
 
         /// <summary>

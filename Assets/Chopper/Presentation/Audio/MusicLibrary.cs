@@ -24,10 +24,26 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("Matches: shuffled, each track plays to its end, then cross-fades to the next.")]
         private AudioClip[] match = Array.Empty<AudioClip>();
         [SerializeField, Tooltip("Seconds of cross-fade between playlist tracks.")] private float crossFadeSeconds = 3f;
+        [SerializeField, Tooltip("Seconds of cross-fade when a scene change starts other music (hangar → match).")]
+        private float sceneCrossFadeSeconds = 2.5f;
+
+        [Header("Music level (on top of the player's music volume)")]
+        [SerializeField, Range(0f, 1f), Tooltip("Hangar and menus.")] private float menuLevel = 1f;
+        [SerializeField, Range(0f, 1f), Tooltip("In a match while you fly: low enough that the rotors, guns and hits come through.")]
+        private float combatLevel = 0.4f;
+        [SerializeField, Range(0f, 1f), Tooltip("In a match before you spawn, while you wait to respawn, and on the results.")]
+        private float idleLevel = 0.8f;
+        [SerializeField, Min(0f), Tooltip("Seconds to move between levels (spawn, death, match end).")]
+        private float levelFadeSeconds = 4f;
 
         public AudioClip Menu => menu;
         public IReadOnlyList<AudioClip> Match => match;
         public float CrossFadeSeconds => crossFadeSeconds;
+        public float SceneCrossFadeSeconds => sceneCrossFadeSeconds;
+        public float MenuLevel => menuLevel;
+        public float CombatLevel => combatLevel;
+        public float IdleLevel => idleLevel;
+        public float LevelFadeSeconds => levelFadeSeconds;
 
         public void CollectProblems(List<string> problems)
         {

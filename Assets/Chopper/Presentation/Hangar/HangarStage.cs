@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Chopper.Presentation.Bridge;
+using Chopper.Presentation.Flow;
 using Chopper.Services.Matchmaking;
 using Cysharp.Threading.Tasks;
 using Chopper.Simulation;
@@ -1001,11 +1002,14 @@ namespace Chopper.Presentation.Hangar
         private void OnLaunched()
         {
             if (_launching) return;
-            _launching = true;
-            // False when worlds already run (a match scene opened the hangar): just load the scene.
-            LocalSession.Start();
             // Training: the map picked in the hangar (MAP list).
-            SceneManager.LoadScene(string.IsNullOrEmpty(_model.TrainingScene) ? matchScene : _model.TrainingScene);
+            var training = !string.IsNullOrEmpty(_model.TrainingScene);
+            var scene = training ? _model.TrainingScene : matchScene;
+            var names = _model.TrainingMapNames;
+            var label = training && _model.TrainingMapIndex < names.Count ? $"TRAINING // {names[_model.TrainingMapIndex]}" : null;
+            // The local session starts once the screen is covered (false when worlds already run: a match scene opened
+            // the hangar), then the scene loads behind the transition.
+            _launching = _context.LoadScene(scene, () => LocalSession.Start(), label);
         }
 
         private void OnMatchRequested() => FindMatchAsync().Forget();
@@ -1050,7 +1054,7 @@ namespace Chopper.Presentation.Hangar
                 // The server picked the map (random from the match pool); it tells us on connect.
                 _model.SetMatchStatus("LOADING MAP", true);
                 var scene = await AnnouncedMapScene(token);
-                SceneManager.LoadScene(scene);
+                _context.LoadScene(scene, label: "MATCH // " + SceneFlow.Pretty(scene));
             }
             catch (OperationCanceledException)
             {

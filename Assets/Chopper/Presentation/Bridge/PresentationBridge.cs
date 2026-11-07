@@ -1,6 +1,7 @@
 using Chopper.Presentation.Audio;
 using Chopper.Presentation.Camera;
 using Chopper.Presentation.Config;
+using Chopper.Presentation.Flow;
 using UnityEngine;
 
 namespace Chopper.Presentation.Bridge
@@ -37,6 +38,12 @@ namespace Chopper.Presentation.Bridge
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetMusic(MusicLibrary.Set set) => music = set;
+
+        /// <summary>
+        /// The game's scene flow (from the root scope's entry point when this scene loads): music cross-fades across scene
+        /// changes and scene loads show the block transition. Without it the scene plays its own music.
+        /// </summary>
+        public void UseSceneFlow(SceneFlow flow) => Context.UseSceneFlow(flow);
 
         private void Start() => Context.Start(music, musicOverride);
 

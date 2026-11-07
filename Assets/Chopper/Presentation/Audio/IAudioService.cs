@@ -61,6 +61,12 @@ namespace Chopper.Presentation.Audio
 
         void StopMusic(float fadeSeconds = 1.5f);
 
+        /// <summary>
+        /// Music level (0..1) on top of the player's music volume, reached over <paramref name="seconds"/>. Matches turn
+        /// it down (<see cref="MusicLibrary"/> levels) so the world comes through.
+        /// </summary>
+        void SetMusicLevel(float level, float seconds);
+
         /// <summary>0..1, saved for the next session.</summary>
         float GetVolume(AudioChannel channel);
 

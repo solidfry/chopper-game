@@ -14,7 +14,8 @@ namespace Chopper.Presentation.Audio
     /// <summary>
     /// Client only. A rotor loop on every chopper (own one mostly 2D, others 3D): pitch rises with speed, and the rotor
     /// strains (louder, higher) with collective and boost. Boost: a kick when it starts and an engine roar while it lasts,
-    /// on every chopper. An alarm loop while the own chopper is outside the arena.
+    /// on every chopper. An alarm loop while the own chopper is outside the arena. Field repair (own chopper): a servo
+    /// hum while it repairs (pitch rises as the hull fills), a chime when full, a cut-off when a hit stops it.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -43,6 +44,8 @@ namespace Chopper.Presentation.Audio
             public float BoostLevel;
             public bool WasBoosting;
             public float BoostEndTime = float.NegativeInfinity;
+            public SoundLoop Repair;
+            public RepairPhase RepairPhase;
         }
 
         private readonly Dictionary<Entity, Voices> _choppers = new();
@@ -107,6 +110,7 @@ namespace Chopper.Presentation.Audio
                     pitchScale: math.lerp(MinRotorPitch, MaxRotorPitch, speed01) + strain);
 
                 if (isLocal) outOfBounds = hasBounds && !bounds.Contains(position);
+                if (isLocal) UpdateRepair(audio, library, voices, entity, position);
             }
 
             StopMissing(audio);
@@ -139,6 +143,28 @@ namespace Chopper.Presentation.Audio
             }
         }
 
+        private void UpdateRepair(IAudioService audio, SoundLibrary library, Voices voices, Entity entity, Vector3 position)
+        {
+            var phase = SystemAPI.HasComponent<ChopperRepair>(entity) ? SystemAPI.GetComponent<ChopperRepair>(entity).State : RepairPhase.Idle;
+            var health = SystemAPI.HasComponent<Health>(entity) ? SystemAPI.GetComponent<Health>(entity) : default;
+            var share = health.Max > 0f ? math.saturate(health.Current / health.Max) : 1f;
+
+            if (voices.RepairPhase == RepairPhase.Repairing && phase == RepairPhase.Locked) audio.Play(library.RepairInterrupted);
+            else if (voices.RepairPhase == RepairPhase.Repairing && phase == RepairPhase.Idle && share >= 0.999f) audio.Play(library.RepairDone);
+            voices.RepairPhase = phase;
+
+            if (phase == RepairPhase.Repairing)
+            {
+                voices.Repair ??= audio.StartLoop(library.RepairLoop, position);
+                voices.Repair?.Set(position, pitchScale: 0.85f + 0.35f * share);
+            }
+            else if (voices.Repair != null)
+            {
+                audio.StopLoop(voices.Repair);
+                voices.Repair = null;
+            }
+        }
+
         private void StopAll()
         {
             if (_audio != null)
@@ -154,6 +180,7 @@ namespace Chopper.Presentation.Audio
         {
             audio.StopLoop(voices.Rotor);
             if (voices.Boost != null) audio.StopLoop(voices.Boost);
+            if (voices.Repair != null) audio.StopLoop(voices.Repair);
         }
 
         private void StopMissing(IAudioService audio)
