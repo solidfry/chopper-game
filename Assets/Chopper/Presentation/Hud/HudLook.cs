@@ -23,6 +23,10 @@ namespace Chopper.Presentation.Hud
         /// <summary>(trail decay per frame, trail strength, world feed 0..1, cockpit depth in metres). Strength 0 = no history pass;
         /// feed 0 = the world is not changed.</summary>
         public static readonly int Params3 = Shader.PropertyToID("_ChopperHudParams3");
+        /// <summary>(feed boot 0..1, biggest pixel size, colour steps, dropout).</summary>
+        public static readonly int Params4 = Shader.PropertyToID("_ChopperHudParams4");
+        /// <summary>(honeycomb 0..1 now, strength, hexagon size, reach from the corners).</summary>
+        public static readonly int Params5 = Shader.PropertyToID("_ChopperHudParams5");
     }
 
     /// <summary>
@@ -96,6 +100,9 @@ namespace Chopper.Presentation.Hud
         /// <summary>For EMP and hack effects (not built yet): hold a glitch for a time.</summary>
         public void Disrupt(float strength, float seconds) => _model.Disrupt(strength, seconds);
 
+        /// <summary>Editor tuning: plays the cockpit boot-up again (seen only in a cockpit view).</summary>
+        public void ReplayBoot() => _model.BootFeed();
+
         /// <summary>Call from the HUD view's OnEnable. Moving the panel into the texture rebuilds the tree; the view rebinds in its reload callback.</summary>
         public void Attach(PanelRenderer renderer)
         {
@@ -134,6 +141,13 @@ namespace Chopper.Presentation.Hud
             // Frame-rate independent fade: after PersistenceTime seconds the trail is at 1/e.
             var decay = profile.PersistenceTime > 0f ? Mathf.Exp(-deltaTime / profile.PersistenceTime) : 0f;
             Shader.SetGlobalVector(HudLookShaderIds.Params3, new Vector4(decay, profile.Persistence, _model.Feed, _settings.FeedCockpitDepth));
+            var reactions = _settings.Reactions;
+            Shader.SetGlobalVector(HudLookShaderIds.Params4,
+                new Vector4(_model.FeedBoot, reactions.BootPixelSize, reactions.BootColourSteps, reactions.BootDropout));
+            // Boot is eased (squared): its root makes the honeycomb go evenly, as the picture clears.
+            var hexGrid = CockpitView ? Mathf.Max(Mathf.Sqrt(_model.FeedBoot), reactions.HexGridRest) : 0f;
+            Shader.SetGlobalVector(HudLookShaderIds.Params5,
+                new Vector4(hexGrid, reactions.HexGrid, reactions.HexGridSize, reactions.HexGridReach));
         }
 
         public void Dispose()

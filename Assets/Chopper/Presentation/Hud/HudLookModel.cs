@@ -56,6 +56,11 @@ namespace Chopper.Presentation.Hud
         public float GlitchSeed { get; private set; }
         /// <summary>World feed noise: 0 = clear view, 1 = full static. Always 0 outside a cockpit view.</summary>
         public float Feed { get; private set; }
+        /// <summary>
+        /// The boot-up's part of <see cref="Feed"/>: 1 = the picture is all big pixels, 0 = done. It draws the digital look
+        /// and the lens dirt; the rest of the feed (hits) draws the analog noise. Always 0 outside a cockpit view.
+        /// </summary>
+        public float FeedBoot { get; private set; }
 
         public void Configure(in HudLookProfile profile, in HudLookReactions reactions, bool reduceEffects)
         {
@@ -112,7 +117,8 @@ namespace Chopper.Presentation.Hud
                 _feedBoot = _reactions.FeedBootSeconds > 0f ? Math.Max(0f, _feedBoot - (deltaTime - held) / _reactions.FeedBootSeconds) : 0f;
             // Ease out: the picture locks in quickly at the end, not a slow fade.
             var boot = _feedBoot * _feedBoot;
-            Feed = CockpitView ? Math.Clamp(Math.Max(boot * scale, Glitch * _reactions.FeedGlitch), 0f, 1f) : 0f;
+            FeedBoot = CockpitView ? Math.Clamp(boot * scale, 0f, 1f) : 0f;
+            Feed = CockpitView ? Math.Clamp(Math.Max(FeedBoot, Glitch * _reactions.FeedGlitch), 0f, 1f) : 0f;
             Noise = (_profile.Noise + Glitch * GlitchNoise + Math.Clamp(MissileUrgency, 0f, 1f) * _reactions.MissileNoise) * scale;
 
             _sampleTime -= deltaTime;

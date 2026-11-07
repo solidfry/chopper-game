@@ -26,6 +26,8 @@ Shader "Hidden/Chopper/HudLook"
         float4 _ChopperHudParams1;  // curvature, chromatic (px), vignette, noise
         float4 _ChopperHudParams2;  // brightness, glitch, glitch seed, unused
         float4 _ChopperHudParams3;  // trail decay per frame, trail strength, world feed 0..1, cockpit depth (m)
+        float4 _ChopperHudParams4;  // feed boot 0..1, biggest pixel size, colour steps, dropout
+        float4 _ChopperHudParams5;  // honeycomb 0..1 now, strength, hexagon size, reach from the corners
         ENDHLSL
 
         // Pass 0: composite the HUD (and its trail) over the camera colour.
@@ -56,17 +58,72 @@ Shader "Hidden/Chopper/HudLook"
                 return SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearClamp, uv, 0).rgb;
             }
 
+            // Honeycomb in the screen corners: a repeating grid of hexagon outlines. Each whole cell has its own strength
+            // (from its distance to the nearest corner), so the edge of the frame breaks up cell by cell, and cells go out
+            // one by one as "now" falls to 0. Some cells are lit, and blink like tech that is starting up.
+            float3 HexGrid(float2 uv, float now, float size, float reach)
+            {
+                float aspect = _ScreenParams.x / _ScreenParams.y;
+                float2 p = uv * float2(aspect, 1.0) / size + 8.0;
+
+                // Two offset rectangular grids make the hexagon tiling: the nearer centre is this pixel's cell.
+                const float2 tile = float2(1.0, 1.7320508);
+                float2 a = fmod(p, tile) - tile * 0.5;
+                float2 b = fmod(p - tile * 0.5, tile) - tile * 0.5;
+                float2 local = dot(a, a) < dot(b, b) ? a : b;
+                float2 id = p - local;
+
+                float2 centreUv = (id - 8.0) * size / float2(aspect, 1.0);
+                float2 toCorner = min(centreUv, 1.0 - centreUv) * float2(aspect, 1.0);
+                float corner = saturate(1.0 - length(toCorner) / max(reach, 0.001));
+                float cellSeed = Hash(id * 0.0731);
+                if (corner <= cellSeed * 0.45 || cellSeed > now * 1.3) return 0.0;
+
+                float2 edge = abs(local);
+                float side = max(dot(edge, float2(0.5, 0.8660254)), edge.x);
+                float lineWidth = 1.6 / (size * _ScreenParams.y);
+                float outline = smoothstep(lineWidth, 0.0, 0.5 - side);
+
+                float blink = floor(_Time.y * 6.0 + cellSeed * 37.0);
+                float lit = step(0.84, Hash(id * 0.0417 + blink * 0.13)) * 0.3;
+                return (outline * 0.8 + lit) * corner * float3(0.25, 1.0, 0.68);
+            }
+
             // The world seen through a weak camera feed. feed 0 = the scene as it is; 1 = only static.
-            float3 WorldFeed(float2 uv, float feed)
+            // The boot-up part of it (Params4.x) is digital: big pixels that resolve in patches, few colours and dead blocks.
+            // What is left of the feed (hits) is the analog noise.
+            float3 WorldFeed(float2 uv, float rawFeed)
             {
                 float t = _Time.y;
                 float2 pixel = 1.0 / _ScreenParams.xy;
                 float2 feedUv = uv;
 
+                float boot = _ChopperHudParams4.x;
+                float feed = saturate(rawFeed - boot);
+                float digital = 0.0;
+                float blockSize = 1.0;
+                float2 block = 0.0;
+                float2 blockLocal = 0.5;
+                float digitalFrame = floor(t * 15.0);
+                if (boot > 0.0)
+                {
+                    float biggest = max(_ChopperHudParams4.y, 2.0);
+                    float2 screen = uv * _ScreenParams.xy;
+                    float2 tile = floor(screen / biggest);
+                    // Each patch resolves at its own time; pixel size halves in steps, so it reads as a digital signal.
+                    digital = saturate(boot * lerp(0.55, 1.6, Hash(tile * 0.37 + 3.1)));
+                    blockSize = pow(2.0, ceil(digital * log2(biggest)));
+                    // Rows of blocks slide sideways while the signal is weak.
+                    screen.x += (Hash(float2(tile.y * 0.41, digitalFrame * 0.07)) - 0.5) * biggest * boot * 2.0;
+                    block = floor(screen / blockSize);
+                    blockLocal = frac(screen / blockSize);
+                    feedUv = (block + 0.5) * blockSize * pixel;
+                }
+
                 // Vertical hold: a weak signal rolls the picture; a dark bar runs with the seam.
                 float hold = smoothstep(0.45, 0.95, feed);
                 float roll = hold * frac(t * 0.9);
-                feedUv.y = frac(feedUv.y + roll);
+                if (roll > 0.0) feedUv.y = frac(feedUv.y + roll);
                 float seam = hold * smoothstep(0.03, 0.0, min(feedUv.y, 1.0 - feedUv.y));
 
                 // Line jitter (new pattern 30 times a second) and a tracking band that runs down the screen.
@@ -78,7 +135,7 @@ Shader "Hidden/Chopper/HudLook"
                 feedUv.x += band * (Hash(float2(row, frame + 3.0)) - 0.5) * 0.04;
 
                 // Colour split, wider with the feed.
-                float2 split = float2(pixel.x * (1.5 + 7.0 * feed), 0.0);
+                float2 split = float2(pixel.x * (1.5 * saturate(feed * 8.0) + 7.0 * feed + blockSize * 0.5 * digital), 0.0);
                 float3 colour = float3(SampleScene(feedUv + split).r, SampleScene(feedUv).g, SampleScene(feedUv - split).b);
 
                 // Washed-out, cool camera colour, and scanlines.
@@ -92,6 +149,26 @@ Shader "Hidden/Chopper/HudLook"
                 colour += (snow - 0.5) * (0.18 * feed + band * 0.5);
                 colour = lerp(colour, snow.xxx * 0.6, smoothstep(0.55, 1.0, feed));
                 colour *= 1.0 - seam;
+
+                if (boot > 0.0)
+                {
+                    // Few colours, in the HUD's green, while the patch is rough.
+                    float steps = max(_ChopperHudParams4.z, 2.0);
+                    float3 banded = floor(max(0.0, colour) * steps + 0.5) / steps * float3(0.7, 1.0, 0.85);
+                    colour = lerp(colour, banded, saturate(digital * 1.5));
+
+                    // Dead blocks: dark data, some lit, new every 1/15 s. All of them at the start of the boot-up.
+                    float2 seed = block * 0.31 + blockSize * 0.7;
+                    if (Hash(seed + digitalFrame * 0.11) < digital * digital * _ChopperHudParams4.w)
+                    {
+                        float data = Hash(seed + digitalFrame * 0.17 + 0.7);
+                        colour = float3(0.01, 0.05, 0.035) + step(0.8, data) * data * float3(0.0, 0.65, 0.45);
+                    }
+
+                    // A dark line round the bigger blocks, so they read as pixels.
+                    float outline = step(0.92, max(blockLocal.x, blockLocal.y)) * step(8.0, blockSize);
+                    colour *= 1.0 - outline * 0.4 * digital;
+                }
                 return max(0.0, colour);
             }
 
@@ -109,6 +186,10 @@ Shader "Hidden/Chopper/HudLook"
                     float outside = saturate(LinearEyeDepth(rawDepth, _ZBufferParams) - _ChopperHudParams3.w);
                     scene = lerp(scene, WorldFeed(uv, feed), outside);
                 }
+
+                // Honeycomb: over the world and the cockpit, under the HUD.
+                if (_ChopperHudParams5.x > 0.001 && _ChopperHudParams5.y > 0.0)
+                    scene += HexGrid(uv, _ChopperHudParams5.x, _ChopperHudParams5.z, _ChopperHudParams5.w) * _ChopperHudParams5.y;
 
                 float glow = _ChopperHudParams0.x;
                 float glowRadius = _ChopperHudParams0.y;

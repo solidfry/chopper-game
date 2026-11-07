@@ -78,7 +78,7 @@ namespace Chopper.Presentation.Camera
         /// <param name="speed01">Speed as a fraction of the full effect speed.</param>
         /// <param name="boost">Boost look, 0..1 (can overshoot a little: the punch).</param>
         /// <param name="kicked">A boost started this frame.</param>
-        /// <param name="share">The view's share of the speed and boost effects (<see cref="CameraView.Effects"/>); bloom stays.</param>
+        /// <param name="share">The view's share of the speed and boost effects (<see cref="CameraView.Effects"/>); base bloom stays.</param>
         public void Apply(CameraSettings settings, float speed, float speed01, float boost, bool kicked, float deltaTime, float share = 1f)
         {
             // Off = no post processing on the camera at all (not only an empty volume), so it can be ruled out.
@@ -89,7 +89,8 @@ namespace Chopper.Presentation.Camera
             if (kicked) _flash = 1f;
             _flash = Mathf.Max(0f, _flash - _flash * FlashFade * deltaTime - 0.01f);
 
-            _bloom.intensity.Override(settings.BloomIntensity + 0.6f * boost01);
+            // The boost's extra bloom follows the view's share too: in a neon city it lit the whole cockpit view at once.
+            _bloom.intensity.Override(settings.BloomIntensity + 0.6f * boost01 * share);
             _bloom.threshold.Override(settings.BloomThreshold);
             // Clamp: a near-infinite pixel (smooth surface catching the sun) overflows the bloom chain and blacks out or
             // whites out the whole frame. Stop NaN does not catch it: the pixel is not NaN.

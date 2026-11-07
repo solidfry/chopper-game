@@ -241,6 +241,18 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
   5. Run `MatchHudModelTests` and `ImpactAudioTests`.
   6. Tune the cue volumes in `Data/Audio`.
 
+## 4f. Audio balance, tuning buttons, cockpit boot-up (7 Nov, compiled and run in the editor)
+
+- Compile errors from 4c to 4e are fixed; Setup step 1 is done and its assets are committed. Steps 8 and 10 are not run yet.
+- **Audio balance** (measured; the owner has not yet judged the result by ear):
+  - The rotor clip was at -33 dB and the city clip at -21 dB. `Assets/Sound/Rotor_Interior_Loop.wav` is the rotor clip raised 17 dB, with a seamless loop. Rotor cues use it.
+  - New `Cue_CityAmbience` (volume 0.18, Ambient channel) loops on `Map_*` scenes.
+  - `MusicLibrary`: menu 0.5, combat 0.22, idle 0.4, on top of the player's music volume.
+- **Outside sounds:** cues with `Outside` on (other choppers, guns, bullet hits, city) go through a low-pass: `SoundLibrary` → `cockpitCutoff` 1200 Hz, `chaseCutoff` 22000 Hz (not muffled). Explosions on effect prefabs have their own AudioSources and are not muffled yet.
+- **Transition tuning:** select `Data/UI/SceneTransitionSettings.asset`; in play mode press **Preview transition**. Changes show at once.
+- **Cockpit boot-up** (`HudLook.shader`, `HudLookSettings` → Reactions; **Replay cockpit boot-up** button): big pixels that resolve in patches, few colours, dead blocks, and a repeating honeycomb in the screen corners. `HexGridRest` above 0 keeps the honeycomb on after the boot-up. Hits still give the analog noise.
+- **Bright flicker (owner, 7 Nov):** cause not confirmed. A sampler found one flight spike, with the FOV rising, which points to the boost kick. Changed: `boostFlash` 0.6 to 0.25; the boost's extra bloom now follows the view's effect share. A 70 s autopilot run then gave no spikes. If it returns, note what was on screen and if boost was pressed.
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |

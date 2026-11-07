@@ -104,10 +104,11 @@ namespace Chopper.Editor.Setup
             library.Initialise(
                 library.Mixer != null ? library.Mixer : mixer,
                 library.MusicGroup != null ? library.MusicGroup : Group(mixer, "Music"),
-                localRotor: Slot(library.RotorLocal, () => Cue("RotorLocal", Clips("Assets/Sound/inside-of-a-helicopter-54404.ogg"), ambient, 0.5f, blend: 0.2f, voices: 1)),
-                remoteRotor: Slot(library.RotorRemote, () => Cue("RotorRemote", Clips("Assets/Sound/inside-of-a-helicopter-54404.ogg"), effects, 0.9f, blend: 1f, voices: 16)),
+                // Rotor_Interior_Loop: inside-of-a-helicopter with its level raised 17 dB (the original is at -33 dB) and a seamless loop.
+                localRotor: Slot(library.RotorLocal, () => Cue("RotorLocal", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), ambient, 0.9f, blend: 0.2f, voices: 1)),
+                remoteRotor: Slot(library.RotorRemote, () => Cue("RotorRemote", Clips("Assets/Sound/Rotor_Interior_Loop.wav"), effects, 1f, blend: 1f, voices: 16, outside: true)),
                 // The old game's gun: a close explosion pitched up (it was on the BulletRed prefab). Gritty and kinetic.
-                gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f)),
+                gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f, outside: true)),
                 hit: Slot(library.HitConfirm, () => Cue("HitConfirm", Clips("Assets/Sound/UI/Switch/Switch (1).wav", "Assets/Sound/UI/Switch/Switch (2).wav",
                     "Assets/Sound/UI/Switch/Switch (4).wav"), ui, 0.5f, blend: 0f, voices: 2, cooldown: 0.06f)),
                 kill: Slot(library.KillConfirm, () => Cue("KillConfirm", Clips("Assets/Sound/UI/Switch/Switch (5).wav", "Assets/Sound/UI/Switch/Switch (6).wav"),
@@ -171,7 +172,7 @@ namespace Chopper.Editor.Setup
             SoundCue SurfaceCue(SoundCue current, string surface, string kind, int count, float volume, int voices, float cooldown) =>
                 Slot(current, () => Cue($"{surface}{kind}",
                     Clips(Enumerable.Range(1, count).Select(n => $"{impacts}{surface}_{kind}_{n}.ogg").ToArray()),
-                    effects, volume, blend: 1f, voices: voices, cooldown: cooldown));
+                    effects, volume, blend: 1f, voices: voices, cooldown: cooldown, outside: kind == "Hit"));
             library.InitialiseSurfaces(
                 new[]
                 {
@@ -188,6 +189,9 @@ namespace Chopper.Editor.Setup
                     SurfaceCue(library.SurfaceCrashCue(3), "Water", "Crash", 2, 1f, 4, 0.12f),
                 });
 
+            library.InitialiseAmbience(Slot(library.CityAmbience, () => Cue("CityAmbience",
+                Clips("Assets/Sound/Ambient/City/city din at night (off big street).wav"), ambient, 0.18f, blend: 0f, voices: 1, outside: true)));
+
             if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
 
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
@@ -199,14 +203,14 @@ namespace Chopper.Editor.Setup
         private static SoundCue Slot(SoundCue current, System.Func<SoundCue> make) => current != null ? current : make();
 
         internal static SoundCue Cue(string name, AudioClip[] clips, AudioMixerGroup group, float volume, float blend, int voices,
-            float cooldown = 0f, float pitch = 1f)
+            float cooldown = 0f, float pitch = 1f, bool outside = false)
         {
             var path = $"{Folder}/Cue_{name}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<SoundCue>(path);
             if (existing != null) return existing;
 
             var cue = ScriptableObject.CreateInstance<SoundCue>();
-            cue.Initialise(clips, group, volume, blend, voices, cooldown, pitch);
+            cue.Initialise(clips, group, volume, blend, voices, cooldown, pitch, outside);
             AssetDatabase.CreateAsset(cue, path);
             return cue;
         }

@@ -35,6 +35,15 @@ namespace Chopper.Presentation.Flow
         private float edgeWidth = 0.14f;
         [SerializeField, Range(0f, 1f), Tooltip("How much the front follows a sweep (left to right) and not only noise.")]
         private float sweep = 0.45f;
+        [SerializeField, Range(0f, 360f), Tooltip("Direction of the sweep: 0 = left to right, 90 = top to bottom, 180 = right to left.")]
+        private float sweepAngle;
+        [SerializeField, Min(0f), Tooltip("How many times a second the front's colours change.")]
+        private float frontFlickerRate = 24f;
+        [SerializeField, Range(0, 16), Tooltip("Glitch bars. 0 = none.")] private int glitchBars = 4;
+        [SerializeField, Range(0f, 1f), Tooltip("Glitch bar strength in the middle of the transition.")]
+        private float glitchStrength = 0.55f;
+        [SerializeField, Range(0f, 0.3f), Tooltip("Scan lines while fully covered. 0 = none.")]
+        private float scanLines = 0.035f;
         [SerializeField] private Color background = new(0.012f, 0.035f, 0.02f, 1f);
         [SerializeField, Tooltip("Glowing front blocks.")] private Color edge = new(0f, 1f, 0.58f, 1f);
         [SerializeField, Tooltip("Some front blocks flash this colour.")] private Color accent = new(0f, 0.94f, 1f, 1f);
@@ -54,6 +63,11 @@ namespace Chopper.Presentation.Flow
         public int BlockSize => blockSize;
         public float EdgeWidth => edgeWidth;
         public float Sweep => sweep;
+        public float SweepAngle => sweepAngle;
+        public float FrontFlickerRate => frontFlickerRate;
+        public int GlitchBars => glitchBars;
+        public float GlitchStrength => glitchStrength;
+        public float ScanLines => scanLines;
         public Color Background => background;
         public Color Edge => edge;
         public Color Accent => accent;

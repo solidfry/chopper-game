@@ -47,6 +47,17 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue groundCrash;
         [SerializeField] private SoundCue waterCrash;
 
+        [Header("Outside sounds (cues marked Outside): a low-pass, as if heard through the canopy")]
+        [SerializeField, Range(200f, 22000f), Tooltip("Cutoff in a cockpit view (Hz). Lower = more muffled.")]
+        private float cockpitCutoff = 1200f;
+        [SerializeField, Range(200f, 22000f), Tooltip("Cutoff in a chase view (Hz). 22000 = not muffled.")]
+        private float chaseCutoff = 22000f;
+        [SerializeField, Min(0.1f), Tooltip("How fast it changes between views (1/s).")]
+        private float cutoffSpeed = 6f;
+
+        [Header("Ambience")]
+        [SerializeField, Tooltip("Loop under a city map, on the Ambient channel.")] private SoundCue cityAmbience;
+
         [Header("Targeting")]
         [SerializeField, Tooltip("Loop while a lock builds; pitch rises with progress.")] private SoundCue lockTone;
         [SerializeField, Tooltip("Loop while locked.")] private SoundCue lockedTone;
@@ -118,6 +129,10 @@ namespace Chopper.Presentation.Audio
             return cue != null ? cue : concrete;
         }
 
+        public float CockpitCutoff => cockpitCutoff;
+        public float ChaseCutoff => chaseCutoff;
+        public float CutoffSpeed => cutoffSpeed;
+        public SoundCue CityAmbience => cityAmbience;
         public SoundCue AbilityActivate => abilityActivate;
         public SoundCue AbilityReady => abilityReady;
         public SoundCue Jammed => jammed;
@@ -160,6 +175,7 @@ namespace Chopper.Presentation.Audio
             Check(abilityActivate, nameof(abilityActivate), problems);
             Check(abilityReady, nameof(abilityReady), problems);
             Check(jammed, nameof(jammed), problems);
+            Check(cityAmbience, nameof(cityAmbience), problems);
             Check(metalHit, nameof(metalHit), problems);
             Check(concreteHit, nameof(concreteHit), problems);
             Check(groundHit, nameof(groundHit), problems);
@@ -198,6 +214,9 @@ namespace Chopper.Presentation.Audio
             repairDone = done;
             repairInterrupted = interrupted;
         }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseAmbience(SoundCue city) => cityAmbience = city;
 
         /// <summary>Editor only: the cue in a surface slot as set (no fallback). Order: metal, concrete, ground, water.</summary>
         public SoundCue SurfaceHitCue(int index) => index switch { 0 => metalHit, 1 => concreteHit, 2 => groundHit, _ => waterHit };

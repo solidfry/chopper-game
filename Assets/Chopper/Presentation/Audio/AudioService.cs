@@ -18,7 +18,11 @@ namespace Chopper.Presentation.Audio
             public AudioSource Source;
             public SoundCue Cue;
             public float StartTime;
+            public AudioLowPassFilter Filter;
         }
+
+        /// <summary>A low-pass at this frequency (Hz) changes nothing that can be heard.</summary>
+        public const float OpenCutoff = 22000f;
 
         private readonly SoundLibrary _library;
         private readonly Transform _root;
@@ -30,6 +34,7 @@ namespace Chopper.Presentation.Audio
         private AudioSource _voice;
         private MixerVolumes _volumes;
         private bool _ownsMusic = true;
+        private float _outsideCutoff = OpenCutoff;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -53,7 +58,6 @@ namespace Chopper.Presentation.Audio
             if (music != null && music != _music)
             {
                 if (_ownsMusic) _music.Dispose();
-            if (_voice != null) Object.Destroy(_voice.gameObject);
                 _music = music;
                 _ownsMusic = false;
                 _music.SetOutput(_library != null ? _library.MusicGroup : null);
@@ -97,6 +101,8 @@ namespace Chopper.Presentation.Audio
             source.loop = true;
             loop.BaseVolume = cue.PickVolume();
             loop.BasePitch = cue.PickPitch();
+            loop.Outside = cue.Outside;
+            Muffle(source, ref loop.Filter, cue.Outside);
             loop.Set(position);
             // Start at a random point, so many choppers do not play the same loop in step.
             source.time = source.clip.length * UnityEngine.Random.value;
@@ -133,6 +139,18 @@ namespace Chopper.Presentation.Audio
             _volumes.ApplyAll();
         }
 
+        /// <summary>Low-pass (Hz) on sounds from outside the chopper (<see cref="SoundCue.Outside"/>), playing ones too.</summary>
+        public void SetOutsideCutoff(float hertz)
+        {
+            hertz = Mathf.Clamp(hertz, 100f, OpenCutoff);
+            if (Mathf.Approximately(hertz, _outsideCutoff)) return;
+            _outsideCutoff = hertz;
+            foreach (var voice in _voices)
+                if (voice.Filter != null && voice.Filter.enabled) voice.Filter.cutoffFrequency = hertz;
+            foreach (var loop in _activeLoops)
+                if (loop.Outside && loop.Filter != null) loop.Filter.cutoffFrequency = hertz;
+        }
+
         public void Tick(float deltaTime)
         {
             if (_ownsMusic) _music.Tick(deltaTime);
@@ -140,6 +158,7 @@ namespace Chopper.Presentation.Audio
 
         public void Dispose()
         {
+            if (_voice != null) Object.Destroy(_voice.gameObject);
             foreach (var voice in _voices)
                 if (voice.Source != null) Object.Destroy(voice.Source.gameObject);
             foreach (var loop in _activeLoops)
@@ -165,6 +184,7 @@ namespace Chopper.Presentation.Audio
             var voice = PickVoice(cue);
             var source = voice.Source;
             cue.Apply(source);
+            Muffle(source, ref voice.Filter, cue.Outside);
             // 2D: position does not matter.
             if (atListener)
                 source.spatialBlend = 0f;
@@ -177,6 +197,23 @@ namespace Chopper.Presentation.Audio
             source.Play();
             voice.Cue = cue;
             voice.StartTime = now;
+        }
+
+        /// <summary>Pooled sources are reused: the filter is on only for outside sounds. It is added the first time it is needed.</summary>
+        private void Muffle(AudioSource source, ref AudioLowPassFilter filter, bool outside)
+        {
+            if (!outside)
+            {
+                if (filter != null) filter.enabled = false;
+                return;
+            }
+            if (filter == null)
+            {
+                filter = source.gameObject.AddComponent<AudioLowPassFilter>();
+                filter.lowpassResonanceQ = 1f;
+            }
+            filter.cutoffFrequency = _outsideCutoff;
+            filter.enabled = true;
         }
 
         /// <summary>

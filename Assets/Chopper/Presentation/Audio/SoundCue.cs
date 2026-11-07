@@ -30,6 +30,9 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private float minDistance = 5f;
         [SerializeField] private float maxDistance = 400f;
 
+        [SerializeField, Tooltip("A sound from outside the chopper: muffled in a cockpit view (SoundLibrary, Outside sounds).")]
+        private bool outside;
+
         [Header("Limits")]
         [SerializeField, Tooltip("Most copies playing at once. A new one replaces the oldest.")]
         private int maxVoices = 8;
@@ -39,6 +42,7 @@ namespace Chopper.Presentation.Audio
         [System.NonSerialized] private int _lastClip = -1;
 
         public AudioMixerGroup Output => output;
+        public bool Outside => outside;
         public float SpatialBlend => spatialBlend;
         public float MinDistance => minDistance;
         public float MaxDistance => maxDistance;
@@ -90,8 +94,9 @@ namespace Chopper.Presentation.Audio
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void Initialise(AudioClip[] clipList, AudioMixerGroup group, float cueVolume, float blend, int voices, float minimumGap = 0f,
-            float cuePitch = 1f)
+            float cuePitch = 1f, bool outsideSound = false)
         {
+            outside = outsideSound;
             clips = clipList;
             output = group;
             volume = cueVolume;

@@ -56,17 +56,25 @@ namespace Chopper.UI.Transitions
             _code = _root.Q<Label>("code");
             _shown = false;
             _infoOpacity = -1f;
-            if (_wipe != null && _settings != null)
-            {
-                _wipe.blockSize = _settings.BlockSize;
-                _wipe.edgeWidth = _settings.EdgeWidth;
-                _wipe.sweep = _settings.Sweep;
-                _wipe.background = _settings.Background;
-                _wipe.edge = _settings.Edge;
-                _wipe.accent = _settings.Accent;
-                _wipe.glitch = _settings.Glitch;
-            }
             _root.EnableInClassList("transition--hidden", true);
+        }
+
+        /// <summary>Each frame it shows, so changes to the settings asset show at once while tuning in play mode.</summary>
+        private void ApplySettings()
+        {
+            if (_wipe == null || _settings == null) return;
+            _wipe.blockSize = _settings.BlockSize;
+            _wipe.edgeWidth = _settings.EdgeWidth;
+            _wipe.sweep = _settings.Sweep;
+            _wipe.sweepAngle = _settings.SweepAngle;
+            _wipe.frontFlickerRate = _settings.FrontFlickerRate;
+            _wipe.glitchBars = _settings.GlitchBars;
+            _wipe.glitchStrength = _settings.GlitchStrength;
+            _wipe.scanLines = _settings.ScanLines;
+            _wipe.background = _settings.Background;
+            _wipe.edge = _settings.Edge;
+            _wipe.accent = _settings.Accent;
+            _wipe.glitch = _settings.Glitch;
         }
 
         private void LateUpdate()
@@ -82,6 +90,7 @@ namespace Chopper.UI.Transitions
             }
             if (!visible) return;
 
+            ApplySettings();
             _wipe?.Set(_model.Cover, _model.Revealing, _model.Seed, _model.Time);
 
             // The text shows only once the screen is nearly covered.

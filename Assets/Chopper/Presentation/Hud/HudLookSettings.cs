@@ -69,6 +69,24 @@ namespace Chopper.Presentation.Hud
         public float FeedBootSeconds;
         [Range(0f, 1f), Tooltip("Feed noise from a hit, as a part of the HUD glitch (damage brings the noise back).")]
         public float FeedGlitch;
+
+        [Header("Cockpit boot-up: the picture resolves from big pixels, in patches")]
+        [Range(2f, 256f), Tooltip("Biggest pixel size at the start of the boot-up, in screen pixels.")]
+        public float BootPixelSize;
+        [Range(2f, 32f), Tooltip("Colour steps per channel while the picture is rough. Lower = harder bands.")]
+        public float BootColourSteps;
+        [Range(0f, 1f), Tooltip("How many blocks show dead data (dark and flashing) at the start of the boot-up.")]
+        public float BootDropout;
+
+        [Header("Cockpit honeycomb: a repeating hexagon frame in the screen corners (the monitor's tech scaffolding)")]
+        [Range(0f, 2f), Tooltip("Strength. 0 = none.")]
+        public float HexGrid;
+        [Range(0.01f, 0.15f), Tooltip("Hexagon size, as a part of the screen height.")]
+        public float HexGridSize;
+        [Range(0.05f, 1f), Tooltip("How far it reaches from each corner, as a part of the screen height.")]
+        public float HexGridReach;
+        [Range(0f, 1f), Tooltip("Share of the strength that stays after the boot-up. 0 = it goes with the boot-up.")]
+        public float HexGridRest;
     }
 
     /// <summary>
@@ -102,7 +120,9 @@ namespace Chopper.Presentation.Hud
         {
             FullGlitchDamage = 40f, GlitchDecay = 2.5f, GlitchChromatic = 4f, LowHullFlicker = 0.2f,
             LockPulse = 0.5f, PulseDecay = 3f, MissileNoise = 0.15f, SpawnGlitch = 0.8f,
-            FeedBootHold = 0.45f, FeedBootSeconds = 1.6f, FeedGlitch = 0.6f,
+            FeedBootHold = 0.9f, FeedBootSeconds = 2.6f, FeedGlitch = 0.6f,
+            BootPixelSize = 96f, BootColourSteps = 5f, BootDropout = 1f,
+            HexGrid = 0.7f, HexGridSize = 0.035f, HexGridReach = 0.42f, HexGridRest = 0f,
         };
 
         public HudLookPreset DefaultPreset => defaultPreset;

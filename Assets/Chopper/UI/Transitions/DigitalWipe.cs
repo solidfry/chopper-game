@@ -30,6 +30,12 @@ namespace Chopper.UI.Transitions
         [UxmlAttribute] public int blockSize { get; set; } = 30;
         [UxmlAttribute] public float edgeWidth { get; set; } = 0.14f;
         [UxmlAttribute] public float sweep { get; set; } = 0.45f;
+        /// <summary>Degrees: 0 = left to right, 90 = top to bottom.</summary>
+        public float sweepAngle { get; set; }
+        public float frontFlickerRate { get; set; } = 24f;
+        public int glitchBars { get; set; } = 4;
+        public float glitchStrength { get; set; } = 0.55f;
+        public float scanLines { get; set; } = 0.035f;
         public Color background { get; set; } = new(0.012f, 0.035f, 0.02f, 1f);
         public Color edge { get; set; } = new(0f, 1f, 0.58f, 1f);
         public Color accent { get; set; } = new(0f, 0.94f, 1f, 1f);
@@ -81,15 +87,19 @@ namespace Chopper.UI.Transitions
             var width = Mathf.Max(0.01f, edgeWidth);
             var progress = Revealing ? 1f - Cover : Cover;
             var front = progress * (1f + width);
-            // Flicker: the front's colours change about 24 times a second.
-            var flicker = (int)(Time * 24f);
+            var flicker = (int)(Time * frontFlickerRate);
+            var cos = Mathf.Cos(sweepAngle * Mathf.Deg2Rad);
+            var sin = Mathf.Sin(sweepAngle * Mathf.Deg2Rad);
+            var reach = Mathf.Max(0.001f, Mathf.Abs(cos) + Mathf.Abs(sin));
 
             for (var row = 0; row < rows; row++)
             {
                 for (var column = 0; column < columns; column++)
                 {
                     var noise = Hash(column, row, Seed);
-                    var along = columns > 1 ? column / (float)(columns - 1) : 0f;
+                    var x = columns > 1 ? column / (float)(columns - 1) - 0.5f : 0f;
+                    var y = rows > 1 ? row / (float)(rows - 1) - 0.5f : 0f;
+                    var along = (x * cos + y * sin) / reach + 0.5f;
                     var threshold = Mathf.Lerp(noise, along, sweep);
                     var local = (front - threshold) / width;
 
@@ -119,8 +129,9 @@ namespace Chopper.UI.Transitions
         /// <summary>Thin lines every 4 px over the covered screen.</summary>
         private void AddScanLines(Rect rect)
         {
+            if (scanLines <= 0f) return;
             var colour = edge;
-            colour.a = 0.035f;
+            colour.a = scanLines;
             for (var y = rect.y; y < rect.yMax; y += 4f) Add(new Rect(rect.x, y, rect.width, 1f), colour);
         }
 
@@ -130,14 +141,14 @@ namespace Chopper.UI.Transitions
             var strength = Cover >= 0.999f ? 0.35f : Mathf.Sin(Cover * Mathf.PI);
             if (strength <= 0.05f) return;
             var step = (int)(Time * 14f);
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < glitchBars; i++)
             {
                 var y = Hash(i, step, Seed) * rect.height;
                 var height = 1f + Hash(i, step + 7, Seed) * 5f;
                 var x = Hash(i + 11, step, Seed) * rect.width * 0.6f;
                 var length = rect.width * (0.15f + 0.5f * Hash(i + 3, step, Seed));
                 var colour = (i & 1) == 0 ? glitch : accent;
-                colour.a = 0.55f * strength;
+                colour.a = glitchStrength * strength;
                 Add(new Rect(rect.x + x, rect.y + y, length, height), colour);
             }
         }

@@ -133,6 +133,24 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void FeedBoot_OnlyTheBootUp_NotHits()
+        {
+            var model = Make();
+            model.CockpitView = true;
+            model.OnDamage(40f);
+            model.Tick(0f);
+            Assert.That(model.Feed, Is.GreaterThan(0f), "a hit gives feed noise");
+            Assert.That(model.FeedBoot, Is.EqualTo(0f), "but not the digital look");
+
+            model.BootFeed();
+            model.Tick(0f);
+            Assert.That(model.FeedBoot, Is.EqualTo(1f).Within(0.001f));
+            model.CockpitView = false;
+            model.Tick(0f);
+            Assert.That(model.FeedBoot, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void Feed_OnlyInCockpitView()
         {
             var model = Make();

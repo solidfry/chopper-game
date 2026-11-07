@@ -30,6 +30,8 @@ namespace Chopper.Presentation.Bridge
         private AudioClip _musicOverride;
         private bool _musicStarted;
         private float _musicLevel = -1f;
+        private SoundLoop _ambience;
+        private float _outsideCutoff = AudioService.OpenCutoff;
         /// <summary>Only <c>Flight/Scoreboard</c> is on here; the flight actions are read by the simulation.</summary>
         private readonly Simulation.Input.PlayerControls _controls = new();
 
@@ -115,6 +117,9 @@ namespace Chopper.Presentation.Bridge
             return true;
         }
 
+        /// <summary>Editor tuning: runs the transition with no scene change. False with no scene flow or while one runs.</summary>
+        public bool PreviewTransition() => _flow != null && !_flow.IsDisposed && _flow.Preview();
+
         /// <summary>
         /// The game's scene flow (root scope; it outlives this scene): music and volumes move to it, and this scene tells
         /// it when it is ready to show. Called when the scene loads; music already started moves over.
@@ -139,6 +144,14 @@ namespace Chopper.Presentation.Bridge
             _musicStarted = true;
             _audio.ApplySavedVolumes();
             StartMusic();
+            StartAmbience();
+        }
+
+        /// <summary>City maps (<c>Map_*</c> scenes): the city's sound under everything, on the Ambient channel.</summary>
+        private void StartAmbience()
+        {
+            if (_ambience != null || Sounds == null || !_scene.name.StartsWith("Map_", StringComparison.Ordinal)) return;
+            _ambience = _audio.StartLoop(Sounds.CityAmbience, Vector3.zero);
         }
 
         private void StartMusic()
@@ -169,10 +182,23 @@ namespace Chopper.Presentation.Bridge
             _audio.SetMusicLevel(level, music.LevelFadeSeconds);
         }
 
+        /// <summary>In a cockpit view, sounds from outside come through the canopy: muffled. Moves in log steps, as hearing does.</summary>
+        private void UpdateOutsideSounds(float deltaTime)
+        {
+            var sounds = Sounds;
+            if (sounds == null) return;
+            var inCockpit = CameraRig != null && CameraRig.HidesOwnChopper;
+            var target = inCockpit ? sounds.CockpitCutoff : sounds.ChaseCutoff;
+            var blend = 1f - Mathf.Exp(-sounds.CutoffSpeed * deltaTime);
+            _outsideCutoff = Mathf.Exp(Mathf.Lerp(Mathf.Log(_outsideCutoff), Mathf.Log(target), blend));
+            _audio.SetOutsideCutoff(_outsideCutoff);
+        }
+
         public void Tick(float deltaTime, float unscaledDeltaTime)
         {
             _audio.Tick(unscaledDeltaTime);
             UpdateMusicLevel();
+            UpdateOutsideSounds(unscaledDeltaTime);
             // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.
             if (_flow != null && _flow.WaitingFor(_scene) && (!IsMatchScene || Hud.HasChopper)) _flow.SceneReady(_scene);
             Effects.Tick(deltaTime);

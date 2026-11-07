@@ -128,6 +128,23 @@ namespace Chopper.Presentation.Flow
             return true;
         }
 
+        /// <summary>
+        /// Runs the whole transition with no scene change (tuning in play mode). False while another one runs. With no
+        /// target, the scene that is open says it is ready, so the hold is the same as in a real change.
+        /// </summary>
+        public bool Preview()
+        {
+            if (Busy || IsDisposed) return false;
+            _target = null;
+            _whenCovered = null;
+            Model.Label = "PREVIEW";
+            Model.Seed = ++_seed;
+            Model.Time = 0f;
+            Enter(Phase.Covering);
+            Play(_settings != null ? _settings.CoverSound : null);
+            return true;
+        }
+
         /// <summary>True while the flow waits for <paramref name="scene"/> to say it is ready.</summary>
         public bool WaitingFor(Scene scene) => _phase == Phase.Waiting && (_target == null || scene.name == _target);
 
@@ -200,6 +217,12 @@ namespace Chopper.Presentation.Flow
 
         private void StartLoad()
         {
+            if (_target == null)
+            {
+                Enter(Phase.Waiting);   // Preview: nothing to load.
+                return;
+            }
+
             var callback = _whenCovered;
             _whenCovered = null;
             try
