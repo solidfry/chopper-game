@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Combat;
+using Chopper.Simulation.Visuals;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -14,8 +15,9 @@ namespace Chopper.Presentation.Effects
     /// <summary>
     /// Client only. Nose gun effects for every chopper, from <see cref="HitscanWeaponState.ShotCount"/> (predicted for
     /// the local player, replicated for others): muzzle flash, a bullet visual flown to where the shot ends, and an
-    /// impact if it hit something. Cosmetic: the client ray-casts its own world; the server decides hits.
-    /// Prefabs and sounds come from the presentation context.
+    /// impact if it hit something, with the impact sound of what it hit (<see cref="Surfaces.Classify"/>: a ping on
+    /// metal, chips off concrete, a thud in dirt, a splash). Cosmetic: the client ray-casts its own world; the server
+    /// decides hits. Prefabs and sounds come from the presentation context.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -36,6 +38,7 @@ namespace Chopper.Presentation.Effects
             public Vector3 Direction;
             public float DistanceLeft;
             public bool Impact;
+            public SurfaceKind Surface;
         }
 
         private readonly Dictionary<Entity, uint> _lastShotCount = new();
@@ -43,11 +46,14 @@ namespace Chopper.Presentation.Effects
         private readonly Dictionary<Entity, float> _lastFlashTime = new();
         private readonly List<Bullet> _bullets = new();
         private CombatEffects _effects;
+        private PresentationContext _context;
+        private ComponentLookup<PhysicsSurface> _surfaces;
 
         protected override void OnCreate()
         {
             base.OnCreate();
             RequireForUpdate<NetworkStreamInGame>();
+            _surfaces = GetComponentLookup<PhysicsSurface>(isReadOnly: true);
         }
 
         protected override void OnUpdate()
@@ -60,6 +66,8 @@ namespace Chopper.Presentation.Effects
                 _effects = context.Effects;
             }
 
+            _context = context;
+            _surfaces.Update(this);
             var audio = context.Audio;
             var gunSound = context.Sounds != null ? context.Sounds.GunFire : null;
             var settings = _effects.Settings;
@@ -95,11 +103,11 @@ namespace Chopper.Presentation.Effects
 
                 audio.Play(gunSound, muzzle);
 
-                var hit = RayCast(world, entity, muzzle, forward, config.ValueRO.Range, out var distance);
+                var hit = RayCast(world, _surfaces, entity, muzzle, forward, config.ValueRO.Range, out var distance, out var surface);
                 var shots = math.min(count - last, MaxShotsPerFrame);
                 var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
                 for (var i = 0u; i < shots; i++)
-                    Fire(settings, muzzle + forward * start, forward, rotation, distance - start, hit);
+                    Fire(settings, muzzle + forward * start, forward, rotation, distance - start, hit, surface);
             }
 
             // Swap, so despawned choppers drop out.
@@ -116,17 +124,29 @@ namespace Chopper.Presentation.Effects
             foreach (var entity in gone) _lastFlashTime.Remove(entity);
         }
 
-        private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, bool hit)
+        private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, bool hit,
+            SurfaceKind surface)
         {
             var visual = _effects.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
             if (visual == null)
             {
                 // No bullet visual set: show the impact at once.
-                if (hit) _effects.SpawnOneShot(settings.GunImpact, muzzle + forward * distance, Quaternion.LookRotation(-forward));
+                if (hit) Impact(settings, muzzle + forward * distance, forward, surface);
                 return;
             }
 
-            _bullets.Add(new Bullet { Visual = visual, Position = muzzle, Direction = forward, DistanceLeft = distance, Impact = hit });
+            _bullets.Add(new Bullet
+            {
+                Visual = visual, Position = muzzle, Direction = forward, DistanceLeft = distance, Impact = hit, Surface = surface,
+            });
+        }
+
+        /// <summary>The impact effect and the surface's hit sound. The cue's cooldown and voice limit keep fast guns tidy.</summary>
+        private void Impact(CombatEffectsSettings settings, Vector3 point, Vector3 direction, SurfaceKind surface)
+        {
+            _effects.SpawnOneShot(settings.GunImpact, point, Quaternion.LookRotation(-direction));
+            var sounds = _context != null ? _context.Sounds : null;
+            if (sounds != null) _context.Audio.Play(sounds.SurfaceHit(surface), point);
         }
 
         private void MoveBullets(CombatEffectsSettings settings, float deltaTime)
@@ -146,30 +166,34 @@ namespace Chopper.Presentation.Effects
                 }
 
                 if (bullet.Impact)
-                    _effects.SpawnOneShot(settings.GunImpact, bullet.Position, Quaternion.LookRotation(-bullet.Direction));
+                    Impact(settings, bullet.Position, bullet.Direction, bullet.Surface);
                 _effects.Release(bullet.Visual);
                 _bullets.RemoveAt(i);
             }
         }
 
-        /// <summary>Distance to the first thing the shot hits (not the shooter), or the full range.</summary>
-        private static bool RayCast(in CollisionWorld world, Entity shooter, float3 start, float3 forward, float range, out float distance)
+        /// <summary>Distance to the first thing the shot hits (not the shooter) and what it is made of, or the full range.</summary>
+        private static bool RayCast(in CollisionWorld world, in ComponentLookup<PhysicsSurface> surfaces, Entity shooter, float3 start,
+            float3 forward, float range, out float distance, out SurfaceKind surface)
         {
             var ray = new RaycastInput { Start = start, End = start + forward * range, Filter = CollisionFilter.Default };
             var hits = new NativeList<Unity.Physics.RaycastHit>(8, Allocator.Temp);
             var closest = 1f;
             var found = false;
+            var nearest = default(Unity.Physics.RaycastHit);
             if (world.CastRay(ray, ref hits))
             {
                 foreach (var hit in hits)
                 {
                     if (hit.Entity == shooter || hit.Fraction >= closest) continue;
                     closest = hit.Fraction;
+                    nearest = hit;
                     found = true;
                 }
             }
             hits.Dispose();
             distance = closest * range;
+            surface = found ? Surfaces.Classify(world, nearest, surfaces) : SurfaceKind.Concrete;
             return found;
         }
     }

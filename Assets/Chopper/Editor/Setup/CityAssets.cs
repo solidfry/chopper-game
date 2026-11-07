@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Chopper.Simulation.Visuals;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -710,6 +711,7 @@ namespace Chopper.Editor.Setup
 
                 var colliders = new GameObject("Colliders") { isStatic = true };
                 colliders.transform.SetParent(root.transform, false);
+                var metal = building.type is "industrial" or "slum";
                 // One object per box, all named "Box": numbered names (Box_0, Box_1…) filled the Entities name table
                 // (16 384) with the old 24 837 shanty colliders. Several boxes on one object made the subscene bake
                 // hang (5 Nov 2026), so keep one each; CityForge keeps the counts low (shanties: one box per row).
@@ -720,6 +722,8 @@ namespace Chopper.Editor.Setup
                     box.transform.localPosition = Vector(info.centre);
                     box.transform.localRotation = Quaternion.Euler(0f, info.yaw, 0f);
                     box.AddComponent<BoxCollider>().size = Vector(info.size);
+                    // Impact sounds: plant and tin shacks ring like metal; other boxes count as concrete (Surfaces.Classify).
+                    if (metal) box.AddComponent<SurfaceAuthoring>().Kind = SurfaceKind.Metal;
                 }
 
                 if (building.markers is { Length: > 0 })

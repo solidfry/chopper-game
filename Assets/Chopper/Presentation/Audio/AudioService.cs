@@ -66,6 +66,9 @@ namespace Chopper.Presentation.Audio
 
         public void Play(SoundCue cue, Vector3 position) => PlayAt(cue, position, atListener: false);
 
+        public void Play(SoundCue cue, Vector3 position, float volumeScale) =>
+            PlayAt(cue, position, atListener: false, Mathf.Max(0f, volumeScale));
+
         public void Play(SoundCue cue) => PlayAt(cue, Vector3.zero, atListener: true);
 
         public void PlayVoice(AudioClip clip, float volume = 1f)
@@ -151,7 +154,7 @@ namespace Chopper.Presentation.Audio
         /// <summary>Linear 0..1 to mixer decibels.</summary>
         public static float ToDecibels(float volume) => MixerVolumes.ToDecibels(volume);
 
-        private void PlayAt(SoundCue cue, Vector3 position, bool atListener)
+        private void PlayAt(SoundCue cue, Vector3 position, bool atListener, float volumeScale = 1f)
         {
             if (cue == null || !cue.HasClips) return;
 
@@ -168,7 +171,7 @@ namespace Chopper.Presentation.Audio
             else
                 source.transform.position = position;
             source.clip = cue.PickClip();
-            source.volume = cue.PickVolume();
+            source.volume = cue.PickVolume() * volumeScale;
             source.pitch = cue.PickPitch();
             source.loop = false;
             source.Play();

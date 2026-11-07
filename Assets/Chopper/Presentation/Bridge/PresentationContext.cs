@@ -30,6 +30,8 @@ namespace Chopper.Presentation.Bridge
         private AudioClip _musicOverride;
         private bool _musicStarted;
         private float _musicLevel = -1f;
+        /// <summary>Only <c>Flight/Scoreboard</c> is on here; the flight actions are read by the simulation.</summary>
+        private readonly Simulation.Input.PlayerControls _controls = new();
 
         public PresentationContext(GameConfig config, Transform root, ChopperCameraRig cameraRig)
         {
@@ -48,6 +50,7 @@ namespace Chopper.Presentation.Bridge
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
             _owned.Add(new TargetingFeedback(this));
+            _controls.Flight.Scoreboard.Enable();
         }
 
         public GameConfig Config { get; }
@@ -175,6 +178,7 @@ namespace Chopper.Presentation.Bridge
             Effects.Tick(deltaTime);
             ModuleVisuals.Tick(deltaTime);
             Hud.Tick(deltaTime);
+            Match.SetScoreboardHeld(!MenuOpen && _controls.Flight.Scoreboard.IsPressed());
             Match.Tick(deltaTime);
             HudLook.CockpitView = CameraRig != null && CameraRig.HidesOwnChopper;
             HudLook.Tick(unscaledDeltaTime);
@@ -190,6 +194,8 @@ namespace Chopper.Presentation.Bridge
             Effects.Dispose();
             ModuleVisuals.Dispose();
             _audio.Dispose();
+            _controls.Flight.Scoreboard.Disable();
+            _controls.Dispose();
         }
     }
 }

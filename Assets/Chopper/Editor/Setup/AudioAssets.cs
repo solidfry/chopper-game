@@ -165,6 +165,29 @@ namespace Chopper.Editor.Setup
                 Slot(library.Jammed, () => Cue("Jammed", Clips(SciFi + "/Impact/explosion_lightning.wav"), ui, 0.55f, blend: 0f,
                     voices: 1, cooldown: 0.5f, pitch: 0.8f)));
 
+            // Surfaces (placeholders made by Tools/Sound/make_impact_sounds.py): bullet hits and crashes on metal, concrete,
+            // ground and water. 3D. Hits are short and many, so a short cooldown and a few voices; crashes louder and rarer.
+            const string impacts = "Assets/Sound/Impacts/";
+            SoundCue SurfaceCue(SoundCue current, string surface, string kind, int count, float volume, int voices, float cooldown) =>
+                Slot(current, () => Cue($"{surface}{kind}",
+                    Clips(Enumerable.Range(1, count).Select(n => $"{impacts}{surface}_{kind}_{n}.ogg").ToArray()),
+                    effects, volume, blend: 1f, voices: voices, cooldown: cooldown));
+            library.InitialiseSurfaces(
+                new[]
+                {
+                    SurfaceCue(library.SurfaceHitCue(0), "Metal", "Hit", 3, 0.55f, 6, 0.04f),
+                    SurfaceCue(library.SurfaceHitCue(1), "Concrete", "Hit", 3, 0.6f, 6, 0.04f),
+                    SurfaceCue(library.SurfaceHitCue(2), "Ground", "Hit", 3, 0.6f, 6, 0.04f),
+                    SurfaceCue(library.SurfaceHitCue(3), "Water", "Hit", 2, 0.5f, 6, 0.04f),
+                },
+                new[]
+                {
+                    SurfaceCue(library.SurfaceCrashCue(0), "Metal", "Crash", 3, 1f, 4, 0.12f),
+                    SurfaceCue(library.SurfaceCrashCue(1), "Concrete", "Crash", 3, 1f, 4, 0.12f),
+                    SurfaceCue(library.SurfaceCrashCue(2), "Ground", "Crash", 3, 1f, 4, 0.12f),
+                    SurfaceCue(library.SurfaceCrashCue(3), "Water", "Crash", 2, 1f, 4, 0.12f),
+                });
+
             if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
 
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Chopper.Simulation.Config;
+using Chopper.Simulation.Visuals;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Serialization;
@@ -33,6 +34,18 @@ namespace Chopper.Presentation.Audio
         [SerializeField] private SoundCue killConfirm;
         [SerializeField] private SoundCue damageTaken;
         [SerializeField, Tooltip("Loop while outside the arena.")] private SoundCue outOfBoundsAlarm;
+
+        [Header("Surfaces: bullet hits (3D, where a bullet lands)")]
+        [SerializeField] private SoundCue metalHit;
+        [SerializeField] private SoundCue concreteHit;
+        [SerializeField] private SoundCue groundHit;
+        [SerializeField] private SoundCue waterHit;
+
+        [Header("Surfaces: crashes (3D, a chopper hits something; louder for harder hits)")]
+        [SerializeField] private SoundCue metalCrash;
+        [SerializeField] private SoundCue concreteCrash;
+        [SerializeField] private SoundCue groundCrash;
+        [SerializeField] private SoundCue waterCrash;
 
         [Header("Targeting")]
         [SerializeField, Tooltip("Loop while a lock builds; pitch rises with progress.")] private SoundCue lockTone;
@@ -87,6 +100,24 @@ namespace Chopper.Presentation.Audio
         public SoundCue Flares => flares;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
+        /// <summary>A bullet lands on this surface. Falls back to the concrete cue.</summary>
+        public SoundCue SurfaceHit(SurfaceKind surface) => Pick(surface, metalHit, concreteHit, groundHit, waterHit);
+
+        /// <summary>A chopper crashes into this surface. Falls back to the concrete cue.</summary>
+        public SoundCue SurfaceCrash(SurfaceKind surface) => Pick(surface, metalCrash, concreteCrash, groundCrash, waterCrash);
+
+        private static SoundCue Pick(SurfaceKind surface, SoundCue metal, SoundCue concrete, SoundCue ground, SoundCue water)
+        {
+            var cue = surface switch
+            {
+                SurfaceKind.Metal => metal,
+                SurfaceKind.Ground => ground,
+                SurfaceKind.Water => water,
+                _ => concrete,
+            };
+            return cue != null ? cue : concrete;
+        }
+
         public SoundCue AbilityActivate => abilityActivate;
         public SoundCue AbilityReady => abilityReady;
         public SoundCue Jammed => jammed;
@@ -129,6 +160,14 @@ namespace Chopper.Presentation.Audio
             Check(abilityActivate, nameof(abilityActivate), problems);
             Check(abilityReady, nameof(abilityReady), problems);
             Check(jammed, nameof(jammed), problems);
+            Check(metalHit, nameof(metalHit), problems);
+            Check(concreteHit, nameof(concreteHit), problems);
+            Check(groundHit, nameof(groundHit), problems);
+            Check(waterHit, nameof(waterHit), problems);
+            Check(metalCrash, nameof(metalCrash), problems);
+            Check(concreteCrash, nameof(concreteCrash), problems);
+            Check(groundCrash, nameof(groundCrash), problems);
+            Check(waterCrash, nameof(waterCrash), problems);
         }
 
         private void Check(SoundCue cue, string slot, List<string> problems)
@@ -158,6 +197,25 @@ namespace Chopper.Presentation.Audio
             repairLoop = loop;
             repairDone = done;
             repairInterrupted = interrupted;
+        }
+
+        /// <summary>Editor only: the cue in a surface slot as set (no fallback). Order: metal, concrete, ground, water.</summary>
+        public SoundCue SurfaceHitCue(int index) => index switch { 0 => metalHit, 1 => concreteHit, 2 => groundHit, _ => waterHit };
+
+        /// <summary>Editor only: the cue in a surface slot as set (no fallback). Order: metal, concrete, ground, water.</summary>
+        public SoundCue SurfaceCrashCue(int index) => index switch { 0 => metalCrash, 1 => concreteCrash, 2 => groundCrash, _ => waterCrash };
+
+        /// <summary>Editor only: used by the audio setup tool. Order: metal, concrete, ground, water.</summary>
+        public void InitialiseSurfaces(SoundCue[] hits, SoundCue[] crashes)
+        {
+            metalHit = hits[0];
+            concreteHit = hits[1];
+            groundHit = hits[2];
+            waterHit = hits[3];
+            metalCrash = crashes[0];
+            concreteCrash = crashes[1];
+            groundCrash = crashes[2];
+            waterCrash = crashes[3];
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

@@ -42,6 +42,12 @@ namespace Chopper.Presentation.Audio
         /// <summary>One-shot at a world position (3D as far as the cue's spatial blend says). Null or empty cues do nothing.</summary>
         void Play(SoundCue cue, Vector3 position);
 
+        /// <summary>
+        /// One-shot at a world position, quieter or louder than the cue (<paramref name="volumeScale"/> multiplies its
+        /// volume; crashes scale with how hard the hit was).
+        /// </summary>
+        void Play(SoundCue cue, Vector3 position, float volumeScale);
+
         /// <summary>One-shot at the listener (UI, own feedback).</summary>
         void Play(SoundCue cue);
 

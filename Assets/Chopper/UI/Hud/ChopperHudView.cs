@@ -83,6 +83,7 @@ namespace Chopper.UI.Hud
         private VisualElement _aim;
         private PanelRenderer _renderer;
         private WorldMarkerView _markers;
+        private ScoreboardView _scoreboard;
         private bool _subscribed;
 
         private void OnEnable()
@@ -172,6 +173,7 @@ namespace Chopper.UI.Hud
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
             Bind(_banner, "text", nameof(MatchHudModel.BannerText));
+            _scoreboard = new ScoreboardView(match, _match);
 
             _model.propertyChanged += OnModelChanged;
             _match.propertyChanged += OnMatchChanged;
@@ -195,6 +197,8 @@ namespace Chopper.UI.Hud
         {
             _markers?.Dispose();
             _markers = null;
+            _scoreboard?.Dispose();
+            _scoreboard = null;
             if (_subscribed)
             {
                 _model.propertyChanged -= OnModelChanged;

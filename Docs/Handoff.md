@@ -1,4 +1,4 @@
-# Chopper game — handoff (updated 7 Nov 2026, scene flow and repair)
+# Chopper game — handoff (updated 7 Nov 2026, input actions, scoreboard, impact sounds)
 
 Read this first, then `Docs/MultiplayerOverhaulPlan.md` (full plan + progress log) and `CLAUDE.md` (rules for AI sessions).
 
@@ -96,7 +96,7 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 
 - Targeting, heat-seeking missiles (missile ghosts with predicted spawn), flares, pylon weapon cycling, lock and threat HUD, tones. See plan section 3b, "Built".
 - After pulling: Chopper → Setup → **Do all** (makes the missile prefab, weapon assets, effect/sound slots, re-bakes the default loadout, makes targets pre-spawned ghosts), then Validate.
-- Controls: RMB / E / LB fire the selected pylon; wheel / Tab / D-pad right switch pylon; Space / triggers drop flares.
+- Controls: RMB / E / LB fire the selected pylon; wheel / X / D-pad right switch pylon (Tab was moved to the scoreboard on 7 Nov); Space / triggers drop flares.
 - **Modular sockets runtime** (plan section 5, "Modular build", list "Built"):
   - Loadout goes on the ghost as module ids; client and server both apply it (`LoadoutApplySystem`, `LoadoutBuilder`).
   - Each player's choice (`LoadoutChoice`, set later by the hangar) goes with the go-in-game request; the server validates it.
@@ -170,7 +170,7 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
   - Before spawn, while you wait to respawn and on the results 0.8.
   - Change speed 4 s. This is on top of the player's music volume.
 - **Field repair:**
-  - Hold **R** or gamepad **X** (read from the devices; TODO: an input action). The hull mends from empty to full in 10 s.
+  - Hold **R** or gamepad **X** (`Flight/Repair` action since 7 Nov, see 4e). The hull mends from empty to full in 10 s.
   - Any damage (shot, wall, landing, bounds) stops it and locks it for 3 s. When the lock ends, a key still held starts the repair again.
   - Server: `Simulation/Combat/Repair.cs` (rules, `ChopperRepair` ghost state, `RepairConfig`), `RepairSystem`. `ApplyDamageSystem` interrupts the repair.
   - Per chassis: `RepairTuning` on `ChassisDefinition` (pilots will scale it).
@@ -215,6 +215,31 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
      - OVERWATCH: far enemies show in cyan.
   7. If input breaks after the compile, delete `Library/BurstCache` (new `ChopperInput` field).
   8. Run `PilotTests` and `AbilityTests`.
+
+## 4e. Input actions, scoreboard, impact sounds (7 Nov, written without the editor, not compiled)
+
+- **Input actions** (`Simulation/Input/PlayerControls.inputactions`, Flight map): new actions `Repair` (hold R / gamepad X), `Ability` (F / D-pad up), `CyclePylon` (mouse wheel either way, **X**, D-pad right) and `Scoreboard` (hold **Tab** / gamepad **View**). `ChopperInputSystem` no longer reads the devices. Tab used to switch pylons: it is the scoreboard now, X took its place. The generated `PlayerControls.cs` was edited by hand to match; Unity makes it again on import (same result).
+- **Scoreboard** (hold Tab / View; it also shows on the results under the banner, which moves up):
+  - Columns: place (ties share it), pilot (`VIPER 3`, or `PILOT 3`), chopper (chassis name), kills, deaths. Your row is yellow. Sorted by kills, then fewer deaths, then id.
+  - Model: `MatchHudModel.Scoreboard` / `ScoreboardVisible` / `ScoreboardTitle` (tests in `MatchHudModelTests`). `PilotNamesSystem` now also sends each chassis name. The key is read in `PresentationContext.Tick` (not while a menu is open).
+  - View: `UI/Hud/ScoreboardView.cs` (pooled rows), the `scoreboard` block in `ChopperHud.uxml`, styles in `ChopperHud.uss`. No ping column yet (the server does not send other players' ping).
+  - No protocol change: it uses the score RPCs that exist.
+- **Impact sounds by surface** (no protocol change):
+  - Surfaces: metal, concrete, ground, water (`Simulation/Visuals/Surface.cs`). `Surfaces.Classify`: a `SurfaceAuthoring` on the collider wins; else any moving body (chopper, target) = metal, the "Water" layer = water, mesh or terrain collider = ground (city terrain chunks), else concrete (building boxes). Setup step 8 marks industrial and shanty boxes as metal.
+  - Bullet hits: `GunEffectsSystem` plays the surface's hit cue where each bullet lands (a ping on a chopper, chips off concrete, a thud in dirt, a splash).
+  - Crashes: new `Presentation/Audio/CrashAudioSystem.cs`. For the server's crash and landing hits (all choppers, heard by everyone near) it casts a short ray into what was hit and plays that surface's crash cue, louder for harder hits (`CrashAudioSystem.Volume`, test `ImpactAudioTests`). Your own crash no longer also plays the generic hit sound.
+  - Sounds: placeholders made from noise by `Tools/Sound/make_impact_sounds.py` → `Assets/Sound/Impacts/*.ogg` (22 files). Setup step 1 makes 8 cues (`Data/Audio/Cue_MetalHit` … `Cue_WaterCrash`) on `SoundLibrary` → Surfaces. Swap in real recordings on the cues later.
+- Editor steps:
+  1. Compile. If Unity asks, let it make `PlayerControls.cs` again from the asset.
+  2. Setup step 1 (makes the 8 surface cues), then Validate.
+  3. Setup step 8 for each city (marks the metal boxes), then step 10.
+  4. Play a city map:
+     - Hold Tab: the scoreboard shows; let go: it hides. Check it at the end of a match too.
+     - Wheel / X / D-pad right switch pylons; R / X repair; F / D-pad up ability.
+     - Shoot the ground, a building, a tank farm and a target: different hit sounds.
+     - Fly into a wall and land hard: a crash sound.
+  5. Run `MatchHudModelTests` and `ImpactAudioTests`.
+  6. Tune the cue volumes in `Data/Audio`.
 
 ## 5. Open problems
 
@@ -266,7 +291,7 @@ Then continue with this order (step 1 onward). Older note (29 Oct evening): firs
      - Client `DamageEffectsSystem`: sparks along the normal at each hit; crash and hard-landing dust in the map's colour; the last 3 hit points smoke below 70 % health (grey, black below 40 %) and burn below 20 %. Smoke uses the replicated health, so spectators and late joiners see it. Own chopper in the cockpit view: nothing within 2.5 m of the eye. Settings: `CombatEffectsSettings` → Damage; materials `Data/Effects/DamageSparks.mat` and `DamageSmoke.mat` (step 1). Tests: `DamageModelTests`.
      - Editor steps: compile; press **1. Create / repair config** (makes the two materials); Validate; play TrainingRange and City04: shoot a target, crash into a wall, dive into the ground, fly at low health. Tune `CrashTuning` per chassis and the Damage numbers.
      - Camera shake matches the hit (`CameraSettings.HitTrauma`, "Shake (hits taken)"): guns by damage (40 = full), blasts x1.3, crashes by impact speed (30 m/s = full), hard landings x0.8, out of bounds none. `DamageTakenRpc` now carries the kind and impact speed.
-     - Tested 6 Nov (Burst on, about 93 FPS in the editor): 25 m/s drop = 13.2 of 80, shake 0.47; bullet 20 damage shake 0.47; blast 0.63; 30 m/s impact 0.99. After these changes delete Library/BurstCache with Unity closed: the stale cache gave NullReferenceException in EnvironmentDamageSystem and ApplyDamageSystem. Real weapon fire not tested. 6 Nov: crash damage counts one hit over 0.1 s (`CrashDamage.Track`): a 25 m/s drop now does 18.1 of 80 every time. Next: a crash sound, rotor strike on walls (spin and damage from angular speed), hit sounds by surface.
+     - Tested 6 Nov (Burst on, about 93 FPS in the editor): 25 m/s drop = 13.2 of 80, shake 0.47; bullet 20 damage shake 0.47; blast 0.63; 30 m/s impact 0.99. After these changes delete Library/BurstCache with Unity closed: the stale cache gave NullReferenceException in EnvironmentDamageSystem and ApplyDamageSystem. Real weapon fire not tested. 6 Nov: crash damage counts one hit over 0.1 s (`CrashDamage.Track`): a 25 m/s drop now does 18.1 of 80 every time. Next: rotor strike on walls (spin and damage from angular speed). Crash sounds and hit sounds by surface: built 7 Nov (4e).
    - owner TODO (4 Nov): **rotor downwash**: dust, dirt, grass, snow blown up from the ground when a chopper is low with rotors running (plan section 7c2). **First version written 4 Nov, not yet run**: `Presentation/Effects/DownwashEffectsSystem.cs` (client; ray down from each chopper, dust ring made in code, stronger and tighter when lower, small camera shake for the own chopper); settings in `CombatEffectsSettings` (Rotor downwash); material `Data/Effects/DownwashDust.mat` made by step 1. Editor steps: press '1. Create / repair config', fly low over ground with colliders, tune the numbers. Next: surface type (water spray, snow, grass), ground decal;
    - owner TODOs (29 Oct): rocket lead reticle always on with rockets selected; many rocket systems (slow heavy, fast light, aim-guided, smart, salvo) and a rich roster of guns and abilities (plan section 5, "Rockets and a rich weapon roster"); the original 2023 vision mapped onto v2 (plan section 0);
    - flight (29 Oct, owner request): faster descent, `CollectiveDown` 10 → 18 m/s² on all chassis (Ctrl / S);

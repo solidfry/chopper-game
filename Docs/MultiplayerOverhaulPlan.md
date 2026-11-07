@@ -247,7 +247,7 @@ Goal: the HUD looks like a glowing 80s vector/CRT display, not flat UI.
 - Simulation: `Targetable` (class, heat), server `TargetLockSystem` (cone, range, line of sight, lock time, flares block), `TargetLock` + `ThreatState` ghost fields; `PylonWeapon` buffer + `PylonSelection` + `PylonFireSystem` (rocket or guided); `GuidedMissile` ghost + `GuidedMissileSystem` (lead pursuit, proximity fuse, server detonation, `MissileDetonatedRpc`); flares (`CountermeasureSystem`); shared `Explosions` helper.
 - Data: `GuidedMissileDefinition` (Weapon_HeatSeekerAA: air, needs lock; Weapon_HeatSeekerAG: ground, can dumb-fire), `CountermeasureDefinition` (Ability_Flares) via new `ModuleAbilityDefinition`; module Ground Seeker (115). Default Gunship: rocket pod + homing missiles + flares.
 - Presentation: missile visual per ghost, impacts, flare bursts; HUD lock brackets, MISSILE / LOCK WARNING (blink faster as a missile closes in), missile direction ring, selected pylon, flares ready; lock / locked / warning / missile tones (`TargetingFeedback`).
-- Input: Fire3 (Space, triggers) = flares; mouse wheel / Tab / D-pad right = next pylon (read from devices; TODO move into the input actions asset).
+- Input: Fire3 (Space, triggers) = flares; mouse wheel / X / D-pad right = next pylon (`Flight/CyclePylon` action, 7 Nov; Tab is now the scoreboard).
 - Setup: missile ghost prefab, definitions, links, effect and sound slots; training targets become root pre-spawned ghosts.
 - Tests: `GuidanceTests`.
 
@@ -587,7 +587,7 @@ Built (7 Nov, written without the editor, not compiled):
   - Swap in real art and voices later on the pilot assets.
 - **Names:** call signs show in the kill feed and the leader line ("VIPER 3"; `PilotNamesSystem`), and your own call sign shows under your score. The pilot id is in the matchmaking ticket (`pilot`).
 - **Not yet:**
-  - a full scoreboard (there is none yet).
+  - a full scoreboard: **built 7 Nov, not compiled** (hold Tab / gamepad View; also on the results; see the handoff 4e).
 
 ## 6. Account progression
 

@@ -7,8 +7,34 @@ using UnityEngine.UIElements;
 
 namespace Chopper.Presentation.Hud
 {
+    /// <summary>One player on the scoreboard. <see cref="MatchHudModel.Scoreboard"/> holds them best first.</summary>
+    public readonly struct ScoreboardRow
+    {
+        public readonly int NetworkId;
+        /// <summary>1 = first. Players with the same kills and deaths share a place.</summary>
+        public readonly int Place;
+        /// <summary>"VIPER 3", or "PILOT 3" without a pilot. Never "YOU": <see cref="IsLocal"/> marks the own row.</summary>
+        public readonly string Name;
+        /// <summary>Chassis display name ("GUNSHIP"), "" until the chopper is seen.</summary>
+        public readonly string Chassis;
+        public readonly int Kills;
+        public readonly int Deaths;
+        public readonly bool IsLocal;
+
+        public ScoreboardRow(int networkId, int place, string name, string chassis, int kills, int deaths, bool isLocal)
+        {
+            NetworkId = networkId;
+            Place = place;
+            Name = name;
+            Chassis = chassis;
+            Kills = kills;
+            Deaths = deaths;
+            IsLocal = isLocal;
+        }
+    }
+
     /// <summary>
-    /// View model for the match part of the HUD: timer, scores, kill feed and the end-of-match banner.
+    /// View model for the match part of the HUD: timer, scores, kill feed, the scoreboard and the end-of-match banner.
     /// <see cref="Feedback.MatchFeedback"/> fills it from match messages; UI Toolkit reads it through data binding.
     /// </summary>
     public sealed class MatchHudModel : INotifyBindablePropertyChanged
@@ -22,6 +48,10 @@ namespace Chopper.Presentation.Hud
 
         private int _localNetworkId;
         private readonly Dictionary<int, string> _callSigns = new();
+        private readonly Dictionary<int, string> _chassis = new();
+        private readonly List<ScoreboardRow> _rows = new();
+        private bool _scoreboardHeld;
+        private bool _scoreboardVisible;
         private string _localPilotText = "";
         private MatchPhase _phase;
         private float _timeRemaining;
@@ -35,6 +65,46 @@ namespace Chopper.Presentation.Hud
         private bool _bannerVisible;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+
+        /// <summary>A row was added, removed or changed (<see cref="Scoreboard"/>).</summary>
+        public event Action ScoreboardChanged;
+
+        /// <summary>All players, best first: most kills, then fewest deaths, then the lowest id.</summary>
+        public IReadOnlyList<ScoreboardRow> Scoreboard => _rows;
+
+        /// <summary>Shown while the scoreboard key is held (Tab / gamepad View) and always after the match.</summary>
+        [CreateProperty]
+        public bool ScoreboardVisible
+        {
+            get => _scoreboardVisible;
+            private set => Set(ref _scoreboardVisible, value, nameof(ScoreboardVisible));
+        }
+
+        /// <summary>"FREE FOR ALL // 4 PILOTS".</summary>
+        [CreateProperty]
+        public string ScoreboardTitle
+        {
+            get => _scoreboardTitle;
+            private set => Set(ref _scoreboardTitle, value, nameof(ScoreboardTitle));
+        }
+
+        private string _scoreboardTitle = "FREE FOR ALL";
+
+        /// <summary>The view sets this from the scoreboard action (false while a menu is open).</summary>
+        public void SetScoreboardHeld(bool held)
+        {
+            _scoreboardHeld = held;
+            RefreshScoreboardVisible();
+        }
+
+        /// <summary>A player's chassis name for the scoreboard (<see cref="PilotNamesSystem"/>).</summary>
+        public void SetChassis(int networkId, string chassis)
+        {
+            chassis ??= "";
+            if (_chassis.TryGetValue(networkId, out var known) && known == chassis) return;
+            _chassis[networkId] = chassis;
+            RefreshScores();
+        }
 
         [CreateProperty]
         public string TimerText
@@ -97,6 +167,7 @@ namespace Chopper.Presentation.Hud
 
         public void RemovePlayer(int networkId)
         {
+            // Call signs and chassis stay: PilotNamesSystem sends only changes, and the rows come from the scores.
             if (_scores.Remove(networkId))
                 RefreshScores();
         }
@@ -148,10 +219,15 @@ namespace Chopper.Presentation.Hud
             if (removed) RefreshKillFeed();
         }
 
-        /// <summary>"YOU" for the local player; "VIPER 3" with a pilot (several players may fly the same pilot); else "PILOT 3".</summary>
-        private string PilotName(int networkId) =>
-            networkId == _localNetworkId ? "YOU"
-            : _callSigns.TryGetValue(networkId, out var sign) && !string.IsNullOrEmpty(sign) ? $"{sign} {networkId}"
+        /// <summary>"YOU" for the local player; else <see cref="PlayerName"/>.</summary>
+        private string PilotName(int networkId) => networkId == _localNetworkId ? "YOU" : PlayerName(networkId);
+
+        /// <summary>
+        /// "VIPER 3" with a pilot (several players may fly the same pilot); else "PILOT 3". The one place names are made:
+        /// Steam names come in here later (plan section 6, "NAME [VIPER]").
+        /// </summary>
+        private string PlayerName(int networkId) =>
+            _callSigns.TryGetValue(networkId, out var sign) && !string.IsNullOrEmpty(sign) ? $"{sign} {networkId}"
             : $"PILOT {networkId}";
 
         /// <summary>
@@ -198,7 +274,37 @@ namespace Chopper.Presentation.Hud
                 }
             }
             LeaderText = leaderKills > 0 ? $"LEAD {PilotName(leader)} {leaderKills}" : "";
+            RefreshScoreboard();
         }
+
+        private void RefreshScoreboard()
+        {
+            _rows.Clear();
+            foreach (var (networkId, score) in _scores)
+            {
+                _chassis.TryGetValue(networkId, out var chassis);
+                _rows.Add(new ScoreboardRow(networkId, 0, PlayerName(networkId), chassis ?? "", score.Kills, score.Deaths,
+                    networkId == _localNetworkId));
+            }
+            _rows.Sort(static (a, b) =>
+                a.Kills != b.Kills ? b.Kills.CompareTo(a.Kills)
+                : a.Deaths != b.Deaths ? a.Deaths.CompareTo(b.Deaths)
+                : a.NetworkId.CompareTo(b.NetworkId));
+
+            var place = 0;
+            for (var i = 0; i < _rows.Count; i++)
+            {
+                var row = _rows[i];
+                var tied = i > 0 && _rows[i - 1].Kills == row.Kills && _rows[i - 1].Deaths == row.Deaths;
+                if (!tied) place = i + 1;
+                _rows[i] = new ScoreboardRow(row.NetworkId, place, row.Name, row.Chassis, row.Kills, row.Deaths, row.IsLocal);
+            }
+
+            ScoreboardTitle = _rows.Count == 1 ? "FREE FOR ALL // 1 PILOT" : $"FREE FOR ALL // {_rows.Count} PILOTS";
+            ScoreboardChanged?.Invoke();
+        }
+
+        private void RefreshScoreboardVisible() => ScoreboardVisible = _scoreboardHeld || _phase == MatchPhase.PostGame;
 
         private void RefreshKillFeed()
         {
@@ -213,6 +319,7 @@ namespace Chopper.Presentation.Hud
 
         private void RefreshBanner()
         {
+            RefreshScoreboardVisible();
             BannerVisible = _phase == MatchPhase.PostGame;
             BannerText = !BannerVisible ? ""
                 : _winnerNetworkId == 0 ? "DRAW"

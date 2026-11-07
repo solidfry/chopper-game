@@ -199,6 +199,126 @@
   display: none;
 }
 
+/* Results: the banner moves up over the scoreboard */
+.hud-match--results .hud-match__banner {
+  top: 12%;
+  font-size: 56px;
+}
+
+/* Scoreboard: centre of the view, hold Tab / gamepad View */
+.hud-scoreboard {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 24%;
+  align-items: center;
+  transition-property: opacity, translate;
+  transition-duration: 0.12s;
+}
+
+.hud-scoreboard--hidden {
+  opacity: 0;
+  translate: 0 -8px;
+}
+
+.hud-scoreboard__head {
+  width: 720px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 6px 14px;
+  border-bottom-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+}
+
+.hud-scoreboard__title {
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.hud-scoreboard__timer {
+  font-size: 18px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.hud-scoreboard__rows {
+  width: 720px;
+  background-color: var(--chopper-panel);
+}
+
+.hud-scoreboard__row {
+  width: 720px;
+  height: 34px;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 14px;
+  border-left-width: 3px;
+  border-color: rgba(0, 0, 0, 0);
+}
+
+.hud-scoreboard__row > Label {
+  font-size: 17px;
+  color: var(--chopper-text);
+  padding: 0;
+  -unity-text-align: middle-left;
+}
+
+.hud-scoreboard__row--columns > Label {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--chopper-green-dim);
+}
+
+.hud-scoreboard__row--odd {
+  background-color: rgba(0, 255, 148, 0.04);
+}
+
+/* Own row: yellow, with a bar on the left */
+.hud-scoreboard__row--local {
+  border-color: var(--chopper-yellow);
+  background-color: rgba(255, 214, 0, 0.08);
+}
+
+.hud-scoreboard__row--local > Label {
+  color: var(--chopper-yellow);
+}
+
+/* The leader's place number */
+.hud-scoreboard__row--first .hud-scoreboard__place {
+  color: var(--chopper-green);
+  text-shadow: 0 0 6px rgba(0, 255, 148, 0.45);
+}
+
+.hud-scoreboard__place {
+  width: 44px;
+}
+
+.hud-scoreboard__name {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-scoreboard__chassis {
+  width: 160px;
+}
+
+.hud-scoreboard__row > .hud-scoreboard__chassis {
+  color: var(--chopper-green-dim);
+}
+
+.hud-scoreboard__number {
+  width: 64px;
+}
+
+.hud-scoreboard__row > .hud-scoreboard__number {
+  -unity-text-align: middle-right;
+}
+
 /* Out of bounds warning, upper middle */
 .hud-warning {
   position: absolute;

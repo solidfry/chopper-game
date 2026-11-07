@@ -76,5 +76,56 @@ namespace Chopper.Tests
             model.SetMatch(MatchPhase.InProgress, 600f, winnerNetworkId: 0);
             Assert.That(model.BannerVisible, Is.False);
         }
+
+        [Test]
+        public void Scoreboard_SortsByKillsThenDeaths_AndSharesTiedPlaces()
+        {
+            var model = new MatchHudModel();
+            model.SetLocalPlayer(2);
+            model.ApplyScore(1, kills: 3, deaths: 2);
+            model.ApplyScore(2, kills: 5, deaths: 1);
+            model.ApplyScore(3, kills: 3, deaths: 2);
+            model.ApplyScore(4, kills: 3, deaths: 0);
+            model.SetCallSign(3, "VIPER");
+            model.SetChassis(3, "GUNSHIP");
+
+            var rows = model.Scoreboard;
+            Assert.That(rows, Has.Count.EqualTo(4));
+            Assert.That(rows[0].NetworkId, Is.EqualTo(2));
+            Assert.That(rows[0].IsLocal, Is.True);
+            Assert.That(rows[0].Name, Is.EqualTo("PILOT 2"), "the own row keeps its name; the view marks it");
+            Assert.That(rows[1].NetworkId, Is.EqualTo(4), "same kills: fewer deaths first");
+            Assert.That(rows[2].NetworkId, Is.EqualTo(1), "a full tie: lowest id first");
+            Assert.That(rows[2].Place, Is.EqualTo(3));
+            Assert.That(rows[3].Place, Is.EqualTo(3), "a full tie shares the place");
+            Assert.That(rows[3].Name, Is.EqualTo("VIPER 3"));
+            Assert.That(rows[3].Chassis, Is.EqualTo("GUNSHIP"));
+            Assert.That(model.ScoreboardTitle, Is.EqualTo("FREE FOR ALL // 4 PILOTS"));
+
+            model.RemovePlayer(4);
+            Assert.That(model.Scoreboard, Has.Count.EqualTo(3));
+        }
+
+        [Test]
+        public void Scoreboard_ShowsWhileHeld_AndOnTheResults()
+        {
+            var model = new MatchHudModel();
+            var changes = 0;
+            model.ScoreboardChanged += () => changes++;
+            Assert.That(model.ScoreboardVisible, Is.False);
+
+            model.SetScoreboardHeld(true);
+            Assert.That(model.ScoreboardVisible, Is.True);
+            model.SetScoreboardHeld(false);
+            Assert.That(model.ScoreboardVisible, Is.False);
+
+            model.SetMatch(MatchPhase.PostGame, 10f, winnerNetworkId: 0);
+            Assert.That(model.ScoreboardVisible, Is.True, "always on the results");
+            model.SetMatch(MatchPhase.InProgress, 600f, winnerNetworkId: 0);
+            Assert.That(model.ScoreboardVisible, Is.False);
+
+            model.ApplyScore(1, 1, 0);
+            Assert.That(changes, Is.GreaterThan(0));
+        }
     }
 }

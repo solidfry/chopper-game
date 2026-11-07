@@ -8,15 +8,15 @@ using Unity.NetCode;
 namespace Chopper.Presentation.Hud
 {
     /// <summary>
-    /// Client only. Each player's pilot call sign (from their chopper's ghost loadout and the catalog) for the kill feed,
-    /// the leader line and the local player's own call sign (<see cref="MatchHudModel.SetCallSign"/>). Only changes are
-    /// passed on.
+    /// Client only. Each player's pilot call sign and chassis name (from their chopper's ghost loadout and the catalog)
+    /// for the kill feed, the leader line, the scoreboard and the local player's own call sign
+    /// (<see cref="MatchHudModel.SetCallSign"/>, <see cref="MatchHudModel.SetChassis"/>). Only changes are passed on.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class PilotNamesSystem : PresentationSystemBase
     {
-        private readonly Dictionary<int, ushort> _shown = new();
+        private readonly Dictionary<int, (ushort Pilot, ushort Chassis)> _shown = new();
         private MatchHudModel _model;
 
         protected override void OnCreate()
@@ -41,11 +41,13 @@ namespace Chopper.Presentation.Hud
             foreach (var (loadout, owner) in SystemAPI.Query<RefRO<ChopperLoadout>, RefRO<GhostOwner>>())
             {
                 var networkId = owner.ValueRO.NetworkId;
-                var pilotId = loadout.ValueRO.PilotId;
-                if (_shown.TryGetValue(networkId, out var shown) && shown == pilotId) continue;
-                _shown[networkId] = pilotId;
-                var pilot = catalog.FindPilot(pilotId);
+                var now = (loadout.ValueRO.PilotId, loadout.ValueRO.ChassisId);
+                if (_shown.TryGetValue(networkId, out var shown) && shown == now) continue;
+                _shown[networkId] = now;
+                var pilot = catalog.FindPilot(now.PilotId);
                 _model.SetCallSign(networkId, pilot != null ? pilot.CallSign : "");
+                var chassis = catalog.TryGetChassis(now.ChassisId, out var spec) ? spec.Name ?? "" : "";
+                _model.SetChassis(networkId, chassis.ToUpperInvariant());
             }
         }
     }
