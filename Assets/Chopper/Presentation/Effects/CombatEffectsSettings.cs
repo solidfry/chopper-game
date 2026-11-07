@@ -94,6 +94,10 @@ namespace Chopper.Presentation.Effects
         private float repairSparkRate = 26f;
         [SerializeField, Tooltip("Repair spark colour (multiplies the spark material; HDR for bloom).")]
         private Color repairSparkColour = new(0.55f, 0.95f, 1f, 1f);
+        [SerializeField, Tooltip("Damage over time (pilots VIPER, PYRE): particles per second while a chopper corrodes or burns.")]
+        private float statusRate = 20f;
+        [SerializeField, Tooltip("Corrosion sparks (multiplies the spark material; HDR for bloom).")]
+        private Color corrosionColour = new(0.5f, 1f, 0.15f, 1f);
 
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
@@ -139,6 +143,8 @@ namespace Chopper.Presentation.Effects
         public int ImpactDust => impactDust;
         public float RepairSparkRate => repairSparkRate;
         public Color RepairSparkColour => repairSparkColour;
+        public float StatusRate => statusRate;
+        public Color CorrosionColour => corrosionColour;
 
         public void CollectProblems(List<string> problems)
         {

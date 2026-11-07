@@ -16,6 +16,7 @@ namespace Chopper.UI.Hangar
     /// <item>Slot open: "SELECT &lt;SLOT&gt;", the hovered (else fitted) module's detail on the left, the slot's modules as
     /// tiles along the bottom (hover = stat preview, click = fit). Back, Escape or gamepad B closes it.</item>
     /// <item>Always: stats float on the right (big numbers and bars with the before/after change), skin, launch.</item>
+    /// <item>Pilot: the PILOT card opens the select screen (<see cref="PilotSelectView"/>).</item>
     /// </list>
     /// Rebuilds on <see cref="HangarModel.Changed"/>; on <see cref="HangarModel.StatsChanged"/> only the stats and the
     /// detail change (so hovering does not rebuild the tiles under the pointer).
@@ -130,6 +131,8 @@ namespace Chopper.UI.Hangar
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetStage(HangarStage value) => stage = value;
 
+        private PilotSelectView _pilots;
+
         private void OnEnable()
         {
             if (bridge == null)
@@ -211,6 +214,7 @@ namespace Chopper.UI.Hangar
             _trainingMap?.RegisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked += OnFindMatch;
             _model.MatchStatusChanged += RefreshMatch;
+            _pilots = new PilotSelectView(_root, _model.Pilots, bridge.Context);
             Refresh();
             _launch.Focus();
         }
@@ -227,6 +231,8 @@ namespace Chopper.UI.Hangar
             _trainingMap?.UnregisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked -= OnFindMatch;
             _model.MatchStatusChanged -= RefreshMatch;
+            _pilots?.Dispose();
+            _pilots = null;
             _cards.Clear();
             _root = null;
         }

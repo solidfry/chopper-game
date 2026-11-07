@@ -43,7 +43,7 @@ namespace Chopper.Presentation.Hangar
     /// <summary>
     /// The hangar's saves (PlayerPrefs now, Cloud Save later, Phase 5):
     /// <list type="bullet">
-    /// <item>the choice for the next spawn (loadout + skin), read by the client world when it starts;</item>
+    /// <item>the choice for the next spawn (loadout + skin + pilot), read by the client world when it starts;</item>
     /// <item>the build of each chassis, so every chassis keeps its modules across sessions;</item>
     /// <item>named builds (presets) per chassis.</item>
     /// </list>
@@ -56,6 +56,7 @@ namespace Chopper.Presentation.Hangar
         private const string BuildKey = "Chopper.Hangar.Build.";
         private const string PresetsKey = "Chopper.Hangar.Presets.";
         private const string TrainingMapKey = "Chopper.Hangar.TrainingMap";
+        private const string PilotKey = "Chopper.Hangar.Pilot";
         /// <summary>Longest preset name kept.</summary>
         public const int MaxPresetName = 24;
 
@@ -74,6 +75,17 @@ namespace Chopper.Presentation.Hangar
             _prefs.SetString(LoadoutKey, Encode(selection));
             _prefs.SetInt(SkinKey, skinId);
             SaveBuild(selection);
+        }
+
+        /// <summary>The pilot for the next spawn (<see cref="PilotDefinition"/> id; 0 = none). Saved at once.</summary>
+        public ushort Pilot
+        {
+            get => (ushort)Mathf.Clamp(_prefs.GetInt(PilotKey, 0), 0, ushort.MaxValue);
+            set
+            {
+                _prefs.SetInt(PilotKey, value);
+                _prefs.Save();
+            }
         }
 
         /// <summary>The scene of the last training map picked ("" = none yet).</summary>
@@ -203,8 +215,9 @@ namespace Chopper.Presentation.Hangar
     {
         protected override void OnCreate()
         {
-            if (!new LoadoutChoiceStore().TryLoad(out var selection, out var skinId)) return;
-            EntityManager.CreateSingleton(new LoadoutChoice { Code = LoadoutCode.From(selection), SkinId = skinId }, "LoadoutChoice");
+            var store = new LoadoutChoiceStore();
+            if (!store.TryLoad(out var selection, out var skinId)) return;
+            EntityManager.CreateSingleton(new LoadoutChoice { Code = LoadoutCode.From(selection, store.Pilot), SkinId = skinId }, "LoadoutChoice");
         }
 
         protected override void OnUpdate() => Enabled = false;

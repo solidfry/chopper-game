@@ -183,6 +183,7 @@ namespace Chopper.Presentation.Hangar
             _maxHealth = MaxHealth();
             BarScales();
 
+            Pilots = new PilotSelectModel(_catalog.Pilots, _store, _unlocks);
             ChassisIndex = 0;
             RestoreBuilds();
             if (_store != null && _store.TryLoad(out var saved, out var skinId)) Restore(saved, skinId);
@@ -191,6 +192,8 @@ namespace Chopper.Presentation.Hangar
 
         public event Action Changed;
         public event Action StatsChanged;
+        /// <summary>The pilot select screen and the locked-in pilot (plan section 5b).</summary>
+        public PilotSelectModel Pilots { get; }
         /// <summary>A valid loadout was saved; the scene starts the match.</summary>
         public event Action Launched;
         /// <summary>A valid loadout was saved and the player asked for an online match; the scene runs the search.</summary>
@@ -271,9 +274,10 @@ namespace Chopper.Presentation.Hangar
             Refresh();
         }
 
-        /// <summary>Back out of a slot. False when already in the overview.</summary>
+        /// <summary>Close the pilot select screen, else back out of a slot. False when already in the overview.</summary>
         public bool Back()
         {
+            if (Pilots.Close()) return true;
             if (FocusedSlot == Overview) return false;
             FocusedSlot = Overview;
             Refresh();

@@ -28,6 +28,9 @@ namespace Chopper.Simulation.Combat
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent(entity, new Health { Current = authoring.maxHealth, Max = authoring.maxHealth });
                 AddBuffer<DamageEvent>(entity);
+                // Pilots VIPER and PYRE: targets corrode and burn too, so it can be tried in training.
+                AddBuffer<DamageOverTime>(entity);
+                AddComponent<StatusLook>(entity);
                 AddComponent(entity, new TrainingTarget { ResetDelay = authoring.resetDelay });
                 // Ground class: air-to-ground seekers can lock it. Warmer than the ground so it stands out.
                 AddComponent(entity, new Targetable { Class = TargetClass.Ground, BaseHeat = 0.6f });

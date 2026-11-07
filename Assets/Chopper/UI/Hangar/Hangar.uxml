@@ -24,6 +24,16 @@
           <ui:Label name="chassis-description" class="hangar__description chopper-body" />
           <ui:Label text="// CHASSIS" class="hangar__section chopper-title" />
           <ui:VisualElement name="chassis-grid" class="hangar__chassis-grid" />
+          <ui:Label text="// PILOT" class="hangar__section chopper-title" />
+          <!-- The locked-in pilot; click opens the pilot select screen (PilotSelectView) -->
+          <ui:Button name="pilot-card" class="hangar-pilot">
+            <ui:Label name="pilot-card-mono" class="hangar-pilot__mono chopper-title" picking-mode="Ignore" />
+            <ui:VisualElement class="hangar-pilot__text" picking-mode="Ignore">
+              <ui:Label name="pilot-card-sign" class="hangar-pilot__sign chopper-title" picking-mode="Ignore" />
+              <ui:Label name="pilot-card-role" class="hangar-pilot__role" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label text="CHANGE &gt;" class="hangar-pilot__change" picking-mode="Ignore" />
+          </ui:Button>
           <ui:Label text="// BUILDS" class="hangar__section chopper-title" />
           <ui:DropdownField name="preset" label="BUILD" class="hangar__row" />
           <ui:TextField name="preset-name" label="NAME" max-length="24" class="hangar__row hangar__name-field" />
@@ -83,6 +93,42 @@
         <ui:Button name="find-match" text="[ FIND MATCH ]" class="hangar__button chopper-title" />
         <ui:DropdownField name="training-map" label="MAP" class="hangar__row hangar__map-row" />
         <ui:Button name="launch" text="[ TRAINING ]" class="hangar__button hangar__button--secondary chopper-title" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Pilot select (plan section 5b): fighting-game style. The shown pilot large on the left (call sign slams in),
+         the roster grid on the right, LOCK IN at the bottom. Filled by PilotSelectView. -->
+    <ui:VisualElement name="pilot-select" class="pilot-select hangar--hidden">
+      <ui:VisualElement class="pilot-select__scan" picking-mode="Ignore" />
+      <ui:VisualElement class="pilot-select__header" picking-mode="Ignore">
+        <ui:Label text="// SELECT PILOT" class="pilot-select__title chopper-title" />
+        <ui:Label text="ANY PILOT FLIES ANY CHASSIS" class="pilot-select__hint" />
+        <ui:Label text="ESC = BACK" class="hangar__bar-text" />
+      </ui:VisualElement>
+      <ui:VisualElement class="pilot-select__body" picking-mode="Ignore">
+        <ui:VisualElement name="pilot-feature" class="pilot-feature" picking-mode="Ignore">
+          <ui:VisualElement name="pilot-portrait" class="pilot-feature__portrait" picking-mode="Ignore">
+            <ui:Label name="pilot-monogram" class="pilot-feature__monogram chopper-title" picking-mode="Ignore" />
+            <ui:Label name="pilot-serial" class="pilot-feature__serial chopper-deco-dot" picking-mode="Ignore" />
+          </ui:VisualElement>
+          <ui:VisualElement class="pilot-feature__text" picking-mode="Ignore">
+            <ui:Label name="pilot-role" class="pilot-feature__role" />
+            <ui:Label name="pilot-callsign" class="pilot-feature__callsign chopper-title" />
+            <ui:Label name="pilot-passive" class="pilot-feature__passive chopper-body" />
+            <ui:VisualElement name="pilot-effects" class="pilot-feature__effects" picking-mode="Ignore" />
+            <ui:VisualElement class="pilot-ability" picking-mode="Ignore">
+              <ui:Label text="ABILITY // F OR D-PAD UP" class="pilot-ability__label" />
+              <ui:Label name="pilot-ability-name" class="pilot-ability__name chopper-title" />
+              <ui:Label name="pilot-ability-text" class="pilot-ability__text chopper-body" />
+              <ui:Label text="OFFLINE - COMING IN A LATER BUILD" class="pilot-ability__soon" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="pilot-grid" class="pilot-grid" />
+      </ui:VisualElement>
+      <ui:VisualElement class="pilot-select__footer" picking-mode="Ignore">
+        <ui:Label name="pilot-state" class="pilot-select__state" />
+        <ui:Button name="pilot-lock" text="[ LOCK IN ]" class="hangar__button pilot-select__lock chopper-title" />
       </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>

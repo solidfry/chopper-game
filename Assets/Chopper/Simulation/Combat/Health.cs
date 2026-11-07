@@ -38,6 +38,10 @@ namespace Chopper.Simulation.Combat
         Landing = 4,
         /// <summary>Out of the arena: no hit point.</summary>
         Bounds = 5,
+        /// <summary>Damage over time from corroding gun hits (pilot passive): no hit point, no shake.</summary>
+        Corrosion = 6,
+        /// <summary>Damage over time from burning blast hits (pilot passive): no hit point, no shake.</summary>
+        Burn = 7,
     }
 
     /// <summary>Damage waiting to be applied this tick. Server only; any source (guns, crashes, nuke) appends to it.</summary>
@@ -87,6 +91,8 @@ namespace Chopper.Simulation.Combat
         public byte Kind;
         /// <summary>Crashes and landings: impact speed (m/s). 0 for other hits.</summary>
         public float ImpactSpeed;
+        /// <summary>The attacker's pilot jams HUDs (HEX): the victim's HUD glitches.</summary>
+        public bool Jam;
     }
 
     /// <summary>Server to shooter: your shot hit. Drives the hit marker, so the client never shows a fake hit.</summary>

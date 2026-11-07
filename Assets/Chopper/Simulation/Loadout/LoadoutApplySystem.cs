@@ -11,8 +11,8 @@ namespace Chopper.Simulation.Loadout
 {
     /// <summary>
     /// Client and server. When a chopper's <see cref="ChopperLoadout"/> differs from what this world applied, builds it
-    /// from the catalog (<see cref="LoadoutBuilder"/>, same code as the baker) and writes flight, health, crash, gun,
-    /// pylons and flares. The server validates first (<see cref="LoadoutRules.Validate"/>) and falls back to the
+    /// from the catalog (<see cref="LoadoutBuilder"/>, same code as the baker) and writes flight, health, crash, repair,
+    /// gun, pylons, flares and the pilot's traits. The server validates first (<see cref="LoadoutRules.Validate"/>) and falls back to the
     /// chassis default; the corrected loadout then reaches every client through the ghost field.
     /// Managed on purpose: it reuses the loadout rules and assets instead of a second, Burst copy of them.
     /// TODO: player unlocks from Cloud Save (everything is unlocked for now).
@@ -71,13 +71,15 @@ namespace Chopper.Simulation.Loadout
                 return;
             }
 
-            var built = LoadoutBuilder.Build(chassis, ModulesFor(chassis, wanted), sockets, _ => missilePrefab);
+            // Unknown pilot id: no pilot (the server corrects the ghost field below).
+            var pilot = _indexed.FindPilot(wanted.PilotId);
+            var built = LoadoutBuilder.Build(chassis, ModulesFor(chassis, wanted), sockets, _ => missilePrefab, pilot);
             if (isServer && !built.Validation.IsValid)
             {
                 Debug.LogWarning($"[Server] Loadout not valid ({built.Validation}); using the {chassis.DisplayName} default.");
-                built = LoadoutBuilder.Build(chassis, chassis.DefaultModules, sockets, _ => missilePrefab);
-                EntityManager.SetComponentData(entity, ChopperLoadout.From(built.Code));
+                built = LoadoutBuilder.Build(chassis, chassis.DefaultModules, sockets, _ => missilePrefab, pilot);
             }
+            if (isServer && !built.Code.Equals(wanted)) EntityManager.SetComponentData(entity, ChopperLoadout.From(built.Code));
 
             Write(entity, built, isServer);
             EntityManager.SetComponentData(entity, new AppliedLoadout { Code = isServer ? built.Code : wanted });
@@ -98,6 +100,8 @@ namespace Chopper.Simulation.Loadout
             if (EntityManager.HasComponent<RepairConfig>(entity)) EntityManager.SetComponentData(entity, built.Repair);
             EntityManager.SetComponentData(entity, built.Gun);
             EntityManager.SetComponentData(entity, built.Countermeasure);
+            if (EntityManager.HasComponent<PilotTraits>(entity)) EntityManager.SetComponentData(entity, built.Traits);
+            if (EntityManager.HasComponent<Targetable>(entity)) EntityManager.SetComponentData(entity, built.Target);
 
             // Max is not sent; the server also starts the new chopper at full health.
             var health = EntityManager.GetComponentData<Health>(entity);

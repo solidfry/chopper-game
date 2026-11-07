@@ -5,7 +5,7 @@ namespace Chopper.Simulation.Loadout
 {
     /// <summary>
     /// A loadout in a few bytes, for RPCs and ghost fields: chassis id plus up to <see cref="MaxSlots"/> module ids,
-    /// four per <c>ulong</c>. 0 = empty slot. Pure, Burst friendly.
+    /// four per <c>ulong</c> (0 = empty slot), and the pilot (<see cref="PilotDefinition"/>; 0 = none). Pure, Burst friendly.
     /// </summary>
     public struct LoadoutCode
     {
@@ -14,6 +14,7 @@ namespace Chopper.Simulation.Loadout
         public ushort ChassisId;
         public ulong Modules0;
         public ulong Modules1;
+        public ushort PilotId;
 
         public bool IsEmpty => ChassisId == 0;
 
@@ -34,11 +35,11 @@ namespace Chopper.Simulation.Loadout
         }
 
         public bool Equals(in LoadoutCode other) =>
-            ChassisId == other.ChassisId && Modules0 == other.Modules0 && Modules1 == other.Modules1;
+            ChassisId == other.ChassisId && Modules0 == other.Modules0 && Modules1 == other.Modules1 && PilotId == other.PilotId;
 
-        public static LoadoutCode From(in LoadoutSelection selection)
+        public static LoadoutCode From(in LoadoutSelection selection, ushort pilotId = 0)
         {
-            var code = new LoadoutCode { ChassisId = selection.ChassisId };
+            var code = new LoadoutCode { ChassisId = selection.ChassisId, PilotId = pilotId };
             for (var i = 0; i < selection.Modules.Count && i < MaxSlots; i++)
                 code.SetModule(i, selection.Modules[i]);
             return code;
@@ -61,11 +62,12 @@ namespace Chopper.Simulation.Loadout
         [GhostField] public ushort ChassisId;
         [GhostField] public ulong Modules0;
         [GhostField] public ulong Modules1;
+        [GhostField] public ushort PilotId;
 
-        public LoadoutCode Code => new() { ChassisId = ChassisId, Modules0 = Modules0, Modules1 = Modules1 };
+        public LoadoutCode Code => new() { ChassisId = ChassisId, Modules0 = Modules0, Modules1 = Modules1, PilotId = PilotId };
 
         public static ChopperLoadout From(in LoadoutCode code) =>
-            new() { ChassisId = code.ChassisId, Modules0 = code.Modules0, Modules1 = code.Modules1 };
+            new() { ChassisId = code.ChassisId, Modules0 = code.Modules0, Modules1 = code.Modules1, PilotId = code.PilotId };
     }
 
     /// <summary>Local, not sent: the loadout this world last applied. Differs from <see cref="ChopperLoadout"/> = apply again.</summary>

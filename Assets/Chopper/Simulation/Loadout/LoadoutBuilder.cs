@@ -19,6 +19,10 @@ namespace Chopper.Simulation.Loadout
         public float Health;
         public CrashDamageConfig Crash;
         public RepairConfig Repair;
+        /// <summary>The pilot's combat rules (<see cref="PilotTraits.None"/> without a pilot).</summary>
+        public PilotTraits Traits = PilotTraits.None;
+        /// <summary>How seekers see the chopper (pilot: heat and lock resistance).</summary>
+        public Targetable Target = new() { Class = TargetClass.Air, BaseHeat = 1f, LockTimeScale = 1f };
         /// <summary>FireInterval 0 = no gun.</summary>
         public HitscanWeaponConfig Gun;
         public readonly List<PylonWeapon> Pylons = new();
@@ -29,7 +33,8 @@ namespace Chopper.Simulation.Loadout
     /// <summary>
     /// Turns a chassis + modules into chopper components. One code path for the prefab baker (default loadout) and
     /// for runtime (each player's loadout, <see cref="LoadoutApplySystem"/>), so both always agree. Stats come from
-    /// <see cref="LoadoutRules.Compute"/>; weapon launch points come from the chassis sockets.
+    /// <see cref="LoadoutRules.Compute"/>; weapon launch points come from the chassis sockets. The pilot
+    /// (<see cref="PilotModifiers"/>, optional) scales the result last.
     /// </summary>
     public static class LoadoutBuilder
     {
@@ -38,7 +43,7 @@ namespace Chopper.Simulation.Loadout
         /// <param name="modulesBySlot">One module (or null) per chassis slot, in slot order.</param>
         /// <param name="resolveMissilePrefab">Missile ghost prefab → entity (baker: GetEntity; runtime: the shared prefab).</param>
         public static BuiltLoadout Build(ChassisDefinition chassis, IReadOnlyList<ModuleDefinition> modulesBySlot,
-            IReadOnlyList<ChassisSocket> sockets, Func<GameObject, Entity> resolveMissilePrefab)
+            IReadOnlyList<ChassisSocket> sockets, Func<GameObject, Entity> resolveMissilePrefab, PilotDefinition pilot = null)
         {
             var built = new BuiltLoadout();
             var stats = Stats(chassis, modulesBySlot, built);
@@ -78,8 +83,50 @@ namespace Chopper.Simulation.Loadout
             built.Repair = chassis != null ? chassis.Repair.ToConfig() : RepairConfig.Default;
 
             BuildWeapons(chassis, modulesBySlot, sockets, resolveMissilePrefab, built);
+            if (pilot != null) ApplyPilot(pilot, built);
             return built;
         }
+
+        /// <summary>
+        /// The pilot's passive (plan section 5b): hull, flight, repair and weapon numbers on the built configs, combat
+        /// rules on <see cref="BuiltLoadout.Traits"/>, heat and lock resistance on <see cref="BuiltLoadout.Target"/>.
+        /// </summary>
+        public static void ApplyPilot(PilotDefinition pilot, BuiltLoadout built)
+        {
+            var m = pilot.Modifiers;
+            built.Code.PilotId = pilot.Id;
+            built.Health *= Positive(m.HealthMultiplier);
+
+            var flight = built.Flight;
+            flight.MaxTurnRate *= Positive(m.TurnRateMultiplier);
+            flight.CollectiveUp *= Positive(m.LiftMultiplier);
+            flight.BoostRechargeTime *= Positive(m.BoostRechargeMultiplier);
+            built.Flight = flight;
+
+            built.Repair.Seconds *= Positive(m.RepairTimeMultiplier);
+            built.Repair.InterruptCooldown *= Positive(m.RepairLockMultiplier);
+
+            built.Gun.Damage *= Positive(m.GunDamageMultiplier);
+            for (var i = 0; i < built.Pylons.Count; i++)
+            {
+                var pylon = built.Pylons[i];
+                pylon.LockTime *= Positive(m.LockTimeMultiplier);
+                if (pylon.MagazineSize > 0)
+                    pylon.MagazineSize = (byte)math.clamp((int)math.round(pylon.MagazineSize * Positive(m.MagazineMultiplier)), 1, 255);
+                built.Pylons[i] = pylon;
+            }
+
+            built.Traits = m.ToTraits();
+            built.Target = new Targetable
+            {
+                Class = TargetClass.Air,
+                BaseHeat = Positive(m.HeatMultiplier),
+                LockTimeScale = Positive(m.EnemyLockTimeMultiplier),
+            };
+        }
+
+        /// <summary>A multiplier of 0 or below (unset) counts as 1.</summary>
+        private static float Positive(float multiplier) => multiplier > 0f ? multiplier : 1f;
 
         private static LoadoutStats Stats(ChassisDefinition chassis, IReadOnlyList<ModuleDefinition> modules, BuiltLoadout built)
         {

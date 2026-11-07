@@ -7,7 +7,8 @@ namespace Chopper.Presentation.Feedback
 {
     /// <summary>
     /// Player feedback for combat: hit/kill markers and sounds for our hits; camera shake, sound and the damage
-    /// direction ring for hits we take.
+    /// direction ring for hits we take. Damage over time (corrosion, burn) ticks quietly: no sound, shake or ring per
+    /// pulse. A hit from a jamming pilot (HEX) glitches the HUD.
     /// </summary>
     public sealed class CombatFeedback : IDisposable
     {
@@ -36,8 +37,14 @@ namespace Chopper.Presentation.Feedback
             if (sounds != null) _context.Audio.Play(hit.Killed ? sounds.KillConfirm : sounds.HitConfirm);
         }
 
+        /// <summary>HUD glitch from a jamming pilot's hit (HEX): strength and seconds.</summary>
+        private const float JamStrength = 0.85f;
+        private const float JamSeconds = 1.2f;
+
         private void OnDamageTaken(DamageTaken damage)
         {
+            if (damage.Jam) _context.HudLook.Disrupt(JamStrength, JamSeconds);
+            if (damage.Kind is Simulation.Combat.DamageKind.Corrosion or Simulation.Combat.DamageKind.Burn) return;
             var sounds = _context.Sounds;
             if (sounds != null) _context.Audio.Play(sounds.DamageTaken);
 

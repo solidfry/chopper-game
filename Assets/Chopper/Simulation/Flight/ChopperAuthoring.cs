@@ -79,6 +79,10 @@ namespace Chopper.Simulation.Flight
                 AddComponent<CrashSensor>(entity);
                 AddComponent(entity, built.Repair);
                 AddComponent<ChopperRepair>(entity);
+                // Pilots (plan 5b): none on the prefab; each player's pilot comes with the loadout at runtime.
+                AddComponent(entity, built.Traits);
+                AddBuffer<DamageOverTime>(entity);
+                AddComponent<StatusLook>(entity);
 
                 // Every chopper has every weapon component: a ghost's component set is fixed, and loadouts change at
                 // runtime. A missing gun or flares is just a zero config.
@@ -94,7 +98,7 @@ namespace Chopper.Simulation.Flight
                 AddComponent<PylonSelection>(entity);
                 AddComponent<TargetLock>(entity);
                 AddComponent<ThreatState>(entity);
-                AddComponent(entity, new Targetable { Class = TargetClass.Air, BaseHeat = 1f });
+                AddComponent(entity, built.Target);
 
                 AddComponent(entity, ChopperLoadout.From(built.Code));
                 AddComponent(entity, new AppliedLoadout { Code = built.Code });

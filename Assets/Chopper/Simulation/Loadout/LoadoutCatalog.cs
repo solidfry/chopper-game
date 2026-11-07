@@ -4,12 +4,14 @@ using UnityEngine;
 
 namespace Chopper.Simulation.Loadout
 {
-    /// <summary>All chassis and modules in the game. One asset; the hangar and the server both read it.</summary>
+    /// <summary>All chassis, modules and pilots in the game. One asset; the hangar and the server both read it.</summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Catalog", fileName = "LoadoutCatalog")]
     public sealed class LoadoutCatalog : ScriptableObject, ILoadoutCatalog, IValidatedAsset
     {
         [SerializeField] private ChassisDefinition[] chassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField] private ModuleDefinition[] modules = System.Array.Empty<ModuleDefinition>();
+        [SerializeField, Tooltip("Plan section 5b. Any pilot flies any chassis.")]
+        private PilotDefinition[] pilots = System.Array.Empty<PilotDefinition>();
 
         // Built on first use; assets do not change at runtime.
         private Dictionary<ushort, ChassisSpec> _chassis;
@@ -17,6 +19,19 @@ namespace Chopper.Simulation.Loadout
 
         public IReadOnlyList<ChassisDefinition> Chassis => chassis;
         public IReadOnlyList<ModuleDefinition> Modules => modules;
+        public IReadOnlyList<PilotDefinition> Pilots => pilots ?? System.Array.Empty<PilotDefinition>();
+
+        /// <summary>Null for 0 (no pilot) and for unknown ids.</summary>
+        public PilotDefinition FindPilot(ushort id)
+        {
+            if (id == 0 || pilots == null) return null;
+            foreach (var pilot in pilots)
+                if (pilot != null && pilot.Id == id) return pilot;
+            return null;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetPilots(PilotDefinition[] pilotList) => pilots = pilotList;
 
         public bool TryGetChassis(ushort id, out ChassisSpec spec)
         {
@@ -64,6 +79,14 @@ namespace Chopper.Simulation.Loadout
                 definition.CollectProblems(problems);
                 if (definition.Weapon != null) definition.Weapon.CollectProblems(problems);
                 if (definition.Ability != null) definition.Ability.CollectProblems(problems);
+            }
+
+            seen.Clear();
+            foreach (var pilot in Pilots)
+            {
+                if (pilot == null) { problems.Add($"{name}: empty pilot entry."); continue; }
+                if (!seen.Add(pilot.Id)) problems.Add($"{name}: pilot id {pilot.Id} is used twice.");
+                pilot.CollectProblems(problems);
             }
         }
 

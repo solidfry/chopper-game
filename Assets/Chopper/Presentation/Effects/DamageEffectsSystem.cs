@@ -51,6 +51,7 @@ namespace Chopper.Presentation.Effects
         private readonly HashSet<Entity> _seen = new();
         private readonly List<Entity> _gone = new();
         private readonly Dictionary<Entity, float> _repairCarry = new();
+        private readonly Dictionary<Entity, float> _statusCarry = new();
         private readonly List<(Vector3 Point, Vector3 Normal)> _centre = new() { (new Vector3(0f, 0.5f, 0f), Vector3.up) };
         private PresentationContext _context;
         private IDisposable _subscription;
@@ -91,6 +92,11 @@ namespace Chopper.Presentation.Effects
                 if (!health.ValueRO.IsDead && SystemAPI.HasComponent<ChopperRepair>(entity) &&
                     SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing)
                     EmitRepair(settings, entity, pose.ValueRO, deltaTime, cockpit, eye);
+                if (!health.ValueRO.IsDead && SystemAPI.HasComponent<StatusLook>(entity))
+                {
+                    var look = SystemAPI.GetComponent<StatusLook>(entity);
+                    if (look.Flags != 0) EmitStatus(settings, entity, pose.ValueRO, look, deltaTime, cockpit, eye);
+                }
                 var max = health.ValueRO.Max;
                 var share = max > 0f ? health.ValueRO.Current / max : 1f;
                 var smoke = DamageLook.Smoke(share, settings.SmokeBelow);
@@ -136,10 +142,13 @@ namespace Chopper.Presentation.Effects
                 if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _repairCarry.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
+            foreach (var entity in _statusCarry.Keys)
+                if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _gone)
             {
                 _damaged.Remove(entity);
                 _repairCarry.Remove(entity);
+                _statusCarry.Remove(entity);
             }
         }
 
@@ -233,6 +242,59 @@ namespace Chopper.Presentation.Effects
                 emit.velocity = (normal + Random.insideUnitSphere * 1.2f).normalized * (settings.SparkSpeed * Random.Range(0.1f, 0.35f));
                 emit.startLifetime = Random.Range(0.12f, 0.3f);
                 emit.startSize = Random.Range(0.03f, 0.07f);
+                _sparks.Emit(emit, 1);
+            }
+        }
+
+        /// <summary>
+        /// Damage over time that everyone sees: corrosion fizzes in acid-green sparks, burning chops flames, both at the
+        /// hit points (or round the hull). Skipped next to the eye in the cockpit view.
+        /// </summary>
+        private void EmitStatus(CombatEffectsSettings settings, Entity entity, in LocalToWorld pose, in StatusLook look, float deltaTime,
+            bool cockpit, Vector3 eye)
+        {
+            if (settings.StatusRate <= 0f) return;
+            _statusCarry.TryGetValue(entity, out var carry);
+            carry += settings.StatusRate * deltaTime;
+            var count = (int)carry;
+            _statusCarry[entity] = carry - count;
+            if (count <= 0) return;
+
+            var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+            var matrix = (Matrix4x4)pose.Value;
+            var points = _damaged.TryGetValue(entity, out var state) && state.Points.Count > 0 ? state.Points : null;
+            var corroding = look.Has(StatusLook.Corroding);
+            var burning = look.Has(StatusLook.Burning);
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = settings.CorrosionColour };
+            for (var i = 0; i < count; i++)
+            {
+                Vector3 local, localNormal;
+                if (points != null)
+                {
+                    var pick = points[Random.Range(0, points.Count)];
+                    local = pick.Point + Random.insideUnitSphere * 0.3f;
+                    localNormal = pick.Normal;
+                }
+                else
+                {
+                    localNormal = Random.onUnitSphere;
+                    local = new Vector3(localNormal.x * 1.1f, 0.5f + localNormal.y * 0.6f, localNormal.z * 2f);
+                }
+                var point = matrix.MultiplyPoint3x4(local);
+                if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
+                var normal = matrix.MultiplyVector(localNormal).normalized;
+
+                // Both at once: take turns.
+                if (burning && (!corroding || (i & 1) == 0))
+                {
+                    EmitFlames(point, normal, Vector3.zero, 0.8f, 1);
+                    continue;
+                }
+                if (_sparks == null) continue;
+                emit.position = point + normal * 0.05f;
+                emit.velocity = (normal + Vector3.up * 0.6f + Random.insideUnitSphere * 0.8f).normalized * Random.Range(0.8f, 2.5f);
+                emit.startLifetime = Random.Range(0.25f, 0.6f);
+                emit.startSize = Random.Range(0.04f, 0.09f);
                 _sparks.Emit(emit, 1);
             }
         }

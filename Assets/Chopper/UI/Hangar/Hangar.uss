@@ -671,3 +671,335 @@
 .hangar__match-status {
   color: var(--chopper-yellow);
 }
+
+/* ---- Pilot card (overview, left) ---- */
+
+.hangar-pilot {
+  flex-direction: row;
+  align-items: center;
+  height: 58px;
+  margin: 0 0 4px 0;
+  padding: 4px 10px 4px 4px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-width: var(--chopper-border-width);
+  border-left-width: 3px;
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+}
+
+.hangar-pilot:hover {
+  background-color: rgba(0, 255, 148, 0.08);
+}
+
+.hangar-pilot__mono {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+  -unity-text-align: middle-center;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.55);
+  margin-right: 10px;
+  padding: 0;
+}
+
+.hangar-pilot__text {
+  flex-grow: 1;
+}
+
+.hangar-pilot__sign {
+  font-size: 18px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.hangar-pilot__role {
+  font-size: 11px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.hangar-pilot__change {
+  font-size: 11px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+/* ---- Pilot select (fighting-game style) ---- */
+
+.pilot-select {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px 40px;
+  background-color: rgba(2, 8, 4, 0.94);
+}
+
+/* Faint moving scan band over everything (USS: a tall gradient-like band that slides down). */
+.pilot-select__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -20%;
+  height: 20%;
+  background-color: rgba(0, 255, 148, 0.025);
+  translate: 0 0;
+  transition-property: translate;
+  transition-duration: 4s;
+  transition-timing-function: linear;
+}
+
+.pilot-select__scan--run {
+  translate: 0 700%;
+}
+
+.pilot-select__header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 8px;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-dim);
+}
+
+.pilot-select__title {
+  font-size: 28px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.pilot-select__hint {
+  font-size: 12px;
+  color: var(--chopper-green-dim);
+  padding: 0 0 4px 0;
+}
+
+.pilot-select__body {
+  flex-grow: 1;
+  flex-direction: row;
+  margin-top: 20px;
+}
+
+/* The shown pilot, large */
+.pilot-feature {
+  width: 56%;
+  flex-direction: row;
+  padding-right: 32px;
+}
+
+.pilot-feature__portrait {
+  width: 300px;
+  height: 420px;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-width: 2px;
+  border-color: var(--chopper-green);
+  margin-right: 28px;
+  -unity-background-scale-mode: scale-and-crop;
+  transition-property: border-color, background-color, scale;
+  transition-duration: 0.18s;
+}
+
+/* One frame on, then off: a white-hot flash as a new pilot lands. */
+.pilot-feature__portrait--flash {
+  background-color: rgba(255, 255, 255, 0.35);
+  scale: 1.03 1.03;
+  transition-duration: 0s;
+}
+
+.pilot-feature__monogram {
+  font-size: 150px;
+  color: var(--chopper-green);
+  padding: 0;
+  text-shadow: 0 0 24px rgba(0, 255, 148, 0.5);
+}
+
+.pilot-feature__serial {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+}
+
+.pilot-feature__text {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.pilot-feature__role {
+  font-size: 14px;
+  letter-spacing: 6px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.pilot-feature__callsign {
+  font-size: 72px;
+  letter-spacing: 4px;
+  color: var(--chopper-text);
+  padding: 0;
+  margin: 2px 0 10px 0;
+  opacity: 1;
+  scale: 1 1;
+  translate: 0 0;
+  transition-property: opacity, scale, translate, letter-spacing;
+  transition-duration: 0.22s;
+  transition-timing-function: ease-out-back;
+}
+
+/* The slam: start big, faint and to the left, with wide letters, then drop into place. */
+.pilot-feature__callsign--slam {
+  opacity: 0;
+  scale: 1.45 1.45;
+  translate: -60px 0;
+  letter-spacing: 30px;
+  transition-duration: 0s;
+}
+
+.pilot-feature__passive {
+  font-size: 16px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.pilot-feature__effects {
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.pilot-effect {
+  font-size: 13px;
+  padding: 3px 8px;
+  margin: 0 6px 6px 0;
+  color: var(--chopper-green);
+  background-color: rgba(0, 255, 148, 0.1);
+  border-left-width: 2px;
+  border-color: var(--chopper-green);
+}
+
+.pilot-effect--bad {
+  color: var(--chopper-red);
+  background-color: rgba(255, 66, 70, 0.1);
+  border-color: var(--chopper-red);
+}
+
+.pilot-ability {
+  padding: 10px 12px;
+  background-color: rgba(0, 0, 0, 0.45);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-faint);
+}
+
+.pilot-ability__label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.pilot-ability__name {
+  font-size: 24px;
+  color: var(--chopper-text);
+  padding: 0;
+  margin: 2px 0;
+}
+
+.pilot-ability__text {
+  font-size: 14px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+}
+
+.pilot-ability__soon {
+  font-size: 11px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+  margin-top: 6px;
+}
+
+/* The roster */
+.pilot-grid {
+  flex-grow: 1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.pilot-tile {
+  width: 150px;
+  height: 128px;
+  margin: 0 10px 10px 0;
+  padding: 6px 8px;
+  justify-content: space-between;
+  align-items: stretch;
+  background-color: rgba(8, 27, 10, 0.8);
+  border-width: var(--chopper-border-width);
+  border-bottom-width: 3px;
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+  transition-property: translate, background-color;
+  transition-duration: 0.1s;
+}
+
+.pilot-tile:hover,
+.pilot-tile:focus {
+  translate: 0 -4px;
+  background-color: rgba(0, 255, 148, 0.1);
+}
+
+.pilot-tile--shown {
+  border-width: 2px;
+  border-bottom-width: 3px;
+  background-color: rgba(0, 255, 148, 0.12);
+}
+
+.pilot-tile--locked {
+  opacity: 0.45;
+}
+
+.pilot-tile__mono {
+  font-size: 40px;
+  -unity-text-align: middle-center;
+  padding: 0;
+  flex-grow: 1;
+}
+
+.pilot-tile__sign {
+  font-size: 14px;
+  color: var(--chopper-text);
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.pilot-tile__tag {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 10px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.pilot-select__footer {
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.pilot-select__state {
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  margin-right: 20px;
+  padding: 0;
+}
+
+.pilot-select__lock {
+  width: 280px;
+}

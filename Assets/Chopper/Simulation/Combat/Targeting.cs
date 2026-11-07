@@ -29,6 +29,10 @@ namespace Chopper.Simulation.Combat
         public TargetClass Class;
         /// <summary>Heat at rest. Speed and dash add to it (<see cref="Seeker.Heat"/>).</summary>
         public float BaseHeat;
+        /// <summary>Seekers take this many times longer to lock it (pilot trait, WRAITH). 0 = 1 (not set).</summary>
+        public float LockTimeScale;
+
+        public float LockScale => LockTimeScale > 0f ? LockTimeScale : 1f;
     }
 
     /// <summary>

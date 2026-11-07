@@ -87,7 +87,7 @@ namespace Chopper.Presentation.Events
             foreach (var rpc in SystemAPI.Query<RefRO<DamageTakenRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
                 var taken = rpc.ValueRO;
-                events.Publish(new DamageTaken(taken.Amount, taken.HasSource, taken.SourcePosition, (DamageKind)taken.Kind, taken.ImpactSpeed));
+                events.Publish(new DamageTaken(taken.Amount, taken.HasSource, taken.SourcePosition, (DamageKind)taken.Kind, taken.ImpactSpeed, taken.Jam));
             }
 
             foreach (var rpc in SystemAPI.Query<RefRO<MissileDetonatedRpc>>().WithAll<ReceiveRpcCommandRequest>())

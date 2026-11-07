@@ -54,6 +54,7 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<CrashSensor> _sensors;
         private ComponentLookup<LocalTransform> _poses;
         private ComponentLookup<GhostOwner> _owners;
+        private ComponentLookup<PilotTraits> _traits;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -62,6 +63,7 @@ namespace Chopper.Simulation.Combat
             _sensors = state.GetComponentLookup<CrashSensor>();
             _poses = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
             _owners = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            _traits = state.GetComponentLookup<PilotTraits>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -73,6 +75,7 @@ namespace Chopper.Simulation.Combat
             _sensors.Update(ref state);
             _poses.Update(ref state);
             _owners.Update(ref state);
+            _traits.Update(ref state);
 
             foreach (var (velocity, config, health, transform, damage, chopper) in SystemAPI
                          .Query<RefRO<PhysicsVelocity>, RefRO<CrashDamageConfig>, RefRO<Health>, RefRO<LocalTransform>,
@@ -97,10 +100,14 @@ namespace Chopper.Simulation.Combat
                             ? Radius(SystemAPI.GetComponent<PhysicsCollider>(chopper))
                             : FallbackRadius;
                         var point = Contact(world, chopper, position, normal, radius, out var other);
+                        var rammer = Rammer(chopper, other, sensor.VelocityBefore, position);
+                        // Pilot trait (RAMJET): the rammer's rams hit harder.
+                        if (rammer != Entity.Null && _traits.TryGetComponent(rammer, out var rammerTraits))
+                            amount *= math.max(rammerTraits.RamDealtScale, 0f);
                         damage.Add(new DamageEvent
                         {
                             Amount = amount,
-                            Source = Rammer(chopper, other, sensor.VelocityBefore, position),
+                            Source = rammer,
                             Point = point,
                             Normal = normal,
                             Kind = landing ? DamageKind.Landing : DamageKind.Impact,

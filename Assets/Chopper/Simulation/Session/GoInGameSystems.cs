@@ -13,6 +13,7 @@ namespace Chopper.Simulation.Session
         public ulong Modules0;
         public ulong Modules1;
         public ushort SkinId;
+        public ushort PilotId;
     }
 
     /// <summary>Client: once connected, mark the connection in game and ask the server for a chopper.</summary>
@@ -44,6 +45,7 @@ namespace Chopper.Simulation.Session
                     Modules0 = choice.Modules0,
                     Modules1 = choice.Modules1,
                     SkinId = skin,
+                    PilotId = choice.PilotId,
                 });
                 ecb.AddComponent(request, new SendRpcCommandRequest { TargetConnection = connection });
                 UnityEngine.Debug.Log("[Client] Connected; asking the server for a chopper.");
@@ -84,6 +86,7 @@ namespace Chopper.Simulation.Session
                     ChassisId = goInGame.ValueRO.ChassisId,
                     Modules0 = goInGame.ValueRO.Modules0,
                     Modules1 = goInGame.ValueRO.Modules1,
+                    PilotId = goInGame.ValueRO.PilotId,
                 };
                 var skinId = goInGame.ValueRO.SkinId;
                 ecb.AddComponent(connection, new RequestedLoadout { Code = loadout, SkinId = skinId });

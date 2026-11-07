@@ -29,6 +29,7 @@ namespace Chopper.Simulation.Combat
             public float3 Position;
             public TargetClass Class;
             public float Heat;
+            public float LockScale;
         }
 
         private ComponentLookup<ThreatState> _threats;
@@ -71,6 +72,7 @@ namespace Chopper.Simulation.Combat
 
                 var best = Entity.Null;
                 var bestScore = 0f;
+                var bestLockScale = 1f;
                 foreach (var candidate in candidates)
                 {
                     if (candidate.Entity == self || (candidate.Class & weapon.Targets) == 0) continue;
@@ -81,6 +83,7 @@ namespace Chopper.Simulation.Combat
                     if (score <= bestScore || !HasLineOfSight(world, self, candidate.Entity, origin, candidate.Position)) continue;
                     best = candidate.Entity;
                     bestScore = score;
+                    bestLockScale = candidate.LockScale;
                 }
 
                 if (best == Entity.Null)
@@ -91,7 +94,7 @@ namespace Chopper.Simulation.Combat
 
                 if (best != lockState.Target)
                     lockState = new TargetLock { Target = best };
-                lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime, 0.01f));
+                lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime * bestLockScale, 0.01f));
                 lockState.Locked = lockState.Progress >= 1f;
 
                 if (_threats.HasComponent(best))
@@ -130,6 +133,7 @@ namespace Chopper.Simulation.Combat
                     Position = pose.ValueRO.Position,
                     Class = targetable.ValueRO.Class,
                     Heat = Seeker.Heat(targetable.ValueRO, speed, dashing),
+                    LockScale = targetable.ValueRO.LockScale,
                 });
             }
             return candidates;

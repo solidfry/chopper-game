@@ -489,7 +489,7 @@ handling and their own ability, in the same role:
   - **Focus views (3 Nov, checked in play):** automatic per slot, no hand-tuned poses: frame the module's bounds in the gap between the panels, distance from its size, side / 3/4 / whole-chopper (armour) views, rotor = the overview angle zoomed to fit (no turn), camera under the rotor disc for modules below it, and a clear-view test (body and module mesh colliders from readable copies in the `WireframeLibrary`) that picks the first unblocked view. `SocketAuthoring` poses (`useSocketPoses`) stay as a manual override. Lifter: the engine module mounts at the back of both side pods (two Engine sockets, the second repeats the module).
   - Not yet: module icons on tiles and cards (the tile shows a text mark: +, X, EQUIPPED, LOCKED); idea: Setup step 7 renders each module's wireframe to a small texture (`ModuleDefinition` icon field).
 
-## 5b. Pilots (owner TODO, 7 Nov 2026 — design, not built)
+## 5b. Pilots (owner TODO, 7 Nov 2026 — steps 1 to 3 built 7 Nov, not compiled)
 
 The player picks a pilot as well as a chopper. Any pilot flies any chassis. A pilot gives one passive bonus (with a small cost) and one active ability.
 
@@ -502,7 +502,7 @@ The player picks a pilot as well as a chopper. Any pilot flies any chassis. A pi
   - Online: the pilot id goes in the matchmaking request and the go-in-game request, next to the loadout. The server checks it.
 - **Data (systemic, plan 1c):**
   - Each pilot is a `PilotDefinition` asset: id, call sign, portrait, one-line role, `PilotModifiers` and one ability definition.
-  - The pilots are listed in a `PilotCatalog` on the `GameConfig`.
+  - The pilots are listed in the `LoadoutCatalog` (the server already reads it), not in a separate catalog.
   - `LoadoutBuilder` applies the modifiers, so there is one code path for the baker and for runtime (like modules). Example: repair time = chassis `RepairTuning.Seconds` × the pilot's repair multiplier. `RepairConfig` is already per chopper.
 - **Shared building block:** a server-side `StatusEffect` buffer on each chopper, for damage over time, a shield, stealth, overclock and jam.
   - One server system ticks the buffer.
@@ -515,22 +515,54 @@ Starting roster (passive / active ability; numbers are first guesses):
 | Call sign | Role | Passive (cost) | Active ability |
 |---|---|---|---|
 | APOTHECARY | Field medic | Repair 40% faster; the lock after a hit is 1.5 s (less boost energy) | **Nanite Cloud**: heal 30% over 5 s, and a hit does not stop it |
-| VIPER | Poison rounds | Gun hits corrode: +30% of the hit as damage over 3 s (a little more gun spread) | **Venom Belt**: 8 s of double corrosion |
+| VIPER | Poison rounds | Gun hits corrode: +30% of the hit as damage over 3 s (gun damage −5%) | **Venom Belt**: 8 s of double corrosion |
 | PYRE | Incendiary | Rocket and missile hits burn: +25% over 4 s (fewer rockets per pod) | **Napalm Salvo**: the next salvo leaves fire on the ground for 6 s |
-| WRAITH | Stealth | Lower heat signature: enemy locks take 40% longer (less hull) | **Ghost**: 4 s where seekers cannot lock you, and missiles in flight lose you |
+| WRAITH | Stealth | Lower heat signature: enemy locks take 40% longer (hull −10%) | **Ghost**: 4 s where seekers cannot lock you, and missiles in flight lose you |
 | BULWARK | Tank | 15% less damage taken (slower turns) | **Aegis**: a 4 s shield that takes the next 50 damage |
 | HOTWIRE | Engines | Boost recharges 35% faster (more crash damage) | **Overclock**: 4 s of endless boost |
-| OVERWATCH | Sensors | Locks build 30% faster; enemy markers at longer range (gun damage −10%) | **Ping**: shows every enemy through walls for 5 s |
-| HEX | Electronic war | Your hits glitch the victim's HUD (HUD look) | **Blackout**: a 150 m EMP; enemy locks drop and cannot start for 3 s |
+| OVERWATCH | Sensors | Locks build 30% faster (gun damage −10%) | **Ping**: shows every enemy through walls for 5 s |
+| HEX | Electronic war | Your hits glitch the victim's HUD (HUD look) (gun damage −5%) | **Blackout**: a 150 m EMP; enemy locks drop and cannot start for 3 s |
 | SCRAPPER | Salvage | A kill gives back 25% hull (repair is 20% slower) | **Strip Down**: drop flares and armour for a short burst of speed |
 | RAMJET | Brawler | Ram damage x2 to others, half to you (heavier: slower climb) | **Battering Ram**: 2 s armoured dash; impacts do not hurt you |
 
 Build order:
-1. `PilotDefinition`, the catalog and modifiers in `LoadoutBuilder` (repair, boost, lock and damage multipliers). The pilot id goes on the loadout.
-2. The select screen.
-3. The `StatusEffect` buffer and damage over time (Viper, Pyre).
+1. `PilotDefinition`, the catalog and modifiers in `LoadoutBuilder` (repair, boost, lock and damage multipliers). The pilot id goes on the loadout. **Built 7 Nov.**
+2. The select screen. **Built 7 Nov.**
+3. The `StatusEffect` buffer and damage over time (Viper, Pyre). **Built 7 Nov** as `DamageOverTime` (shield, stealth and overclock join it in step 4).
 4. Active abilities (key, cooldown, HUD).
 5. Portraits and voice lines.
+
+Built (7 Nov, written without the editor, not compiled):
+- **Data:**
+  - `Simulation/Loadout/PilotDefinition.cs`: `PilotDefinition` and `PilotModifiers`, with `Effects()` for the card lines.
+  - The 10 pilots are in `Data/Loadout/Pilots` (Setup step 1, `Editor/Setup/PilotAssets.cs`) and are linked in the `LoadoutCatalog`.
+- **Loadout:**
+  - `LoadoutCode.PilotId` travels in the ghost loadout, the go-in-game request and the saved choice (`LoadoutChoiceStore.Pilot`).
+  - `LoadoutBuilder.ApplyPilot` scales hull, turn, lift, boost recharge, repair, gun damage, lock time and pylon rounds.
+  - It also writes `PilotTraits` and the `Targetable` heat and lock resistance.
+  - The server sends a corrected loadout back when the pilot id is unknown.
+- **Combat** (server):
+  - `ApplyDamageSystem`:
+    - scales damage taken (all hits, and crashes again);
+    - gun hits corrode and blasts burn (`DamageOverTime`; the same source and kind merges);
+    - a kill heals the killer (SCRAPPER);
+    - a hit from HEX jams the victim's HUD (`DamageTakenRpc.Jam`);
+    - damage-over-time pulses give no hit marker, only the kill.
+  - `DamageOverTimeSystem` deals the damage over time in 0.5 s pulses with the source. So kill credit counts, and corrosion or burn also stops a repair.
+  - `EnvironmentDamageSystem`: RAMJET rams. `TargetLockSystem`: the target's lock-time scale (WRAITH).
+- **Client:**
+  - `StatusLook` (ghost) shows acid-green corrosion sparks and flames on the hull.
+  - Damage-over-time ticks give no sound, shake or ring.
+  - HEX hits call `HudLook.Disrupt`.
+- **Select screen:**
+  - `PilotSelectModel` (Presentation/Hangar) and `PilotSelectView` (UI/Hangar), with a PILOT card in the hangar overview.
+  - A full-screen select screen: a monogram portrait, the call sign slams in with a flash, the passive, green and red effect chips, the ability card (OFFLINE), the roster grid (hover or focus shows, click or LOCK IN picks), and locked pilots by level.
+  - Tests: `PilotTests`.
+- **Not yet:**
+  - abilities (step 4);
+  - portraits (step 5);
+  - the pilot in the matchmaking ticket;
+  - the pilot's call sign on the HUD, kill feed and scoreboard.
 
 ## 6. Account progression
 

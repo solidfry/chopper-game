@@ -33,8 +33,11 @@ namespace Chopper.Presentation.Events
         public readonly DamageKind Kind;
         /// <summary>Crashes and landings: impact speed (m/s). 0 for other hits.</summary>
         public readonly float ImpactSpeed;
-        public DamageTaken(float amount, bool hasSource, Vector3 sourcePosition, DamageKind kind, float impactSpeed)
+        /// <summary>The attacker's pilot jams HUDs (HEX).</summary>
+        public readonly bool Jam;
+        public DamageTaken(float amount, bool hasSource, Vector3 sourcePosition, DamageKind kind, float impactSpeed, bool jam = false)
         {
+            Jam = jam;
             Amount = amount;
             HasSource = hasSource;
             SourcePosition = sourcePosition;
