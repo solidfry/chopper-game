@@ -713,3 +713,48 @@
   height: 4px;
   background-color: var(--chopper-green);
 }
+
+/* Pilot ability line (under flares): dim while cooling down, bright when ready, pink while on */
+.hud-ability {
+  font-size: 13px;
+  letter-spacing: 3px;
+  padding: 2px 8px;
+  margin-top: 4px;
+  color: var(--chopper-green-dim);
+  transition-property: opacity, scale;
+  transition-duration: 0.15s;
+}
+
+.hud-ability--hidden {
+  display: none;
+}
+
+.hud-ability--ready {
+  color: var(--chopper-yellow);
+  border-right-width: 2px;
+  border-color: var(--chopper-yellow);
+  background-color: rgba(48, 40, 0, 0.5);
+}
+
+.hud-ability--active {
+  color: var(--chopper-pink);
+  border-right-width: 2px;
+  border-color: var(--chopper-pink);
+  background-color: rgba(60, 10, 30, 0.6);
+  text-shadow: 0 0 8px rgba(255, 66, 137, 0.7);
+  scale: 1.08 1.08;
+}
+
+.hud-threat--jam {
+  color: var(--chopper-cyan);
+  border-color: var(--chopper-cyan);
+}
+
+/* Ping (pilot OVERWATCH): every enemy, cyan */
+.hud-marker--pinged .hud-marker__icon {
+  background-color: var(--chopper-cyan);
+}
+
+.hud-marker--pinged.hud-marker--locked .hud-marker__icon {
+  background-color: var(--chopper-red);
+}

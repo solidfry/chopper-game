@@ -50,7 +50,10 @@ namespace Chopper.Presentation.Hud
                          .WithEntityAccess())
             {
                 model.Begin();
-                AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target);
+                // Ping (pilot OVERWATCH): every enemy chopper at any range, with health.
+                var ping = SystemAPI.HasComponent<AbilityConfig>(self) && SystemAPI.HasComponent<AbilityState>(self) &&
+                           Abilities.ShowsAllEnemies(SystemAPI.GetComponent<AbilityConfig>(self), SystemAPI.GetComponent<AbilityState>(self));
+                AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
                 model.End();
                 return;
@@ -59,7 +62,7 @@ namespace Chopper.Presentation.Hud
             model.Clear();
         }
 
-        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, Entity lockTarget)
+        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, Entity lockTarget, bool ping)
         {
             var heading = math.atan2(forward.x, forward.z);
             _candidates.Clear();
@@ -70,7 +73,9 @@ namespace Chopper.Presentation.Hud
             {
                 if (health.ValueRO.IsDead) continue;
                 var distanceSq = math.distancesq(position, pose.ValueRO.Position);
-                if (distanceSq > MarkerRange * MarkerRange) continue;
+                var air = (targetable.ValueRO.Class & TargetClass.Air) != 0;
+                var pinged = ping && air;
+                if (!pinged && distanceSq > MarkerRange * MarkerRange) continue;
 
                 var distance = math.sqrt(distanceSq);
                 var onScreen = WorldMarkerModel.Place(camera.WorldToViewportPoint(pose.ValueRO.Position), out var viewport, out var angle);
@@ -83,8 +88,9 @@ namespace Chopper.Presentation.Hud
                     EdgeAngleDegrees = angle,
                     BearingDegrees = Bearing(pose.ValueRO.Position - position, heading),
                     Distance = (int)math.round(distance / WorldMarkerModel.DistanceStep) * WorldMarkerModel.DistanceStep,
-                    HealthFraction = distance <= HealthBarRange && max > 0f ? math.saturate(health.ValueRO.Current / max) : -1f,
+                    HealthFraction = (pinged || distance <= HealthBarRange) && max > 0f ? math.saturate(health.ValueRO.Current / max) : -1f,
                     IsLockTarget = entity == lockTarget,
+                    Pinged = pinged,
                 }));
             }
 

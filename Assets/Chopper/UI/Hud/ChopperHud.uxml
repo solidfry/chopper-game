@@ -21,6 +21,8 @@
       <ui:VisualElement name="threats" class="hud-threats" picking-mode="Ignore">
         <ui:Label name="missile-warning" text="MISSILE" class="hud-threat hud-threat--missile hud-threat--hidden chopper-title" />
         <ui:Label name="lock-warning" text="LOCK WARNING" class="hud-threat hud-threat--lock hud-threat--hidden chopper-title" />
+        <!-- Hit by a Blackout (pilot HEX): no locks for a moment -->
+        <ui:Label name="jam-warning" text="SYSTEMS JAMMED" class="hud-threat hud-threat--jam hud-threat--hidden chopper-title" />
       </ui:VisualElement>
       <ui:VisualElement name="damage-layer" class="hud-layer hud-damage-layer" picking-mode="Ignore">
         <ui:VisualElement name="damage-ring" class="hud-damage hud-damage--hidden" picking-mode="Ignore">
@@ -57,6 +59,8 @@
               <ui:VisualElement name="pylon-reload-fill" class="hud-reload__fill" picking-mode="Ignore" />
             </ui:VisualElement>
             <ui:Label name="flares" text="FLARES" class="hud-flares" />
+            <!-- Pilot ability (F / D-pad up): ready, on, cooling down -->
+            <ui:Label name="ability" text="" class="hud-ability hud-ability--hidden" />
             <ui:VisualElement name="flare-reload" class="hud-reload hud-reload--small hud-reload--hidden" picking-mode="Ignore">
               <ui:VisualElement name="flare-reload-fill" class="hud-reload__fill" picking-mode="Ignore" />
             </ui:VisualElement>

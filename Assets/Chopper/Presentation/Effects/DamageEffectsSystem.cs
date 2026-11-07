@@ -52,6 +52,8 @@ namespace Chopper.Presentation.Effects
         private readonly List<Entity> _gone = new();
         private readonly Dictionary<Entity, float> _repairCarry = new();
         private readonly Dictionary<Entity, float> _statusCarry = new();
+        /// <summary>Per chopper: ability particle carry and the last use count seen (a new use plays the start burst).</summary>
+        private readonly Dictionary<Entity, (float Carry, uint Uses)> _abilityLooks = new();
         private readonly List<(Vector3 Point, Vector3 Normal)> _centre = new() { (new Vector3(0f, 0.5f, 0f), Vector3.up) };
         private PresentationContext _context;
         private IDisposable _subscription;
@@ -92,6 +94,9 @@ namespace Chopper.Presentation.Effects
                 if (!health.ValueRO.IsDead && SystemAPI.HasComponent<ChopperRepair>(entity) &&
                     SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing)
                     EmitRepair(settings, entity, pose.ValueRO, deltaTime, cockpit, eye);
+                if (!health.ValueRO.IsDead && SystemAPI.HasComponent<AbilityState>(entity) && SystemAPI.HasComponent<AbilityConfig>(entity))
+                    EmitAbility(settings, entity, pose.ValueRO, SystemAPI.GetComponent<AbilityConfig>(entity),
+                        SystemAPI.GetComponent<AbilityState>(entity), deltaTime, cockpit, eye);
                 if (!health.ValueRO.IsDead && SystemAPI.HasComponent<StatusLook>(entity))
                 {
                     var look = SystemAPI.GetComponent<StatusLook>(entity);
@@ -144,11 +149,14 @@ namespace Chopper.Presentation.Effects
                 if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _statusCarry.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
+            foreach (var entity in _abilityLooks.Keys)
+                if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _gone)
             {
                 _damaged.Remove(entity);
                 _repairCarry.Remove(entity);
                 _statusCarry.Remove(entity);
+                _abilityLooks.Remove(entity);
             }
         }
 
@@ -299,6 +307,99 @@ namespace Chopper.Presentation.Effects
             }
         }
 
+        /// <summary>
+        /// Pilot abilities that everyone sees: Aegis wraps the hull in a blue spark shell, Nanite Cloud lifts green motes,
+        /// the endless-boost abilities throw pink sparks back from the tail, and a Blackout starts with a cyan ring.
+        /// Ghost shows nothing (it is stealth). Skipped next to the eye in the cockpit view.
+        /// </summary>
+        private void EmitAbility(CombatEffectsSettings settings, Entity entity, in LocalToWorld pose, in AbilityConfig config,
+            in AbilityState ability, float deltaTime, bool cockpit, Vector3 eye)
+        {
+            if (_sparks == null || config.Kind == AbilityKind.None) return;
+            var known = _abilityLooks.TryGetValue(entity, out var look);
+            var started = known && ability.Uses != look.Uses;
+            look.Uses = ability.Uses;
+            var matrix = (Matrix4x4)pose.Value;
+            Vector3 centre = pose.Value.c3.xyz;
+
+            if (started && config.Kind == AbilityKind.Blackout) EmitRing(settings, centre, config.Radius);
+            if (!ability.Active || config.Kind is AbilityKind.Ghost or AbilityKind.Blackout or AbilityKind.Ping)
+            {
+                _abilityLooks[entity] = look;
+                return;
+            }
+
+            look.Carry += settings.AbilityRate * deltaTime;
+            var count = (int)look.Carry;
+            look.Carry -= count;
+            _abilityLooks[entity] = look;
+            if (count <= 0) return;
+
+            var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            for (var i = 0; i < count; i++)
+            {
+                Vector3 local;
+                Vector3 velocity;
+                switch (config.Kind)
+                {
+                    case AbilityKind.Aegis:
+                        // A shell round the hull: points on an ellipsoid, drifting along the surface.
+                        var onShell = Random.onUnitSphere;
+                        local = new Vector3(onShell.x * 2.4f, 0.6f + onShell.y * 1.6f, onShell.z * 4.2f);
+                        velocity = matrix.MultiplyVector(Vector3.Cross(onShell, Vector3.up).normalized * 0.8f);
+                        emit.startColor = settings.ShieldColour;
+                        emit.startLifetime = Random.Range(0.25f, 0.5f);
+                        break;
+                    case AbilityKind.NaniteCloud:
+                        local = Random.insideUnitSphere * 2.2f + new Vector3(0f, 0.5f, 0f);
+                        velocity = Vector3.up * Random.Range(0.6f, 1.6f);
+                        emit.startColor = settings.NaniteColour;
+                        emit.startLifetime = Random.Range(0.5f, 1f);
+                        break;
+                    case AbilityKind.VenomBelt:
+                    case AbilityKind.NapalmSalvo:
+                        // A glow at the guns: the next hits are stronger.
+                        local = new Vector3(Random.Range(-0.8f, 0.8f), Random.Range(-0.2f, 0.4f), 2f + Random.Range(0f, 1f));
+                        velocity = Random.insideUnitSphere * 0.6f;
+                        emit.startColor = config.Kind == AbilityKind.VenomBelt ? settings.CorrosionColour : settings.OverdriveColour;
+                        emit.startLifetime = Random.Range(0.15f, 0.3f);
+                        break;
+                    default:
+                        // Endless boost: sparks thrown back from the tail.
+                        local = new Vector3(Random.Range(-0.4f, 0.4f), 0.6f + Random.Range(-0.3f, 0.3f), -4f);
+                        velocity = matrix.MultiplyVector(Vector3.back * Random.Range(8f, 16f) + Random.insideUnitSphere * 2f);
+                        emit.startColor = settings.OverdriveColour;
+                        emit.startLifetime = Random.Range(0.15f, 0.35f);
+                        break;
+                }
+                var point = matrix.MultiplyPoint3x4(local);
+                if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
+                emit.position = point;
+                emit.velocity = velocity;
+                emit.startSize = Random.Range(0.05f, 0.11f);
+                _sparks.Emit(emit, 1);
+            }
+        }
+
+        /// <summary>A Blackout pulse: a flat ring of fast cyan sparks out to the jam reach.</summary>
+        private void EmitRing(CombatEffectsSettings settings, Vector3 centre, float radius)
+        {
+            const int count = 160;
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = settings.BlackoutColour };
+            var lifetime = 0.6f;
+            for (var i = 0; i < count; i++)
+            {
+                var angle = i * Mathf.PI * 2f / count;
+                var direction = new Vector3(Mathf.Cos(angle), Random.Range(-0.05f, 0.05f), Mathf.Sin(angle));
+                emit.position = centre + direction * 2f;
+                emit.velocity = direction * (Mathf.Max(radius, 10f) / lifetime);
+                emit.startLifetime = lifetime;
+                emit.startSize = Random.Range(0.4f, 0.8f);
+                _sparks.Emit(emit, 1);
+            }
+        }
+
         private void EmitSmoke(CombatEffectsSettings settings, Vector3 point, Vector3 normal, Vector3 velocity, Color colour,
             float strength, int count)
         {
@@ -364,7 +465,7 @@ namespace Chopper.Presentation.Effects
             _root = new GameObject("Damage Effects").transform;
             if (settings.DamageSparkMaterial != null)
             {
-                _sparks = Create("Sparks", settings.DamageSparkMaterial, 800, ParticleSystemRenderMode.Stretch, gravity: 1f,
+                _sparks = Create("Sparks", settings.DamageSparkMaterial, 1500, ParticleSystemRenderMode.Stretch, gravity: 1f,
                     Fade(new Color(1f, 0.95f, 0.75f), new Color(1f, 0.45f, 0.1f), 0.7f), grow: 0.6f, drag: 0.02f);
                 _flames = Create("Flames", settings.DamageSparkMaterial, 600, ParticleSystemRenderMode.Billboard, gravity: -0.2f,
                     Fade(new Color(1f, 0.75f, 0.3f), new Color(0.9f, 0.2f, 0.05f), 0.25f), grow: 1.6f, drag: 0.1f);

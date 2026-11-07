@@ -42,6 +42,8 @@ namespace Chopper.Simulation.Flight
                 DeltaTime = SystemAPI.Time.DeltaTime,
                 Gravity = math.length(gravity),
                 CollisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld,
+                AbilityConfigs = SystemAPI.GetComponentLookup<Combat.AbilityConfig>(isReadOnly: true),
+                AbilityStates = SystemAPI.GetComponentLookup<Combat.AbilityState>(isReadOnly: true),
             }.ScheduleParallel(state.Dependency);
         }
 
@@ -56,6 +58,9 @@ namespace Chopper.Simulation.Flight
             public float DeltaTime;
             public float Gravity;
             [ReadOnly] public CollisionWorld CollisionWorld;
+            /// <summary>Pilot abilities with endless boost (Overclock, Strip Down, Battering Ram).</summary>
+            [ReadOnly] public ComponentLookup<Combat.AbilityConfig> AbilityConfigs;
+            [ReadOnly] public ComponentLookup<Combat.AbilityState> AbilityStates;
 
             private void Execute(
                 Entity entity,
@@ -111,7 +116,10 @@ namespace Chopper.Simulation.Flight
                 var collective = spooled >= 0f ? spooled * config.CollectiveUp : spooled * config.CollectiveDown;
                 velocity.Linear += up * (collective * DeltaTime);
 
-                Boost(input, config, noseAxis, ref velocity, ref state);
+                var endless = AbilityConfigs.TryGetComponent(entity, out var abilityConfig) &&
+                              AbilityStates.TryGetComponent(entity, out var abilityState) &&
+                              Combat.Abilities.EndlessBoost(abilityConfig, abilityState);
+                Boost(input, config, noseAxis, ref velocity, ref state, endless);
 
                 // Drag in the heading frame (yaw only: x = sideways, y = world up, z = flat nose), so sideways and
                 // vertical slides stop faster than forward flight. Not the tilted body frame: there, fast forward
@@ -193,9 +201,9 @@ namespace Chopper.Simulation.Flight
             /// once the button is released.
             /// </summary>
             private void Boost(in ChopperInput input, in ChopperFlightConfig config, float3 noseAxis, ref PhysicsVelocity velocity,
-                ref ChopperFlightState state)
+                ref ChopperFlightState state, bool endless)
             {
-                var canBoost = state.Boosting ? state.BoostUsed < 1f : state.BoostUsed <= 1f - config.BoostStartEnergy;
+                var canBoost = endless || (state.Boosting ? state.BoostUsed < 1f : state.BoostUsed <= 1f - config.BoostStartEnergy);
                 var boosting = input.Boost && canBoost && config.BoostDuration > 0f;
                 var direction = math.normalizesafe(noseAxis, math.forward());
 
@@ -203,7 +211,8 @@ namespace Chopper.Simulation.Flight
                 {
                     if (!state.Boosting) velocity.Linear += direction * config.BoostKick;
                     velocity.Linear += direction * (config.BoostAcceleration * DeltaTime);
-                    state.BoostUsed = math.min(1f, state.BoostUsed + DeltaTime / config.BoostDuration);
+                    // Endless (pilot ability): the tank does not drain.
+                    if (!endless) state.BoostUsed = math.min(1f, state.BoostUsed + DeltaTime / config.BoostDuration);
                     state.BoostRechargeWait = config.BoostRechargeDelay;
                 }
                 else if (input.Boost)

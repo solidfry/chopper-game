@@ -83,6 +83,8 @@ namespace Chopper.Simulation.Flight
                 AddComponent(entity, built.Traits);
                 AddBuffer<DamageOverTime>(entity);
                 AddComponent<StatusLook>(entity);
+                AddComponent(entity, built.Ability);
+                AddComponent<AbilityState>(entity);
 
                 // Every chopper has every weapon component: a ghost's component set is fixed, and loadouts change at
                 // runtime. A missing gun or flares is just a zero config.

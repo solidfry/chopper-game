@@ -46,6 +46,10 @@ namespace Chopper.Presentation.Audio
             public float BoostEndTime = float.NegativeInfinity;
             public SoundLoop Repair;
             public RepairPhase RepairPhase;
+            public uint AbilityUses;
+            public bool AbilityCooling;
+            public bool Jammed;
+            public bool AbilitySeen;
         }
 
         private readonly Dictionary<Entity, Voices> _choppers = new();
@@ -111,6 +115,7 @@ namespace Chopper.Presentation.Audio
 
                 if (isLocal) outOfBounds = hasBounds && !bounds.Contains(position);
                 if (isLocal) UpdateRepair(audio, library, voices, entity, position);
+                if (isLocal) UpdateAbility(audio, library, voices, entity);
             }
 
             StopMissing(audio);
@@ -163,6 +168,25 @@ namespace Chopper.Presentation.Audio
                 audio.StopLoop(voices.Repair);
                 voices.Repair = null;
             }
+        }
+
+        /// <summary>Own pilot ability: a sound when it starts, when it is ready again, and when a Blackout jams you.</summary>
+        private void UpdateAbility(IAudioService audio, SoundLibrary library, Voices voices, Entity entity)
+        {
+            if (!SystemAPI.HasComponent<AbilityState>(entity)) return;
+            var ability = SystemAPI.GetComponent<AbilityState>(entity);
+            var cooling = ability.CooldownLeft > 0f;
+            // The first frame only records (a respawned chopper is not a new use).
+            if (voices.AbilitySeen)
+            {
+                if (ability.Uses != voices.AbilityUses) audio.Play(library.AbilityActivate);
+                else if (voices.AbilityCooling && !cooling) audio.Play(library.AbilityReady);
+                if (ability.Jammed && !voices.Jammed) audio.Play(library.Jammed);
+            }
+            voices.AbilitySeen = true;
+            voices.AbilityUses = ability.Uses;
+            voices.AbilityCooling = cooling;
+            voices.Jammed = ability.Jammed;
         }
 
         private void StopAll()

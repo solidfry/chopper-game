@@ -26,5 +26,7 @@ namespace Chopper.Simulation.Flight
         public InputEvent Countermeasure;
         /// <summary>Held: field repair (R / gamepad X). Any hit stops it for a moment.</summary>
         public bool Repair;
+        /// <summary>The pilot's ability (F / gamepad D-pad up).</summary>
+        public InputEvent Ability;
     }
 }

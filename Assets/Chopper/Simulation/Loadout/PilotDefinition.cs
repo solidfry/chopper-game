@@ -102,10 +102,31 @@ namespace Chopper.Simulation.Loadout
         }
     }
 
+    /// <summary>The numbers of a pilot's active ability (plan section 5b, step 4). See <see cref="AbilityKind"/>.</summary>
+    [Serializable]
+    public sealed class PilotAbilitySettings
+    {
+        public AbilityKind Kind;
+        [Min(0f)] public float Cooldown = 30f;
+        [Min(0f), Tooltip("Seconds it stays on.")] public float Duration = 4f;
+        [Tooltip("Nanite Cloud: hull share healed. Venom Belt / Napalm Salvo: damage-over-time scale. Aegis: shield points. Blackout: jam seconds.")]
+        public float Strength = 1f;
+        [Tooltip("Blackout: reach (m).")] public float Radius = 150f;
+
+        public AbilityConfig ToConfig() => new()
+        {
+            Kind = Kind,
+            Cooldown = Cooldown,
+            Duration = Duration,
+            Strength = Strength,
+            Radius = Radius,
+        };
+    }
+
     /// <summary>
     /// A pilot (plan section 5b): a call sign that says what they do (never a personal name), one passive
-    /// (<see cref="PilotModifiers"/>, with a small cost) and one active ability (text only for now; abilities are build
-    /// step 4). Any pilot flies any chassis. Listed in the <see cref="LoadoutCatalog"/>; the id travels in the loadout.
+    /// (<see cref="PilotModifiers"/>, with a small cost) and one active ability (<see cref="PilotAbilitySettings"/>,
+    /// key F or D-pad up). Any pilot flies any chassis. Listed in the <see cref="LoadoutCatalog"/>; the id travels in the loadout.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Pilot", fileName = "Pilot")]
     public sealed class PilotDefinition : ScriptableObject, IValidatedAsset
@@ -122,6 +143,8 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Optional. Empty = the call sign's monogram.")] private Texture2D portrait;
         [SerializeField] private int unlockLevel;
         [SerializeField] private PilotModifiers modifiers = new();
+        [SerializeField, Tooltip("The active ability's kind and numbers (the text is above).")]
+        private PilotAbilitySettings ability = new();
 
         public ushort Id => id;
         public string CallSign => callSign;
@@ -133,6 +156,15 @@ namespace Chopper.Simulation.Loadout
         public Texture2D Portrait => portrait;
         public int UnlockLevel => unlockLevel;
         public PilotModifiers Modifiers => modifiers ??= new PilotModifiers();
+        public PilotAbilitySettings Ability => ability ??= new PilotAbilitySettings();
+
+        /// <summary>Editor only: used by the setup tool (abilities came after the first pilots).</summary>
+        public void SetAbility(PilotAbilitySettings settings, string name, string text)
+        {
+            ability = settings;
+            abilityName = name;
+            abilityText = text;
+        }
 
         public void CollectProblems(List<string> problems)
         {

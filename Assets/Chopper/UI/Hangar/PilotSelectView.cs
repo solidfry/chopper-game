@@ -40,6 +40,7 @@ namespace Chopper.UI.Hangar
         private readonly VisualElement _effects;
         private readonly Label _abilityName;
         private readonly Label _abilityText;
+        private readonly Label _abilityMeta;
         private readonly VisualElement _grid;
         private readonly Label _state;
         private readonly Button _lockIn;
@@ -64,6 +65,7 @@ namespace Chopper.UI.Hangar
             _effects = root.Q("pilot-effects");
             _abilityName = root.Q<Label>("pilot-ability-name");
             _abilityText = root.Q<Label>("pilot-ability-text");
+            _abilityMeta = root.Q<Label>("pilot-ability-meta");
             _grid = root.Q("pilot-grid");
             _state = root.Q<Label>("pilot-state");
             _lockIn = root.Q<Button>("pilot-lock");
@@ -179,6 +181,7 @@ namespace Chopper.UI.Hangar
             _passive.text = card.Passive;
             _abilityName.text = card.AbilityName;
             _abilityText.text = card.AbilityText;
+            if (_abilityMeta != null) _abilityMeta.text = card.AbilityMeta;
 
             _effects.Clear();
             foreach (var (text, good) in card.Effects)

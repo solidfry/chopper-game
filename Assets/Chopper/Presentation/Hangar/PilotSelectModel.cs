@@ -14,6 +14,8 @@ namespace Chopper.Presentation.Hangar
         public readonly string Passive;
         public readonly string AbilityName;
         public readonly string AbilityText;
+        /// <summary>"COOLDOWN 30 S // ON 4 S", or "" with no ability.</summary>
+        public readonly string AbilityMeta;
         public readonly Color Accent;
         /// <summary>"+40% REPAIR SPEED" (good) / "+15% BOOST RECHARGE" ... in a fixed order.</summary>
         public readonly IReadOnlyList<(string Text, bool Good)> Effects;
@@ -31,6 +33,10 @@ namespace Chopper.Presentation.Hangar
             Passive = pilot.Passive ?? "";
             AbilityName = pilot.AbilityName ?? "";
             AbilityText = pilot.AbilityText ?? "";
+            var ability = pilot.Ability;
+            AbilityMeta = ability.Kind == Simulation.Combat.AbilityKind.None ? ""
+                : ability.Duration >= 1f ? $"COOLDOWN {Mathf.RoundToInt(ability.Cooldown)} S // ON {Mathf.RoundToInt(ability.Duration)} S"
+                : $"COOLDOWN {Mathf.RoundToInt(ability.Cooldown)} S";
             Accent = pilot.Accent;
             Effects = pilot.Modifiers.Effects();
             Monogram = CallSign.Length >= 2 ? CallSign.Substring(0, 2) : CallSign;

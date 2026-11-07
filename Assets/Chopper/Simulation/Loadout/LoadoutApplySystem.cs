@@ -101,6 +101,7 @@ namespace Chopper.Simulation.Loadout
             EntityManager.SetComponentData(entity, built.Gun);
             EntityManager.SetComponentData(entity, built.Countermeasure);
             if (EntityManager.HasComponent<PilotTraits>(entity)) EntityManager.SetComponentData(entity, built.Traits);
+            if (EntityManager.HasComponent<AbilityConfig>(entity)) EntityManager.SetComponentData(entity, built.Ability);
             if (EntityManager.HasComponent<Targetable>(entity)) EntityManager.SetComponentData(entity, built.Target);
 
             // Max is not sent; the server also starts the new chopper at full health.

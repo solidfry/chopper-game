@@ -156,6 +156,15 @@ namespace Chopper.Editor.Setup
                 Slot(library.RepairInterrupted, () => Cue("RepairInterrupted", Clips(SciFiGuns + "/Weapon 12 Stop (Laser).wav"), ui, 0.6f,
                     blend: 0f, voices: 1, cooldown: 0.3f, pitch: 0.8f)));
 
+            // Pilot ability (placeholders): an energy blast on use, a short switch when ready, crackling lightning when jammed.
+            library.InitialiseAbility(
+                Slot(library.AbilityActivate, () => Cue("AbilityActivate", Clips(SciFi + "/Impact/explosion_energy.wav"), ui, 0.5f, blend: 0f,
+                    voices: 1, cooldown: 0.2f, pitch: 1.2f)),
+                Slot(library.AbilityReady, () => Cue("AbilityReady", Clips("Assets/Sound/UI/Switch/Switch (7).wav"), ui, 0.6f, blend: 0f,
+                    voices: 1, cooldown: 0.5f)),
+                Slot(library.Jammed, () => Cue("Jammed", Clips(SciFi + "/Impact/explosion_lightning.wav"), ui, 0.55f, blend: 0f,
+                    voices: 1, cooldown: 0.5f, pitch: 0.8f)));
+
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();

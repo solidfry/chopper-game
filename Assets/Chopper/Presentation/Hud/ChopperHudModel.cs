@@ -6,6 +6,16 @@ using UnityEngine.UIElements;
 
 namespace Chopper.Presentation.Hud
 {
+    /// <summary>What the pilot ability line (under flares) shows.</summary>
+    public enum HudAbility
+    {
+        /// <summary>No pilot, or a pilot with no ability.</summary>
+        Hidden,
+        Ready,
+        Active,
+        Cooldown,
+    }
+
     /// <summary>What the field repair line under the hull shows.</summary>
     public enum HudRepair
     {
@@ -101,6 +111,10 @@ namespace Chopper.Presentation.Hud
         private HudRepair _repair;
         private string _repairText = "";
         private int _repairShown = -1;
+        private HudAbility _ability;
+        private string _abilityText = "";
+        private int _abilityShown = -1;
+        private bool _jammed;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -513,9 +527,49 @@ namespace Chopper.Presentation.Hud
             Repair = state;
         }
 
+        [CreateProperty] public HudAbility Ability { get => _ability; private set => Set(ref _ability, value, nameof(Ability)); }
+
+        [CreateProperty] public string AbilityText { get => _abilityText; private set => Set(ref _abilityText, value, nameof(AbilityText)); }
+
+        /// <summary>Hit by a Blackout (pilot HEX): no locks for a moment.</summary>
+        [CreateProperty] public bool Jammed { get => _jammed; private set => Set(ref _jammed, value, nameof(Jammed)); }
+
+        /// <summary>
+        /// The pilot ability line: "[F] AEGIS" when ready, "AEGIS 2.4" while on, "AEGIS 12" while it cools down. Strings
+        /// are made only when the shown number changes.
+        /// </summary>
+        public void UpdateAbility(string name, float activeLeft, float cooldownLeft, float jammedLeft)
+        {
+            Jammed = jammedLeft > 0f;
+            var state = string.IsNullOrEmpty(name) ? HudAbility.Hidden
+                : activeLeft > 0f ? HudAbility.Active
+                : cooldownLeft > 0f ? HudAbility.Cooldown
+                : HudAbility.Ready;
+            var number = state switch
+            {
+                HudAbility.Active => 100000 + (int)MathF.Ceiling(activeLeft * 10f),
+                HudAbility.Cooldown => 200000 + (int)MathF.Ceiling(cooldownLeft),
+                HudAbility.Ready => 300000,
+                _ => 0,
+            };
+            // A new name (another pilot) is a new text too.
+            if (Changed(ref _abilityShown, number) || (state != HudAbility.Hidden && !_abilityText.Contains(name)))
+                AbilityText = state switch
+                {
+                    HudAbility.Active => name + " " + ((number - 100000) / 10f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture),
+                    HudAbility.Cooldown => $"{name} {number - 200000}",
+                    HudAbility.Ready => "[F] " + name,
+                    _ => "",
+                };
+            Ability = state;
+        }
+
         public void ClearChopper()
         {
             HasChopper = false;
+            Ability = HudAbility.Hidden;
+            _abilityShown = -1;
+            Jammed = false;
             Repair = HudRepair.Hidden;
             AimVisible = false;
             OutOfBounds = false;

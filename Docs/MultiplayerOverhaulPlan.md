@@ -489,7 +489,7 @@ handling and their own ability, in the same role:
   - **Focus views (3 Nov, checked in play):** automatic per slot, no hand-tuned poses: frame the module's bounds in the gap between the panels, distance from its size, side / 3/4 / whole-chopper (armour) views, rotor = the overview angle zoomed to fit (no turn), camera under the rotor disc for modules below it, and a clear-view test (body and module mesh colliders from readable copies in the `WireframeLibrary`) that picks the first unblocked view. `SocketAuthoring` poses (`useSocketPoses`) stay as a manual override. Lifter: the engine module mounts at the back of both side pods (two Engine sockets, the second repeats the module).
   - Not yet: module icons on tiles and cards (the tile shows a text mark: +, X, EQUIPPED, LOCKED); idea: Setup step 7 renders each module's wireframe to a small texture (`ModuleDefinition` icon field).
 
-## 5b. Pilots (owner TODO, 7 Nov 2026 — steps 1 to 3 built 7 Nov, not compiled)
+## 5b. Pilots (owner TODO, 7 Nov 2026 — steps 1 to 4 built 7 Nov, not compiled)
 
 The player picks a pilot as well as a chopper. Any pilot flies any chassis. A pilot gives one passive bonus (with a small cost) and one active ability.
 
@@ -529,7 +529,7 @@ Build order:
 1. `PilotDefinition`, the catalog and modifiers in `LoadoutBuilder` (repair, boost, lock and damage multipliers). The pilot id goes on the loadout. **Built 7 Nov.**
 2. The select screen. **Built 7 Nov.**
 3. The `StatusEffect` buffer and damage over time (Viper, Pyre). **Built 7 Nov** as `DamageOverTime` (shield, stealth and overclock join it in step 4).
-4. Active abilities (key, cooldown, HUD).
+4. Active abilities (key, cooldown, HUD). **Built 7 Nov** (see below).
 5. Portraits and voice lines.
 
 Built (7 Nov, written without the editor, not compiled):
@@ -556,10 +556,31 @@ Built (7 Nov, written without the editor, not compiled):
   - HEX hits call `HudLook.Disrupt`.
 - **Select screen:**
   - `PilotSelectModel` (Presentation/Hangar) and `PilotSelectView` (UI/Hangar), with a PILOT card in the hangar overview.
-  - A full-screen select screen: a monogram portrait, the call sign slams in with a flash, the passive, green and red effect chips, the ability card (OFFLINE), the roster grid (hover or focus shows, click or LOCK IN picks), and locked pilots by level.
+  - A full-screen select screen: a monogram portrait, the call sign slams in with a flash, the passive, green and red effect chips, the ability card (name, text, cooldown), the roster grid (hover or focus shows, click or LOCK IN picks), and locked pilots by level.
   - Tests: `PilotTests`.
+- **Abilities (step 4, built 7 Nov):**
+  - Data: `PilotAbilitySettings` on each pilot (kind, cooldown, duration, strength, radius). Setup step 1 gives older pilot assets their ability once.
+  - On the chopper: `AbilityConfig`, and `AbilityState` (ghost; unquantized timers, `Uses` counter).
+  - Key F or D-pad up (`ChopperInput.Ability`, read from the devices).
+  - `PilotAbilitySystem` is predicted like flares.
+  - Where each ability acts:
+    - Ghost: the flare decoy window, with no flares.
+    - Strip Down: flares and the decoy window, plus endless boost.
+    - Overclock, Strip Down and Battering Ram: the boost tank does not drain (`ChopperFlightSystem`).
+    - Aegis: the shield takes damage first, but not bounds damage.
+    - Battering Ram: no crash or ram damage.
+    - Venom Belt and Napalm Salvo: damage over time x2.
+    - Nanite Cloud: the server heals.
+    - Blackout: other choppers in reach lose their locks and cannot lock for 3 s (`TargetLockSystem`).
+    - Ping: every enemy on the HUD markers at any range, with health.
+  - Simplified from the table:
+    - Napalm Salvo is "6 s of double burn"; it leaves no ground fire.
+    - Strip Down drops no armour.
+  - HUD: an ability line under flares ("[F] AEGIS", "AEGIS 2.4", "AEGIS 12"), and a SYSTEMS JAMMED warning with a HUD glitch.
+  - Looks that everyone sees: a blue shield shell, green nanites, a glow at the guns, pink tail sparks for endless boost, and a cyan Blackout ring.
+  - Own sounds: on use, when ready again, and when jammed.
+  - Tests: `AbilityTests`.
 - **Not yet:**
-  - abilities (step 4);
   - portraits (step 5);
   - the pilot in the matchmaking ticket;
   - the pilot's call sign on the HUD, kill feed and scoreboard.

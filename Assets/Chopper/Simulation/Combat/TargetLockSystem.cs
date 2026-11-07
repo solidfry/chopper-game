@@ -20,6 +20,7 @@ namespace Chopper.Simulation.Combat
     [UpdateInGroup(typeof(PhysicsSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(ExportPhysicsWorld))]
     [UpdateAfter(typeof(CountermeasureSystem))]
+    [UpdateAfter(typeof(PilotAbilitySystem))]
     [UpdateBefore(typeof(PylonFireSystem))]
     public partial struct TargetLockSystem : ISystem
     {
@@ -33,12 +34,14 @@ namespace Chopper.Simulation.Combat
         }
 
         private ComponentLookup<ThreatState> _threats;
+        private ComponentLookup<AbilityState> _abilities;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PhysicsWorldSingleton>();
             _threats = state.GetComponentLookup<ThreatState>();
+            _abilities = state.GetComponentLookup<AbilityState>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -47,6 +50,7 @@ namespace Chopper.Simulation.Combat
             var deltaTime = SystemAPI.Time.DeltaTime;
             var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
             _threats.Update(ref state);
+            _abilities.Update(ref state);
 
             var candidates = CollectCandidates(ref state);
 
@@ -59,7 +63,9 @@ namespace Chopper.Simulation.Combat
             {
                 ref var lockState = ref targetLock.ValueRW;
                 var selected = selection.ValueRO.Selected;
-                if (selected >= weapons.Length || weapons[selected].Seeker == SeekerType.None)
+                // Hit by a Blackout (pilot HEX): no lock until it wears off.
+                var jammed = _abilities.TryGetComponent(self, out var ability) && ability.Jammed;
+                if (jammed || selected >= weapons.Length || weapons[selected].Seeker == SeekerType.None)
                 {
                     lockState = default;
                     continue;

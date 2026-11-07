@@ -21,6 +21,8 @@ namespace Chopper.Simulation.Loadout
         public RepairConfig Repair;
         /// <summary>The pilot's combat rules (<see cref="PilotTraits.None"/> without a pilot).</summary>
         public PilotTraits Traits = PilotTraits.None;
+        /// <summary>The pilot's active ability (kind None without a pilot).</summary>
+        public AbilityConfig Ability;
         /// <summary>How seekers see the chopper (pilot: heat and lock resistance).</summary>
         public Targetable Target = new() { Class = TargetClass.Air, BaseHeat = 1f, LockTimeScale = 1f };
         /// <summary>FireInterval 0 = no gun.</summary>
@@ -117,6 +119,7 @@ namespace Chopper.Simulation.Loadout
             }
 
             built.Traits = m.ToTraits();
+            built.Ability = pilot.Ability.ToConfig();
             built.Target = new Targetable
             {
                 Class = TargetClass.Air,

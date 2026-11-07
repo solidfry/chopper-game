@@ -28,6 +28,8 @@ namespace Chopper.Presentation.Hud
         public float HealthFraction;
         /// <summary>The selected seeker is locking or has locked this target.</summary>
         public bool IsLockTarget;
+        /// <summary>Shown by the own pilot's Ping (OVERWATCH): beyond the usual range, health at any range.</summary>
+        public bool Pinged;
     }
 
     /// <summary>

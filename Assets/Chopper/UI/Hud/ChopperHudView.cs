@@ -40,6 +40,9 @@ namespace Chopper.UI.Hud
         private const string ReloadHiddenClass = "hud-reload--hidden";
         private const string HeatNoneClass = "hud-heat--none";
         private const string HeatLabelHotClass = "hud-heat-label--hot";
+        private const string AbilityHiddenClass = "hud-ability--hidden";
+        private const string AbilityReadyClass = "hud-ability--ready";
+        private const string AbilityActiveClass = "hud-ability--active";
         private const string RepairHiddenClass = "hud-repair--hidden";
         private const string RepairActiveClass = "hud-repair--active";
         private const string RepairLockedClass = "hud-repair--locked";
@@ -75,6 +78,8 @@ namespace Chopper.UI.Hud
         private VisualElement _health;
         private VisualElement _hullArc;
         private VisualElement _repair;
+        private VisualElement _ability;
+        private VisualElement _jamWarning;
         private VisualElement _aim;
         private PanelRenderer _renderer;
         private WorldMarkerView _markers;
@@ -121,6 +126,8 @@ namespace Chopper.UI.Hud
             _health = _chopper.Q("health");
             _hullArc = _chopper.Q("hull-arc");
             _repair = _chopper.Q("repair");
+            _ability = _chopper.Q("ability");
+            _jamWarning = _chopper.Q("jam-warning");
             _aim = _chopper.Q("aim");
             _boundsWarning = _chopper.Q("bounds-warning");
             _damageRing = _chopper.Q("damage-ring");
@@ -150,6 +157,7 @@ namespace Chopper.UI.Hud
             _chopper.dataSource = _model;
             BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));
             BindNumber(_chopper.Q<Label>("repair"), nameof(ChopperHudModel.RepairText));
+            BindNumber(_chopper.Q<Label>("ability"), nameof(ChopperHudModel.AbilityText));
             BindNumber(_chopper.Q<Label>("speed-value"), nameof(ChopperHudModel.SpeedText));
             BindNumber(_chopper.Q<Label>("altitude-value"), nameof(ChopperHudModel.AltitudeText));
             Bind(_chopper.Q<ArcGauge>("boost"), nameof(ArcGauge.value), nameof(ChopperHudModel.BoostEnergy));
@@ -177,6 +185,7 @@ namespace Chopper.UI.Hud
             RefreshWeapons();
             RefreshReload();
             RefreshRepair();
+            RefreshAbility();
             RefreshBanner();
         }
 
@@ -249,6 +258,8 @@ namespace Chopper.UI.Hud
                 RefreshHorizon();
             else if (args.propertyName == nameof(ChopperHudModel.Repair))
                 RefreshRepair();
+            else if (args.propertyName == nameof(ChopperHudModel.Ability) || args.propertyName == nameof(ChopperHudModel.Jammed))
+                RefreshAbility();
             else if (args.propertyName == nameof(ChopperHudModel.DamageDirectionDegrees))
                 RefreshDamageDirection();
             else if (args.propertyName == nameof(ChopperHudModel.HasChopper) ||
@@ -275,6 +286,16 @@ namespace Chopper.UI.Hud
             _aim.EnableInClassList(AimHiddenClass, !_model.AimVisible);
             _aim.EnableInClassList(HitClass, _model.HitMarkerVisible);
             _aim.EnableInClassList(KillClass, _model.KillMarkerVisible);
+        }
+
+        private void RefreshAbility()
+        {
+            if (_ability == null) return;
+            var state = _model.Ability;
+            _ability.EnableInClassList(AbilityHiddenClass, state == HudAbility.Hidden);
+            _ability.EnableInClassList(AbilityReadyClass, state == HudAbility.Ready);
+            _ability.EnableInClassList(AbilityActiveClass, state == HudAbility.Active);
+            _jamWarning?.EnableInClassList(ThreatHiddenClass, !_model.Jammed);
         }
 
         private void RefreshRepair()

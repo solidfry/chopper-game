@@ -98,6 +98,13 @@ namespace Chopper.Presentation.Effects
         private float statusRate = 20f;
         [SerializeField, Tooltip("Corrosion sparks (multiplies the spark material; HDR for bloom).")]
         private Color corrosionColour = new(0.5f, 1f, 0.15f, 1f);
+        [SerializeField, Tooltip("Pilot abilities: particles per second while one is on (shield shell, nanites, overdrive).")]
+        private float abilityRate = 34f;
+        [SerializeField] private Color shieldColour = new(0.3f, 0.6f, 1f, 1f);
+        [SerializeField] private Color naniteColour = new(0.3f, 1f, 0.65f, 1f);
+        [SerializeField, Tooltip("Endless-boost abilities (Overclock, Strip Down, Battering Ram).")]
+        private Color overdriveColour = new(1f, 0.3f, 0.6f, 1f);
+        [SerializeField, Tooltip("Blackout pulse ring.")] private Color blackoutColour = new(0f, 0.94f, 1f, 1f);
 
         [Header("One-shot effects")]
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
@@ -145,6 +152,11 @@ namespace Chopper.Presentation.Effects
         public Color RepairSparkColour => repairSparkColour;
         public float StatusRate => statusRate;
         public Color CorrosionColour => corrosionColour;
+        public float AbilityRate => abilityRate;
+        public Color ShieldColour => shieldColour;
+        public Color NaniteColour => naniteColour;
+        public Color OverdriveColour => overdriveColour;
+        public Color BlackoutColour => blackoutColour;
 
         public void CollectProblems(List<string> problems)
         {

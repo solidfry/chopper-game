@@ -191,14 +191,14 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
      - Take damage and hold R: check the hint, the progress, the sparks and the sounds. Get shot while repairing: check the lock.
   5. Tune `SceneTransitionSettings` and the `MusicLibrary` levels.
 
-## 4d. Pilots, steps 1 to 3 (7 Nov, written without the editor, not compiled)
+## 4d. Pilots, steps 1 to 4 (7 Nov, written without the editor, not compiled)
 
 - See plan section 5b, "Built".
-  - There are 10 call-sign pilots. Each has a passive with a cost; the abilities are text only for now.
+  - There are 10 call-sign pilots. Each has a passive with a cost and an active ability: **F or D-pad up** (step 4).
   - The pilot id travels with the loadout.
   - Damage over time: VIPER corrodes, PYRE burns.
   - The hangar has a fighting-game style select screen (PILOT card, then the full-screen picker).
-- **Protocol change** (new ghost fields `ChopperLoadout.PilotId` and `StatusLook`, new RPC fields): rebuild and push the Edgegap server and change the allocator's `Version`.
+- **Protocol change** (new ghost fields `ChopperLoadout.PilotId`, `StatusLook` and `AbilityState`, new input and RPC fields): rebuild and push the Edgegap server and change the allocator's `Version`.
 - Editor steps:
   1. Compile.
   2. Setup step 1 (makes `Data/Loadout/Pilots/Pilot_*.asset` and links them in the catalog), then Validate.
@@ -207,7 +207,13 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
   5. Check a pilot in play:
      - APOTHECARY: repair in 6 s.
      - VIPER or PYRE: green sparks or flames on a target, and the damage keeps ticking.
-  6. Run `PilotTests`.
+  6. Abilities: press F with each pilot. Check the HUD line, the cooldown, the look and the effect:
+     - BULWARK: hits do nothing while the shield holds.
+     - HOTWIRE: boost does not drain.
+     - HEX near a target: the enemy's lock drops.
+     - OVERWATCH: far enemies show in cyan.
+  7. If input breaks after the compile, delete `Library/BurstCache` (new `ChopperInput` field).
+  8. Run `PilotTests` and `AbilityTests`.
 
 ## 5. Open problems
 

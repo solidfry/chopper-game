@@ -52,6 +52,11 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("The hull is full.")] private SoundCue repairDone;
         [SerializeField, Tooltip("A hit stopped the repair (it locks for a moment).")] private SoundCue repairInterrupted;
 
+        [Header("Pilot ability (own chopper)")]
+        [SerializeField, Tooltip("The ability starts.")] private SoundCue abilityActivate;
+        [SerializeField, Tooltip("The cooldown is over.")] private SoundCue abilityReady;
+        [SerializeField, Tooltip("A Blackout jammed you.")] private SoundCue jammed;
+
         [SerializeField, Tooltip("A module locks onto its socket.")] private SoundCue moduleFit;
         [SerializeField, Tooltip("A socket is emptied.")] private SoundCue moduleRemove;
         [SerializeField, Tooltip("The camera moves to a slot or back to the overview.")] private SoundCue slotFocus;
@@ -76,6 +81,9 @@ namespace Chopper.Presentation.Audio
         public SoundCue Flares => flares;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
+        public SoundCue AbilityActivate => abilityActivate;
+        public SoundCue AbilityReady => abilityReady;
+        public SoundCue Jammed => jammed;
         public SoundCue RepairLoop => repairLoop;
         public SoundCue RepairDone => repairDone;
         public SoundCue RepairInterrupted => repairInterrupted;
@@ -112,6 +120,9 @@ namespace Chopper.Presentation.Audio
             Check(repairLoop, nameof(repairLoop), problems);
             Check(repairDone, nameof(repairDone), problems);
             Check(repairInterrupted, nameof(repairInterrupted), problems);
+            Check(abilityActivate, nameof(abilityActivate), problems);
+            Check(abilityReady, nameof(abilityReady), problems);
+            Check(jammed, nameof(jammed), problems);
         }
 
         private void Check(SoundCue cue, string slot, List<string> problems)
@@ -125,6 +136,14 @@ namespace Chopper.Presentation.Audio
         {
             boostStart = start;
             boostLoop = loop;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseAbility(SoundCue activate, SoundCue ready, SoundCue jam)
+        {
+            abilityActivate = activate;
+            abilityReady = ready;
+            jammed = jam;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

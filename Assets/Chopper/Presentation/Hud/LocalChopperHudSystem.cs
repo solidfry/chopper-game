@@ -21,6 +21,9 @@ namespace Chopper.Presentation.Hud
         private const float AimDistance = 200f;
 
         private MeasuredVelocity _velocity;
+        private bool _wasJammed;
+        /// <summary>HUD glitch strength while jammed by a Blackout.</summary>
+        private const float JamGlitch = 0.9f;
 
         protected override void OnCreate()
         {
@@ -52,6 +55,12 @@ namespace Chopper.Presentation.Hud
                 var repair = SystemAPI.HasComponent<ChopperRepair>(entity) ? SystemAPI.GetComponent<ChopperRepair>(entity) : default;
                 var share = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f;
                 model.UpdateRepair(repair.State, repair.LockLeft, health.ValueRO.IsDead ? 1f : share);
+                var abilityConfig = SystemAPI.HasComponent<AbilityConfig>(entity) ? SystemAPI.GetComponent<AbilityConfig>(entity) : default;
+                var ability = SystemAPI.HasComponent<AbilityState>(entity) ? SystemAPI.GetComponent<AbilityState>(entity) : default;
+                model.UpdateAbility(AbilityNames.Of(abilityConfig.Kind), ability.ActiveLeft, ability.CooldownLeft, ability.JammedLeft);
+                // Blackout: the HUD glitches for as long as the jam lasts.
+                if (ability.Jammed && !_wasJammed) context.HudLook.Disrupt(JamGlitch, ability.JammedLeft);
+                _wasJammed = ability.Jammed;
                 model.OutOfBounds = hasBounds && !bounds.Contains(localToWorld.ValueRO.Position);
                 UpdateAttitude(model, localToWorld.ValueRO, velocity.ValueRO, mass.ValueRO);
 

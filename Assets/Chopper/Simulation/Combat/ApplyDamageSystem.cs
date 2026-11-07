@@ -43,6 +43,8 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<RepairConfig> _repairConfigLookup;
         private ComponentLookup<PilotTraits> _traitsLookup;
         private BufferLookup<DamageOverTime> _dotLookup;
+        private ComponentLookup<AbilityConfig> _abilityConfigLookup;
+        private ComponentLookup<AbilityState> _abilityLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -56,6 +58,8 @@ namespace Chopper.Simulation.Combat
             _repairConfigLookup = state.GetComponentLookup<RepairConfig>(isReadOnly: true);
             _traitsLookup = state.GetComponentLookup<PilotTraits>(isReadOnly: true);
             _dotLookup = state.GetBufferLookup<DamageOverTime>();
+            _abilityConfigLookup = state.GetComponentLookup<AbilityConfig>(isReadOnly: true);
+            _abilityLookup = state.GetComponentLookup<AbilityState>();
         }
 
         [BurstCompile]
@@ -74,6 +78,8 @@ namespace Chopper.Simulation.Combat
             _repairConfigLookup.Update(ref state);
             _traitsLookup.Update(ref state);
             _dotLookup.Update(ref state);
+            _abilityConfigLookup.Update(ref state);
+            _abilityLookup.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             // Kill heals (SCRAPPER) wait until the loop ends: the healer's health may be in the query too.
             var killHeals = new NativeList<KillHeal>(4, Allocator.Temp);
@@ -95,6 +101,7 @@ namespace Chopper.Simulation.Combat
                     // (VIPER, PYRE) and HUD jam (HEX).
                     var hit = raw;
                     hit.Amount = victimTraits.Taken(raw.Amount, raw.Kind);
+                    hit.Amount = VictimAbility(victim, hit.Amount, hit.Kind);
                     var sourceTraits = hit.Source != victim && _traitsLookup.TryGetComponent(hit.Source, out var theirs)
                         ? theirs
                         : PilotTraits.None;
@@ -102,6 +109,10 @@ namespace Chopper.Simulation.Combat
                     if (sourceTraits.DotFor(hit.Kind, hit.Amount, out var dot) && _dotLookup.HasBuffer(victim))
                     {
                         dot.Source = hit.Source;
+                        // Venom Belt, Napalm Salvo: the attacker's ability makes it stronger.
+                        if (_abilityConfigLookup.TryGetComponent(hit.Source, out var sourceAbility) &&
+                            _abilityLookup.TryGetComponent(hit.Source, out var sourceAbilityState))
+                            dot.Remaining *= Abilities.DotScale(sourceAbility, sourceAbilityState, hit.Kind);
                         DamageOverTimeRules.Add(_dotLookup[victim], dot);
                     }
 
@@ -155,6 +166,22 @@ namespace Chopper.Simulation.Combat
             }
             killHeals.Dispose();
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>
+        /// The victim's ability: Battering Ram takes no crash or ram damage; the Aegis shield takes what it can (not
+        /// bounds damage: the arena edge still pushes you back).
+        /// </summary>
+        private float VictimAbility(Entity victim, float amount, DamageKind kind)
+        {
+            if (amount <= 0f || !_abilityConfigLookup.TryGetComponent(victim, out var config) ||
+                !_abilityLookup.TryGetComponent(victim, out var ability))
+                return amount;
+            if (kind is DamageKind.Impact or DamageKind.Landing && Abilities.CrashImmune(config, ability)) return 0f;
+            if (kind == DamageKind.Bounds || ability.Shield <= 0f) return amount;
+            var through = Abilities.Absorb(ref ability, amount);
+            _abilityLookup[victim] = ability;
+            return through;
         }
 
         /// <summary>Shot, hit a wall, out of bounds: a repair in progress stops and locks for a moment.</summary>

@@ -70,6 +70,8 @@ namespace Chopper.Simulation.Flight
             var countermeasure = flight.Fire3.WasPressedThisFrame();
             var cyclePylon = CyclePylonPressed();
             var repair = RepairHeld();
+            var ability = (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame) ||
+                          (Gamepad.current != null && Gamepad.current.dpad.up.wasPressedThisFrame);
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
@@ -102,6 +104,9 @@ namespace Chopper.Simulation.Flight
                     input.ValueRW.Countermeasure.Set();
                 if (cyclePylon)
                     input.ValueRW.CyclePylon.Set();
+                // Pilot ability: F or D-pad up. TODO: an input action (needs the editor to regenerate the class).
+                if (ability)
+                    input.ValueRW.Ability.Set();
             }
         }
 

@@ -16,6 +16,7 @@ namespace Chopper.UI.Hud
         private const string GroundClass = "hud-marker--ground";
         private const string OffScreenClass = "hud-marker--offscreen";
         private const string LockedClass = "hud-marker--locked";
+        private const string PingedClass = "hud-marker--pinged";
         private const string NoHealthClass = "hud-marker--no-health";
         private const string LeadHiddenClass = "hud-lead--hidden";
 
@@ -99,6 +100,7 @@ namespace Chopper.UI.Hud
             root.EnableInClassList(GroundClass, marker.Kind == WorldMarkerKind.Ground);
             root.EnableInClassList(OffScreenClass, !marker.OnScreen);
             root.EnableInClassList(LockedClass, marker.IsLockTarget);
+            root.EnableInClassList(PingedClass, marker.Pinged);
             root.EnableInClassList(NoHealthClass, marker.HealthFraction < 0f);
 
             if (!marker.OnScreen) slot.Arrow.style.rotate = new Rotate(Angle.Degrees(marker.EdgeAngleDegrees));
