@@ -276,6 +276,15 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 - **Open (8 Nov):** the owner's first `-join` window stayed black: it got the map announcement and loaded `Map_City04`, but the city subscene never finished ("did not say it was ready in 12 s"), so it never sent the go-in-game request; the server never saw it. A restart joined at once. Not reproduced; watch for it.
 - **Edgegap API rate limit:** `fetch-logs.ps1` every 30 s plus another call got HTTP 429. Use `-Watch 60` or more.
 
+## 4h. Bots, step 1: the pilot (8 Nov, compiled, tested in the editor)
+
+Design agreed with the owner (8 Nov): bots use the chopper like a player (they only write `ChopperInput`). Three layers: **pilot** (hands and eyes, built), **navigator** (3D grid of about 12 m cells baked from the physics colliders at map load, A* for air, floor cells of the same grid for ground units; not built), **brain** (dogfight moves, threat reactions, human errors, personalities from `BotProfile`; not built). Grid, not octree: memory is small (about 4 MB for City04), the pilot reads it every tick, and wall distance per cell is simple; the bots ask a query service, so the grid can be replaced later.
+- **Code** (`Simulation/Bots/`): `BotPilot.Steer` (pure function: wanted velocity → tilt of the rotor axis, heading, collective → stick input at a human hand speed; removes the flight model's coordinated-turn assist, now shared as `FlightAssists.BankAssistRollRate`), `BotSensing` (sphere casts along the velocity, below it and along the wanted direction; surface height; line-of-flight), `BotWander` (stand-in brain: random waypoints at a height over the ground, raised over buildings in the straight line), `BotPilotSystem` (client, with `ScriptedPilotOverride` / `-bot`).
+- **Data:** `BotProfile` asset (`Data/Bots/BotProfile_Default.asset`) on each map's `ChopperSpawnerAuthoring` (field `botProfile`), baked to the `BotHandling` singleton. Setup step 4 adds it; the validator reports a missing one. Without it, `-bot` falls back to the old `ScriptedPilot` pattern. Thin clients always use the old pattern (no ghosts, so nothing to sense).
+- **Tests:** `Tests/EditMode/BotPilotTests.cs` flies the pilot in a copy of the flight model: reach a waypoint and stop, turn round, brake and climb at a wall, hold the minimum clearance.
+- **Editor result, City04, 1 bot:** 3 min and 2.7 min runs, **no crash, no damage** (the scripted pilot crashed about every 8 s). Closest pass over a roof: 15 m. Cruise 35-40 m/s, 60-84 m/s coasting after boosts.
+- **Next:** check in builds with the match log (`-bot` windows); then the navigator; then the brain (chase, attack, evade); then server bots that fill empty slots (same code on the server).
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |
@@ -292,7 +301,7 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 
 **Owner TODOs (8 Nov):**
 - **A good spawn system**: spawn points spread over the map, away from enemies and walls, safe height; today all players spawn near one point.
-- **Bot pathfinding**: bots that avoid buildings and the ground, find and chase targets, so solo tests have real combat (see 4g: the scripted pilot crashes every 7 s). This also gives Claude a way to fly the game well in tests. Plan section 7a has the bot design (utility decisions, air and land).
+- **Bot pathfinding**: bots that avoid buildings and the ground, find and chase targets, so solo tests have real combat (see 4g: the scripted pilot crashes every 7 s). This also gives Claude a way to fly the game well in tests. Plan section 7a has the bot design (utility decisions, air and land). **Step 1 (pilot) done, see 4h**; next the navigator grid, then the brain.
 
 **Next task: first real playtest** (recommended 6 Nov, owner agreed): 2–4 people on client builds, on a city map, through Edgegap.
 - **Why first:** network tests so far used thin clients and one editor. It answers weapon balance and magazine sizes, turn weight per chassis, hits on other players, and missiles, flares and locks against people. It also checks server load: one local reading was 53 % of a CPU core with 1 player, and the Edgegap version has 0.5 vCPU.

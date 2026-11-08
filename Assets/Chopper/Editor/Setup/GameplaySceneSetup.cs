@@ -167,16 +167,20 @@ namespace Chopper.Editor.Setup
             serialized.ApplyModifiedProperties();
         }
 
-        /// <summary>The spawner needs the loadout catalog (per-player loadouts, chassis prefabs) and the missile ghost.</summary>
+        /// <summary>
+        /// The spawner needs the loadout catalog (per-player loadouts, chassis prefabs), the missile ghost and the bot
+        /// profile.
+        /// </summary>
         private static void EnsureSpawner(Scene scene)
         {
             var config = ConfigAssets.Load();
             var missile = AssetDatabase.LoadAssetAtPath<GameObject>(GuidedWeaponAssets.MissilePrefabPath);
+            var bots = BotAssets.EnsureProfile();
             foreach (var spawner in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)))
             {
-                if (spawner.Catalog != null && spawner.MissilePrefab != null) continue;
+                if (spawner.Catalog != null && spawner.MissilePrefab != null && spawner.BotProfile != null) continue;
                 Undo.RecordObject(spawner, "Configure chopper spawner");
-                spawner.Configure(config != null ? config.LoadoutCatalog : null, missile);
+                spawner.Configure(config != null ? config.LoadoutCatalog : null, missile, bots);
                 EditorUtility.SetDirty(spawner);
             }
         }

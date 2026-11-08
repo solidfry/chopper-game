@@ -71,6 +71,42 @@ namespace Chopper.Simulation.Flight
         public float BoostStartEnergy;
     }
 
+    /// <summary>
+    /// Flight assists that the flight model adds to the pilot's input. Shared, so bots can predict them
+    /// (<see cref="Bots.BotPilot"/>).
+    /// </summary>
+    public static class FlightAssists
+    {
+        /// <summary>
+        /// Coordinated turn: yawing without rolling leans the chopper into the turn (up to
+        /// <see cref="ChopperFlightConfig.MaxBank"/>), so the tilted lift pulls it round. Blended in smoothly (no on/off
+        /// switch, which made the mouse erratic), and off when there is no yaw: then the chopper keeps the bank the pilot
+        /// set, like Battlefield. Returns the extra local roll rate (rad/s, z axis).
+        /// </summary>
+        public static float BankAssistRollRate(quaternion rotation, float yaw, float roll, in ChopperFlightConfig config)
+        {
+            var bankAssist = math.saturate(math.abs(yaw) / 0.2f) * math.saturate(1f - math.abs(roll) / 0.3f);
+            if (config.MaxBank <= 0f || bankAssist <= 0f) return 0f;
+
+            var worldUp = math.up();
+            var up = math.mul(rotation, worldUp);
+            var forwardAxis = math.mul(rotation, math.forward());
+            var flatForward = math.normalizesafe(new float3(forwardAxis.x, 0f, forwardAxis.z), math.forward());
+            var flatRight = math.cross(worldUp, flatForward);
+            var bank = yaw * config.MaxBank;
+            var targetUp = worldUp * math.cos(bank) + flatRight * math.sin(bank);
+            // Compare in the plane across the nose, so pitch does not count as bank.
+            var upAcross = math.normalizesafe(up - flatForward * math.dot(up, flatForward), worldUp);
+            var bankAxis = math.cross(upAcross, targetUp);
+            var sinBank = math.length(bankAxis);
+            if (sinBank <= 1e-4f) return 0f;
+
+            var bankError = math.atan2(sinBank, math.dot(upAcross, targetUp));
+            var localAxis = math.mul(math.inverse(rotation), bankAxis / sinBank);
+            return localAxis.z * bankError * config.BankResponse * bankAssist;
+        }
+    }
+
     /// <summary>Predicted flight state. Ghost fields so the server corrects the client on mismatch.</summary>
     public struct ChopperFlightState : IComponentData
     {

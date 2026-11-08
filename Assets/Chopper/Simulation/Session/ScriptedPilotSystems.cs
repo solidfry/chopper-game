@@ -36,8 +36,9 @@ namespace Chopper.Simulation.Session
     }
 
     /// <summary>
-    /// Dev switch: while this singleton is in the client world, the scripted pilot flies the local chopper (network and
-    /// feel tests without a person at the controls).
+    /// Dev switch: while this singleton is in the client world, a bot flies the local chopper (network and feel tests
+    /// without a person at the controls): <see cref="Bots.BotPilotSystem"/>, or the fixed <see cref="ScriptedPilot"/>
+    /// pattern when the map has no bot profile.
     /// </summary>
     public struct ScriptedPilotOverride : IComponentData
     {
@@ -90,7 +91,8 @@ namespace Chopper.Simulation.Session
     /// <summary>
     /// Writes <see cref="ScriptedPilot"/> input. Thin client: makes its input entity (a thin client has no chopper
     /// ghost, so the connection's command target is a plain entity with the input buffer) and flies it. Full client:
-    /// only with <see cref="ScriptedPilotOverride"/> (<see cref="ChopperInputSystem"/> then leaves the input alone).
+    /// only with <see cref="ScriptedPilotOverride"/> (<see cref="ChopperInputSystem"/> then leaves the input alone) and
+    /// no <see cref="Bots.BotHandling"/> (else <see cref="Bots.BotPilotSystem"/> flies it).
     /// </summary>
     [BurstCompile]
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
@@ -111,7 +113,7 @@ namespace Chopper.Simulation.Session
         public void OnUpdate(ref SystemState state)
         {
             var thin = state.WorldUnmanaged.IsThinClient();
-            if (!thin && !SystemAPI.HasSingleton<ScriptedPilotOverride>()) return;
+            if (!thin && (!SystemAPI.HasSingleton<ScriptedPilotOverride>() || SystemAPI.HasSingleton<Bots.BotHandling>())) return;
 
             var connection = SystemAPI.GetSingletonEntity<NetworkStreamInGame>();
             var networkId = SystemAPI.GetComponent<NetworkId>(connection).Value;

@@ -159,25 +159,7 @@ namespace Chopper.Simulation.Flight
                 // Coordinated turn: yawing (A/D) without rolling leans the chopper into the turn (up to MaxBank), so the
                 // tilted lift pulls it round. Blended in smoothly (no on/off switch, which made the mouse erratic), and
                 // off when there is no yaw: then the chopper keeps the bank the pilot set, like Battlefield.
-                var bankAssist = math.saturate(math.abs(yaw) / 0.2f) * math.saturate(1f - math.abs(roll) / 0.3f);
-                if (config.MaxBank > 0f && bankAssist > 0f)
-                {
-                    var forwardAxis = math.mul(rotation, math.forward());
-                    var flatForward = math.normalizesafe(new float3(forwardAxis.x, 0f, forwardAxis.z), math.forward());
-                    var flatRight = math.cross(worldUp, flatForward);
-                    var bank = yaw * config.MaxBank;
-                    var targetUp = worldUp * math.cos(bank) + flatRight * math.sin(bank);
-                    // Compare in the plane across the nose, so pitch does not count as bank.
-                    var upAcross = math.normalizesafe(up - flatForward * math.dot(up, flatForward), worldUp);
-                    var bankAxis = math.cross(upAcross, targetUp);
-                    var sinBank = math.length(bankAxis);
-                    if (sinBank > 1e-4f)
-                    {
-                        var bankError = math.atan2(sinBank, math.dot(upAcross, targetUp));
-                        var localAxis = math.mul(toLocal, bankAxis / sinBank);
-                        desiredRate.z += localAxis.z * bankError * config.BankResponse * bankAssist;
-                    }
-                }
+                desiredRate.z += FlightAssists.BankAssistRollRate(rotation, yaw, roll, config);
 
                 // Weathervane: at speed, yaw the nose into the horizontal direction of travel.
                 var horizontalVelocity = new float3(velocity.Linear.x, 0f, velocity.Linear.z);

@@ -49,16 +49,19 @@ namespace Chopper.Simulation.Session
         [SerializeField] private float respawnDelay = 3f;
         [SerializeField, Tooltip("Chassis prefabs and module data for per-player loadouts.")] private LoadoutCatalog catalog;
         [SerializeField, Tooltip("Guided missile ghost prefab.")] private GameObject missilePrefab;
+        [SerializeField, Tooltip("How bots fly on this map (BotHandling singleton).")] private Bots.BotProfile botProfile;
 
         /// <summary>Editor only: used by the setup tool.</summary>
-        public void Configure(LoadoutCatalog loadoutCatalog, GameObject missile)
+        public void Configure(LoadoutCatalog loadoutCatalog, GameObject missile, Bots.BotProfile bots)
         {
             if (loadoutCatalog != null) catalog = loadoutCatalog;
             if (missile != null) missilePrefab = missile;
+            if (bots != null) botProfile = bots;
         }
 
         public LoadoutCatalog Catalog => catalog;
         public GameObject MissilePrefab => missilePrefab;
+        public Bots.BotProfile BotProfile => botProfile;
 
         private sealed class Baker : Baker<ChopperSpawnerAuthoring>
         {
@@ -81,6 +84,12 @@ namespace Chopper.Simulation.Session
                     RespawnDelay = authoring.respawnDelay,
                     MissilePrefab = authoring.missilePrefab != null ? GetEntity(authoring.missilePrefab, TransformUsageFlags.Dynamic) : Entity.Null,
                 });
+
+                if (authoring.botProfile != null)
+                {
+                    DependsOn(authoring.botProfile);
+                    AddComponent(entity, authoring.botProfile.Pilot.ToHandling());
+                }
 
                 // Collect first, add the buffer last: a later AddComponent would make the buffer handle invalid.
                 var prefabs = new System.Collections.Generic.List<ChassisPrefab>();
