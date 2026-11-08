@@ -6,9 +6,9 @@ using Random = Unity.Mathematics.Random;
 namespace Chopper.Simulation.Bots
 {
     /// <summary>
-    /// Stand-in brain until the real one (plan section 7a): flies to random points over the map at a random height over
-    /// the ground or roofs. When a building is in the straight line, the waypoint goes up over it (the path finder will
-    /// replace this).
+    /// Stand-in brain until the real one (plan section 7a): flies to random points, mostly in the city area
+    /// (<see cref="BotHandling.WanderCityShare"/>), low over street level (with a grid) or over the ground or roofs. With a <see cref="NavGrid"/> the <see cref="BotNavigation"/> finds the way; without one, a
+    /// building in the straight line raises the waypoint over it.
     /// </summary>
     public struct BotWander : IComponentData
     {
@@ -26,14 +26,17 @@ namespace Chopper.Simulation.Bots
         public static BotWander Create(uint seed) => new() { Random = Random.CreateFromIndex(seed) };
 
         public void Think(in CollisionWorld world, Entity self, float3 position, double now, in PilotSense sense,
-            in BotHandling handling, ref PilotOrder order)
+            in BotHandling handling, in NavGrid grid, ref PilotOrder order)
         {
             var reached = HasGoal && math.distance(position.xz, Goal.xz) < handling.ArriveRadius * 1.5f &&
                           math.abs(position.y - Goal.y) < 60f;
+            var hasGrid = grid.Blob.IsCreated;
             if (!HasGoal || reached || now - GoalTime > handling.WanderSeconds)
-                PickGoal(world, now, sense, handling, position);
+                PickGoal(world, grid, now, sense, handling, position);
 
-            if (now >= NextLineCheck)
+            if (hasGrid)
+                Waypoint = Goal;
+            else if (now >= NextLineCheck)
             {
                 NextLineCheck = now + LineCheckSeconds;
                 Waypoint = Goal;
@@ -42,6 +45,7 @@ namespace Chopper.Simulation.Bots
             }
 
             order.Destination = Waypoint;
+            order.RemainingDistance = 0f;
             order.Speed = handling.CruiseSpeed;
             order.ArriveRadius = handling.ArriveRadius;
             order.AllowBoost = true;
@@ -50,7 +54,7 @@ namespace Chopper.Simulation.Bots
             order.FireSecondary = false;
         }
 
-        private void PickGoal(in CollisionWorld world, double now, in PilotSense sense, in BotHandling handling, float3 position)
+        private void PickGoal(in CollisionWorld world, in NavGrid grid, double now, in PilotSense sense, in BotHandling handling, float3 position)
         {
             var centre = sense.HasBounds ? sense.BoundsCentre : float3.zero;
             var half = sense.HasBounds ? sense.BoundsHalfExtents : new float3(1000f, 450f, 1000f);
@@ -62,8 +66,22 @@ namespace Chopper.Simulation.Bots
             var goal = position;
             for (var attempt = 0; attempt < 4; attempt++)
             {
-                var xz = centre.xz + Random.NextFloat2(-inner.xz, inner.xz);
-                BotSensing.SurfaceHeight(world, xz.x, xz.y, top, bottom, out var surface);
+                float2 xz;
+                if (Random.NextFloat() < handling.WanderCityShare)
+                {
+                    // Uniform over the city disc, clamped into the bounds.
+                    var angle = Random.NextFloat(0f, 2f * math.PI);
+                    var radius = handling.WanderCityRadius * math.sqrt(Random.NextFloat());
+                    xz = math.clamp(centre.xz + new float2(math.cos(angle), math.sin(angle)) * radius, centre.xz - inner.xz, centre.xz + inner.xz);
+                }
+                else
+                {
+                    xz = centre.xz + Random.NextFloat2(-inner.xz, inner.xz);
+                }
+
+                float surface;
+                if (grid.Blob.IsCreated) surface = grid.Blob.Value.FloorAt(new float3(xz.x, 0f, xz.y));
+                else BotSensing.SurfaceHeight(world, xz.x, xz.y, top, bottom, out surface);
                 var height = surface + Random.NextFloat(handling.WanderClearance.x, handling.WanderClearance.y);
                 goal = new float3(xz.x, math.min(height, top - handling.BoundsMargin), xz.y);
                 if (math.distance(goal.xz, position.xz) > handling.BoostDistance) break;

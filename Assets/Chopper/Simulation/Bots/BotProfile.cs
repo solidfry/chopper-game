@@ -74,9 +74,33 @@ namespace Chopper.Simulation.Bots
         [Tooltip("No boost lower than this over the ground, m.")]
         public float BoostMinClearance = 45f;
 
+        [Header("Navigation (path finding on the level grid)")]
+        [Tooltip("Grid cell size, m. Smaller = tighter gaps, more memory and slower searches. The map's grid uses the first bot's value.")]
+        public float NavCellSize = 12f;
+        [Tooltip("Paths keep at least this far from walls, m (rounded up to whole cells; 1 cell is already about half a cell from any surface).")]
+        public float PathMinClearance = 12f;
+        [Tooltip("Paths prefer this much room, m: closer cells cost more.")]
+        public float PathPreferredClearance = 40f;
+        [Tooltip("Extra cost next to a wall (1 = twice the length), fading to 0 at the preferred clearance.")]
+        public float PathClearancePenalty = 1.5f;
+        [Tooltip("Extra cost per metre of climb. 0 = goes over everything; higher = goes round buildings.")]
+        public float PathClimbCost = 0.4f;
+        [Tooltip("Paths stay about this high over street level, m (low flight between buildings).")]
+        public float PathCruiseHeight = 30f;
+        [Tooltip("Extra cost per 100 m above the cruise height (1 = twice the length). 0 = height does not matter.")]
+        public float PathHeightCost = 1.5f;
+        [Tooltip("Most grid cells one search may open (CPU limit). Then the path goes to the closest point found.")]
+        public int PathMaxNodes = 40000;
+        [Tooltip("Plan the path again after this many seconds.")]
+        public float ReplanSeconds = 4f;
+
         [Header("Wander (until the brain is built)")]
         [Tooltip("Height range over the ground or roofs at the wander waypoints, m.")]
-        public Vector2 WanderClearance = new(35f, 110f);
+        public Vector2 WanderClearance = new(15f, 45f);
+        [Tooltip("Share of wander goals inside the city area (the rest anywhere in the bounds).")]
+        [Range(0f, 1f)] public float WanderCityShare = 0.8f;
+        [Tooltip("Radius of the city area round the arena centre, m.")]
+        public float WanderCityRadius = 650f;
         [Tooltip("A new waypoint after this many seconds, even when the old one was not reached.")]
         public float WanderSeconds = 40f;
         [Tooltip("Waypoint reached inside this distance, m.")]
@@ -107,7 +131,18 @@ namespace Chopper.Simulation.Bots
             BoostMinClearance = BoostMinClearance,
             WanderClearance = new float2(WanderClearance.x, math.max(WanderClearance.x, WanderClearance.y)),
             WanderSeconds = math.max(WanderSeconds, 1f),
+            WanderCityShare = math.saturate(WanderCityShare),
+            WanderCityRadius = math.max(WanderCityRadius, 10f),
+            PathCruiseHeight = PathCruiseHeight,
+            PathHeightCost = math.max(PathHeightCost, 0f),
             ArriveRadius = math.max(ArriveRadius, 1f),
+            NavCellSize = math.max(NavCellSize, 2f),
+            PathMinClearance = PathMinClearance,
+            PathPreferredClearance = PathPreferredClearance,
+            PathClearancePenalty = math.max(PathClearancePenalty, 0f),
+            PathClimbCost = math.max(PathClimbCost, 0f),
+            PathMaxNodes = PathMaxNodes,
+            ReplanSeconds = math.max(ReplanSeconds, 0.5f),
         };
     }
 
@@ -136,7 +171,18 @@ namespace Chopper.Simulation.Bots
         public float BoostDistance;
         public float BoostMinClearance;
         public float2 WanderClearance;
+        public float WanderCityShare;
+        public float WanderCityRadius;
+        public float PathCruiseHeight;
+        public float PathHeightCost;
         public float WanderSeconds;
         public float ArriveRadius;
+        public float NavCellSize;
+        public float PathMinClearance;
+        public float PathPreferredClearance;
+        public float PathClearancePenalty;
+        public float PathClimbCost;
+        public int PathMaxNodes;
+        public float ReplanSeconds;
     }
 }

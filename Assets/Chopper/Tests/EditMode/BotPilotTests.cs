@@ -187,6 +187,27 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void BoundsMargin_DoesNotKeepTheBotOffTheFloor()
+        {
+            var flight = Flight();
+            var handling = Handling();
+            var body = Hover(new float3(0f, 100f, 0f));
+            var hands = new PilotHands();
+            var order = new PilotOrder { Destination = new float3(0f, 30f, 100f), Speed = handling.CruiseSpeed, ArriveRadius = 10f };
+
+            for (var i = 0; i < 60 * 25; i++)
+            {
+                var sense = Sense(body);
+                sense.HasBounds = true;
+                sense.BoundsCentre = new float3(0f, 450f, 0f);
+                sense.BoundsHalfExtents = new float3(1000f, 450f, 1000f);
+                Integrate(ref body, BotPilot.Steer(order, sense, flight, handling, ref hands, Step), flight);
+            }
+
+            Assert.Less(math.distance(body.Position, order.Destination), 15f, $"ended at {body.Position}");
+        }
+
+        [Test]
         public void RotationVector_IsAxisTimesAngle()
         {
             var v = BotPilot.RotationVector(quaternion.AxisAngle(math.up(), 0.5f));

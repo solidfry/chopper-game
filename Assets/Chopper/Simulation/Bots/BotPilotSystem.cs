@@ -19,8 +19,9 @@ namespace Chopper.Simulation.Bots
 
     /// <summary>
     /// A bot flies the local chopper (client with <see cref="ScriptedPilotOverride"/>, e.g. a <c>-bot</c> build):
-    /// brain (<see cref="BotWander"/> for now) → order → eyes (<see cref="BotSensing"/>) → hands (<see cref="BotPilot"/>)
-    /// → <see cref="ChopperInput"/>, the same input a player sends. Needs the <see cref="BotHandling"/> singleton (the
+    /// brain (<see cref="BotWander"/> for now: the goal) → navigator (<see cref="BotNavigation"/>, when the map's
+    /// <see cref="NavGrid"/> is baked: the next waypoint) → eyes (<see cref="BotSensing"/>) → hands
+    /// (<see cref="BotPilot"/>) → <see cref="ChopperInput"/>, the same input a player sends. Needs the <see cref="BotHandling"/> singleton (the
     /// spawner's bot profile); without it <see cref="ScriptedPilotSystem"/> flies the old fixed pattern.
     /// Server bots (filling empty slots) will run the same steps on the server.
     /// </summary>
@@ -50,6 +51,8 @@ namespace Chopper.Simulation.Bots
                 state.EntityManager.AddComponentData(bot, new BotPilotState());
                 state.EntityManager.AddComponentData(bot, new PilotOrder());
                 state.EntityManager.AddComponentData(bot, BotWander.Create((uint)networkId * 7919u + 17u));
+                state.EntityManager.AddComponentData(bot, new BotNavigator());
+                state.EntityManager.AddBuffer<BotWaypoint>(bot);
             }
 
             var handling = SystemAPI.GetSingleton<BotHandling>();
@@ -58,13 +61,16 @@ namespace Chopper.Simulation.Bots
             var hasBounds = SystemAPI.TryGetSingleton<ArenaBounds>(out var bounds);
             var now = SystemAPI.Time.ElapsedTime;
             var deltaTime = SystemAPI.Time.DeltaTime;
+            SystemAPI.TryGetSingleton<NavGrid>(out var grid);
+            var hasGrid = grid.Blob.IsCreated;
 
             // The local chopper (one per client).
             var chopper = Entity.Null;
             foreach (var (_, entity) in SystemAPI.Query<RefRO<ChopperInput>>().WithAll<GhostOwnerIsLocal, ChopperFlightConfig>().WithEntityAccess())
                 chopper = entity;
 
-            foreach (var (pilot, order, wander) in SystemAPI.Query<RefRW<BotPilotState>, RefRW<PilotOrder>, RefRW<BotWander>>())
+            foreach (var (pilot, order, wander, navigator, waypoints) in
+                     SystemAPI.Query<RefRW<BotPilotState>, RefRW<PilotOrder>, RefRW<BotWander>, RefRW<BotNavigator>, DynamicBuffer<BotWaypoint>>())
             {
                 if (chopper == Entity.Null) continue;
                 if (pilot.ValueRO.Chopper != chopper)
@@ -72,6 +78,7 @@ namespace Chopper.Simulation.Bots
                     // New chopper (spawn or respawn): fresh hands and a new goal from here.
                     pilot.ValueRW = new BotPilotState { Chopper = chopper };
                     wander.ValueRW.HasGoal = false;
+                    navigator.ValueRW.Planned = false;
                 }
 
                 var transform = SystemAPI.GetComponent<LocalTransform>(chopper);
@@ -94,7 +101,10 @@ namespace Chopper.Simulation.Bots
                     BoundsHalfExtents = bounds.HalfExtents,
                 };
 
-                wander.ValueRW.Think(world, chopper, sense.Position, now, sense, handling, ref order.ValueRW);
+                wander.ValueRW.Think(world, chopper, sense.Position, now, sense, handling, grid, ref order.ValueRW);
+                if (hasGrid)
+                    BotNavigation.Follow(ref grid.Blob.Value, ref navigator.ValueRW, waypoints, sense.Position, wander.ValueRO.Goal,
+                        now, handling, NavDomain.Air, ref order.ValueRW);
 
                 var maxAcceleration = gravity * flight.GravityScale * flight.TiltThrust * math.tan(handling.MaxTilt);
                 var wanted = BotPilot.DesiredVelocity(order.ValueRO, sense, handling);

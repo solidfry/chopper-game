@@ -15,6 +15,11 @@ namespace Chopper.Simulation.Bots
         /// <summary>Cruise speed to it, m/s. The pilot brakes in time to stop at <see cref="ArriveRadius"/>.</summary>
         public float Speed;
         public float ArriveRadius;
+        /// <summary>
+        /// Path length still to go through <see cref="Destination"/> to the end of the path, m (0 = the destination is the
+        /// end). The pilot brakes for the end, not for each waypoint.
+        /// </summary>
+        public float RemainingDistance;
         /// <summary>Point the nose (and the gun) at <see cref="AimPoint"/>; else the nose follows the travel direction.</summary>
         public bool Aim;
         public float3 AimPoint;
@@ -165,7 +170,7 @@ namespace Chopper.Simulation.Bots
             var toDestination = order.Destination - sense.Position;
             var flat = Flat(toDestination);
             var flatDistance = math.length(flat);
-            var room = math.max(flatDistance - order.ArriveRadius, 0f);
+            var room = math.max(math.max(order.RemainingDistance, flatDistance) - order.ArriveRadius, 0f);
             var direction = flatDistance > 1e-3f ? flat / flatDistance : float3.zero;
             // On a travel leg, faster than cruise (after a boost) is kept: drag slows the chopper, not a hard flare.
             var cruise = order.AllowBoost ? math.max(order.Speed, math.dot(Flat(sense.Velocity), direction)) : order.Speed;
@@ -197,10 +202,12 @@ namespace Chopper.Simulation.Bots
 
             if (sense.HasBounds)
             {
-                // Outside the inner box: steer back in, harder the further out.
+                // Outside the inner box: steer back in, harder the further out. Sides and ceiling only: the floor of the
+                // bounds is the ground, which the minimum clearance already keeps away.
                 var inner = math.max(sense.BoundsHalfExtents - handling.BoundsMargin, 1f);
                 var offset = sense.Position - sense.BoundsCentre;
                 var outside = math.max(math.abs(offset) - inner, 0f) * math.sign(offset);
+                outside.y = math.max(outside.y, 0f);
                 desired -= outside * 0.5f;
             }
             return desired;
