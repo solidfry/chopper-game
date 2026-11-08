@@ -6,6 +6,7 @@ using Unity.NetCode;
 using Unity.Physics;
 using Unity.Physics.Systems;
 using Unity.Transforms;
+using Chopper.Simulation.Session;
 
 namespace Chopper.Simulation.Combat
 {
@@ -52,6 +53,8 @@ namespace Chopper.Simulation.Combat
             _damage.Update(ref state);
             _owners.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
+            var now = SystemAPI.Time.ElapsedTime;
+            var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log) && isServer;
 
             foreach (var (missileRef, transform, entity) in SystemAPI.Query<RefRW<GuidedMissile>, RefRW<LocalTransform>>()
                          .WithAll<Simulate>()
@@ -67,7 +70,21 @@ namespace Chopper.Simulation.Combat
                 // Flares: a heat seeker loses a target that is dropping them.
                 if (missile.Seeker == SeekerType.Heat && !missile.IgnoresFlares && _countermeasures.TryGetComponent(missile.Target, out var flares) &&
                     flares.DecoyRemaining > 0f)
+                {
+                    if (hasLog)
+                        log.Add(new MatchLogEntry
+                        {
+                            Kind = MatchLogKind.MissileDecoyed,
+                            Time = now,
+                            Actor = _owners.TryGetComponent(entity, out var shooterOwner) ? shooterOwner.NetworkId : 0,
+                            Target = _owners.TryGetComponent(missile.Target, out var targetOwner) ? targetOwner.NetworkId : 0,
+                            Weapon = missile.Weapon,
+                            ActorPosition = start,
+                            TargetPosition = _poses.TryGetComponent(missile.Target, out var decoyPose) ? decoyPose.Position : start,
+                            Distance = _poses.TryGetComponent(missile.Target, out var decoyAt) ? math.distance(start, decoyAt.Position) : -1f,
+                        });
                     missile.Target = Entity.Null;
+                }
 
                 LocalToWorld targetPose = default;
                 var hasTarget = missile.Target != Entity.Null && _poses.TryGetComponent(missile.Target, out targetPose);
@@ -135,8 +152,23 @@ namespace Chopper.Simulation.Combat
                         Point = directPoint,
                         Normal = directNormal,
                         Kind = DamageKind.Explosion,
+                        Weapon = missile.Weapon,
                     });
-                Explosions.Splash(world, ref _damage, detonateAt, missile.SplashRadius, missile.SplashDamage, missile.Shooter, directTarget);
+                Explosions.Splash(world, ref _damage, detonateAt, missile.SplashRadius, missile.SplashDamage, missile.Shooter, directTarget,
+                    missile.Weapon);
+                if (hasLog)
+                    log.Add(new MatchLogEntry
+                    {
+                        Kind = MatchLogKind.MissileEnd,
+                        Time = now,
+                        Actor = _owners.TryGetComponent(entity, out var endOwner) ? endOwner.NetworkId : 0,
+                        Target = _owners.TryGetComponent(missile.Target, out var endTarget) ? endTarget.NetworkId : 0,
+                        Weapon = missile.Weapon,
+                        ActorPosition = detonateAt,
+                        TargetPosition = hasTarget ? targetPose.Position : detonateAt,
+                        Distance = hasTarget ? math.distance(detonateAt, targetPose.Position) : -1f,
+                        Detail = (byte)(impact ? MissileOutcome.Impact : directTarget != Entity.Null ? MissileOutcome.Proximity : MissileOutcome.Expired),
+                    });
 
                 var rpc = ecb.CreateEntity();
                 ecb.AddComponent(rpc, new MissileDetonatedRpc { Position = detonateAt });
@@ -166,6 +198,7 @@ namespace Chopper.Simulation.Combat
                     DirectDamage = cluster.DirectDamage,
                     SplashDamage = cluster.SplashDamage,
                     SplashRadius = cluster.SplashRadius,
+                    Weapon = missile.Weapon,
                 });
             }
 

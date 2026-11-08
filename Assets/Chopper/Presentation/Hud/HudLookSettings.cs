@@ -119,10 +119,10 @@ namespace Chopper.Presentation.Hud
         [SerializeField] private HudLookReactions reactions = new()
         {
             FullGlitchDamage = 40f, GlitchDecay = 2.5f, GlitchChromatic = 4f, LowHullFlicker = 0.2f,
-            LockPulse = 0.5f, PulseDecay = 3f, MissileNoise = 0.15f, SpawnGlitch = 0.8f,
-            FeedBootHold = 0.9f, FeedBootSeconds = 2.6f, FeedGlitch = 0.6f,
-            BootPixelSize = 96f, BootColourSteps = 5f, BootDropout = 1f,
-            HexGrid = 0.7f, HexGridSize = 0.035f, HexGridReach = 0.42f, HexGridRest = 0f,
+            LockPulse = 0.5f, PulseDecay = 3f, MissileNoise = 0.15f, SpawnGlitch = 0.5f,
+            FeedBootHold = 0.4f, FeedBootSeconds = 1.6f, FeedGlitch = 0.6f,
+            BootPixelSize = 48f, BootColourSteps = 8f, BootDropout = 0.5f,
+            HexGrid = 0.45f, HexGridSize = 0.035f, HexGridReach = 0.42f, HexGridRest = 0f,
         };
 
         public HudLookPreset DefaultPreset => defaultPreset;

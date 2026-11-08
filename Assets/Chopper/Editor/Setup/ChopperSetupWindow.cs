@@ -60,6 +60,7 @@ namespace Chopper.Editor.Setup
                     EditorSceneManager.OpenScene(HangarSetup.ScenePath);
             }) { text = "Open hangar scene" });
             root.Add(new Button(ServerBuild.BuildLinux) { text = "Build Linux server (Edgegap)" });
+            root.Add(new Button(ClientBuild.BuildWindows) { text = "Build Windows client (test)" });
 
             root.Add(new Label("Problems") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 10 } });
             root.Add(new Button(Validate) { text = "Validate" });

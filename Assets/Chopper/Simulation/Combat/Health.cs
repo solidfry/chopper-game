@@ -59,6 +59,8 @@ namespace Chopper.Simulation.Combat
         public DamageKind Kind;
         /// <summary>Crashes and landings: the impact speed (m/s), for the victim's camera shake. 0 for other hits.</summary>
         public float ImpactSpeed;
+        /// <summary>The weapon's short name, for the match log; empty for crashes, bounds and damage over time.</summary>
+        public Unity.Collections.FixedString32Bytes Weapon;
 
         public bool HasPoint => Kind is DamageKind.Bullet or DamageKind.Explosion or DamageKind.Impact or DamageKind.Landing;
     }

@@ -58,6 +58,8 @@ namespace Chopper.Simulation.Combat
 
             _interpolationDelayLookup.Update(ref state);
             _damageLookup.Update(ref state);
+            var now = SystemAPI.Time.ElapsedTime;
+            var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log) && isServer;
 
             foreach (var (input, config, weapon, transform, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<HitscanWeaponConfig>, RefRW<HitscanWeaponState>, RefRO<LocalTransform>>()
@@ -76,6 +78,16 @@ namespace Chopper.Simulation.Combat
 
                 // Clients only predict the fire rate and shot count; presentation draws tracers from the count.
                 if (!isServer) continue;
+                if (hasLog)
+                    log.Add(new Session.MatchLogEntry
+                    {
+                        Kind = Session.MatchLogKind.Shot,
+                        Time = now,
+                        Actor = SystemAPI.HasComponent<GhostOwner>(shooter) ? SystemAPI.GetComponent<GhostOwner>(shooter).NetworkId : 0,
+                        Weapon = config.ValueRO.Name,
+                        ActorPosition = transform.ValueRO.Position,
+                        Distance = -1f,
+                    });
 
                 var collisionWorld = physicsWorld.CollisionWorld;
                 if (hasHistory)
@@ -100,6 +112,7 @@ namespace Chopper.Simulation.Combat
                         Point = hit.Position,
                         Normal = hit.SurfaceNormal,
                         Kind = DamageKind.Bullet,
+                        Weapon = config.ValueRO.Name,
                     });
             }
         }

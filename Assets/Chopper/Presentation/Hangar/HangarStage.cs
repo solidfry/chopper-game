@@ -243,6 +243,44 @@ namespace Chopper.Presentation.Hangar
             _model.SearchCancelled += OnSearchCancelled;
             OnChanged();
             SnapCamera();
+            AutoStartAsync().Forget();
+        }
+
+        /// <summary>Seconds in the hangar before <c>-autoMatch</c> or <c>-join</c> starts (services sign in first).</summary>
+        private const float AutoStartDelay = 3f;
+
+        /// <summary>
+        /// Test windows: <c>-autoMatch</c> presses FIND MATCH, <c>-join IP:PORT</c> joins that server directly (no
+        /// matchmaker). Both run each time the hangar opens, so a bot window goes back into a match after one ends.
+        /// </summary>
+        private async UniTaskVoid AutoStartAsync()
+        {
+            var join = ServerArgs.String("-join");
+            var autoMatch = ServerArgs.Flag("-autoMatch");
+            if (string.IsNullOrEmpty(join) && !autoMatch) return;
+            if (await UniTask.Delay(TimeSpan.FromSeconds(AutoStartDelay), cancellationToken: destroyCancellationToken)
+                    .SuppressCancellationThrow()) return;
+            if (!isActiveAndEnabled || _launching) return;
+            if (string.IsNullOrEmpty(join))
+            {
+                if (!_model.FindMatch()) Debug.LogWarning($"-autoMatch: cannot search ({_model.Error}).");
+                return;
+            }
+
+            var colon = join.LastIndexOf(':');
+            if (colon <= 0 || !ushort.TryParse(join.Substring(colon + 1), out var port))
+            {
+                Debug.LogWarning($"-join {join}: expected IP:PORT.");
+                return;
+            }
+            _model.SaveChoice();
+            try
+            {
+                await JoinAsync(join.Substring(0, colon), port, destroyCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private void OnDisable()
@@ -541,7 +579,11 @@ namespace Chopper.Presentation.Hangar
                 if (part.Renderer == null || !part.Renderer.TryGetComponent<MeshFilter>(out var filter) ||
                     _settings.Wireframes == null || !_settings.Wireframes.TryGetBody(filter.sharedMesh, out var body)) continue;
                 if (part.Slot >= 0 && part.Slot < _slotBounds.Count && _slotBounds[part.Slot] is Bounds module && IsTop(module.center)) continue;
-                var collider = part.Renderer.gameObject.AddComponent<MeshCollider>();
+                // On an empty child: on the part itself, AddComponent takes the MeshFilter's mesh first, and in a build
+                // that mesh is not readable ("CollisionMeshData couldn't be created").
+                var holder = new GameObject("Measure Collider");
+                holder.transform.SetParent(part.Renderer.transform, false);
+                var collider = holder.AddComponent<MeshCollider>();
                 collider.sharedMesh = body;
                 _bodyColliders.Add(collider, part.Slot);
             }
@@ -552,7 +594,7 @@ namespace Chopper.Presentation.Hangar
                 _slotYaws.Add(yaw);
                 _slotElevations.Add(elevation);
             }
-            foreach (var collider in _bodyColliders.Keys) Destroy(collider);
+            foreach (var collider in _bodyColliders.Keys) Destroy(collider.gameObject);
             _bodyColliders.Clear();
         }
 
@@ -1045,16 +1087,7 @@ namespace Chopper.Presentation.Hangar
                 var assignment = await _matchmaking.FindMatchAsync(request, progress, token);
                 // The hangar stays usable while searching: spawn with the loadout as it is now (if still valid).
                 _model.SaveChoice();
-                if (!LocalSession.Join(assignment.Address, assignment.Port))
-                {
-                    _model.SetMatchStatus($"CANNOT CONNECT TO {assignment.Address}:{assignment.Port}", false);
-                    return;
-                }
-                _launching = true;
-                // The server picked the map (random from the match pool); it tells us on connect.
-                _model.SetMatchStatus("LOADING MAP", true);
-                var scene = await AnnouncedMapScene(token);
-                _context.LoadScene(scene, label: "MATCH // " + SceneFlow.Pretty(scene));
+                await JoinAsync(assignment.Address, assignment.Port, token);
             }
             catch (OperationCanceledException)
             {
@@ -1067,6 +1100,21 @@ namespace Chopper.Presentation.Hangar
                 Debug.LogWarning($"Matchmaking failed: {e}");
                 if (this != null) _model.SetMatchStatus(e.Message.ToUpperInvariant(), false);
             }
+        }
+
+        /// <summary>Client-only worlds connect to the server, then the map it announces loads.</summary>
+        private async UniTask JoinAsync(string address, ushort port, CancellationToken token)
+        {
+            if (!LocalSession.Join(address, port))
+            {
+                _model.SetMatchStatus($"CANNOT CONNECT TO {address}:{port}", false);
+                return;
+            }
+            _launching = true;
+            // The server picked the map (random from the match pool); it tells us on connect.
+            _model.SetMatchStatus("LOADING MAP", true);
+            var scene = await AnnouncedMapScene(token);
+            _context.LoadScene(scene, label: "MATCH // " + SceneFlow.Pretty(scene));
         }
 
         /// <summary>Seconds to wait for the server's map before loading <see cref="matchScene"/> (an older server build).</summary>

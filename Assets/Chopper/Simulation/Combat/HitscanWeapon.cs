@@ -20,6 +20,8 @@ namespace Chopper.Simulation.Combat
         public float HeatPerShot;
         /// <summary>Heat lost per second when cooling.</summary>
         public float CoolRate;
+        /// <summary>The gun module's short name, for the match log (server only).</summary>
+        public Unity.Collections.FixedString32Bytes Name;
     }
 
     /// <summary>

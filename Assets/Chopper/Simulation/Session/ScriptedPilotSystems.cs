@@ -44,6 +44,22 @@ namespace Chopper.Simulation.Session
     }
 
     /// <summary>
+    /// <c>-bot</c> on the command line: adds <see cref="ScriptedPilotOverride"/> to the client world, so a client build
+    /// flies itself (solo network tests with several windows on one PC).
+    /// </summary>
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    public partial class ScriptedPilotArgsSystem : SystemBase
+    {
+        protected override void OnCreate() => Enabled = ServerArgs.Flag("-bot");
+
+        protected override void OnUpdate()
+        {
+            Enabled = false;
+            if (!SystemAPI.HasSingleton<ScriptedPilotOverride>()) EntityManager.CreateSingleton<ScriptedPilotOverride>();
+        }
+    }
+
+    /// <summary>
     /// Thin clients (Multiplayer → Play Mode Tools → Num Thin Clients) are test players with no rendering and no ghosts.
     /// Each gets the next chassis in the catalog with its default modules, so a load test has every chassis. Runs before
     /// <see cref="GoInGameClientSystem"/>, which sends the choice.

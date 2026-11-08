@@ -112,9 +112,16 @@ namespace Chopper.Simulation.Session
         protected override void OnDestroy() => _selfStop?.Dispose();
     }
 
-    /// <summary>Server settings from the command line and the host's environment (no state).</summary>
+    /// <summary>
+    /// Settings from the command line and the host's environment (no state). Server: <c>-port</c>, <c>-map</c>,
+    /// <c>-idleStart</c>, <c>-idleEmpty</c>. Test clients: <c>-bot</c>, <c>-autoMatch</c>, <c>-join IP:PORT</c>,
+    /// <c>-loadLog</c> (and <c>-profile NAME</c>, read by the auth service).
+    /// </summary>
     public static class ServerArgs
     {
+        /// <summary>True when <paramref name="name"/> is on the command line.</summary>
+        public static bool Flag(string name) => Array.IndexOf(Environment.GetCommandLineArgs(), name) >= 0;
+
         /// <summary>The value after <paramref name="name"/> on the command line, else <paramref name="fallback"/>.</summary>
         public static string String(string name, string fallback = null)
         {

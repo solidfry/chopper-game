@@ -83,6 +83,7 @@ namespace Chopper.Simulation.Combat
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             // Kill heals (SCRAPPER) wait until the loop ends: the healer's health may be in the query too.
             var killHeals = new NativeList<KillHeal>(4, Allocator.Temp);
+            var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log);
 
             foreach (var (health, damage, victim) in SystemAPI.Query<RefRW<Health>, DynamicBuffer<DamageEvent>>().WithEntityAccess())
             {
@@ -123,11 +124,15 @@ namespace Chopper.Simulation.Combat
                     if (killed && sourceTraits.KillHeal > 0f && hit.Source != Entity.Null)
                         killHeals.Add(new KillHeal { Healer = hit.Source, Share = sourceTraits.KillHeal });
 
+                    if (hasLog && hit.Amount > 0f)
+                        log.Add(LogEntry(MatchLogKind.Hit, now, attacker, victim, hit, health.ValueRO.Current, killed));
+
                     if (killed && _ownerLookup.TryGetComponent(victim, out var victimOwner))
                     {
                         var killer = attacker != 0 ? attacker : RecentAttacker(victim, now, rules.KillCreditSeconds);
                         var kill = ecb.CreateEntity();
                         ecb.AddComponent(kill, new KillEvent { KillerNetworkId = killer, VictimNetworkId = victimOwner.NetworkId });
+                        if (hasLog) log.Add(LogEntry(MatchLogKind.Kill, now, killer, victim, hit, 0f, true));
                     }
 
                     if (_connectionLookup.TryGetComponent(victim, out var victimConnection))
@@ -166,6 +171,32 @@ namespace Chopper.Simulation.Combat
             }
             killHeals.Dispose();
             ecb.Playback(state.EntityManager);
+        }
+
+        /// <summary>
+        /// A match log line for this hit. <paramref name="actor"/> is a network id (0 = environment or self); the
+        /// actor's position is the hit's source chopper when it still exists.
+        /// </summary>
+        private MatchLogEntry LogEntry(MatchLogKind kind, double now, int actor, Entity victim, in DamageEvent hit, float healthAfter, bool killed)
+        {
+            var hasVictim = _transformLookup.TryGetComponent(victim, out var victimPose);
+            var sourcePose = default(LocalTransform);
+            var hasSource = hit.Source != Entity.Null && _transformLookup.TryGetComponent(hit.Source, out sourcePose);
+            return new MatchLogEntry
+            {
+                Kind = kind,
+                Time = now,
+                Actor = actor,
+                Target = _ownerLookup.TryGetComponent(victim, out var owner) ? owner.NetworkId : 0,
+                Weapon = hit.Weapon,
+                Damage = hit.Kind,
+                Amount = hit.Amount,
+                Distance = hasVictim && hasSource ? math.distance(victimPose.Position, sourcePose.Position) : -1f,
+                ActorPosition = hasSource ? sourcePose.Position : float3.zero,
+                TargetPosition = hasVictim ? victimPose.Position : float3.zero,
+                Detail = (byte)(killed ? 1 : 0),
+                HealthAfter = healthAfter,
+            };
         }
 
         /// <summary>

@@ -31,8 +31,13 @@ namespace Chopper.Services.Auth
         public async UniTask SignInAsync(CancellationToken cancellationToken)
         {
             if (UnityServices.State != ServicesInitializationState.Initialized)
-                await UnityServices.InitializeAsync(new InitializationOptions().SetEnvironmentName(ServiceEnvironment.Current))
-                    .AsUniTask().AttachExternalCancellation(cancellationToken);
+            {
+                var options = new InitializationOptions().SetEnvironmentName(ServiceEnvironment.Current);
+                // -profile NAME: its own anonymous account, so several windows on one PC are different players.
+                var profile = ProfileArg();
+                if (!string.IsNullOrEmpty(profile)) options.SetProfile(profile);
+                await UnityServices.InitializeAsync(options).AsUniTask().AttachExternalCancellation(cancellationToken);
+            }
             if (AuthenticationService.Instance.IsSignedIn) return;
 
             var ticket = await _platform.GetSignInTicketAsync(cancellationToken);
@@ -55,6 +60,15 @@ namespace Chopper.Services.Auth
 
             await AuthenticationService.Instance.SignInAnonymouslyAsync()
                 .AsUniTask().AttachExternalCancellation(cancellationToken);
+        }
+
+        /// <summary>The value after <c>-profile</c> (letters, digits, '-' and '_', at most 30), else null.</summary>
+        private static string ProfileArg()
+        {
+            var args = Environment.GetCommandLineArgs();
+            for (var i = 0; i + 1 < args.Length; i++)
+                if (args[i] == "-profile") return args[i + 1];
+            return null;
         }
     }
 }

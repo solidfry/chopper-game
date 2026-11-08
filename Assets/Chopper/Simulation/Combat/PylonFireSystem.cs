@@ -7,6 +7,7 @@ using Unity.NetCode;
 using Unity.Physics;
 using Unity.Physics.Systems;
 using Unity.Transforms;
+using Chopper.Simulation.Session;
 
 namespace Chopper.Simulation.Combat
 {
@@ -50,6 +51,9 @@ namespace Chopper.Simulation.Combat
             var networkTime = SystemAPI.GetSingleton<NetworkTime>();
             var firstPrediction = networkTime.IsFirstTimeFullyPredictingTick;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
+            var now = SystemAPI.Time.ElapsedTime;
+            // Server: one Shot per rocket or missile for the match log (when logging is on).
+            var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log) && isServer;
 
             foreach (var (input, weapons, cooldownBuffer, selection, transform, velocity, owner, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, DynamicBuffer<PylonWeapon>, DynamicBuffer<PylonWeaponState>, RefRW<PylonSelection>,
@@ -88,6 +92,7 @@ namespace Chopper.Simulation.Combat
                             cooldown.SalvoRemaining--;
                             if (isServer || (firstPrediction && ClaimLaunch(i, networkTime.ServerTick)))
                                 LaunchMissile(ecb, salvoWeapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot);
+                            if (hasLog) LogShot(log, now, shooterId, salvoWeapon.Name, pose.Position);
                         }
                     }
                     cooldowns[i] = cooldown;
@@ -123,9 +128,21 @@ namespace Chopper.Simulation.Combat
                 {
                     LaunchMissile(ecb, weapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot: 0);
                 }
+                if (hasLog) LogShot(log, now, shooterId, weapon.Name, pose.Position);
             }
             ecb.Playback(state.EntityManager);
         }
+
+        private static void LogShot(DynamicBuffer<MatchLogEntry> log, double now, int shooterId, in FixedString32Bytes weapon, float3 position) =>
+            log.Add(new MatchLogEntry
+            {
+                Kind = MatchLogKind.Shot,
+                Time = now,
+                Actor = shooterId,
+                Weapon = weapon,
+                ActorPosition = position,
+                Distance = -1f,
+            });
 
         /// <summary>Client: true once per pylon and tick (see <see cref="_launchTicks"/>).</summary>
         private bool ClaimLaunch(int pylon, NetworkTick tick)
@@ -153,6 +170,7 @@ namespace Chopper.Simulation.Combat
                     DirectDamage = weapon.DirectDamage,
                     SplashDamage = weapon.SplashDamage,
                     SplashRadius = weapon.SplashRadius,
+                    Weapon = weapon.Name,
                 });
 
                 var rpc = ecb.CreateEntity();
@@ -221,6 +239,7 @@ namespace Chopper.Simulation.Combat
                 Cluster = weapon.Cluster,
                 SplitRemaining = weapon.Cluster.SplitTime,
                 IgnoresFlares = Salvo.IgnoresFlares(shot, weapon.FlareResistance),
+                Weapon = weapon.Name,
             });
         }
     }

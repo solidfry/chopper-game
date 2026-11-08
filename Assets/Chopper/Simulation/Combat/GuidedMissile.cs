@@ -31,6 +31,8 @@ namespace Chopper.Simulation.Combat
         public float SplitRemaining;
         /// <summary>Flares do not fool this one (part of a swarm salvo).</summary>
         public bool IgnoresFlares;
+        /// <summary>Server: short name of the weapon that fired it, for the match log.</summary>
+        public Unity.Collections.FixedString32Bytes Weapon;
     }
 
     /// <summary>Server to all: a missile exploded here (its ghost is removed, so clients need the place).</summary>

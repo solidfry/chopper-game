@@ -21,9 +21,12 @@ namespace Chopper.Simulation.Combat
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;
-            foreach (var (input, config, countermeasure) in SystemAPI
+            var now = SystemAPI.Time.ElapsedTime;
+            var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log) && state.WorldUnmanaged.IsServer();
+            foreach (var (input, config, countermeasure, chopper) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<CountermeasureConfig>, RefRW<CountermeasureState>>()
-                         .WithAll<Simulate>())
+                         .WithAll<Simulate>()
+                         .WithEntityAccess())
             {
                 ref var flares = ref countermeasure.ValueRW;
                 flares.CooldownRemaining = math.max(0f, flares.CooldownRemaining - deltaTime);
@@ -37,6 +40,17 @@ namespace Chopper.Simulation.Combat
                 flares.DecoyRemaining = config.ValueRO.DecoyDuration;
                 flares.FlareCount++;
                 Magazine.Spend(ref flares.RoundsUsed, ref flares.ReloadRemaining, config.ValueRO.MagazineSize, config.ValueRO.ReloadSeconds);
+                if (hasLog)
+                    log.Add(new Session.MatchLogEntry
+                    {
+                        Kind = Session.MatchLogKind.Flare,
+                        Time = now,
+                        Actor = SystemAPI.HasComponent<GhostOwner>(chopper) ? SystemAPI.GetComponent<GhostOwner>(chopper).NetworkId : 0,
+                        ActorPosition = SystemAPI.HasComponent<Unity.Transforms.LocalTransform>(chopper)
+                            ? SystemAPI.GetComponent<Unity.Transforms.LocalTransform>(chopper).Position
+                            : float3.zero,
+                        Distance = -1f,
+                    });
             }
         }
     }

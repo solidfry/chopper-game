@@ -13,7 +13,7 @@ namespace Chopper.Simulation.Combat
         /// direct-hit target are skipped: the shooter takes no splash, the direct target already took its hit.
         /// </summary>
         public static void Splash(in CollisionWorld world, ref BufferLookup<DamageEvent> damageLookup, float3 centre, float radius,
-            float damage, Entity source, Entity directTarget)
+            float damage, Entity source, Entity directTarget, in FixedString32Bytes weapon = default)
         {
             if (radius <= 0f || damage <= 0f) return;
 
@@ -36,6 +36,7 @@ namespace Chopper.Simulation.Combat
                         Point = hit.Position,
                         Normal = SafeNormal(centre - hit.Position, hit.SurfaceNormal),
                         Kind = DamageKind.Explosion,
+                        Weapon = weapon,
                     });
                 }
             }

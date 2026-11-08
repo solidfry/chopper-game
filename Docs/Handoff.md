@@ -1,4 +1,4 @@
-# Chopper game — handoff (updated 7 Nov 2026, input actions, scoreboard, impact sounds)
+# Chopper game — handoff (updated 8 Nov 2026, solo network test tools, match log)
 
 Read this first, then `Docs/MultiplayerOverhaulPlan.md` (full plan + progress log) and `CLAUDE.md` (rules for AI sessions).
 
@@ -262,6 +262,20 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 - **HUD opacity (options menu, "// HUD OPACITY"):** `Presentation/Hud/HudOpacity.cs` (saved), one slider per `HudGroup`: horizon, flight ring, readouts, weapons, reticle and markers, score and timer. `ChopperHudView` applies them as inline opacity, so do not put an element with a USS opacity state in a group. Warnings, the repair line, banners and the scoreboard always show in full.
 - **Death alert:** `MatchHudModel.DeathAlertText` / `DeathAlertVisible`: "YOU CRASHED" or "SHOT DOWN BY ..." in a red box in the centre, and a full-screen red tint (`.hud-death-tint`), from your death until you respawn. The tint alpha is tuned by eye for the CRT 84 look; the look pass makes low alpha read much stronger, so the Clean preset will look weaker.
 
+## 4g. Solo network test and match log (8 Nov, compiled, run in builds)
+
+- **Test arguments** (one PC, several client windows): `-profile NAME` (own anonymous UGS account, so windows are different players), `-bot` (scripted pilot flies the window), `-autoMatch` (presses FIND MATCH 3 s after the hangar opens), `-join IP:PORT` (straight to one server, no matchmaker), `-loadLog` (a "[Load]" line every 30 s: ticks/s, worst frame, hitches, CPU, memory, RTT). All in `ServerArgs` (`Session/ServerLifecycle.cs`); `-profile` is read in `UnityAuthService`.
+- **Builds:** Setup window → "Build Windows client (test)" (`Editor/Setup/ClientBuild.cs`, development build to `Builds/Windows/AirwingNitro.exe`). Example: `AirwingNitro.exe -profile p2 -bot -join 127.0.0.1:7979 -loadLog -logFile p2.log -screen-fullscreen 0 -screen-width 960 -screen-height 540`.
+- **Local server:** `docker run -d --name airwing-local -p 7979:7979/udp -v <folder>:/logs airwing-server:0.1.5 -map Map_City04 -matchLogDir /logs`.
+- **Match log** (`Session/MatchLog.cs`, `Session/MatchLogSystem.cs`): JSON lines, always on in a dedicated server (`-matchLog` elsewhere). To the server log with the prefix `[Event] ` and to a file (`-matchLogDir`, else `persistentDataPath/MatchLogs`). Events: session, map, match (start / end with scores), join / leave (loadout names), spawn, kill (killer, victim, weapon, kind, distance, both positions, life length), shots and hits summed per second (per player and weapon), flare, decoy, missile end, positions every second, load every 30 s. Simulation systems append `MatchLogEntry` to a server singleton buffer (only made when logging is on); weapon names ride on `DamageEvent.Weapon`, `Rocket.Weapon`, `GuidedMissile.Weapon`, `HitscanWeaponConfig.Name`. Raise `MatchLogSystem.FormatVersion` when a field changes meaning.
+- **Keeping logs:** Edgegap deletes container logs when a deployment stops (unless Endpoint Storage, an S3 bucket, is set on the app version). `Tools/Edgegap/fetch-logs.ps1 -Watch 60` saves running deployments' logs to `Logs/Matches/` during a test. `Logs/` is git-ignored. Summary: `python Tools/MatchLogs/summarize.py Logs/Matches/*.jsonl`.
+- **Fixed:** hangar "CollisionMeshData couldn't be created ... Utility_Flares" (and 4 other meshes) in builds: the measuring collider was added to the part itself and took its unreadable mesh first; now on an empty child.
+- **Results, 8 Nov, local Docker server on City04 (not Edgegap):** 3 clients all joined; clients 95-137 FPS, RTT 16 ms, no hitches after load. **Server CPU 64-70 % of one core with 3 players** (1 player was 53 % on 6 Nov). The Edgegap version has 0.5 vCPU: expect it to fall behind with 3 or more players. Profile the server. With 3 `-bot` windows over 3 min: 46 deaths, all crashes (median life 7 s), 995 gun rounds for 1 hit: the open-loop scripted pilot cannot test combat.
+- **Cockpit boot-up toned down (owner, 8 Nov):** spawn glitch 0.8 to 0.5, static hold 0.9 to 0.4 s, clear time 2.6 to 1.6 s, biggest pixel 96 to 48, colour steps 5 to 8, dead blocks 1 to 0.5, honeycomb 0.7 to 0.45 (asset and code defaults). Hit noise is not changed. Judge in play: **Replay cockpit boot-up** on `HudLookSettings`.
+- **Online test, 8 Nov (Edgegap, Melbourne, request `2313f7397db5`, log in `Logs/Matches/`):** image `airwing-server:0.1.5` pushed; Edgegap version `0.1.3` now runs it (`release.ps1 -Version 0.1.5 -InPlace 0.1.3`; allocator unchanged). 3 `-bot -autoMatch` windows were matched into one server; the owner joined as player 4 with `-join` (no backfill in the matchmaker, so FIND MATCH would make a new match). 6.3 min, no exceptions on the server. **Server: 60 ticks/s, 20-22 % of one core with 4 players, 299 MB, 2 hitches in total** (local Docker Desktop showed 65 %: its overhead, not the game). RTT 37-47 ms. Owner: 2 kills (minigun at 265-300 m), 2 deaths (both crashes, 11-12 s after spawn), 461 rounds, 3 hits. Bots: 89 deaths, all crashes.
+- **Open (8 Nov):** the owner's first `-join` window stayed black: it got the map announcement and loaded `Map_City04`, but the city subscene never finished ("did not say it was ready in 12 s"), so it never sent the go-in-game request; the server never saw it. A restart joined at once. Not reproduced; watch for it.
+- **Edgegap API rate limit:** `fetch-logs.ps1` every 30 s plus another call got HTTP 429. Use `-Watch 60` or more.
+
 ## 5. Open problems
 
 | Problem | Likely cause | Next action |
@@ -275,6 +289,10 @@ Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). C
 | Edgegap server is older than the current protocol | Ghost and RPC data changed (5 and 6 Nov) | Rebuild, push, new Edgegap version, change the allocator's `Version` before any online test |
 
 ## 6. Next steps (recommended order)
+
+**Owner TODOs (8 Nov):**
+- **A good spawn system**: spawn points spread over the map, away from enemies and walls, safe height; today all players spawn near one point.
+- **Bot pathfinding**: bots that avoid buildings and the ground, find and chase targets, so solo tests have real combat (see 4g: the scripted pilot crashes every 7 s). This also gives Claude a way to fly the game well in tests. Plan section 7a has the bot design (utility decisions, air and land).
 
 **Next task: first real playtest** (recommended 6 Nov, owner agreed): 2–4 people on client builds, on a city map, through Edgegap.
 - **Why first:** network tests so far used thin clients and one editor. It answers weapon balance and magazine sizes, turn weight per chassis, hits on other players, and missiles, flares and locks against people. It also checks server load: one local reading was 53 % of a CPU core with 1 player, and the Edgegap version has 0.5 vCPU.

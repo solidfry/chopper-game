@@ -17,6 +17,8 @@ namespace Chopper.Simulation.Combat
         public float DirectDamage;
         public float SplashDamage;
         public float SplashRadius;
+        /// <summary>Short name of the weapon that fired it, for the match log.</summary>
+        public Unity.Collections.FixedString32Bytes Weapon;
     }
 
     /// <summary>Server to all clients: a rocket was launched. The shooter's client ignores its own (it predicted it).</summary>

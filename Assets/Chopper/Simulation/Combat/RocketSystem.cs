@@ -51,8 +51,10 @@ namespace Chopper.Simulation.Combat
                             Point = hit.Position,
                             Normal = hit.SurfaceNormal,
                             Kind = DamageKind.Explosion,
+                            Weapon = rocket.Weapon,
                         });
-                    Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity);
+                    Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity,
+                        rocket.Weapon);
                     ecb.DestroyEntity(entity);
                     continue;
                 }

@@ -178,6 +178,7 @@ namespace Chopper.Simulation.Loadout
                         MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, module.Muzzle, gun.MuzzleOffset, mirror: false),
                         HeatPerShot = gun.HeatPerShot,
                         CoolRate = gun.CoolRate,
+                        Name = ShortName(module),
                     };
                 }
 
