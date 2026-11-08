@@ -13,6 +13,8 @@ namespace Chopper.Simulation.Combat
         public byte MagazineSize;
         /// <summary>Seconds after the last drop until the magazine is full again.</summary>
         public float ReloadSeconds;
+        /// <summary>When a bot drops them (Auto = shortly before a missile hits).</summary>
+        public Bots.BotUse Bot;
     }
 
     /// <summary>Predicted on the owner, sent to everyone (<see cref="FlareCount"/> drives the flare visuals).</summary>

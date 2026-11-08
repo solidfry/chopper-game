@@ -14,8 +14,82 @@ namespace Chopper.Simulation.Bots
     public sealed class BotProfile : ScriptableObject
     {
         [SerializeField] private BotPilotTuning pilot = new();
+        [SerializeField] private BotSkillTuning skill = new();
 
         public BotPilotTuning Pilot => pilot;
+        public BotSkillTuning Skill => skill;
+
+        public BotHandling ToHandling()
+        {
+            var handling = pilot.ToHandling();
+            skill.Apply(ref handling);
+            return handling;
+        }
+    }
+
+    /// <summary>How well and how the bot fights (see <see cref="BotBrain"/>). Human limits on purpose.</summary>
+    [Serializable]
+    public sealed class BotSkillTuning
+    {
+        [Header("Human limits")]
+        [Tooltip("Seconds before the bot reacts to a change (new target, a missile, a lock). People: about 0.2–0.4.")]
+        public float ReactionSeconds = 0.3f;
+        [Tooltip("Aim error when it starts to aim, degrees. It gets smaller while the bot holds the aim.")]
+        public float AimErrorDegrees = 3.5f;
+        [Tooltip("Seconds of steady aim until the error is at its smallest (a third of the start).")]
+        public float AimSettleSeconds = 1.5f;
+        [Tooltip("Flare timing: 1 = the definition's time; above 1 = earlier (worse), below 1 = later (better, riskier).")]
+        public float FlareTimingScale = 1f;
+        [Range(0f, 1f), Tooltip("Chance to forget a gadget or ability when its moment comes.")]
+        public float MistakeChance = 0.12f;
+
+        [Header("Eyes")]
+        [Tooltip("Sees enemies in line of sight up to this far, m (like the HUD markers).")]
+        public float VisionRange = 900f;
+        [Tooltip("Knows about enemies this close even behind buildings (rotor noise), m.")]
+        public float HearingRange = 220f;
+
+        [Header("Fighting")]
+        [Tooltip("Distance the bot tries to hold from its target while shooting, m.")]
+        public float PreferredRange = 220f;
+        [Tooltip("Closer than this, the bot extends away and turns back for a new pass, m.")]
+        public float MinRange = 70f;
+        [Tooltip("Speed while circling a target, m/s.")]
+        public float EngageSpeed = 24f;
+        [Tooltip("How fast it circles the target while shooting (radians of the circle per second).")]
+        public float StrafeRate = 0.3f;
+        [Tooltip("Aims (nose on target) when the target is inside this angle, degrees; else turns towards it.")]
+        public float AimConeDegrees = 30f;
+        [Range(0f, 1f), Tooltip("Stops firing at this gun heat, to avoid an overheat (a careful player).")]
+        public float GunHeatRelease = 0.8f;
+
+        [Header("Survival")]
+        [Range(0f, 1f), Tooltip("Retreats to repair below this health share.")]
+        public float RetreatHealth = 0.35f;
+        [Range(0f, 1f), Tooltip("Repairs up to this health share before it goes back in.")]
+        public float RepairDoneHealth = 0.9f;
+        [Tooltip("Distance to run before it stops to repair, m (also: no enemy in sight).")]
+        public float RetreatDistance = 450f;
+
+        public void Apply(ref BotHandling h)
+        {
+            h.ReactionSeconds = math.max(ReactionSeconds, 0.02f);
+            h.AimError = math.radians(math.max(AimErrorDegrees, 0f));
+            h.AimSettleSeconds = math.max(AimSettleSeconds, 0.1f);
+            h.FlareTimingScale = math.max(FlareTimingScale, 0.1f);
+            h.MistakeChance = math.saturate(MistakeChance);
+            h.VisionRange = VisionRange;
+            h.HearingRange = HearingRange;
+            h.PreferredRange = math.max(PreferredRange, MinRange + 10f);
+            h.MinRange = MinRange;
+            h.EngageSpeed = EngageSpeed;
+            h.StrafeRate = StrafeRate;
+            h.AimConeCos = math.cos(math.radians(math.clamp(AimConeDegrees, 1f, 90f)));
+            h.GunHeatRelease = math.saturate(GunHeatRelease);
+            h.RetreatHealth = math.saturate(RetreatHealth);
+            h.RepairDoneHealth = math.max(math.saturate(RepairDoneHealth), h.RetreatHealth);
+            h.RetreatDistance = RetreatDistance;
+        }
     }
 
     /// <summary>The bot's hands and eyes for flying. See <see cref="BotPilot"/>.</summary>
@@ -184,5 +258,23 @@ namespace Chopper.Simulation.Bots
         public float PathClimbCost;
         public int PathMaxNodes;
         public float ReplanSeconds;
+
+        // Skill (BotSkillTuning).
+        public float ReactionSeconds;
+        public float AimError;
+        public float AimSettleSeconds;
+        public float FlareTimingScale;
+        public float MistakeChance;
+        public float VisionRange;
+        public float HearingRange;
+        public float PreferredRange;
+        public float MinRange;
+        public float EngageSpeed;
+        public float StrafeRate;
+        public float AimConeCos;
+        public float GunHeatRelease;
+        public float RetreatHealth;
+        public float RepairDoneHealth;
+        public float RetreatDistance;
     }
 }

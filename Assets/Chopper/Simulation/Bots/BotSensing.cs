@@ -96,6 +96,24 @@ namespace Chopper.Simulation.Bots
             return found;
         }
 
+        /// <summary>True when no static collider (level geometry) is on the straight line; choppers do not block it.</summary>
+        public static bool InSight(in CollisionWorld world, float3 from, float3 to)
+        {
+            var hits = new NativeList<RaycastHit>(8, Allocator.Temp);
+            var clear = true;
+            if (world.CastRay(new RaycastInput { Start = from, End = to, Filter = CollisionFilter.Default }, ref hits))
+            {
+                foreach (var hit in hits)
+                {
+                    if (hit.RigidBodyIndex < world.NumDynamicBodies) continue;
+                    clear = false;
+                    break;
+                }
+            }
+            hits.Dispose();
+            return clear;
+        }
+
         private static void Cast(in CollisionWorld world, Entity self, float3 origin, float3 direction, float length,
             float3 velocity, float radius, ref NativeList<ColliderCastHit> hits, ref ObstacleSense best)
         {

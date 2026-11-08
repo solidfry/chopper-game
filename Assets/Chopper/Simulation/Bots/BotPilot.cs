@@ -23,6 +23,9 @@ namespace Chopper.Simulation.Bots
         /// <summary>Point the nose (and the gun) at <see cref="AimPoint"/>; else the nose follows the travel direction.</summary>
         public bool Aim;
         public float3 AimPoint;
+        /// <summary>Not aiming: turn the nose (heading only) to <see cref="FacePoint"/> while moving any way (strafe).</summary>
+        public bool Face;
+        public float3 FacePoint;
         public bool AllowBoost;
         public bool Fire;
         public bool FireSecondary;
@@ -216,6 +219,11 @@ namespace Chopper.Simulation.Bots
         /// <summary>Nose direction when not aiming: along the wanted travel, else at the waypoint, else as it is.</summary>
         private static float3 Face(in PilotOrder order, in PilotSense sense, float3 desired, float3 forward)
         {
+            if (order.Face)
+            {
+                var toFace = Flat(order.FacePoint - sense.Position);
+                if (math.lengthsq(toFace) > 1f) return math.normalize(toFace);
+            }
             var travel = Flat(desired);
             if (math.lengthsq(travel) > FaceTravelSpeed * FaceTravelSpeed) return math.normalize(travel);
             var toDestination = Flat(order.Destination - sense.Position);

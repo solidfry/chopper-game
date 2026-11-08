@@ -88,7 +88,7 @@ namespace Chopper.Simulation.Session
                 if (authoring.botProfile != null)
                 {
                     DependsOn(authoring.botProfile);
-                    AddComponent(entity, authoring.botProfile.Pilot.ToHandling());
+                    AddComponent(entity, authoring.botProfile.ToHandling());
                 }
 
                 // Collect first, add the buffer last: a later AddComponent would make the buffer handle invalid.

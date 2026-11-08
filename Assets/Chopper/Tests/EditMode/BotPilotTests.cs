@@ -82,7 +82,12 @@ namespace Chopper.Tests
             body.Position += body.Velocity * Step;
         }
 
-        private static BotHandling Handling() => new BotPilotTuning().ToHandling();
+        private static BotHandling Handling()
+        {
+            var handling = new BotPilotTuning().ToHandling();
+            new BotSkillTuning().Apply(ref handling);
+            return handling;
+        }
 
         private static PilotSense Sense(in Body body) => new()
         {

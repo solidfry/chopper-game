@@ -112,6 +112,7 @@ namespace Chopper.Simulation.Loadout
         [Tooltip("Nanite Cloud: hull share healed. Venom Belt / Napalm Salvo: damage-over-time scale. Aegis: shield points. Blackout: jam seconds.")]
         public float Strength = 1f;
         [Tooltip("Blackout: reach (m).")] public float Radius = 150f;
+        [Tooltip("When a bot pilot uses it. Auto = the default for the kind.")] public Bots.BotUse Bot;
 
         public AbilityConfig ToConfig() => new()
         {
@@ -120,6 +121,7 @@ namespace Chopper.Simulation.Loadout
             Duration = Duration,
             Strength = Strength,
             Radius = Radius,
+            Bot = Bot,
         };
     }
 

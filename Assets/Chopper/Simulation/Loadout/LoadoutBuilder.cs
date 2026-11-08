@@ -191,6 +191,7 @@ namespace Chopper.Simulation.Loadout
                         DecoyDuration = flares.DecoyDuration,
                         MagazineSize = flares.MagazineSize,
                         ReloadSeconds = flares.ReloadSeconds,
+                        Bot = flares.Bot,
                     };
                 }
 

@@ -41,6 +41,8 @@ namespace Chopper.Simulation.Combat
         public float Strength;
         /// <summary>Blackout: reach (m).</summary>
         public float Radius;
+        /// <summary>When a bot uses it (from the pilot definition; Auto = the default for <see cref="Kind"/>).</summary>
+        public Bots.BotUse Bot;
     }
 
     /// <summary>

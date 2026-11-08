@@ -11,11 +11,13 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Seconds the chopper cannot be heat-locked after a drop.")] private float decoyDuration = 2f;
         [SerializeField, Range(0, 255), Tooltip("Drops before a reload. 0 = no limit.")] private int magazineSize = 3;
         [SerializeField, Tooltip("Seconds after the last drop until the magazine is full again.")] private float reloadSeconds = 18f;
+        [SerializeField, Tooltip("When a bot drops flares. Auto = about 1 s before a missile hits.")] private Bots.BotUse bot;
 
         public float Cooldown => cooldown;
         public float DecoyDuration => decoyDuration;
         public byte MagazineSize => (byte)Mathf.Clamp(magazineSize, 0, 255);
         public float ReloadSeconds => reloadSeconds;
+        public Bots.BotUse Bot => bot;
 
         public override void CollectProblems(List<string> problems)
         {
