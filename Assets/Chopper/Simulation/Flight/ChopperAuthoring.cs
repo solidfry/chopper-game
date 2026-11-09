@@ -124,6 +124,8 @@ namespace Chopper.Simulation.Flight
                         Index = (byte)Mathf.Clamp(socket.Index, 0, 255),
                         LocalPosition = root.InverseTransformPoint(transform.position),
                         LocalRotation = Quaternion.Inverse(root.rotation) * transform.rotation,
+                        // Socket scale (kit manifest "scale", exported on the marker node), relative to the chopper root.
+                        Scale = transform.lossyScale.x / Mathf.Max(Mathf.Abs(root.lossyScale.x), 1e-4f),
                     });
                 }
                 return sockets;

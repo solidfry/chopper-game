@@ -149,6 +149,8 @@ namespace Chopper.Presentation.Visuals
             var visual = pool.Spawn(module.Visual, Vector3.zero, Quaternion.identity);
             DisableColliders(visual);
             SetSkin(visual, skinRow);
+            // Pooled visuals are reused: always set the scale (socket scale on top of the prefab's own).
+            if (visual != null) visual.transform.localScale = module.Visual.transform.localScale * (socket.Scale > 0f ? socket.Scale : 1f);
             var spin = math.radians((float3)module.VisualSpin) * (socket.Index % 2 == 0 ? 1f : -1f);
             fitted.Parts.Add((visual, socket.LocalPosition, socket.LocalRotation, spin));
         }

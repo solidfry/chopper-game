@@ -441,7 +441,7 @@ handling and their own ability, in the same role:
   Lifter uses `tandem`. Rule: a different body = a chassis variant; a different part on the same body (e.g. a ducted
   rotor with a rim) = a module (`parts.py` part + `ModuleDefinition`, `allowedChassis` if it fits only some chassis).
   Order:
-  1. **Socket scale first (blocker):** the quad hubs have socket scale 0.34 in the kit manifest, but the game uses 1.0
+  1. **Socket scale first (blocker; done 9 Nov, see handoff):** the quad hubs have socket scale 0.34 in the kit manifest, but the game uses 1.0
      (handoff: "next: socket scale"). Read `scale` into `SocketAuthoring` (Setup step 6) and apply it in
      `ModuleVisualSystem` and `HangarStage`. Without it, full-size blades show through the ducts. It also fixes the
      extra hubs of the tandem and coaxial layouts.

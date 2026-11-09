@@ -166,7 +166,7 @@ namespace Chopper.Editor.Setup
                 Slot(library.Jammed, () => Cue("Jammed", Clips(SciFi + "/Impact/explosion_lightning.wav"), ui, 0.55f, blend: 0f,
                     voices: 1, cooldown: 0.5f, pitch: 0.8f)));
 
-            // Surfaces (placeholders made by Tools/Sound/make_impact_sounds.py): bullet hits and crashes on metal, concrete,
+            // Surfaces (placeholders made by Tools/Sound/make_impact_sounds.py; crashes have a medium explosion mixed under them): bullet hits and crashes on metal, concrete,
             // ground and water. 3D. Hits are short and many, so a short cooldown and a few voices; crashes louder and rarer.
             const string impacts = "Assets/Sound/Impacts/";
             SoundCue SurfaceCue(SoundCue current, string surface, string kind, int count, float volume, int voices, float cooldown) =>
