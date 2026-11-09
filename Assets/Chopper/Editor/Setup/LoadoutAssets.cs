@@ -33,7 +33,11 @@ namespace Chopper.Editor.Setup
         public static LoadoutCatalog Ensure()
         {
             var existing = AssetDatabase.LoadAssetAtPath<LoadoutCatalog>(CatalogPath);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                EnsureClasses(existing);
+                return existing;
+            }
             System.IO.Directory.CreateDirectory(Folder);
 
             var gunshipFlight = CalibratedGunshipFlight();
@@ -196,11 +200,25 @@ namespace Chopper.Editor.Setup
             return flight;
         }
 
+        /// <summary>Old chassis assets have no class: take it from the display name (Scout, Gunship, Assault, Lifter).</summary>
+        private static void EnsureClasses(LoadoutCatalog catalog)
+        {
+            foreach (var chassis in catalog.Chassis)
+            {
+                if (chassis == null || chassis.Class != ChassisClass.None) continue;
+                if (!System.Enum.TryParse<ChassisClass>(chassis.DisplayName, true, out var value) || value == ChassisClass.None) continue;
+                chassis.SetClass(value);
+                EditorUtility.SetDirty(chassis);
+                Debug.Log($"Setup: {chassis.name} class set to {value}.");
+            }
+        }
+
         private static ChassisDefinition Chassis(ushort id, string name, string text, float health, float budget, int level,
             SlotType[] slots, FlightTuning flight)
         {
             var asset = ScriptableObject.CreateInstance<ChassisDefinition>();
             asset.Initialise(id, name, text, health, budget, level, slots, flight);
+            if (System.Enum.TryParse<ChassisClass>(name, out var chassisClass)) asset.SetClass(chassisClass);
             AssetDatabase.CreateAsset(asset, $"{Folder}/Chassis_{name}.asset");
             return asset;
         }

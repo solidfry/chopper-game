@@ -7,11 +7,19 @@ namespace Chopper.Simulation.Loadout
 {
     /// <summary>Design data for one chassis (Scout, Gunship, Assault, Lifter).</summary>
     [CreateAssetMenu(menuName = "Chopper/Loadout/Chassis", fileName = "Chassis")]
+    /// <summary>
+    /// The role a chassis belongs to. Variants of one class (a tandem and a quad Lifter) share it; the hangar groups
+    /// chassis cards by it. None = not set (old asset; Setup step 1 fills it from the name).
+    /// </summary>
+    public enum ChassisClass : byte { None = 0, Scout = 1, Gunship = 2, Assault = 3, Lifter = 4 }
+
     public sealed class ChassisDefinition : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("Unique, never 0, never reused. Saved in player loadouts.")]
         private ushort id;
         [SerializeField] private string displayName;
+        [SerializeField, Tooltip("Role. Variants of one class share it (e.g. tandem and quad Lifter).")]
+        private ChassisClass chassisClass;
         [SerializeField, TextArea] private string description;
         [SerializeField] private float baseHealth = 100f;
         [SerializeField] private float weightBudget = 90f;
@@ -35,6 +43,7 @@ namespace Chopper.Simulation.Loadout
 
         public ushort Id => id;
         public string DisplayName => displayName;
+        public ChassisClass Class => chassisClass;
         public string Description => description;
         public GameObject Prefab => prefab;
         public FlightTuning Flight => flight;
@@ -63,6 +72,7 @@ namespace Chopper.Simulation.Loadout
         {
             if (id == 0) problems.Add($"{name}: id must not be 0.");
             if (string.IsNullOrWhiteSpace(displayName)) problems.Add($"{name}: no display name.");
+            if (chassisClass == ChassisClass.None) problems.Add($"{name}: no chassis class (Setup step 1 fills it from the name).");
             if (slots == null || slots.Length == 0) problems.Add($"{name}: no slots.");
             if (baseHealth <= 0f) problems.Add($"{name}: base health must be above 0.");
             if (weightBudget <= 0f) problems.Add($"{name}: weight budget must be above 0.");
@@ -72,6 +82,9 @@ namespace Chopper.Simulation.Loadout
         }
 
         public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel);
+
+        /// <summary>Editor only: the setup tool sets the class (also on old assets).</summary>
+        public void SetClass(ChassisClass value) => chassisClass = value;
 
         /// <summary>Editor only: used by the default catalog tool.</summary>
         public void Initialise(ushort chassisId, string name, string text, float health, float budget, int level, SlotType[] slotLayout,

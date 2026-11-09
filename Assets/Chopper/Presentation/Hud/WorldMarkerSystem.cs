@@ -13,7 +13,7 @@ namespace Chopper.Presentation.Hud
     /// Client only. Fills the <see cref="WorldMarkerModel"/>: a marker on every other chopper and ground target in range
     /// (closest first, edge arrows when off screen, health bar when close), and the lead indicator for the selected
     /// rocket pylon (where to put the nose so the rockets meet the target). With rockets selected the lead is always on:
-    /// with no target near the nose it shows where the rockets go (free aim). No HUD code reads ECS; this is the one place.
+    /// with no target near the nose it shows where the rockets hit (free aim; hidden when nothing is in range). No HUD code reads ECS; this is the one place.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -134,12 +134,12 @@ namespace Chopper.Presentation.Hud
                 }
             }
 
-            // Free aim: the rocket path (no gravity, launch velocity as in PylonFireSystem) to the first hit or full range.
+            // Free aim: the rocket path (no gravity, launch velocity as in PylonFireSystem) to the first hit. Nothing in
+            // range (open sky): no reticle, so it never points at empty air.
             var end = muzzle + (velocity + pose.Forward * weapon.Speed) * weapon.Lifetime;
             if (SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics) &&
                 Explosions.TryRaycast(physics.CollisionWorld, self, muzzle, end, out var hit))
-                end = hit.Position;
-            model.SetLead(camera.WorldToViewportPoint(end), onTarget: false);
+                model.SetLead(camera.WorldToViewportPoint(hit.Position), onTarget: false);
         }
 
         private Entity TargetNearestTheNose(Entity self, float3 muzzle, float3 forward, float range)
