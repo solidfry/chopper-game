@@ -19,6 +19,19 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void TickGrace_RefillsInSightAndCountsDownOutOfSight()
+        {
+            Assert.That(Seeker.TickGrace(0.2f, true, 1.5f, 0.1f), Is.EqualTo(1.5f), "in sight: full");
+            var grace = 1.5f;
+            for (var i = 0; i < 14; i++) grace = Seeker.TickGrace(grace, false, 1.5f, 0.1f);
+            Assert.That(grace, Is.GreaterThan(0f), "still held after 1.4 s");
+            grace = Seeker.TickGrace(grace, false, 1.5f, 0.1f);
+            grace = Seeker.TickGrace(grace, false, 1.5f, 0.1f);
+            Assert.That(grace, Is.LessThanOrEqualTo(0f), "broken after 1.6 s");
+            Assert.That(Seeker.TickGrace(0f, false, 0f, 0.016f), Is.LessThan(0f), "no grace: breaks at once");
+        }
+
+        [Test]
         public void Score_PrefersHotterCentredCloserTargets()
         {
             Assert.That(Seeker.Score(2f, 1f, 100f), Is.GreaterThan(Seeker.Score(1f, 1f, 100f)), "hotter");

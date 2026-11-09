@@ -56,6 +56,8 @@ namespace Chopper.Presentation.Hud
         /// <summary>Where to put the nose so the selected rockets hit the target.</summary>
         public bool LeadVisible { get; private set; }
         public Vector2 LeadViewport { get; private set; }
+        /// <summary>True: the lead is on a target. False: free aim, where the rockets go (first hit, or end of range).</summary>
+        public bool LeadOnTarget { get; private set; }
 
         public void Begin()
         {
@@ -72,8 +74,10 @@ namespace Chopper.Presentation.Hud
         }
 
         /// <param name="viewport">Lead point in viewport space; z below 0 = behind the camera (hidden).</param>
-        public void SetLead(Vector3 viewport)
+        /// <param name="onTarget">False for free aim (no target near the nose).</param>
+        public void SetLead(Vector3 viewport, bool onTarget)
         {
+            LeadOnTarget = onTarget;
             LeadVisible = viewport.z > 0f && viewport.x is >= 0f and <= 1f && viewport.y is >= 0f and <= 1f;
             if (LeadVisible) LeadViewport = new Vector2(viewport.x, viewport.y);
         }

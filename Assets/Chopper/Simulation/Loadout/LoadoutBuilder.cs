@@ -255,6 +255,7 @@ namespace Chopper.Simulation.Loadout
             LockConeCos = missile.LockConeCos,
             LockRange = missile.LockRange,
             LockTime = missile.LockTime,
+            LockGrace = missile.LockGrace,
             RequiresLock = missile.RequiresLock,
             TurnRate = missile.TurnRateRadians,
             NavigationGain = missile.NavigationGain,

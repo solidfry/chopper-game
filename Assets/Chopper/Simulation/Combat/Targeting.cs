@@ -45,6 +45,8 @@ namespace Chopper.Simulation.Combat
         /// <summary>0 = just started, 1 = locked.</summary>
         [GhostField(Quantization = 100)] public float Progress;
         [GhostField] public bool Locked;
+        /// <summary>Server only (not sent): seconds the lock still holds with the target out of the cone or sight.</summary>
+        public float Grace;
     }
 
     /// <summary>Server-written warnings for this chopper's pilot: how many enemies are locking it, and how many have a lock.</summary>
@@ -76,6 +78,15 @@ namespace Chopper.Simulation.Combat
             alignment = distance > 1e-3f ? math.dot(offset / distance, forward) : 1f;
             return distance <= range && alignment >= coneCos;
         }
+
+        /// <summary>Holding a lock with the target out of the cone or sight: it must still be lockable and this close.</summary>
+        public const float GraceRangeScale = 1.25f;
+
+        /// <summary>
+        /// The grace left after this tick. In sight: full again. Out of sight: counts down; the lock breaks at 0.
+        /// </summary>
+        public static float TickGrace(float grace, bool inSight, float graceSeconds, float deltaTime) =>
+            inSight ? graceSeconds : grace - deltaTime;
 
         /// <summary>Higher = better target: hot, near the centre of the cone, close.</summary>
         public static float Score(float heat, float alignment, float distance) =>

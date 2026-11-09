@@ -13,7 +13,10 @@ namespace Chopper.Simulation.Combat
     /// <summary>
     /// Server only. Builds the lock of each chopper's selected seeker weapon: the best <see cref="Targetable"/> in the
     /// cone (hot, centred, close) with a clear line of sight. Keeping the same target fills the lock over the weapon's
-    /// lock time; a target with flares out cannot be locked. Also fills each target's <see cref="ThreatState"/>.
+    /// lock time; a target with flares out cannot be locked. A target being locked is kept while it stays in the cone,
+    /// even if another scores higher. When it leaves the cone or line of sight the lock holds for the weapon's grace time
+    /// (progress frozen) and breaks after that. Flares, death or range break it at once.
+    /// Also fills each target's <see cref="ThreatState"/>.
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -79,28 +82,61 @@ namespace Chopper.Simulation.Combat
                 var best = Entity.Null;
                 var bestScore = 0f;
                 var bestLockScale = 1f;
+                var current = lockState.Target;
+                var currentSeen = false;
+                var currentInSight = false;
+                var currentDistance = 0f;
+                var currentLockScale = 1f;
                 foreach (var candidate in candidates)
                 {
                     if (candidate.Entity == self || (candidate.Class & weapon.Targets) == 0) continue;
-                    if (!Seeker.InCone(origin, forward, candidate.Position, weapon.LockConeCos, weapon.LockRange, out var distance, out var alignment))
-                        continue;
+                    var isCurrent = candidate.Entity == current && current != Entity.Null;
+                    var inCone = Seeker.InCone(origin, forward, candidate.Position, weapon.LockConeCos, weapon.LockRange, out var distance, out var alignment);
+                    if (isCurrent)
+                    {
+                        currentSeen = true;
+                        currentDistance = distance;
+                        currentLockScale = candidate.LockScale;
+                    }
+                    if (!inCone) continue;
 
                     var score = Seeker.Score(candidate.Heat, alignment, distance);
-                    if (score <= bestScore || !HasLineOfSight(world, self, candidate.Entity, origin, candidate.Position)) continue;
+                    if (!isCurrent && score <= bestScore) continue;
+                    var sight = HasLineOfSight(world, self, candidate.Entity, origin, candidate.Position);
+                    if (isCurrent) currentInSight = sight;
+                    if (!sight || score <= bestScore) continue;
                     best = candidate.Entity;
                     bestScore = score;
                     bestLockScale = candidate.LockScale;
                 }
 
-                if (best == Entity.Null)
+                // Keep the current target while it is in sight, or for the grace time after it leaves.
+                var holding = currentSeen && currentDistance <= weapon.LockRange * Seeker.GraceRangeScale;
+                if (holding)
+                {
+                    lockState.Grace = Seeker.TickGrace(lockState.Grace, currentInSight, weapon.LockGrace, deltaTime);
+                    holding = currentInSight || lockState.Grace > 0f;
+                }
+
+                if (holding)
+                {
+                    best = current;
+                    bestLockScale = currentLockScale;
+                }
+                else if (best == Entity.Null)
                 {
                     lockState = default;
                     continue;
                 }
+                else
+                {
+                    lockState = new TargetLock { Target = best, Grace = weapon.LockGrace };
+                    currentInSight = true;
+                }
 
-                if (best != lockState.Target)
-                    lockState = new TargetLock { Target = best };
-                lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime * bestLockScale, 0.01f));
+                // Progress fills only while the target is in sight; during grace it holds.
+                if (currentInSight)
+                    lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime * bestLockScale, 0.01f));
                 lockState.Locked = lockState.Progress >= 1f;
 
                 if (_threats.HasComponent(best))

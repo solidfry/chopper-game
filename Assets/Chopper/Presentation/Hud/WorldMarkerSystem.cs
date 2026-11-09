@@ -12,7 +12,8 @@ namespace Chopper.Presentation.Hud
     /// <summary>
     /// Client only. Fills the <see cref="WorldMarkerModel"/>: a marker on every other chopper and ground target in range
     /// (closest first, edge arrows when off screen, health bar when close), and the lead indicator for the selected
-    /// rocket pylon (where to put the nose so the rockets meet the target). No HUD code reads ECS; this is the one place.
+    /// rocket pylon (where to put the nose so the rockets meet the target). With rockets selected the lead is always on:
+    /// with no target near the nose it shows where the rockets go (free aim). No HUD code reads ECS; this is the one place.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -120,16 +121,25 @@ namespace Chopper.Presentation.Hud
             var target = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target)
                 ? targetLock.Target
                 : TargetNearestTheNose(self, muzzle, pose.Forward, range);
-            if (target == Entity.Null) return;
+            if (target != Entity.Null)
+            {
+                // Rockets keep the chopper's velocity, so work relative to the chopper.
+                var targetPosition = SystemAPI.GetComponent<LocalToWorld>(target).Position;
+                var targetVelocity = SystemAPI.HasComponent<PhysicsVelocity>(target) ? SystemAPI.GetComponent<PhysicsVelocity>(target).Linear : float3.zero;
+                var relativeVelocity = targetVelocity - velocity;
+                if (Guidance.InterceptTime(targetPosition - muzzle, relativeVelocity, weapon.Speed, out var time) && time <= weapon.Lifetime)
+                {
+                    model.SetLead(camera.WorldToViewportPoint(targetPosition + relativeVelocity * time), onTarget: true);
+                    return;
+                }
+            }
 
-            // Rockets keep the chopper's velocity, so work relative to the chopper.
-            var targetPosition = SystemAPI.GetComponent<LocalToWorld>(target).Position;
-            var targetVelocity = SystemAPI.HasComponent<PhysicsVelocity>(target) ? SystemAPI.GetComponent<PhysicsVelocity>(target).Linear : float3.zero;
-            var relativeVelocity = targetVelocity - velocity;
-            if (!Guidance.InterceptTime(targetPosition - muzzle, relativeVelocity, weapon.Speed, out var time)) return;
-            if (time > weapon.Lifetime) return;
-
-            model.SetLead(camera.WorldToViewportPoint(targetPosition + relativeVelocity * time));
+            // Free aim: the rocket path (no gravity, launch velocity as in PylonFireSystem) to the first hit or full range.
+            var end = muzzle + (velocity + pose.Forward * weapon.Speed) * weapon.Lifetime;
+            if (SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics) &&
+                Explosions.TryRaycast(physics.CollisionWorld, self, muzzle, end, out var hit))
+                end = hit.Position;
+            model.SetLead(camera.WorldToViewportPoint(end), onTarget: false);
         }
 
         private Entity TargetNearestTheNose(Entity self, float3 muzzle, float3 forward, float range)

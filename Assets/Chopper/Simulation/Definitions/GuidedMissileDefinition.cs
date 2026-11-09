@@ -28,6 +28,8 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Half-angle of the lock cone, degrees.")] private float lockConeDegrees = 15f;
         [SerializeField] private float lockRange = 600f;
         [SerializeField, Tooltip("Seconds on target to lock.")] private float lockTime = 1.2f;
+        [SerializeField, Tooltip("Seconds the lock holds after the target leaves the cone or line of sight. Flares still break it at once.")]
+        private float lockGraceSeconds = 1.5f;
         [SerializeField, Tooltip("On: cannot fire without a lock (no dumb-fire).")] private bool requiresLock = true;
 
         [Header("Flight")]
@@ -70,6 +72,7 @@ namespace Chopper.Simulation.Definitions
         public float LockConeCos => Mathf.Cos(lockConeDegrees * Mathf.Deg2Rad);
         public float LockRange => lockRange;
         public float LockTime => lockTime;
+        public float LockGrace => lockGraceSeconds;
         public bool RequiresLock => requiresLock;
         public float TurnRateRadians => turnRate * Mathf.Deg2Rad;
         public float NavigationGain => navigationGain;

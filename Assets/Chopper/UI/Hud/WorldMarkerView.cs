@@ -19,6 +19,7 @@ namespace Chopper.UI.Hud
         private const string PingedClass = "hud-marker--pinged";
         private const string NoHealthClass = "hud-marker--no-health";
         private const string LeadHiddenClass = "hud-lead--hidden";
+        private const string LeadFreeClass = "hud-lead--free";
 
         private readonly WorldMarkerModel _model;
         private readonly HudLook _look;
@@ -89,6 +90,7 @@ namespace Chopper.UI.Hud
 
             _lead.EnableInClassList(LeadHiddenClass, !_model.LeadVisible);
             if (!_model.LeadVisible) return;
+            _lead.EnableInClassList(LeadFreeClass, !_model.LeadOnTarget);
             var lead = _look.ToHud(_model.LeadViewport);
             _lead.style.left = Length.Percent(lead.x * 100f);
             _lead.style.top = Length.Percent((1f - lead.y) * 100f);

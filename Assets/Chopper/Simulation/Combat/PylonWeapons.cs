@@ -42,6 +42,8 @@ namespace Chopper.Simulation.Combat
         public float LockConeCos;
         public float LockRange;
         public float LockTime;
+        /// <summary>Seconds the lock holds after the target leaves the cone or line of sight.</summary>
+        public float LockGrace;
         /// <summary>True: cannot fire without a lock (no dumb-fire).</summary>
         public bool RequiresLock;
         /// <summary>Radians per second.</summary>
