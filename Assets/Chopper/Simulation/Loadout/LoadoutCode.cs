@@ -85,5 +85,8 @@ namespace Chopper.Simulation.Loadout
         public byte Index;
         public Unity.Mathematics.float3 LocalPosition;
         public Unity.Mathematics.quaternion LocalRotation;
+        /// <summary>Size of the module on this socket (1 = as modelled; 0 = old bake, read as 1). The hangar gets it
+        /// from the socket transform itself.</summary>
+        public float Scale;
     }
 }

@@ -214,7 +214,7 @@ namespace Chopper.Simulation.Loadout
             if (sockets != null)
                 foreach (var socket in sockets)
                     if (socket.Slot == slot && socket.Index == index)
-                        return socket.LocalPosition + math.mul(socket.LocalRotation, (float3)tip);
+                        return socket.LocalPosition + math.mul(socket.LocalRotation, (float3)tip * (socket.Scale > 0f ? socket.Scale : 1f));
 
             float3 offset = fallback;
             if (mirror) offset.x = -offset.x;
@@ -255,6 +255,7 @@ namespace Chopper.Simulation.Loadout
             LockConeCos = missile.LockConeCos,
             LockRange = missile.LockRange,
             LockTime = missile.LockTime,
+            LockGrace = missile.LockGrace,
             RequiresLock = missile.RequiresLock,
             TurnRate = missile.TurnRateRadians,
             NavigationGain = missile.NavigationGain,

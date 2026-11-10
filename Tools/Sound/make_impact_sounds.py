@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Placeholder impact sounds, made from noise and partials (no recordings): bullet hits and chopper crashes on each
-surface (metal, concrete, ground, water). Output: Assets/Sound/Impacts/<Surface>_<Kind>_<n>.ogg, which Setup step 1
+Placeholder impact sounds, made from noise and partials: bullet hits and chopper crashes on each surface (metal,
+concrete, ground, water). Crashes also get the first ~1.3 s of a Tom Winandy medium explosion (Assets/Sound/Explosions)
+mixed under them, faded out, for weight; the full 6-9 s explosions are too long for a crash. Output: Assets/Sound/Impacts/<Surface>_<Kind>_<n>.ogg, which Setup step 1
 puts on the surface cues (SoundLibrary > Surfaces). Swap them for real recordings on the cue assets later.
 
 Run: python3 Tools/Sound/make_impact_sounds.py   (needs numpy and ffmpeg with libvorbis)
@@ -17,6 +18,18 @@ import numpy as np
 RATE = 44100
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "Assets", "Sound", "Impacts")
+EXPLOSIONS = os.path.join(ROOT, "Assets", "Sound", "Explosions", "TomWinandySFX_Explosions Volume I_MediumExplosion_{:02d}.wav")
+
+# Explosion under each crash file (index n-1) and its level against the synth layer. Picked for a hard attack and a
+# fast fall (head/tail level); brighter ones under metal, darker ones under ground, a soft low one under water.
+CRASH_LAYERS = {
+    "Metal": ([14, 19, 6], 0.75),
+    "Concrete": ([20, 5, 15], 0.9),
+    "Ground": ([9, 11, 22], 0.9),
+    "Water": ([7, 17], 0.5),
+}
+LAYER_SECONDS = 1.3
+LAYER_FADE = 0.7
 
 
 def t(seconds):
@@ -201,6 +214,30 @@ SOUNDS = [
 ]
 
 
+def explosion_layer(number):
+    """The start of a medium explosion: mono, from its onset, faded out over the last LAYER_FADE seconds, peak 1."""
+    raw = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", EXPLOSIONS.format(number), "-ac", "1", "-ar", str(RATE),
+                          "-f", "f32le", "-"], check=True, capture_output=True, stdin=subprocess.DEVNULL).stdout
+    signal = np.frombuffer(raw, np.float32).astype(np.float64)
+    onset = int(np.argmax(np.abs(signal) > 0.1 * np.max(np.abs(signal))))
+    signal = signal[onset:onset + int(LAYER_SECONDS * RATE)].copy()
+    fade = min(len(signal), int(LAYER_FADE * RATE))
+    signal[-fade:] *= np.linspace(1, 0, fade) ** 2
+    return signal / (np.max(np.abs(signal)) or 1)
+
+
+def with_layer(signal, surface, n):
+    numbers, level = CRASH_LAYERS[surface]
+    if not os.path.exists(EXPLOSIONS.format(numbers[n - 1])):
+        print(f"  no explosion {numbers[n - 1]}: synth only")
+        return signal
+    layer = explosion_layer(numbers[n - 1])
+    out = np.zeros(max(len(signal), len(layer)))
+    out[:len(signal)] += signal / (np.max(np.abs(signal)) or 1)
+    out[:len(layer)] += layer * level
+    return out
+
+
 def finish(signal):
     # Short fade at the end, then peak at -1 dBFS.
     fade = min(len(signal), int(0.03 * RATE))
@@ -232,7 +269,10 @@ def main():
             # Fixed seed per file, so a re-run makes the same sounds.
             rng = np.random.default_rng(sum(map(ord, surface + kind)) * 10 + n)
             path = os.path.join(OUT, f"{surface}_{kind}_{n}.ogg")
-            write_ogg(finish(make(rng, n)), path)
+            signal = make(rng, n)
+            if kind == "Crash":
+                signal = with_layer(signal, surface, n)
+            write_ogg(finish(signal), path)
             print(os.path.relpath(path, ROOT))
 
 
