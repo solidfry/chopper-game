@@ -22,6 +22,16 @@ namespace Chopper.Presentation.Hangar
         /// <summary>The big letter(s) on the portrait until there is art: the call sign's first two letters.</summary>
         public readonly string Monogram;
         public readonly Texture2D Portrait;
+        /// <summary>
+        /// The head in the portrait, for a tile that shows only the head: x = middle of the head, y = top of the head,
+        /// z = base of the neck (parts of the image from the top left), w = the image's width / height.
+        /// </summary>
+        public readonly Vector4 FaceFrame;
+        /// <summary>The pilot itself (the live portrait reads its face and art).</summary>
+        private readonly PilotDefinition _pilot;
+
+        /// <summary>Puts this pilot on the live portrait.</summary>
+        public void ShowOn(Pilots.PilotPortraitRig rig) => rig.SetPilot(_pilot);
         public readonly AudioClip SelectLine;
         public readonly AudioClip AbilityLine;
         public readonly bool Locked;
@@ -43,6 +53,10 @@ namespace Chopper.Presentation.Hangar
             Effects = pilot.Modifiers.Effects();
             Monogram = CallSign.Length >= 2 ? CallSign.Substring(0, 2) : CallSign;
             Portrait = pilot.Portrait;
+            var face = pilot.Face;
+            FaceFrame = new Vector4(face.HeadCentre.x, Mathf.Max(0f, face.HeadCentre.y - face.HeadSize.y * 1.05f),
+                Mathf.Min(1f, face.Neck.y), Portrait != null && Portrait.height > 0 ? (float)Portrait.width / Portrait.height : 2f / 3f);
+            _pilot = pilot;
             SelectLine = pilot.SelectLine;
             AbilityLine = pilot.AbilityLine;
             Locked = locked;

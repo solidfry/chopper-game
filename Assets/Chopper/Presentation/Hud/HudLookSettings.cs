@@ -125,6 +125,14 @@ namespace Chopper.Presentation.Hud
             HexGrid = 0.45f, HexGridSize = 0.035f, HexGridReach = 0.42f, HexGridRest = 0f,
         };
 
+        [SerializeField, Tooltip("The pilot's live portrait (HUD corner and pilot select screen).")]
+        private Pilots.PilotPortraitLook pilotPortrait = new();
+
+        public Pilots.PilotPortraitLook PilotPortrait => pilotPortrait ??= new Pilots.PilotPortraitLook();
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetPilotPortraitShader(Shader shader) => PilotPortrait.Shader = shader;
+
         public HudLookPreset DefaultPreset => defaultPreset;
         public float RenderScale => renderScale;
         public float FeedCockpitDepth => feedCockpitDepth;
@@ -149,6 +157,7 @@ namespace Chopper.Presentation.Hud
                 problems.Add($"{name}: glitch and pulse decay must be above 0, or the effect never clears.");
             if (reactions.FeedBootHold < 0f || reactions.FeedBootSeconds < 0f) problems.Add($"{name}: feed boot times must not be below 0.");
             if (vector.ScanlineCount <= 0f || crt84.ScanlineCount <= 0f) problems.Add($"{name}: scanline count must be above 0.");
+            if (PilotPortrait.Shader == null) problems.Add($"{name}: pilot portrait has no shader (Chopper/PilotPortrait). Run Setup step 1.");
         }
     }
 }

@@ -5,14 +5,14 @@ using UnityEngine;
 
 namespace Chopper.Simulation.Loadout
 {
-    /// <summary>Design data for one chassis (Scout, Gunship, Assault, Lifter).</summary>
-    [CreateAssetMenu(menuName = "Chopper/Loadout/Chassis", fileName = "Chassis")]
     /// <summary>
     /// The role a chassis belongs to. Variants of one class (a tandem and a quad Lifter) share it; the hangar groups
     /// chassis cards by it. None = not set (old asset; Setup step 1 fills it from the name).
     /// </summary>
     public enum ChassisClass : byte { None = 0, Scout = 1, Gunship = 2, Assault = 3, Lifter = 4 }
 
+    /// <summary>Design data for one chassis (Scout, Gunship, Assault, Lifter).</summary>
+    [CreateAssetMenu(menuName = "Chopper/Loadout/Chassis", fileName = "Chassis")]
     public sealed class ChassisDefinition : ScriptableObject, IValidatedAsset
     {
         [SerializeField, Tooltip("Unique, never 0, never reused. Saved in player loadouts.")]

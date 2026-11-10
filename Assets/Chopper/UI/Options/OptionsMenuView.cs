@@ -118,6 +118,7 @@ namespace Chopper.UI.Options
             AddHudOpacity("hud-opacity-weapons", HudGroup.Weapons);
             AddHudOpacity("hud-opacity-targeting", HudGroup.Targeting);
             AddHudOpacity("hud-opacity-match", HudGroup.MatchInfo);
+            AddHudOpacity("hud-opacity-pilot", HudGroup.Pilot);
 
             _prompts = new InputPromptLabels(_root, _context.Prompts);
             SetOpen(IsOpen);

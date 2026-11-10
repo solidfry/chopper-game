@@ -91,6 +91,23 @@ namespace Chopper.Presentation.Audio
             _voice.Play();
         }
 
+        public AudioClip VoiceClip => _voice != null && _voice.isPlaying ? _voice.clip : null;
+
+        public float VoiceLevel
+        {
+            get
+            {
+                if (_voice == null || !_voice.isPlaying) return 0f;
+                _voice.GetOutputData(_voiceSamples, 0);
+                var sum = 0f;
+                foreach (var sample in _voiceSamples) sum += sample * sample;
+                return Mathf.Sqrt(sum / _voiceSamples.Length);
+            }
+        }
+
+        /// <summary>About 6 ms at 44.1 kHz: short enough for syllables.</summary>
+        private readonly float[] _voiceSamples = new float[256];
+
         public SoundLoop StartLoop(SoundCue cue, Vector3 position)
         {
             if (cue == null || !cue.HasClips) return null;

@@ -81,6 +81,18 @@ Owner direction (28 Oct): "most technology isn't basic shapes with hard square e
 
 Cost at the current values: about 15k-26k triangles per chassis, 37k for the Lifter (with surface detail).
 
+## Modules (machined parts)
+
+`partforge/modules.py`. Modules are turned and fitted parts, not stacked boxes: `Builder.lathe` (barrels, nozzles,
+hubs, pods, missile and bomb bodies: a list of (distance, radius[, swatch]) steps), `Builder.tube` (hoses, feed
+chutes), swept wedge fins (`_fins`), aerofoil rotor blades with a root cuff, twist and a swept painted tip
+(`_blade`), an articulated rotor head (swashplate, hub plates, pitch links, dampers), a hardpoint adapter with sway
+braces (`_mount`). Modules get a fine bevel (`build.MODULE_BEVEL`, 8 mm), not the hull's wide chamfer.
+Rules: keep the old envelope (the game reads the largest z as the muzzle; the audit checks the ground clearance);
+no glowing exhaust on a missile that hangs on its rail. Cost: 1k to 5k triangles per module.
+The chassis use the same blocks for wheels (`_wheel`: tyre, dished rim), gear legs (`_strut`: oleo piston) and the
+open tail rotor (tapered blades, painted tips).
+
 ## Parts on the hull sides
 
 Plates, repair patches, vents, strips, windows, door frames and ladder rungs are laid flat on the real hull: after the
@@ -123,15 +135,37 @@ seated too: hanging modules hang from the underside above their socket, engine s
 Export bakes real textures; the palette stays as the swatch ids and the quick look in the panel.
 
 - **UVs:** UV0 = a unique unwrap per chassis (all modules share one atlas); UV1 = the palette cell.
-- **Baked once per set:** normal map (fine cast grain and hammered dents; glass and lights stay smooth), occlusion,
-  and the surface data the skins use: position and normal in model space, swatch id, edge mask, cavity mask.
+- **Atlas budget:** the hull gets most of the map. Small separate pieces (nuts, greebles, clips) are deflated before
+  the packing: under `tiny_area` one flat island at `tiny_scale`, under `small_area` their islands at `small_scale`.
+  (Before 10 Nov the nuts and greebles took about 70 % of the atlas, and the hull was blurred.)
+- **Baked once per set:** normal map (cast grain, hammered dents, fine scratches along the airflow, and **rounded
+  edges**: the Bevel shader's normal is baked in, so every hard edge catches a highlight like a filleted high-poly
+  model; `edge_round` = radius; glass and lights stay smooth), occlusion, and the surface data the skins use: position
+  and normal in model space, swatch id, edge mask, cavity mask, UV tangent.
+- **Panel lines and rivets** (`partforge/surface.py`, style `textures.seams`): frames, stringers and ribs in model
+  space, some segments left out, a rivet row on both sides. They go into the normal map (numpy: the gradient of a
+  height field, turned into tangent space with the baked UV tangent) and into the dirt and wear masks. Numbers at the
+  top of `surface.py`.
+- **Markings** (`surface.markings`, chassis only): a stencilled tail code, a unit number on the cheeks, a danger band
+  before the tail. They are not paint in the colour map: they change the texel's swatch (light armour tone, warning
+  paint), so every skin shows them in its own colours, baked or runtime, with no shader change.
 - **Base maps:** the first skin's colour, metallic/smoothness and emission, and the skin masks (`SkinMask`,
   `SkinWear`): the runtime skin shader paints every skin from them (see "Skins").
 - **Wear and grime** come from the bake, on every skin: bare metal on the edges and in chips near them, dirt in the
   crevices, rain streaks, soot plumes behind each exhaust (found from the exhaust faces), a little occlusion.
-- Style key `textures`: `density` (normal-map pixels per metre, 110), `max_size` (2048), `module_size` (1024),
-  `skin_scale` (0.5: skin maps at half size; small files, the paint is soft-edged anyway), `samples` (16).
+- Style key `textures`: `density` (normal-map pixels per metre, 110), `max_size` (2048), `module_size` (2048),
+  `cockpit_size` (2048; 0 = cockpits on the palette only), `skin_scale` (1.0: skin maps at the normal map's size;
+  panel lines and markings need it), `samples` (16).
 - Unity: one skin-shader material per set (all skins), used by the kit models.
+- **Cockpit chamfers** (`Builder._scaled_bevel` in `geo.py`): each edge gets a chamfer sized to the room it has, from
+  `build.COCKPIT_BEVEL` (4 mm, switches and keys) to `build.COCKPIT_CHAMFER` (40 mm: seat, cushions, consoles,
+  shell). Pieces with inside corners (dash, bezels) get at most `geo.COMPLEX_CHAMFER` (12 mm). The Bevel modifier's
+  overlap clamp is off for cockpits: it is one limit for the whole mesh, so the smallest switch made every chamfer
+  4 mm or less (the cockpit looked square).
+- **Cockpits** have a texture set each (`Cockpit_<Chassis>`): the large surfaces (shell, panels, seat, frames) are
+  baked (occlusion, worn edges at half the hull's wear, grime, normal map; no skin paint: the skin mask is empty);
+  the millimetre parts (switches, lamps, screen graphics) stay on the palette in a second material slot, the live
+  screens in a third. Unity (`KitAssets`) gives the baked faces the first skin's baked material (plain URP Lit).
 
 ## Skins
 

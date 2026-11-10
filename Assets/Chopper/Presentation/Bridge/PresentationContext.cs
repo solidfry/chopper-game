@@ -49,6 +49,7 @@ namespace Chopper.Presentation.Bridge
             moduleRoot.SetParent(root, false);
             ModuleVisuals = new EffectPool(moduleRoot);
             HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
+            PilotPortrait = new Pilots.PilotPortraitRig(config != null && config.HudLook != null ? config.HudLook.PilotPortrait : null);
             if (cameraRig != null && config != null) cameraRig.UseSettings(config.Camera);
 
             _owned.Add(new CombatFeedback(this));
@@ -78,6 +79,11 @@ namespace Chopper.Presentation.Bridge
         public WorldMarkerModel Markers { get; } = new();
         /// <summary>Retro HUD look: the HUD view attaches its document; gameplay drives glitches.</summary>
         public HudLook HudLook { get; }
+        /// <summary>
+        /// The live pilot portrait: the local pilot in a match (<see cref="Hud.LocalPilotPortraitSystem"/>), the shown
+        /// pilot on the select screen. Its texture is null without the shader (Setup step 1).
+        /// </summary>
+        public Pilots.PilotPortraitRig PilotPortrait { get; }
         /// <summary>Can be null (no chase camera in the scene).</summary>
         public ChopperCameraRig CameraRig { get; }
         public PresentationEvents Events { get; }
@@ -251,6 +257,7 @@ namespace Chopper.Presentation.Bridge
             IsDisposed = true;
             foreach (var owned in _owned) owned.Dispose();
             HudLook.Dispose();
+            PilotPortrait.Dispose();
             Events.Dispose();
             Effects.Dispose();
             ModuleVisuals.Dispose();

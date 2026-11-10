@@ -46,6 +46,13 @@ namespace Chopper.UI.Hangar
         private readonly Label _state;
         private readonly Button _lockIn;
         private readonly List<Button> _tiles = new();
+        /// <summary>Runs each frame while the select screen is open: moves and draws the live portrait.</summary>
+        private IVisualElementScheduledItem _animate;
+        private float _lastTick;
+        /// <summary>The model's open state as last shown (the screen stays visible while its close plays).</summary>
+        private bool _open;
+        /// <summary>Glitch on the live portrait when a new pilot shows (it fades out).</summary>
+        private float _swapGlitch;
 
         public PilotSelectView(VisualElement root, PilotSelectModel model, PresentationContext context)
         {
@@ -78,6 +85,8 @@ namespace Chopper.UI.Hangar
             _model.Changed += Refresh;
             _model.ShownChanged += OnShownChanged;
             BuildGrid();
+            _animate = _portrait.schedule.Execute(Animate).Every(0);
+            _animate.Pause();
             Refresh();
         }
 
@@ -88,6 +97,7 @@ namespace Chopper.UI.Hangar
             _lockIn.clicked -= OnLockIn;
             _model.Changed -= Refresh;
             _model.ShownChanged -= OnShownChanged;
+            _animate?.Pause();
         }
 
         private void OnCardClicked()
@@ -117,13 +127,21 @@ namespace Chopper.UI.Hangar
             _cardMono.style.color = accent;
 
             var open = _model.IsOpen;
-            var wasOpen = !_screen.ClassListContains(HiddenClass);
-            _screen.EnableInClassList(HiddenClass, !open);
+            var wasOpen = _open;
+            _open = open;
+            // The shared window power on / off (WindowTransition): the screen hides when the close ends.
+            if (open && !wasOpen) WindowTransition.Open(_screen, HiddenClass);
             if (!open)
             {
-                if (wasOpen) _card.Focus();
+                if (!wasOpen) return;
+                WindowTransition.Close(_screen, HiddenClass, () =>
+                {
+                    if (!_open) _animate.Pause();
+                });
+                _card.Focus();
                 return;
             }
+            _animate.Resume();
             if (!wasOpen)
             {
                 RunScan();
@@ -161,10 +179,26 @@ namespace Chopper.UI.Hangar
                 tile.RegisterCallback<PointerEnterEvent>(_ => _model.Show(index));
                 tile.RegisterCallback<FocusInEvent>(_ => _model.Show(index));
 
-                var face = new PilotPortrait();
-                face.AddToClassList("pilot-tile__drawn");
-                face.Set(card.Id, card.Accent);
-                tile.Add(face);
+                if (card.Portrait != null)
+                {
+                    // The art, still (only the big card is live): the head fills the whole tile, in the UI green; the
+                    // name sits on a strip over the neck.
+                    tile.AddToClassList("pilot-tile--art");
+                    var art = new VisualElement { pickingMode = PickingMode.Ignore };
+                    art.AddToClassList("pilot-tile__drawn");
+                    art.AddToClassList("pilot-tile__art");
+                    art.style.backgroundImage = new StyleBackground(card.Portrait);
+                    var frame = card.FaceFrame;
+                    art.RegisterCallback<GeometryChangedEvent>(_ => FrameFace(art, frame));
+                    tile.Add(art);
+                }
+                else
+                {
+                    var face = new PilotPortrait();
+                    face.AddToClassList("pilot-tile__drawn");
+                    face.Set(card.Id, card.Accent);
+                    tile.Add(face);
+                }
                 tile.Add(Text(card.CallSign, "pilot-tile__sign", title: true));
                 if (card.Locked) tile.Add(Text($"LEVEL {card.UnlockLevel}", "pilot-tile__tag"));
                 _grid.Add(tile);
@@ -179,7 +213,16 @@ namespace Chopper.UI.Hangar
             var card = shown.Value;
             for (var i = 0; i < _tiles.Count; i++) _tiles[i].EnableInClassList(ShownTileClass, i == _model.ShownIndex);
 
-            // Art when the pilot has a portrait; else the drawn helmet with the monogram as a corner tag.
+            // Art when the pilot has a portrait (live when the rig can draw it); else the drawn helmet with the monogram
+            // as a corner tag.
+            var rig = _context.PilotPortrait;
+            var live = card.Portrait != null && rig.Texture != null;
+            if (live)
+            {
+                card.ShowOn(rig);
+                rig.UiColour = false;
+                _swapGlitch = slam ? 1f : _swapGlitch;
+            }
             var drawn = card.Portrait == null && _drawn != null;
             if (_drawn != null)
             {
@@ -191,7 +234,8 @@ namespace Chopper.UI.Hangar
             _monogram.style.color = card.Accent;
             _portrait.style.borderTopColor = _portrait.style.borderBottomColor =
                 _portrait.style.borderLeftColor = _portrait.style.borderRightColor = card.Accent;
-            _portrait.style.backgroundImage = card.Portrait != null ? new StyleBackground(card.Portrait) : new StyleBackground(StyleKeyword.None);
+            _portrait.style.backgroundImage = live ? new StyleBackground(Background.FromRenderTexture(rig.Texture))
+                : card.Portrait != null ? new StyleBackground(card.Portrait) : new StyleBackground(StyleKeyword.None);
             _serial.text = $"P-{card.Id:00}";
             _role.text = card.Role;
             _callSign.text = card.CallSign;
@@ -223,6 +267,53 @@ namespace Chopper.UI.Hangar
                 _callSign.RemoveFromClassList(SlamClass);
                 _portrait.RemoveFromClassList(FlashClass);
             }).StartingIn(16);
+        }
+
+        /// <summary>
+        /// The live portrait while the screen is open: it faces the hangar camera (the hangar's light falls on it from
+        /// there), and its jaw follows its own radio line (LOCK IN), not the announcer.
+        /// </summary>
+        private void Animate()
+        {
+            var now = Time.unscaledTime;
+            var deltaTime = _lastTick > 0f ? now - _lastTick : 0f;
+            _lastTick = now;
+            var rig = _context.PilotPortrait;
+            if (!rig.HasPilot) return;
+            var camera = UnityEngine.Camera.main;
+            var facing = camera != null ? Quaternion.LookRotation(-camera.transform.forward, camera.transform.up) : Quaternion.identity;
+            _swapGlitch = Mathf.MoveTowards(_swapGlitch, 0f, deltaTime * 3f);
+            var audio = _context.Audio;
+            rig.Tick(deltaTime, new Presentation.Pilots.PilotPortraitInput
+            {
+                Facing = facing,
+                Voice = rig.OwnVoice(audio),
+                Glitch = _swapGlitch,
+            });
+        }
+
+        /// <summary>
+        /// Sizes and moves the tile's art so the head (top of the head to the base of the neck) fills the tile's height,
+        /// the head in the middle, the image's shape kept. If that leaves a gap at a side, the image grows until it
+        /// covers the tile. It never moves so far that a gap shows. Background size and position in pixels: they need
+        /// the element's size.
+        /// </summary>
+        private static void FrameFace(VisualElement art, Vector4 frame)
+        {
+            var size = art.contentRect.size;
+            if (size.x < 1f || size.y < 1f) return;
+            var height = size.y / Mathf.Max(0.05f, frame.z - frame.y);
+            var width = height * frame.w;
+            if (width < size.x)
+            {
+                height *= size.x / width;
+                width = size.x;
+            }
+            var x = Mathf.Clamp(size.x * 0.5f - frame.x * width, size.x - width, 0f);
+            var y = Mathf.Clamp(size.y * 0.5f - (frame.y + frame.z) * 0.5f * height, size.y - height, 0f);
+            art.style.backgroundSize = new BackgroundSize(width, height);
+            art.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, x);
+            art.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, y);
         }
 
         /// <summary>The scan band slides down the screen once each time it opens.</summary>

@@ -143,6 +143,8 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, TextArea] private string abilityText;
         [SerializeField, Tooltip("Card and tile accent.")] private Color accent = new(0f, 1f, 0.58f);
         [SerializeField, Tooltip("Optional. Empty = the call sign's monogram.")] private Texture2D portrait;
+        [SerializeField, Tooltip("The portrait's normal map and rig points (HUD and select screen: it moves, talks and takes the scene light).")]
+        private PilotFace face = new();
         [SerializeField] private int unlockLevel;
         [SerializeField, Tooltip("The announcer says the call sign (select screen).")] private AudioClip selectLine;
         [SerializeField, Tooltip("The pilot on the radio when the ability starts (own chopper).")] private AudioClip abilityLine;
@@ -158,7 +160,15 @@ namespace Chopper.Simulation.Loadout
         public string AbilityText => abilityText;
         public Color Accent => accent;
         public Texture2D Portrait => portrait;
+        public PilotFace Face => face ??= new PilotFace();
         public int UnlockLevel => unlockLevel;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetArt(Texture2D image, PilotFace rig)
+        {
+            portrait = image;
+            face = rig;
+        }
         public AudioClip SelectLine => selectLine;
         public AudioClip AbilityLine => abilityLine;
 
@@ -184,6 +194,7 @@ namespace Chopper.Simulation.Loadout
             if (id == 0) problems.Add($"{name}: id must not be 0 (0 means no pilot).");
             if (string.IsNullOrWhiteSpace(callSign)) problems.Add($"{name}: no call sign.");
             else if (callSign != callSign.ToUpperInvariant()) problems.Add($"{name}: call sign should be upper case.");
+            if (portrait != null) Face.CollectProblems(name, problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>

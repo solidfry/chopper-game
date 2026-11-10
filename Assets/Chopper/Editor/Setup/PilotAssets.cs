@@ -135,6 +135,75 @@ namespace Chopper.Editor.Setup
             return changed;
         }
 
+        private const string ArtFolder = "Assets/Textures/Pilots";
+
+        /// <summary>
+        /// Rig points of the starting art (<see cref="PilotFace"/>), measured on the images: parts of the image from the
+        /// top left. Overwatch's left eye is a lens and Wraith's mouth is under a mask.
+        /// </summary>
+        private static PilotFace FaceOf(string callSign)
+        {
+            static PilotFace Make(float headX, float headY, float headW, float headH, float neckX, float neckY,
+                float leftX, float leftY, float rightX, float rightY, float eye, float mouthX, float mouthY, float mouth, float chin) => new()
+            {
+                HeadCentre = new Vector2(headX, headY), HeadSize = new Vector2(headW, headH), Neck = new Vector2(neckX, neckY),
+                LeftEye = new Vector2(leftX, leftY), RightEye = new Vector2(rightX, rightY), EyeSize = eye,
+                Mouth = new Vector2(mouthX, mouthY), MouthWidth = mouth, Chin = chin,
+            };
+            return callSign switch
+            {
+                "APOTHECARY" => Make(0.49f, 0.25f, 0.20f, 0.23f, 0.50f, 0.50f, 0.415f, 0.282f, 0.595f, 0.282f, 0.045f, 0.505f, 0.398f, 0.055f, 0.45f),
+                "VIPER" => Make(0.50f, 0.25f, 0.20f, 0.24f, 0.51f, 0.52f, 0.425f, 0.295f, 0.60f, 0.295f, 0.045f, 0.515f, 0.418f, 0.06f, 0.47f),
+                "PYRE" => Make(0.50f, 0.22f, 0.20f, 0.22f, 0.51f, 0.48f, 0.415f, 0.26f, 0.60f, 0.26f, 0.045f, 0.51f, 0.365f, 0.055f, 0.42f),
+                "WRAITH" => Make(0.50f, 0.27f, 0.23f, 0.27f, 0.50f, 0.53f, 0.40f, 0.31f, 0.60f, 0.31f, 0.04f, 0.50f, 0.43f, 0f, 0.48f),
+                "BULWARK" => Make(0.50f, 0.24f, 0.27f, 0.25f, 0.50f, 0.52f, 0.40f, 0.278f, 0.595f, 0.278f, 0.045f, 0.505f, 0.39f, 0.06f, 0.48f),
+                "HOTWIRE" => Make(0.51f, 0.27f, 0.21f, 0.25f, 0.52f, 0.55f, 0.42f, 0.307f, 0.61f, 0.307f, 0.045f, 0.52f, 0.43f, 0.07f, 0.495f),
+                "OVERWATCH" => Make(0.50f, 0.26f, 0.25f, 0.25f, 0.505f, 0.54f, 0f, 0f, 0.605f, 0.31f, 0.04f, 0.505f, 0.445f, 0.055f, 0.49f),
+                "HEX" => Make(0.50f, 0.30f, 0.19f, 0.23f, 0.51f, 0.55f, 0.43f, 0.33f, 0.59f, 0.33f, 0.04f, 0.51f, 0.445f, 0.055f, 0.50f),
+                "SCRAPPER" => Make(0.50f, 0.32f, 0.27f, 0.30f, 0.50f, 0.62f, 0.40f, 0.358f, 0.615f, 0.358f, 0.045f, 0.50f, 0.50f, 0.075f, 0.56f),
+                "RAMJET" => Make(0.50f, 0.22f, 0.24f, 0.23f, 0.50f, 0.50f, 0.405f, 0.262f, 0.60f, 0.262f, 0.045f, 0.50f, 0.372f, 0.08f, 0.45f),
+                _ => new PilotFace(),
+            };
+        }
+
+        /// <summary>
+        /// Portrait art: <c>Textures/Pilots/Callsign.png</c> and its normal map <c>Callsign_n.png</c> (import settings
+        /// fixed here: normal map type, 1024 max). Fills pilots with no portrait only, so tuned face points are kept.
+        /// </summary>
+        private static bool LinkArt(IEnumerable<PilotDefinition> pilots)
+        {
+            var changed = false;
+            foreach (var pilot in pilots)
+            {
+                if (pilot.Portrait != null || string.IsNullOrEmpty(pilot.CallSign)) continue;
+                var file = pilot.CallSign.Substring(0, 1) + pilot.CallSign.Substring(1).ToLowerInvariant();
+                var artPath = $"{ArtFolder}/{file}.png";
+                var normalPath = $"{ArtFolder}/{file}_n.png";
+                if (!File.Exists(artPath)) continue;
+                Import(artPath, normal: false);
+                if (File.Exists(normalPath)) Import(normalPath, normal: true);
+                var face = FaceOf(pilot.CallSign);
+                face.NormalMap = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+                pilot.SetArt(AssetDatabase.LoadAssetAtPath<Texture2D>(artPath), face);
+                EditorUtility.SetDirty(pilot);
+                changed = true;
+            }
+            return changed;
+        }
+
+        private static void Import(string path, bool normal)
+        {
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
+            var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            if (importer.textureType == type && importer.maxTextureSize == 1024 && importer.wrapMode == TextureWrapMode.Clamp &&
+                (normal || importer.alphaIsTransparency)) return;
+            importer.textureType = type;
+            importer.maxTextureSize = 1024;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            if (!normal) importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+        }
+
         public static void Ensure(LoadoutCatalog catalog)
         {
             if (catalog == null) return;
@@ -168,6 +237,7 @@ namespace Chopper.Editor.Setup
                 changed = true;
             }
             changed |= LinkVoices(pilots);
+            changed |= LinkArt(pilots);
             if (!changed) return;
             catalog.SetPilots(pilots.OrderBy(p => p.Id).ToArray());
             EditorUtility.SetDirty(catalog);

@@ -149,7 +149,7 @@ def maps(surface, names, wear_of_style):
     tone[swatch == index["hull_light"]] = 1.0
     mask = np.stack([where(skins.PAINT), where(skins.PANELS), where(skins.HAZARD), tone], axis=1)
 
-    dirt = (1 - surface["cavity"]) * 1.4 + np.clip(surface["streak"] - 0.62, 0, 1) * 1.2
+    dirt = surface["dirt"]  # skins.prepare: crevices, rain streaks, film, belly dirt
     soot = surface["soot"] * (0.4 + 0.6 * wear_of_style)
     edge, chips = surface["edge"], surface["chips"]
     # Lowest wear at which the paint here is bare (skins.compose: edges first, then chips near edges).

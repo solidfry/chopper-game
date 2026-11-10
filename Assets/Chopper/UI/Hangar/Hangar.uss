@@ -1045,3 +1045,28 @@
 .pilot-tile__drawn {
   flex-grow: 1;
 }
+
+/* Pilot art in a roster tile: the head fills the whole square tile (size and place set by PilotSelectView from the
+   face points), in the UI green. The name sits on a dark strip at the bottom, over the neck. */
+.pilot-tile--art {
+  height: 150px;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.pilot-tile__art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  flex-grow: 0;
+  background-repeat: no-repeat;
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+.pilot-tile--art .pilot-tile__sign {
+  margin: 0 -8px -6px -8px;
+  padding: 3px 0 4px 0;
+  background-color: rgba(2, 8, 4, 0.78);
+}

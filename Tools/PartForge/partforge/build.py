@@ -23,7 +23,9 @@ STAGE_COLLECTION = "PartForge: stage"
 MODULE_COLUMNS = 6
 MODULE_GRID_Y = 30.0
 CHASSIS_SPACING = 14.0
-COCKPIT_BEVEL = 0.004
+COCKPIT_BEVEL = 0.004       # the fine edge on cockpit switches, keys and lamps
+COCKPIT_CHAMFER = 0.040     # the wide chamfer on the cockpit's big forms (shell, dash, consoles, seat): cut corners
+MODULE_BEVEL = 0.008  # modules are small machined parts: a fine edge, not the hull's wide chamfer
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")  # not in git
 
 
@@ -69,13 +71,23 @@ def generate(style, kit=None):
     screen_material = palette.make_screen_material(kit)
     specs = chassis_specs(style)
 
+    overrides = style.get("palette") or {}
+    emissive = set()
+    for index, (name, _base, glow, _metal, _smooth) in enumerate(palette.SWATCHES):
+        override = overrides.get(name, ())
+        if (override[1] if len(override) > 1 else glow):
+            emissive.add(index)
     built = {}
     for part in ([parts.chassis(spec, style) for spec in specs] + parts.cockpits(specs, style)
                  + parts.all_modules()):
         detail = (part.seed, style.get("detail")) if part.kind == "chassis" and style.get("detail") else None
-        # Cockpit details are centimetres small and seen up close: a fine bevel, not the hull's.
-        bevel = COCKPIT_BEVEL if part.kind == "cockpit" else None
-        obj = part.builder.to_object(part.name, export_collection, bevel_width=bevel, detail=detail)
+        # Cockpit: a chamfer per edge, sized to its room (fine on switches, wide on the seat and consoles).
+        cockpit = part.kind == "cockpit"
+        bevel = COCKPIT_CHAMFER if cockpit else MODULE_BEVEL if part.kind == "module" else None
+        obj = part.builder.to_object(part.name, export_collection, bevel_width=bevel, detail=detail,
+                                     bevel_fine=COCKPIT_BEVEL if cockpit else None)
+        if part.kind == "cockpit":
+            texture.mark_baked(obj, emissive)
         palette.apply_uvs(obj, palette_only=part.kind == "cockpit")
         # One material per kit: Geometry Nodes can leave an empty slot behind, so start clean.
         obj.data.materials.clear()
@@ -177,8 +189,18 @@ def export(state, out_dir):
     for texture_set in sets:
         material = texture.preview_material(state.kit, texture_set.name, texture_dir, skin_list[0]["key"])
         for obj in texture_set.objects:
-            obj.data.materials.clear()
-            obj.data.materials.append(material)
+            flags = texture.baked_faces(obj.data)
+            if flags is None:
+                obj.data.materials.clear()
+                obj.data.materials.append(material)
+            else:
+                # Cockpit: the palette and screen slots stay; the baked faces get the set's material.
+                if material.name not in obj.data.materials:
+                    obj.data.materials.append(material)
+                slot = obj.data.materials.find(material.name)
+                for polygon, baked in zip(obj.data.polygons, flags):
+                    if baked and polygon.material_index == 0:
+                        polygon.material_index = slot
             set_of[obj.name] = texture_set.name
         texture_set.surface = None  # large; not needed after the maps are written
     # Parts in no set (cockpits) keep the palette material; the palette maps go out with the kit.

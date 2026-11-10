@@ -1,7 +1,10 @@
 """
 Renders the cockpit of one chassis from the pilot's eye (front, head look right and left) and one view from outside, to
 previews/<kit>/cockpit_<name>_*.jpg.
-    blender --background --python cockpit_preview.py -- [--style dystopia] [--chassis Gunship] [--samples 24]
+    blender --background --python cockpit_preview.py -- [--style dystopia] [--chassis Gunship] [--samples 24] [--baked 1]
+--chassis: one name, a list with commas, or "all". --baked 1: bakes the texture sets first (about 3 minutes, into
+Tools/PartForge/cache, not the kit folder), so the views show what Unity shows: occlusion, edge wear, grime, normal map.
+Without it the views show the palette colours only (shape check, a few seconds).
 """
 import math
 import os
@@ -20,11 +23,20 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     options = dict(zip(argv[::2], argv[1::2]))
     style = styles.get(options.get("--style", "dystopia"))
-    name = options.get("--chassis", "Gunship")
     samples = int(options.get("--samples", 24))
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     state = build.generate(style)
+    if options.get("--baked", "0") not in ("0", ""):
+        build.export(state, os.path.join(build.CACHE_DIR, state.kit, "cockpit_preview"))
+    chosen = options.get("--chassis", "Gunship")
+    names = [key[len("Cockpit_"):] for key in state.built if key.startswith("Cockpit_")]
+    for name in (names if chosen == "all" else chosen.split(",")):
+        views(state, name, samples)
+    print("done")
+
+
+def views(state, name, samples):
     scene = bpy.context.scene
     scene.cycles.samples = samples
     scene.render.resolution_x, scene.render.resolution_y = 1280, 720
@@ -58,8 +70,11 @@ def main():
         for part, obj in state.built.values():
             obj.hide_render = part.name not in names
 
-    light = bpy.data.objects.new("PF Cabin Light", bpy.data.lights.new("PF Cabin Light", "POINT"))
-    bpy.context.scene.collection.objects.link(light)
+    light = bpy.data.objects.get("PF Cabin Light")
+    if light is None:
+        light = bpy.data.objects.new("PF Cabin Light", bpy.data.lights.new("PF Cabin Light", "POINT"))
+        bpy.context.scene.collection.objects.link(light)
+    light.hide_render = False
     light.data.energy = 60
     light.data.shadow_soft_size = 0.3
     light.location = eye + Vector((0, 0.1, 0.45))
@@ -98,7 +113,7 @@ def main():
     aim.location = eye
     camera.data.lens = 40
     build._render(scene, os.path.join(out_dir, f"cockpit_{name.lower()}_outside.jpg"))
-    print("done", out_dir)
+    print("views", name, out_dir)
 
 
 main()

@@ -54,6 +54,10 @@
           <ui:VisualElement class="hud-damage__arc" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
+      <!-- The pilot: a live portrait (PilotPortraitRig) that breathes, blinks, talks on radio lines and takes the scene light -->
+      <ui:VisualElement name="pilot" class="hud-pilot hud-pilot--hidden" picking-mode="Ignore">
+        <ui:VisualElement name="pilot-picture" class="hud-pilot__picture" picking-mode="Ignore" />
+      </ui:VisualElement>
       <!-- World markers: pooled elements made by WorldMarkerView -->
       <ui:VisualElement name="markers" class="hud-layer" picking-mode="Ignore" />
       <ui:VisualElement name="aim-layer" class="hud-layer" picking-mode="Ignore">

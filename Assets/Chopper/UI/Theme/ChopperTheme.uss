@@ -272,3 +272,53 @@
 .unity-toggle:hover .unity-toggle__checkmark {
   border-color: var(--chopper-green);
 }
+
+
+/* ---- Window open / close (WindowTransition.cs): a CRT screen that powers on and off ----
+   Open: --off (a dark point) -> --line (a bright line across the middle, 0.12 s) -> open (0.2 s, a small overshoot).
+   Close: --closing --line (falls in to the line, 0.13 s) -> --off (the line shrinks to the middle, 0.12 s) -> hidden.
+   The beam is a green layer over the window: bright while it is a line, it fades as the window opens. */
+.chopper-window {
+  transition-property: scale, opacity;
+  transition-duration: 0.2s, 0.12s;
+  transition-timing-function: ease-out-back, linear;
+}
+
+.chopper-window--line {
+  scale: 1 0.004;
+  transition-duration: 0.12s, 0.12s;
+  transition-timing-function: ease-out-cubic, linear;
+}
+
+.chopper-window--off {
+  scale: 0 0.004;
+  opacity: 0;
+}
+
+.chopper-window--closing {
+  transition-duration: 0.13s, 0.12s;
+  transition-timing-function: ease-in-cubic, ease-in-cubic;
+}
+
+.chopper-window--snap {
+  transition-duration: 0s, 0s;
+}
+
+.chopper-window__beam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgb(190, 255, 225);
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.25s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.chopper-window--line > .chopper-window__beam,
+.chopper-window--off > .chopper-window__beam {
+  opacity: 1;
+  transition-duration: 0.06s;
+}

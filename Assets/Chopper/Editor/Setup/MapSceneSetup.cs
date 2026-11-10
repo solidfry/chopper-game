@@ -200,6 +200,7 @@ namespace Chopper.Editor.Setup
                 EditorUtility.SetDirty(camera);
             }
             ApplyLook(scene, look);
+            CityAssets.PlaceProbes(scene, terrain.size, kit);
             CityLookSetup.EnsureVolume(CityLookSetup.EnsureProfile());
             EditorSceneManager.SaveScene(scene);
 
@@ -300,8 +301,9 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>
-        /// Bakes the city's probes under this scene's light into <see cref="ProbePath"/> (one set per time of day) and
-        /// sets them as custom probes, so the bake survives a new city import (step 8 reads the files back).
+        /// Bakes the match scene's probes (<see cref="CityAssets.PlaceProbes"/>) under its light, with the city scene
+        /// open beside it, into <see cref="ProbePath"/> (one set per time of day) and sets them as custom probes, so the
+        /// bake is kept when the scene is built again. Probes left in the city scene by an older step 8 are removed.
         /// </summary>
         private static void BakeProbes(string kit, Scene host)
         {
@@ -309,7 +311,15 @@ namespace Chopper.Editor.Setup
             try
             {
                 SceneManager.SetActiveScene(host);            // the bake uses the active scene's ambient light
-                var probes = city.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).ToArray();
+                var old = city.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true))
+                    .Select(p => p.transform.root.gameObject).Distinct().ToArray();
+                foreach (var root in old) Object.DestroyImmediate(root);
+                if (old.Length > 0)
+                {
+                    EditorSceneManager.MarkSceneDirty(city);
+                    EditorSceneManager.SaveScene(city);
+                }
+                var probes = host.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true)).ToArray();
                 // Plumes in edit mode are empty; the lights and emissive windows are what the probes should see.
                 foreach (var probe in probes)
                 {
@@ -326,9 +336,9 @@ namespace Chopper.Editor.Setup
                     probe.customBakedTexture = AssetDatabase.LoadAssetAtPath<Texture>(path);
                     EditorUtility.SetDirty(probe);
                 }
-                EditorSceneManager.MarkSceneDirty(city);
-                EditorSceneManager.SaveScene(city);
-                Debug.Log($"Setup: baked {probes.Length} reflection probes of {kit} ({DefaultTime}).");
+                EditorSceneManager.MarkSceneDirty(host);
+                EditorSceneManager.SaveScene(host);
+                Debug.Log($"Setup: baked {probes.Length} reflection probes of {kit} ({DefaultTime}) in its match scene.");
             }
             finally
             {

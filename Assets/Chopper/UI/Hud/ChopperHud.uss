@@ -976,3 +976,25 @@
 .hud-marker--pinged.hud-marker--locked .hud-marker__icon {
   background-color: var(--chopper-red);
 }
+
+/* The pilot portrait, bottom centre under the flight ring (a live render texture, in the UI green). The picture
+   fades out at its own bottom edge. */
+.hud-pilot {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  width: 104px;
+  height: 156px;
+  translate: -50% 0;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.hud-pilot--hidden {
+  display: none;
+}
+
+.hud-pilot__picture {
+  flex-grow: 1;
+  -unity-background-scale-mode: scale-to-fit;
+}

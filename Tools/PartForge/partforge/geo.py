@@ -24,6 +24,8 @@ DEFAULT_FORM = dict(
     sharp_angle=35.0,    # soft forms: edges sharper than this shade hard (rounded corners step 30° or less)
 )
 FORM = dict(DEFAULT_FORM)
+CORNER_RATIO = 3.0       # a piece's widest chamfer over its smallest (see Builder._scaled_bevel)
+COMPLEX_CHAMFER = 0.012  # largest chamfer on a piece with inside corners or open rims (see Builder._scaled_bevel)
 
 
 def configure(style):
@@ -181,6 +183,57 @@ class Builder:
         if not open_back:
             self._face(rings[-1], swatch if cap_back is None else cap_back)
 
+    def raw_loft(self, sections, swatch, cap_front=None, cap_back=None, swatches=None):
+        """Connects rings exactly as given (never smoothed: machined parts keep their steps). swatches: one per band
+        (between section i and i + 1; None = swatch)."""
+        rings = [self._verts(ring) for ring in sections]
+        count = len(rings[0])
+        for k, (a, c) in enumerate(zip(rings, rings[1:])):
+            band = swatch if swatches is None or swatches[k] is None else swatches[k]
+            for i in range(count):
+                j = (i + 1) % count
+                self._face([a[i], a[j], c[j], c[i]], band)
+        self._face(list(reversed(rings[0])), swatch if cap_front is None else cap_front)
+        self._face(rings[-1], swatch if cap_back is None else cap_back)
+
+    @staticmethod
+    def _frame(axis):
+        helper = Vector((0, 1, 0)) if abs(axis.y) < 0.9 else Vector((1, 0, 0))
+        u = axis.cross(helper).normalized()
+        return u, axis.cross(u).normalized()
+
+    def lathe(self, origin, axis, profile, swatch, segments=12, phase=0.0, cap_start=None, cap_end=None):
+        """Turned part (barrels, nozzles, hubs, missile bodies): `profile` is a list of (distance along the axis,
+        radius[, swatch of the band that starts here]) from `origin`. Two entries at one distance make a step; the
+        distance may go back (a hollow nozzle: out to the lip, then back inside)."""
+        segments = max(segments, round(segments * FORM["curve_detail"]))
+        o, axis = Vector(origin), Vector(axis).normalized()
+        u, w = self._frame(axis)
+        sections, swatches = [], []
+        for entry in profile:
+            centre, radius = o + axis * entry[0], max(entry[1], 0.002)
+            sections.append([tuple(centre + (u * math.cos(t) + w * math.sin(t)) * radius)
+                             for t in (phase + 2 * math.pi * i / segments for i in range(segments))])
+            swatches.append(entry[2] if len(entry) > 2 else None)
+        self.raw_loft(sections, swatch, cap_front=cap_start, cap_back=cap_end, swatches=swatches[:-1])
+
+    def tube(self, points, radius, swatch, segments=6, cap=None):
+        """Round pipe or hose through `points` (a bent path); radius: one number or one per point."""
+        segments = max(segments, round(segments * FORM["curve_detail"]))
+        path = [Vector(p) for p in points]
+        radii = list(radius) if isinstance(radius, (list, tuple)) else [radius] * len(path)
+        sections, u = [], None
+        for i, point in enumerate(path):
+            tangent = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
+            if u is None:
+                u, _w = self._frame(tangent)
+            else:
+                u = (u - tangent * u.dot(tangent)).normalized()  # carry the frame along the path: no twist
+            w = tangent.cross(u).normalized()
+            sections.append([tuple(point + (u * math.cos(t) + w * math.sin(t)) * radii[i])
+                             for t in (2 * math.pi * k / segments for k in range(segments))])
+        self.raw_loft(sections, swatch, cap_front=cap, cap_back=cap)
+
     def box(self, centre, size, swatch, rotation=None, swatches=None):
         """Axis box (optionally rotated about its centre). swatches: optional dict per side
         ('right','left','top','bottom','front','back'). With form box_rounding, boxes that are not thin get all edges
@@ -301,7 +354,72 @@ class Builder:
         self.loft([front, back], swatch)
 
     # -- finish ----------------------------------------------------------------------------------------------------
-    def to_object(self, name, collection, bevel_width=None, detail=None):
+    def _scaled_bevel(self, width, fine):
+        """Edge bevel weights for a part of many sizes (a cockpit), from `fine` on switches and keys up to `width`.
+        Only edges sharper than 30 degrees get a weight. Returns False when nothing was marked.
+        - Each edge is sized by the room it has: the distance across its two faces to the nearest other corner of
+          that face (so a narrow bar, a thin rim or a small facet gets a small chamfer). Size = 0.3 of the room.
+          A thin plate (console top, seat pan) gets a small chamfer along its rims but a wide cut on its corners:
+          the outline is not square.
+        - A piece with inside corners or open rims (the shell, the dash, a bezel) gets at most COMPLEX_CHAMFER, and
+          the fine edge on its inside corners: a wide bevel there adds material and can cover a screen.
+        - Knife edges (faces more than 100 degrees apart) and the faces of a live screen keep the fine edge.
+        - No edge of a piece is more than CORNER_RATIO times the piece's smallest size (very different sizes at one
+          corner give a warped bevel).
+        No size is more than 0.45 of its room: the modifier's overlap clamp is off (see to_object)."""
+        layer = self.bm.edges.layers.float.new("bevel_weight_edge")
+        seen, marked = set(), False
+        for start in self.bm.verts:
+            if start in seen:
+                continue
+            stack, verts = [start], []
+            seen.add(start)
+            while stack:
+                vert = stack.pop()
+                verts.append(vert)
+                for edge in vert.link_edges:
+                    other = edge.other_vert(vert)
+                    if other not in seen:
+                        seen.add(other)
+                        stack.append(other)
+            edges = {edge for vert in verts for edge in vert.link_edges}
+            simple = all(len(edge.link_faces) == 2 and edge.is_convex for edge in edges)
+            sizes = {}
+            for edge in edges:
+                if len(edge.link_faces) != 2:
+                    continue
+                angle = edge.calc_face_angle(0.0)
+                if angle <= math.radians(30):
+                    continue
+                origin = edge.verts[0].co
+                along = edge.verts[1].co - origin
+                if along.length < 1e-7:
+                    continue
+                along.normalize()
+                room = None
+                for face in edge.link_faces:
+                    across = face.normal.cross(along)
+                    for vert in face.verts:
+                        reach = abs((vert.co - origin).dot(across))
+                        if reach > 1e-5 and (room is None or reach < room):
+                            room = reach
+                if room is None:
+                    continue
+                size = room * 0.30
+                if not simple:
+                    size = min(size, COMPLEX_CHAMFER) if edge.is_convex else 0.0
+                if angle > math.radians(100) or any(face[self.screen] for face in edge.link_faces):
+                    size = 0.0
+                sizes[edge] = min(width, max(size, min(fine, room * 0.45)))
+            if not sizes:
+                continue
+            limit = min(sizes.values()) * CORNER_RATIO
+            for edge, size in sizes.items():
+                edge[layer] = min(size, limit) / width
+            marked = True
+        return marked
+
+    def to_object(self, name, collection, bevel_width=None, detail=None, bevel_fine=None):
         """Unity -> Blender mapping, normals out, a bevel on hard edges with hardened normals (form: radius, segments,
         profile; flat faces stay flat, the bevel shades as a soft rounded edge), then the surface detail node group
         (detail = (seed, values): panels, nuts, greebles); all baked into the mesh."""
@@ -311,6 +429,7 @@ class Builder:
             vert.co = to_blender(vert.co)
         bmesh.ops.remove_doubles(self.bm, verts=self.bm.verts, dist=1e-5)
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
+        by_weight = bevel_fine is not None and bevel_width > bevel_fine and self._scaled_bevel(bevel_width, bevel_fine)
 
         mesh = bpy.data.meshes.new(name + "_raw")
         self.bm.to_mesh(mesh)
@@ -328,7 +447,10 @@ class Builder:
             bevel.width = bevel_width
             bevel.segments = segments
             bevel.profile = FORM["edge_profile"]
-            bevel.limit_method = "ANGLE"
+            bevel.limit_method = "WEIGHT" if by_weight else "ANGLE"
+            # The overlap clamp is one limit for the whole mesh: the smallest switch would shrink every chamfer of
+            # a cockpit to its own size. The weights already fit each edge.
+            bevel.use_clamp_overlap = not by_weight
             # Soft forms: rounded corners already come in steps of 45° or less; bevel only what is still sharp.
             bevel.angle_limit = math.radians(50 if soft else 35)
             bevel.harden_normals = soft

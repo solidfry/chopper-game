@@ -47,7 +47,8 @@ Options: `--style dystopia|neon` (art direction, see `ART_DIRECTION.md`), `--kit
 `--out DIR` (default `Assets/Chopper/Art/Kits/<kit>`), `--previews DIR` (default `Tools/PartForge/previews/<kit>`),
 `--no-render`, `--samples 32`. Export (bake + 10 skins) about 2.5 min, previews about 12 min more.
 
-Texture files: about 13 MB per kit, whatever the number of skins (skins are data: a row in the skin table).
+Texture files: about 60 MB per kit (full-size skin maps, a 2048 module atlas, a set per cockpit), whatever the
+number of skins (skins are data: a row in the skin table).
 
 A command-line run also saves `blend/<kit>.blend` (`--no-blend` to skip).
 Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): texture settings, the skin-shader materials, skin table, material remap. **Open skin preview scene** shows every chassis with its modules.
@@ -69,7 +70,9 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 - Socket rotation is identity: modules point +Z. (The old PolygonMilitary placeholder art needed yaw on the sockets; kit
   chassis do not.)
 - Look: `partforge/styles.py` (art direction, see `ART_DIRECTION.md`). Shapes: `partforge/kits.py` (chassis numbers +
-  seed), `partforge/parts.py` (builders), `partforge/palette.py` (swatches).
+  seed), `partforge/parts.py` (chassis and cockpit builders), `partforge/modules.py` (weapons, pods, rotors,
+  engines), `partforge/palette.py` (swatches). Surface: `partforge/texture.py` (unwrap, bake), `partforge/surface.py`
+  (panel lines, rivets, markings), `partforge/skins.py` (paint, wear, grime).
 - Armour modules have no model (stats only, plates are on the chassis).
 
 ## Previews

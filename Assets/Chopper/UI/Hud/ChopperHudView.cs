@@ -90,6 +90,9 @@ namespace Chopper.UI.Hud
         private VisualElement _killFeed;
         private VisualElement _deathTint;
         private VisualElement _deathAlert;
+        private VisualElement _pilot;
+        private VisualElement _pilotPicture;
+        private const string PilotHiddenClass = "hud-pilot--hidden";
         private readonly List<(HudGroup Group, VisualElement Element)> _opacityGroups = new();
         private Vector2 _panelInset;
         private bool _subscribed;
@@ -202,6 +205,10 @@ namespace Chopper.UI.Hud
             AddToGroup(HudGroup.Weapons, _chopper.Q("left"));
             AddToGroup(HudGroup.Targeting, _chopper.Q("aim-layer"), _chopper.Q("markers"));
             AddToGroup(HudGroup.MatchInfo, _matchScores, _killFeed, match.Q("timer"));
+            _pilot = _chopper.Q("pilot");
+            _pilotPicture = _pilot?.Q("pilot-picture");
+            if (_pilot != null) AddToGroup(HudGroup.Pilot, _pilot);
+            _panelInset = new Vector2(-1f, -1f);
 
             _model.propertyChanged += OnModelChanged;
             _match.propertyChanged += OnMatchChanged;
@@ -470,9 +477,22 @@ namespace Chopper.UI.Hud
         /// The sphere look cuts off the panel's corners: the corner text moves in by that much, for any bend and window shape.
         /// Each frame, so tuning the angle in the inspector and changing the window work at once. Writes only on a change.
         /// </summary>
+        /// <summary>The pilot portrait shows while the rig has a pilot with art (its texture is drawn by <see cref="LocalPilotPortraitSystem"/>).</summary>
+        private void RefreshPilot()
+        {
+            if (_pilot == null) return;
+            var rig = bridge.Context.PilotPortrait;
+            var show = rig.HasPilot;
+            _pilot.EnableInClassList(PilotHiddenClass, !show);
+            if (!show || _pilotPicture == null) return;
+            var texture = _pilotPicture.style.backgroundImage.value.renderTexture;
+            if (texture != rig.Texture) _pilotPicture.style.backgroundImage = Background.FromRenderTexture(rig.Texture);
+        }
+
         private void Update()
         {
             if (_matchScores == null || _matchScores.panel == null) return;
+            RefreshPilot();
             var look = bridge.Context.HudLook;
             var inset = look.PanelInset;
             if (inset == _panelInset) return;
@@ -484,6 +504,7 @@ namespace Chopper.UI.Hud
             _matchScores.style.top = down;
             _killFeed.style.right = sideways;
             _killFeed.style.top = down;
+            if (_pilot != null) _pilot.style.bottom = down;
 
             RefreshAim();
             RefreshLock();

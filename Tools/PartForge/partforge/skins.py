@@ -293,9 +293,41 @@ def _hex_grid(u, v):
 def prepare(surface):
     """Skin-independent noise fields, worked out once per texture set: paint blotches, chips, rain streaks."""
     p = surface["position"]
+    normal = surface["normal"]
     surface["blotch"] = fbm(p * 0.9, 3, 77)
-    surface["chips"] = fbm(p * 9.0, 3, 41)
+    # Chips: coarse patches (where paint fails) broken up by a fine speckle, so their rims are crisp, not blobs.
+    coarse, fine = fbm(p * 9.0, 3, 41), fbm(p * 46.0, 2, 43)
+    surface["chips"] = np.clip(coarse + (fine - 0.5) * 0.22, 0.0, 1.0)
     surface["streak"] = fbm(p * np.array([14.0, 1.2, 14.0], dtype=np.float32), 3, 23)
+    # Scratches: thin lines along the airflow (z), in a few scuffed zones; they count as worn edge, so the paint
+    # chips to bare metal along them where the chip noise is high.
+    lines = value_noise(p * np.array([55.0, 55.0, 1.6], dtype=np.float32), 61)
+    zone = _smoothstep(0.52, 0.68, fbm(p * 1.3, 2, 67))
+    scratch = (np.abs(lines - 0.5) < 0.018).astype(np.float32) * zone
+    edge = np.maximum(surface["edge"], scratch * 0.55)
+    if "rivet" in surface:
+        edge = np.maximum(edge, surface["rivet"] * 0.55)  # rivet heads rub bare
+    surface["edge"] = np.clip(edge, 0.0, 1.0)
+    surface["dirt"] = _dirt(surface, p, normal)
+
+
+def _dirt(surface, p, normal):
+    """Grime amount before the skin's own factor (about 0..3; the wear map stores it / 3). Layers:
+    crevice dirt (the baked cavity mask, broken up by a fine noise), rain streaks down the steep faces (strongest
+    where they start under a ledge or a part), a thin uneven film everywhere (so no paint is one flat value: this is
+    most of the roughness variation), road and exhaust dirt on the faces that look down."""
+    mottle = fbm(p * 5.0, 3, 131)
+    fine = fbm(p * 31.0, 2, 137)
+    crevice = (1 - surface["cavity"]) * 1.4 * (0.7 + 0.6 * fine)
+    crevice += np.clip(0.75 - surface["ao"], 0, 1) * 0.5 * mottle
+    steep = 1 - _smoothstep(0.35, 0.8, np.abs(normal[:, 1]))
+    streak = np.clip(surface["streak"] - 0.62, 0, 1) * 1.2 * (0.35 + 0.65 * steep)
+    thin = fbm(p * np.array([34.0, 2.6, 34.0], dtype=np.float32), 2, 29)  # narrow runs
+    streak += np.clip(thin - 0.6, 0, 1) * 0.9 * steep * np.clip(1.3 - surface["cavity"], 0.3, 1.0)
+    film = np.clip(mottle - 0.42, 0, 1) * 0.45 + np.clip(fine - 0.55, 0, 1) * 0.3
+    belly = _smoothstep(0.3, 0.9, -normal[:, 1]) * (0.25 + 0.5 * mottle)
+    seam = surface["seam"] * (0.7 + 0.8 * mottle) if "seam" in surface else 0.0  # grime sits in the panel lines
+    return (crevice + streak + film + belly + seam).astype(np.float32)
 
 
 def compose(skin, surface, palette_rows, names, style_wear=1.0):
@@ -371,8 +403,7 @@ def compose(skin, surface, palette_rows, names, style_wear=1.0):
     grime = skin.get("grime", 1.0) * (0.4 + 0.6 * style_wear)
     if grime > 0:
         dirt = hex_linear("#2b261f")
-        streak = surface["streak"]
-        amount = np.clip((1 - surface["cavity"]) * 1.4 * grime + np.clip(streak - 0.62, 0, 1) * 1.2 * grime, 0, 0.85)
+        amount = np.clip(surface["dirt"] * grime, 0, 0.85)
         amount = np.where(emission.max(axis=1) > 0.05, 0.0, amount)
         colour = colour * (1 - amount[:, None]) + dirt * amount[:, None] * 0.6
         smoothness = smoothness * (1 - amount * 0.6)

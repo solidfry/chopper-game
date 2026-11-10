@@ -59,6 +59,12 @@ namespace Chopper.Presentation.Audio
         /// </summary>
         void PlayVoice(AudioClip clip, float volume = 1f);
 
+        /// <summary>The voice line playing now; null when none plays.</summary>
+        AudioClip VoiceClip { get; }
+
+        /// <summary>Loudness (RMS, 0..1) of the voice line now: the pilot portrait's jaw follows it. 0 when none plays.</summary>
+        float VoiceLevel { get; }
+
         /// <summary>Returns null for a null or empty cue.</summary>
         SoundLoop StartLoop(SoundCue cue, Vector3 position);
 

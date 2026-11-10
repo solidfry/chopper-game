@@ -27,11 +27,15 @@ import zlib
 import bpy
 import numpy as np
 
-from . import palette, runtime, skins
+from . import palette, runtime, skins, surface
 
 # density: normal-map pixels per metre; skin_scale: size of the skin maps (colour, metal/smoothness, emission) and
 # the occlusion map against the normal map (0.5 = half: a quarter of the file size, the paint is soft-edged anyway).
-DEFAULTS = dict(density=110.0, min_size=512, max_size=2048, module_size=1024, skin_scale=0.5, samples=16, margin=8)
+# Atlas budget (unwrap): separate pieces under tiny_area (m2 of surface) become one flat island at tiny_scale, pieces
+# under small_area keep their islands at small_scale; pack_margin is the space between islands (share of the map).
+DEFAULTS = dict(density=110.0, min_size=512, max_size=2048, module_size=2048, skin_scale=1.0, samples=16, margin=8,
+                tiny_area=0.02, tiny_scale=0.4, small_area=0.09, small_scale=0.6, pack_margin=0.0025, cockpit_size=2048,
+                edge_round=0.012, seams=True)
 SPAN = 40.0  # positions are baked as p / SPAN + 0.5 (every part fits in +-20 m)
 BUMP = {"glass": 0.0, "rubber": 0.3, "carbon": 0.2, "neon_green": 0.0, "neon_cyan": 0.0, "neon_pink": 0.0,
         "exhaust": 0.0, "sodium": 0.0, "warning": 0.0, "steel": 0.4, "bare": 0.6, "gunmetal": 0.6, "missile": 0.5}
@@ -50,6 +54,9 @@ class TextureSet:
         self.normal = None     # (size, size, 4) floats 0..1
         self.occlusion = None  # (size, size) 0..1
         self.height_range = (0.0, 1.0)  # model-space y of the lowest and highest texel (synthwave and livery bands)
+        self.markings = None   # chassis: (tail code, unit number) stencilled on the hull (surface.markings)
+        self.interior = False  # cockpits: no skin paint; only the faces marked BAKED are in the set (mark_baked)
+        self.texel = 0.004     # size of one texel on the surface (m), set by the bake
 
 
 def settings(style):
@@ -64,8 +71,72 @@ def texture_sets(state):
     modules = [obj for part, obj in state.built.values() if part.kind == "module"]
     scale = values["skin_scale"]
     sets = [TextureSet(part.name.replace("Chassis_", ""), [obj], _size([obj], values), scale) for part, obj in chassis]
+    for texture_set, (part, _obj) in zip(sets, chassis):
+        texture_set.markings = _tail_code(texture_set.name, part.seed)
     sets.append(TextureSet(MODULES_SET, modules, int(values["module_size"]), scale))
+    # Cockpits: the large surfaces (shell, panels, seat, frames) get a baked set each, so the interior has occlusion,
+    # worn edges, grime and a normal map; the millimetre parts (switches, lamps, screen graphics) stay on the palette
+    # (mark_baked), where their colours are exact at any size.
+    if values["cockpit_size"]:
+        for part, obj in state.built.values():
+            if part.kind == "cockpit" and obj.data.attributes.get(BAKED) is not None:
+                cockpit = TextureSet(part.name, [obj], int(values["cockpit_size"]), scale)
+                cockpit.interior = True
+                sets.append(cockpit)
     return sets
+
+
+BAKED = "pf_baked"  # face attribute (cockpits): this face is in the cockpit's texture set, not on the palette
+
+
+def mark_baked(obj, emissive, min_area=0.012):
+    """Marks the faces of a cockpit that go into its texture set: every separate piece with at least min_area (m2) of
+    surface and no glowing swatch. Call before the palette UVs are applied (it reads the "swatch" attribute)."""
+    import bmesh
+
+    mesh = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    swatch = bm.faces.layers.int.get("swatch")
+    flags = [False] * len(bm.faces)
+    seen = set()
+    for start in bm.verts:
+        if start.index in seen:
+            continue
+        stack, faces = [start], set()
+        seen.add(start.index)
+        while stack:
+            vert = stack.pop()
+            faces.update(vert.link_faces)
+            for edge in vert.link_edges:
+                other = edge.other_vert(vert)
+                if other.index not in seen:
+                    seen.add(other.index)
+                    stack.append(other)
+        if sum(face.calc_area() for face in faces) < min_area:
+            continue
+        for face in faces:
+            flags[face.index] = swatch is None or face[swatch] not in emissive
+    bm.free()
+    attribute = mesh.attributes.get(BAKED) or mesh.attributes.new(BAKED, "BOOLEAN", "FACE")
+    attribute.data.foreach_set("value", flags)
+
+
+def baked_faces(mesh):
+    """Per face: in the texture set? None when the whole mesh is (no BAKED attribute)."""
+    attribute = mesh.attributes.get(BAKED)
+    if attribute is None:
+        return None
+    flags = [False] * len(mesh.polygons)
+    attribute.data.foreach_get("value", flags)
+    return flags
+
+
+def _tail_code(name, seed):
+    """A chassis' stencils: tail code (class letter + serial) and unit number, the same on every export."""
+    letters = "KDGRSTVXNLA"
+    serial = (seed * 7919 + 1013) % 900 + 100
+    return f"{name[0].upper() if name[0].upper() in letters else 'K'}{letters[seed % len(letters)]}-{serial}", f"{seed % 90 + 10}"
 
 
 def _size(objects, values):
@@ -77,20 +148,112 @@ def _size(objects, values):
 
 # -- unwrap ---------------------------------------------------------------------------------------------------------
 
-def unwrap(objects):
-    """Smart UV projection + packing of every object's "UVMap" into one 0..1 square."""
+def unwrap(objects, values=None):
+    """Smart UV projection + packing of every object's "UVMap" into one 0..1 square.
+
+    Texel budget: the hull must get most of the map. Small separate pieces (nuts, greebles, clips: thousands of them)
+    would each become several islands with a margin round each one and take most of the atlas, so they are deflated
+    before the packing: tiny pieces (style "textures": tiny_area) become one flat island each at tiny_scale, small
+    pieces (small_area) keep their islands at small_scale."""
+    values = values or DEFAULTS
     view_layer = bpy.context.view_layer
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objects:
         obj.data.uv_layers.active = obj.data.uv_layers["UVMap"]
         obj.select_set(True)
     view_layer.objects.active = objects[0]
+    subsets = {obj.name: baked_faces(obj.data) for obj in objects}
+
+    def select():
+        """Edit mode: select the faces of the set (all, or a cockpit's baked faces)."""
+        import bmesh
+        bpy.ops.mesh.select_mode(type="FACE")
+        bpy.ops.mesh.select_all(action="SELECT")
+        for obj in objects:
+            flags = subsets[obj.name]
+            if flags is None:
+                continue
+            bm = bmesh.from_edit_mesh(obj.data)
+            for face in bm.faces:
+                face.select_set(flags[face.index])
+            bm.select_flush_mode()
+            bmesh.update_edit_mesh(obj.data)
+
     bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
+    select()
     bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0, area_weight=0.0,
                              scale_to_bounds=False)
-    bpy.ops.uv.pack_islands(rotate=True, margin=0.003)
     bpy.ops.object.mode_set(mode="OBJECT")
+    for obj in objects:
+        _deflate_details(obj.data, values, subsets[obj.name])
+    bpy.ops.object.mode_set(mode="EDIT")
+    select()
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(rotate=True, margin=float(values["pack_margin"]))
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def _deflate_details(mesh, values, subset=None):
+    """Shrinks the UVs of small separate pieces of the mesh (see unwrap). Works on the smart projection's result.
+    subset: per face, in the set? (cockpits); the other faces keep their UVs."""
+    import bmesh
+    from mathutils import Vector
+
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    uv = bm.loops.layers.uv["UVMap"]
+    # UV units per metre of the smart projection (it keeps one scale for the whole mesh): median over the big faces.
+    ratios = []
+    for face in bm.faces:
+        area = face.calc_area()
+        if area > 1e-4 and (subset is None or subset[face.index]):
+            points = [loop[uv].uv for loop in face.loops]
+            uv_area = abs(sum(points[i].x * points[(i + 1) % len(points)].y - points[(i + 1) % len(points)].x * points[i].y
+                              for i in range(len(points)))) / 2
+            if uv_area > 0:
+                ratios.append(math.sqrt(uv_area / area))
+    if not ratios:
+        bm.free()
+        return
+    per_metre = float(np.median(ratios))
+
+    seen = set()
+    for start in bm.verts:
+        if start.index in seen:
+            continue
+        stack, verts = [start], []
+        seen.add(start.index)
+        while stack:
+            vert = stack.pop()
+            verts.append(vert)
+            for edge in vert.link_edges:
+                other = edge.other_vert(vert)
+                if other.index not in seen:
+                    seen.add(other.index)
+                    stack.append(other)
+        faces = {face for vert in verts for face in vert.link_faces
+                 if subset is None or subset[face.index]}
+        if not faces:
+            continue
+        area = sum(face.calc_area() for face in faces)
+        if area >= values["small_area"]:
+            continue
+        loops = [loop for face in faces for loop in face.loops]
+        if area < values["tiny_area"]:
+            # One flat island: looking along the largest face's normal (a nut's top, a clip's front).
+            normal = max(faces, key=lambda face: face.calc_area()).normal
+            helper = Vector((0, 0, 1)) if abs(normal.z) < 0.9 else Vector((1, 0, 0))
+            u_axis = normal.cross(helper).normalized()
+            v_axis = normal.cross(u_axis)
+            scale = per_metre * values["tiny_scale"]
+            for loop in loops:
+                loop[uv].uv = (loop.vert.co.dot(u_axis) * scale, loop.vert.co.dot(v_axis) * scale)
+        else:
+            centre = sum((loop[uv].uv for loop in loops), Vector((0.0, 0.0))) / len(loops)
+            for loop in loops:
+                loop[uv].uv = centre + (loop[uv].uv - centre) * values["small_scale"]
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 # -- bake -----------------------------------------------------------------------------------------------------------
@@ -105,7 +268,7 @@ def _id_image(names, overrides_bump=None):
     return image
 
 
-def _bake_material(id_image):
+def _bake_material(id_image, edge_round=0.012):
     material = bpy.data.materials.get("PF Bake") or bpy.data.materials.new("PF Bake")
     material.use_nodes = True
     nodes, links = material.node_tree.nodes, material.node_tree.links
@@ -143,7 +306,7 @@ def _bake_material(id_image):
     links.new(n["geometry"].outputs["Normal"], n["dot"].inputs[1])
     node("edge", "ShaderNodeMapRange")
     n["edge"].inputs["From Min"].default_value = 1.0
-    n["edge"].inputs["From Max"].default_value = 0.8
+    n["edge"].inputs["From Max"].default_value = 0.9
     links.new(n["dot"].outputs["Value"], n["edge"].inputs["Value"])
     node("masks", "ShaderNodeCombineColor")
     links.new(n["ao"].outputs["AO"], n["masks"].inputs[0])
@@ -161,13 +324,42 @@ def _bake_material(id_image):
     links.new(n["dents"].outputs["Distance"], n["height"].inputs[0])
     n["height"].inputs[1].default_value = 0.35
     links.new(n["grain"].outputs["Fac"], n["height"].inputs[2])
+    # Fine scratches along the airflow (z in Unity = y here): a noise stretched 30 : 1, only its sharp valleys.
+    node("scratch_scale", "ShaderNodeVectorMath", operation="MULTIPLY")
+    links.new(n["local"].outputs["Vector"], n["scratch_scale"].inputs[0])
+    n["scratch_scale"].inputs[1].default_value = (160.0, 5.0, 160.0)
+    node("scratch", "ShaderNodeTexNoise")
+    n["scratch"].inputs["Scale"].default_value = 1.0
+    n["scratch"].inputs["Detail"].default_value = 1.0
+    links.new(n["scratch_scale"].outputs["Vector"], n["scratch"].inputs["Vector"])
+    node("scratch_cut", "ShaderNodeMapRange")
+    n["scratch_cut"].inputs["From Min"].default_value = 0.30
+    n["scratch_cut"].inputs["From Max"].default_value = 0.36
+    n["scratch_cut"].inputs["To Min"].default_value = -0.5
+    n["scratch_cut"].inputs["To Max"].default_value = 0.0
+    links.new(n["scratch"].outputs["Fac"], n["scratch_cut"].inputs["Value"])
+    node("height_all", "ShaderNodeMath", operation="ADD")
+    links.new(n["height"].outputs["Value"], n["height_all"].inputs[0])
+    links.new(n["scratch_cut"].outputs["Result"], n["height_all"].inputs[1])
     node("bump_strength", "ShaderNodeMath", operation="MULTIPLY")
     links.new(n["split_id"].outputs["Green"], n["bump_strength"].inputs[0])
-    n["bump_strength"].inputs[1].default_value = 0.12
+    n["bump_strength"].inputs[1].default_value = 0.3
+    # Rounded edges: the Bevel shader's normal goes into the tangent bake, so every hard edge (hull breaks, inset
+    # panels, nuts, greebles) catches a highlight like a filleted high-poly model, at no triangle cost.
+    node("round", "ShaderNodeBevel", samples=8)
+    n["round"].inputs["Radius"].default_value = edge_round
     node("bump", "ShaderNodeBump")
     n["bump"].inputs["Distance"].default_value = 0.002
     links.new(n["bump_strength"].outputs["Value"], n["bump"].inputs["Strength"])
-    links.new(n["height"].outputs["Value"], n["bump"].inputs["Height"])
+    links.new(n["height_all"].outputs["Value"], n["bump"].inputs["Height"])
+    if edge_round > 0:
+        links.new(n["round"].outputs["Normal"], n["bump"].inputs["Normal"])
+    # The UV tangent in object space: surface.py needs it to turn its own detail into the tangent-space map.
+    node("uv_tangent", "ShaderNodeTangent", direction_type="UV_MAP", uv_map="UVMap")
+    node("uvtan", "ShaderNodeVectorMath", operation="MULTIPLY_ADD")
+    links.new(n["uv_tangent"].outputs["Tangent"], n["uvtan"].inputs[0])
+    n["uvtan"].inputs[1].default_value = (0.5, 0.5, 0.5)
+    n["uvtan"].inputs[2].default_value = (0.5, 0.5, 0.5)
     node("diffuse", "ShaderNodeBsdfDiffuse")
     links.new(n["bump"].outputs["Normal"], n["diffuse"].inputs["Normal"])
     node("emission", "ShaderNodeEmission")
@@ -238,7 +430,7 @@ def bake(sets, style, names):
     bake_settings.use_clear = True
     bake_settings.use_selected_to_active = False
     bake_settings.normal_space = "TANGENT"
-    material, n = _bake_material(_id_image(names, style.get("bump")))
+    material, n = _bake_material(_id_image(names, style.get("bump")), float(values["edge_round"]))
     links = material.node_tree.links
     hidden = {}
     for texture_set in sets:
@@ -250,13 +442,13 @@ def bake(sets, style, names):
     try:
         for texture_set in sets:
             started = time.time()
-            unwrap(texture_set.objects)
+            unwrap(texture_set.objects, values)
             target = _bake_object(texture_set.objects, material)
             for obj in scene.objects:
                 obj.hide_render = obj is not target
             maps = {}
-            passes = (("position", "EMIT", 1), ("normal", "EMIT", 1), ("id", "EMIT", 1),
-                      ("masks", "EMIT", int(values["samples"])), ("tangent", "NORMAL", 2))
+            passes = (("position", "EMIT", 1), ("normal", "EMIT", 1), ("id", "EMIT", 1), ("uvtan", "EMIT", 1),
+                      ("masks", "EMIT", int(values["samples"])), ("tangent", "NORMAL", 6))
             for key, kind, count in passes:
                 image = _bake_image(f"PF Bake {key}", texture_set.size if key == "tangent" else texture_set.data_size)
                 n["target"].image = image
@@ -274,9 +466,10 @@ def bake(sets, style, names):
                 maps[key] = _pixels(image)
                 bpy.data.images.remove(image)
             mesh = target.data
+            area = sum(polygon.area for polygon in mesh.polygons)
             bpy.data.objects.remove(target, do_unlink=True)
             bpy.data.meshes.remove(mesh)
-            _decode(texture_set, maps, names)
+            _decode(texture_set, maps, names, style, area)
             print(f"PartForge: baked {texture_set.name} ({texture_set.size} px) in {time.time() - started:.0f} s")
     finally:
         for name, viewport in hidden.items():
@@ -298,7 +491,7 @@ def _unity(v):
     return np.stack([-v[:, 0], v[:, 2], -v[:, 1]], axis=1)
 
 
-def _decode(texture_set, maps, names):
+def _decode(texture_set, maps, names, style, area):
     flat = {key: value.reshape(-1, 4) for key, value in maps.items()}
     # Texels the bake reached (islands + margin): a baked position is never exactly 0 (that is -20 m on every axis).
     valid = np.nonzero(flat["position"][:, :3].sum(axis=1) > 1e-6)[0]
@@ -314,10 +507,20 @@ def _decode(texture_set, maps, names):
                                edge=np.clip(masks[:, 1], 0, 1), cavity=masks[:, 2],
                                height=(position[:, 1] - low) / max(high - low, 1e-3),
                                soot=_soot(position, swatch, names.index("exhaust")))
-    skins.prepare(texture_set.surface)
     tangent = maps["tangent"].reshape(-1, 4).copy()
     outside = tangent[:, :3].sum(axis=1) < 1e-6  # a baked normal is never (0, 0, 0)
     tangent[outside] = (0.5, 0.5, 1.0, 1.0)  # flat normal between islands (mipmaps blend into it)
+    texture_set.texel = math.sqrt(area / max(len(valid), 1))
+    if texture_set.markings:
+        surface.markings(texture_set.surface, names, style.get("hazard", "hazard"), *texture_set.markings)
+    if settings(style)["seams"] and texture_set.size == texture_set.data_size:
+        # Panel lines and rivets: into the normal map here, into the dirt and wear masks in skins.prepare.
+        normal_b = flat["normal"][valid, :3] * 2.0 - 1.0
+        normal_b /= np.maximum(np.linalg.norm(normal_b, axis=1, keepdims=True), 1e-6)
+        surface.apply(texture_set.surface, names, tangent, valid, normal_b, flat["uvtan"][valid, :3] * 2.0 - 1.0,
+                      texture_set.texel,
+                      painted_names=surface.PAINTED[:3] if texture_set.interior else surface.PAINTED)
+    skins.prepare(texture_set.surface)
     texture_set.normal = tangent.reshape(maps["tangent"].shape)
     occlusion = np.ones(texture_set.data_size * texture_set.data_size, dtype=np.float32)
     occlusion[valid] = 0.35 + 0.65 * masks[:, 0]
@@ -361,8 +564,10 @@ def palette_rows(style):
 def _compose(texture_set, style, skin):
     """One skin on one set: (colour, metal_smooth, emission) as (size, size, 4) pixel arrays (sRGB colours)."""
     names = [name for name, *_ in palette.SWATCHES]
+    # Interiors are looked after: half the chipped paint of the hull.
+    wear = max(style.get("wear", 0.0), 0.15) * (0.5 if texture_set.interior else 1.0)
     colour, emission, metallic, smoothness = skins.compose(skin, texture_set.surface, palette_rows(style), names,
-                                                           style_wear=max(style.get("wear", 0.0), 0.15))
+                                                           style_wear=wear)
     size, valid = texture_set.data_size, texture_set.valid
     zero = np.zeros_like(metallic)
     # Metallic and smoothness in 32 steps: no visible change, half the file size.
@@ -443,6 +648,8 @@ def write(kit, sets, style, skin_list, folder, runtime_folder=None, keep=()):
         write_png(os.path.join(folder, shared["normal"]), texture_set.normal, 3)
         write_png(os.path.join(folder, shared["occlusion"]), np.repeat(texture_set.occlusion[:, :, None], 4, axis=2), 1)
         mask, wear = runtime.maps(texture_set.surface, names, wear_of_style)
+        if texture_set.interior:
+            mask[:, :3] = 0.0  # no skin paint inside the cockpit
         size, valid = texture_set.data_size, texture_set.valid
         write_png(os.path.join(folder, shared["skinMask"]), _image_array(size, valid, mask), 4)
         write_png(os.path.join(folder, shared["skinWear"]), _image_array(size, valid, wear), 4)
@@ -455,7 +662,14 @@ def write(kit, sets, style, skin_list, folder, runtime_folder=None, keep=()):
         base = None
         differences = []
         started = time.time()
+        first_files = file_names(kit, texture_set.name, skin_list[0]["key"])
         for skin, entry in zip(skin_list, skin_entries):
+            if texture_set.interior and lights is not None:
+                # Interiors take no skin: every skin shows the first one's maps (previews: the same files again).
+                if runtime_folder:
+                    for key, name in file_names(kit, texture_set.name, skin["key"]).items():
+                        _copy(os.path.join(runtime_folder, first_files[key]), os.path.join(runtime_folder, name))
+                continue
             # Every skin is composed (the runtime check below compares against it); only the first one (the runtime
             # shader's base maps) is written, or all of them with style "baked_skins".
             colour, metal_smooth, emission = _compose(texture_set, style, skin)

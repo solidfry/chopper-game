@@ -828,7 +828,6 @@ namespace Chopper.Editor.Setup
 
                 PlaceLights(scene, terrain.lights);
                 PlaceEmitters(scene, terrain.emitters);
-                PlaceProbes(scene, terrain.size, manifest.kit);
                 PlaceAtmosphere(scene, terrain.heightFog);
                 PlaceTraffic(scene, folder, manifest.kit, terrain.traffic, terrain.lava, prefabs, buildingMaterial);
 
@@ -1095,11 +1094,15 @@ namespace Chopper.Editor.Setup
 
         // -- reflection probes, fog -----------------------------------------------------------------------------------
 
-        /// <summary>"Reflection Probes": a 3 x 3 grid of baked box probes over the city floor (glass, wet ground and puddles
-        /// reflect the neon) and one high probe for the tower tops. Bake lighting in the editor to fill them.</summary>
-        /// <summary>Probes use the cubemaps step 10 baked for the map's default time of day when they exist
-        /// (<see cref="MapSceneSetup.ProbePath"/>); otherwise they stay plain baked probes.</summary>
-        private static void PlaceProbes(Scene scene, float mapSize, string kit)
+        /// <summary>
+        /// "Reflection Probes": a 3 x 3 grid of baked box probes over the city floor (glass, wet ground and puddles
+        /// reflect the neon) and one high probe for the tower tops. Probes use the cubemaps step 10 baked for the map's
+        /// default time of day when they exist (<see cref="MapSceneSetup.ProbePath"/>); otherwise they stay plain baked
+        /// probes. Placed by step 10 in the match scene, not in the city SubScene: in a SubScene they are companion
+        /// objects, made again on each domain reload, and URP then culls a destroyed probe for a frame
+        /// (NullReferenceException in ReflectionProbeManager.UpdateGpuData, then ZBinningJob errors).
+        /// </summary>
+        internal static void PlaceProbes(Scene scene, float mapSize, string kit)
         {
             var root = new GameObject("Reflection Probes") { isStatic = true };
             SceneManager.MoveGameObjectToScene(root, scene);

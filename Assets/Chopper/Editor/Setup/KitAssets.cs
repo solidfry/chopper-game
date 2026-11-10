@@ -28,6 +28,7 @@ namespace Chopper.Editor.Setup
         public const string RuntimeShader = "Shader Graphs/ChopperSkin";
         /// <summary>Texture set name of parts drawn with the palette maps (UV0 = palette cells).</summary>
         public const string PaletteSet = "Palette";
+        private const string CockpitKind = "cockpit";
         /// <summary>Glow of the palette material's lit cells (HDR multiplier, for bloom).</summary>
         private const float PaletteGlow = 2.5f;
         /// <summary>The live cockpit screens' shader (Presentation/Visuals/CockpitScreen.shader).</summary>
@@ -159,7 +160,7 @@ namespace Chopper.Editor.Setup
                 {
                     var material = part.textureSet == PaletteSet
                         ? AssetDatabase.LoadAssetAtPath<Material>(PaletteMaterialPath(folder, manifest))
-                        : ModelMaterial(folder, manifest, part.textureSet, library);
+                        : PartMaterial(folder, manifest, part, library);
                     if (AssetImporter.GetAtPath($"{folder}/{part.file}") is not ModelImporter importer)
                         yield return ($"Kit {manifest.kit}: model {part.file} is missing.", null);
                     else if (material == null || !importer.GetExternalObjectMap().ContainsValue(material))
@@ -333,7 +334,8 @@ namespace Chopper.Editor.Setup
                 }
                 var onPalette = part.textureSet == PaletteSet;
                 var set = manifest.textureSets.FirstOrDefault(s => s.name == part.textureSet);
-                var material = onPalette ? paletteMaterial : set != null ? ModelMaterial(folder, manifest, set.name, library) : null;
+                var cockpit = part.kind == CockpitKind;
+                var material = onPalette ? paletteMaterial : set != null ? PartMaterial(folder, manifest, part, library) : null;
                 if (material == null)
                 {
                     Debug.LogWarning($"Setup: kit {manifest.kit} part {part.name} has no texture set material.");
@@ -355,8 +357,19 @@ namespace Chopper.Editor.Setup
                     importer.AddRemap(source, material);
                     changed = true;
                 }
+                // Cockpits with a baked texture set: their small parts (switches, lamps, screen graphics) stay on the
+                // palette (exact colours at millimetre size), in a second material slot.
+                if (cockpit && !onPalette && paletteMaterial != null && !string.IsNullOrEmpty(manifest.palette?.material))
+                {
+                    var palette = new AssetImporter.SourceAssetIdentifier(typeof(Material), manifest.palette.material);
+                    if (!importer.GetExternalObjectMap().TryGetValue(palette, out var mappedPalette) || mappedPalette != paletteMaterial)
+                    {
+                        importer.AddRemap(palette, paletteMaterial);
+                        changed = true;
+                    }
+                }
                 // Cockpits: the live screen faces have their own material.
-                if (onPalette && screenMaterial != null)
+                if ((onPalette || cockpit) && screenMaterial != null)
                 {
                     var screen = new AssetImporter.SourceAssetIdentifier(typeof(Material), manifest.screen.material);
                     if (!importer.GetExternalObjectMap().TryGetValue(screen, out var mappedScreen) || mappedScreen != screenMaterial)
@@ -368,6 +381,13 @@ namespace Chopper.Editor.Setup
                 if (changed) importer.SaveAndReimport();
             }
         }
+
+        /// <summary>The material of a part in a texture set. Cockpit interiors take no skin: they use the baked maps of
+        /// the first skin (plain URP Lit), not the runtime skin shader.</summary>
+        private static Material PartMaterial(string folder, Manifest manifest, PartInfo part, SkinLibrary library) =>
+            part.kind == CockpitKind
+                ? AssetDatabase.LoadAssetAtPath<Material>(MaterialPath(folder, manifest, part.textureSet, manifest.skins[0].key))
+                : ModelMaterial(folder, manifest, part.textureSet, library);
 
         /// <summary>The material a kit model uses: its set's runtime skin material, else the default skin's baked one.</summary>
         private static Material ModelMaterial(string folder, Manifest manifest, string set, SkinLibrary library)

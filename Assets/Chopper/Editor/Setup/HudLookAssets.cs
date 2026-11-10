@@ -22,14 +22,23 @@ namespace Chopper.Editor.Setup
             EnsureRendererFeatures();
 
             var settings = AssetDatabase.LoadAssetAtPath<HudLookSettings>(SettingsPath);
-            if (settings != null) return settings;
-
-            settings = ScriptableObject.CreateInstance<HudLookSettings>();
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
-            AssetDatabase.CreateAsset(settings, SettingsPath);
+            if (settings == null)
+            {
+                settings = ScriptableObject.CreateInstance<HudLookSettings>();
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
+                AssetDatabase.CreateAsset(settings, SettingsPath);
+            }
+            // The pilot portrait's shader (the reference also puts it in the build).
+            if (settings.PilotPortrait.Shader == null)
+            {
+                settings.SetPilotPortraitShader(AssetDatabase.LoadAssetAtPath<Shader>(PilotShaderPath));
+                EditorUtility.SetDirty(settings);
+            }
             AssetDatabase.SaveAssets();
             return settings;
         }
+
+        private const string PilotShaderPath = "Assets/Chopper/Presentation/Pilots/PilotPortrait.shader";
 
         /// <summary>URP renderers under Assets (the project's quality levels point to these).</summary>
         public static IEnumerable<UniversalRendererData> Renderers() => AssetDatabase

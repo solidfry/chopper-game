@@ -12,6 +12,8 @@ namespace Chopper.Presentation.Hud
         Weapons = 3,
         Targeting = 4,
         MatchInfo = 5,
+        /// <summary>The pilot portrait (bottom left).</summary>
+        Pilot = 6,
     }
 
     /// <summary>

@@ -19,7 +19,18 @@ MonoBehaviour:
   abilityName: BLACKOUT
   abilityText: 'A 150 m pulse: enemy locks drop and cannot start for 3 s.'
   accent: {r: 0.85, g: 0.2, b: 1, a: 1}
-  portrait: {fileID: 0}
+  portrait: {fileID: 2800000, guid: d06ba49a73d361f4d884267ae7dfa6d6, type: 3}
+  face:
+    NormalMap: {fileID: 2800000, guid: b09919a16e2735b4ab3cf6b7a2711ffe, type: 3}
+    HeadCentre: {x: 0.5, y: 0.3}
+    HeadSize: {x: 0.19, y: 0.23}
+    Neck: {x: 0.51, y: 0.55}
+    LeftEye: {x: 0.43, y: 0.33}
+    RightEye: {x: 0.59, y: 0.33}
+    EyeSize: 0.04
+    Mouth: {x: 0.51, y: 0.445}
+    MouthWidth: 0.055
+    Chin: 0.5
   unlockLevel: 0
   selectLine: {fileID: 8300000, guid: 2528d1c65caa9514c8f74a028342857c, type: 3}
   abilityLine: {fileID: 8300000, guid: a48df5cc3baedef4fa91378cdcdf7a5b, type: 3}
@@ -50,3 +61,6 @@ MonoBehaviour:
     Duration: 0.5
     Strength: 3
     Radius: 150
+    Bot:
+      Trigger: 0
+      Threshold: 0
