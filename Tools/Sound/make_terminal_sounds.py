@@ -9,6 +9,7 @@ thumps, with no tones (taps, not pings). Output: Assets/Sound/UI/Terminal/<Name>
   Term_Window      a panel pops open: a relay double clack and a short hiss, ~160 ms
   Term_Award       an award stamps down: one heavy low tap and a bounce, ~100 ms
   Term_Level       level up: a burst of fast typing ending on a heavy tap, ~380 ms
+  Term_XpPing      XP: a soft, round ping; the screen raises its pitch as the XP fills, ~320 ms
 
 Run: python Tools/Sound/make_terminal_sounds.py   (needs numpy)
 """
@@ -128,6 +129,27 @@ def level(rng):
     return finish(s, -3.0)
 
 
+def xp_ping(rng):
+    """
+    The XP ping (the game raises its pitch as the XP fills): a soft sine at A5 with a quiet octave and twelfth for
+    sparkle, two voices a few cents apart for width, a tiny pitch scoop into the note, a soft tap at the start and a
+    short bloom. Gentle, round, no hard edge.
+    """
+    length = 0.32
+    x = t(length)
+    base = 880.0
+    scoop = 1.0 - 0.03 * np.exp(-x / 0.012)  # starts a hair flat and slides up: the juice
+    s = np.zeros(len(x))
+    for detune, level in ((1.0, 0.6), (1.0035, 0.4)):
+        phase = 2 * np.pi * np.cumsum(base * detune * scoop) / RATE
+        s += np.sin(phase) * level
+        s += np.sin(2 * phase) * level * 0.22 * np.exp(-x / 0.05)
+        s += np.sin(3 * phase) * level * 0.08 * np.exp(-x / 0.025)
+    s *= env(length, 0.003, 0.085)
+    place(s, band(rng, 0.004, 2, 8) * np.exp(-t(0.004) / 0.001) * 0.15, 0.0)
+    return finish(s, -6.0)
+
+
 def main():
     rng = np.random.default_rng(7)
     for i, body in enumerate([300, 340, 380], start=1):
@@ -137,6 +159,7 @@ def main():
     write("Term_Window", window(rng))
     write("Term_Award", award(rng))
     write("Term_Level", level(rng))
+    write("Term_XpPing", xp_ping(rng))
 
 
 if __name__ == "__main__":

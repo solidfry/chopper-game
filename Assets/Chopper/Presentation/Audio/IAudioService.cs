@@ -54,6 +54,12 @@ namespace Chopper.Presentation.Audio
         void Play(SoundCue cue);
 
         /// <summary>
+        /// One-shot at the listener with its pitch scaled (<paramref name="pitchScale"/> multiplies the cue's pitch): a
+        /// count-up that rises as it fills.
+        /// </summary>
+        void PlayPitched(SoundCue cue, float pitchScale, float volumeScale = 1f);
+
+        /// <summary>
         /// A voice line at the listener (pilot call signs, radio calls). A new line cuts the one playing, so calls never
         /// pile up. Null does nothing.
         /// </summary>

@@ -61,7 +61,7 @@ namespace Chopper.UI.Results
         private float _shownAt;
         private int _step;
         private int _shownLevel;
-        private int _shownXp = -1;
+        private int _barStep;
         private bool _silent;
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -204,7 +204,7 @@ namespace Chopper.UI.Results
             foreach (var player in _model.Players)
                 if (player != _model.Local) AddPlayer(player);
             _shownLevel = 0;
-            _shownXp = -1;
+            _barStep = 0;
         }
 
         private void AddPlayer(ResultsPlayer player)
@@ -276,7 +276,7 @@ namespace Chopper.UI.Results
             for (var i = 0; i < _lineElements.Count; i++)
             {
                 var on = t >= XpAt + XpLineSeconds * (i + 1);
-                if (on && !_lineElements[i].ClassListContains("results-xp-line--in")) Play(Sounds?.ResultsLine);
+                if (on && !_lineElements[i].ClassListContains("results-xp-line--in")) Ping(i);
                 _lineElements[i].EnableInClassList("results-xp-line--in", on);
                 if (on && i < lines.Count) shownXp += lines[i].Amount;
             }
@@ -290,8 +290,10 @@ namespace Chopper.UI.Results
             var startLevel = PilotLevels.Level(_model.XpBefore, out _, out _);
             _level.text = $"LVL {level}";
             _levelNeed.text = $"{into} / {needed} XP";
-            if (xp != _shownXp && _shownXp >= 0 && fill > 0f) Play(Sounds?.ResultsTick);
-            _shownXp = xp;
+            // The bar climbs on from where the lines stopped, one note per step of the fill.
+            var barStep = fill > 0f ? Mathf.Min(BarNotes, Mathf.FloorToInt(fill * BarNotes) + 1) : 0;
+            if (barStep > _barStep) Ping(_lineElements.Count + barStep - 1);
+            _barStep = barStep;
             _levelBar.value = needed > 0 ? (float)into / needed : 0f;
             if (level != _shownLevel)
             {
@@ -313,6 +315,22 @@ namespace Chopper.UI.Results
         }
 
         private SoundLibrary Sounds => _context.Sounds;
+
+        /// <summary>Notes the level bar plays as it fills.</summary>
+        private const int BarNotes = 4;
+        /// <summary>
+        /// Major pentatonic, in semitones, an octave and a half: any run of it sounds pleasant, and it stops before the
+        /// ping turns shrill (more steps stay on the top note).
+        /// </summary>
+        private static readonly int[] Ladder = { 0, 2, 4, 7, 9, 12, 14, 16, 19 };
+
+        /// <summary>The XP ping, <paramref name="step"/> notes up the ladder (XP lines first, then the bar).</summary>
+        private void Ping(int step)
+        {
+            if (_silent || Sounds == null || Sounds.ResultsXp == null) return;
+            var semitones = Ladder[Mathf.Clamp(step, 0, Ladder.Length - 1)];
+            _context.Audio.PlayPitched(Sounds.ResultsXp, Mathf.Pow(2f, semitones / 12f));
+        }
 
         /// <summary>A results sound, unless the screen is jumping to its end state.</summary>
         private void Play(SoundCue cue)

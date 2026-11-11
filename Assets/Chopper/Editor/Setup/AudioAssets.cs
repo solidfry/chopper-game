@@ -168,7 +168,16 @@ namespace Chopper.Editor.Setup
                     blend: 0f, voices: 2, cooldown: 0.04f)),
                 Slot(library.ResultsAward, () => Cue("ResultsAward", Clips(terminal + "Term_Award.wav"), ui, 0.55f, blend: 0f, voices: 3,
                     cooldown: 0.05f)),
-                Slot(library.ResultsLevelUp, () => Cue("ResultsLevelUp", Clips(terminal + "Term_Level.wav"), ui, 0.7f, blend: 0f, voices: 1)));
+                Slot(library.ResultsLevelUp, () => Cue("ResultsLevelUp", Clips(terminal + "Term_Level.wav"), ui, 0.7f, blend: 0f, voices: 1)),
+                // The view sets the pitch (it rises with the XP), so no random pitch on this one.
+                Slot(library.ResultsXp, () =>
+                {
+                    var cue = Cue("ResultsXp", Clips(terminal + "Term_XpPing.wav"), ui, 0.4f, blend: 0f, voices: 4, cooldown: 0.07f,
+                        pitch: 0.75f);
+                    cue.SetPitchVariation(0f);
+                    EditorUtility.SetDirty(cue);
+                    return cue;
+                }));
 
             // Pilot ability (placeholders): an energy blast on use, a short switch when ready, crackling lightning when jammed.
             library.InitialiseAbility(

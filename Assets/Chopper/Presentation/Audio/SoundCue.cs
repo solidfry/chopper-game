@@ -91,6 +91,9 @@ namespace Chopper.Presentation.Audio
         }
 
         public float PickVolume() => volume * (1f - Random.value * volumeVariation);
+        /// <summary>Editor only: used by the audio setup tool (a pitched ladder wants no random pitch).</summary>
+        public void SetPitchVariation(float value) => pitchVariation = Mathf.Clamp01(value);
+
         public float PickPitch() => pitch * (1f + Random.Range(-pitchVariation, pitchVariation));
 
         /// <summary>Copies the cue's settings onto a source (clip, volume and pitch are set by the caller).</summary>

@@ -96,6 +96,7 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("One XP line prints.")] private SoundCue resultsLine;
         [SerializeField, Tooltip("An award card stamps down.")] private SoundCue resultsAward;
         [SerializeField, Tooltip("The level bar passes a level.")] private SoundCue resultsLevelUp;
+        [SerializeField, Tooltip("XP lines and the level bar: a soft ping, played higher as the XP fills.")] private SoundCue resultsXp;
 
         public AudioMixer Mixer => mixer;
         public AudioMixerGroup MusicGroup => musicGroup;
@@ -158,6 +159,7 @@ namespace Chopper.Presentation.Audio
         public SoundCue ResultsLine => resultsLine;
         public SoundCue ResultsAward => resultsAward;
         public SoundCue ResultsLevelUp => resultsLevelUp;
+        public SoundCue ResultsXp => resultsXp;
 
         public void CollectProblems(List<string> problems)
         {
@@ -223,8 +225,9 @@ namespace Chopper.Presentation.Audio
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
-        public void InitialiseResults(SoundCue window, SoundCue tick, SoundCue line, SoundCue award, SoundCue levelUp)
+        public void InitialiseResults(SoundCue window, SoundCue tick, SoundCue line, SoundCue award, SoundCue levelUp, SoundCue xp)
         {
+            resultsXp = xp;
             resultsWindow = window;
             resultsTick = tick;
             resultsLine = line;
