@@ -36,6 +36,7 @@ namespace Chopper.Editor.Setup
         /// <summary>Ground chunks further than this (metres) from the buildings are left out.</summary>
         private const float GroundMargin = 600f;
         private const string VolumePath = "Assets/Chopper/Data/Rendering/HomeTerminal.asset";
+        private const string FocusVolumePath = "Assets/Chopper/Data/Rendering/HomeFocus.asset";
         private const string WirePath = "Assets/Chopper/Data/Rendering/HomeCityWire.mat";
         private const string GroundWirePath = "Assets/Chopper/Data/Rendering/HomeGroundWire.mat";
         private static readonly Color Background = new(0.008f, 0.031f, 0.016f);
@@ -219,8 +220,18 @@ namespace Chopper.Editor.Setup
             if (volume == null) volume = volumeObject.AddComponent<Volume>();
             volume.isGlobal = true;
             volume.sharedProfile = EnsureVolume();
+            // Submenus: blur and darken the city (the flyover fades this one in).
+            var focusObject = FindOrCreate(scene, "Home Focus Volume");
+            var focus = focusObject.GetComponent<Volume>();
+            if (focus == null) focus = focusObject.AddComponent<Volume>();
+            focus.isGlobal = true;
+            focus.priority = 1f;
+            focus.weight = 0f;
+            focus.sharedProfile = EnsureFocusVolume();
+            flyover.SetFocusVolume(focus);
             EditorUtility.SetDirty(flyover);
             EditorUtility.SetDirty(volume);
+            EditorUtility.SetDirty(focus);
 
             // Options overlay over the home panel; the home view opens and closes it (no Escape toggle of its own).
             var optionsObject = FindOrCreate(scene, "Options");
@@ -279,6 +290,33 @@ namespace Chopper.Editor.Setup
             vignette.color.value = new Color(0f, 0.04f, 0.02f);
             var fringe = profile.Add<ChromaticAberration>(true);
             fringe.intensity.value = 0.2f;
+            foreach (var component in profile.components)
+            {
+                component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+                AssetDatabase.AddObjectToAsset(component, profile);
+            }
+            EditorUtility.SetDirty(profile);
+            return profile;
+        }
+
+        /// <summary>Submenu focus: everything blurred (Gaussian depth of field from 0 m) and darker. Only exposure is
+        /// overridden in the colour step, so the terminal look underneath stays. Made once; tune the asset.</summary>
+        private static VolumeProfile EnsureFocusVolume()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(FocusVolumePath);
+            if (profile != null) return profile;
+            Directory.CreateDirectory(Path.GetDirectoryName(FocusVolumePath));
+            profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, FocusVolumePath);
+
+            var blur = profile.Add<DepthOfField>(true);
+            blur.mode.value = DepthOfFieldMode.Gaussian;
+            blur.gaussianStart.value = 0f;
+            blur.gaussianEnd.value = 1f;
+            blur.gaussianMaxRadius.value = 1.5f;
+            blur.highQualitySampling.value = true;
+            var colour = profile.Add<ColorAdjustments>();
+            colour.postExposure.Override(-2.2f);
             foreach (var component in profile.components)
             {
                 component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;

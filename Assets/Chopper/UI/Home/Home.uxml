@@ -28,6 +28,8 @@
           <ui:VisualElement class="home-logo home-logo--airwing" picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:Label name="boot-log" class="home__boot chopper-body" picking-mode="Ignore" />
+        <!-- Pushes the menu to the bottom left -->
+        <ui:VisualElement class="home__spacer" picking-mode="Ignore" />
 
         <ui:VisualElement name="nav" class="home-nav">
           <ui:Button name="nav-play" class="home-nav__item">
@@ -89,7 +91,7 @@
         <ui:Label name="codex-count" class="codex__count chopper-title" picking-mode="Ignore" />
       </ui:VisualElement>
       <ui:VisualElement class="codex__body" picking-mode="Ignore">
-        <ui:ScrollView name="codex-list" class="codex__list" />
+        <ui:ScrollView name="codex-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="codex__list" />
         <ui:VisualElement name="codex-feature" class="codex-feature" picking-mode="Ignore">
           <ui:VisualElement name="codex-portrait" class="codex-feature__portrait" picking-mode="Ignore">
             <hangar:PilotPortrait name="codex-drawn" class="codex-feature__drawn" picking-mode="Ignore" />

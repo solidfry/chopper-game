@@ -43,6 +43,12 @@ namespace Chopper.Presentation.Menu
         /// <summary>A real map is up behind the menu (<see cref="HomeFlyover"/>): the view swaps its drawn grid for a CRT layer.</summary>
         public bool LiveBackdrop { get; private set; }
 
+        /// <summary>A submenu (codex, options) is open: the backdrop blurs and darkens so the text reads (<see cref="HomeFlyover"/>).</summary>
+        public bool Dimmed { get; private set; }
+
+        /// <summary>Set by the view each frame; no event (the flyover fades towards it).</summary>
+        public void SetDimmed(bool dimmed) => Dimmed = dimmed;
+
         public void SetLiveBackdrop(bool live)
         {
             if (live == LiveBackdrop) return;

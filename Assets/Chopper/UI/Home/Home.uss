@@ -74,6 +74,11 @@
   width: 40%;
   min-width: 420px;
   flex-direction: column;
+  padding-bottom: 28px;
+}
+
+.home__spacer {
+  flex-grow: 1;
 }
 
 /* ---- Logo: four same-size layers (916 x 468 source). The wings slide in once ready; in a glitch NITRO jumps and
@@ -156,6 +161,13 @@
 
 .home--live .home__crt {
   display: flex;
+}
+
+/* Submenu open over the live city (with the blur Volume): a dark wash so the text reads. */
+.home--live.home--dimmed .home__shade {
+  display: flex;
+  width: 100%;
+  background-color: rgba(0, 3, 1, 0.6);
 }
 
 /* ---- Boot log: typed lines; fades once ready ---- */

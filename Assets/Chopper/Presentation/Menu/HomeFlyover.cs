@@ -30,6 +30,10 @@ namespace Chopper.Presentation.Menu
         private float bob = 25f;
         [SerializeField] private Color fogColour = new(0.01f, 0.05f, 0.03f);
         [SerializeField] private float fogDensity = 0.00045f;
+        [SerializeField, Tooltip("Blur and darken Volume (weight 0 at rest); faded in while a submenu is open.")]
+        private UnityEngine.Rendering.Volume focusVolume;
+        [SerializeField, Tooltip("Seconds to fade the blur in or out.")]
+        private float focusFadeSeconds = 0.25f;
 
         private UnityEngine.Camera _camera;
         private bool _flying;
@@ -43,6 +47,9 @@ namespace Chopper.Presentation.Menu
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetScene(string value) => sceneName = value;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetFocusVolume(UnityEngine.Rendering.Volume value) => focusVolume = value;
 
         private void Awake() => _camera = GetComponent<UnityEngine.Camera>();
 
@@ -88,6 +95,10 @@ namespace Chopper.Presentation.Menu
         private void LateUpdate()
         {
             if (_flying) Place();
+            if (focusVolume == null) return;
+            var home = bridge != null ? bridge.Context.Home : null;
+            var target = home != null && home.Dimmed ? 1f : 0f;
+            focusVolume.weight = Mathf.MoveTowards(focusVolume.weight, target, Time.unscaledDeltaTime / Mathf.Max(focusFadeSeconds, 0.01f));
         }
 
         private void Place()

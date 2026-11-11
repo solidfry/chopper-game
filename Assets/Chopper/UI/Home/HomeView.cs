@@ -28,6 +28,7 @@ namespace Chopper.UI.Home
     {
         private const string ReadyClass = "home--ready";
         private const string LiveClass = "home--live";
+        private const string DimmedClass = "home--dimmed";
         private const string HiddenClass = "home--hidden";
         private const string GlitchClass = "home-title--glitch";
         private const string ShownRowClass = "codex-row--shown";
@@ -247,6 +248,9 @@ namespace Chopper.UI.Home
             TickBoot(Time.unscaledDeltaTime);
             TickGlitch(time);
             TickClock();
+            var dimmed = _model.Page != HomePage.Main || OptionsOpen;
+            _model.SetDimmed(dimmed);
+            _root.EnableInClassList(DimmedClass, dimmed);
 
             var keyboard = Keyboard.current;
             var gamepad = Gamepad.current;
