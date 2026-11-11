@@ -504,68 +504,96 @@
   flex-direction: row;
 }
 
-.codex__list {
-  width: 300px;
-  margin-right: 28px;
-  background-color: rgba(0, 0, 0, 0.45);
-  border-width: 1px;
-  border-color: var(--chopper-green-faint);
+/* Roster grid on the right (as the hangar's pilot select): square face tiles that wrap, three across. */
+.codex__grid {
+  width: 520px;
+  margin-left: 28px;
+  flex-shrink: 0;
 }
 
-.codex-row {
-  flex-direction: row;
-  align-items: center;
-  height: 58px;
-  margin: 0;
-  padding: 4px 10px;
-  background-color: rgba(0, 0, 0, 0);
-  border-width: 0;
-  border-left-width: 3px;
-  border-color: rgba(0, 0, 0, 0);
-  border-bottom-width: 1px;
-  border-bottom-color: var(--chopper-green-faint);
-  transition-property: background-color, translate;
+.codex-tile {
+  width: 150px;
+  height: 150px;
+  margin: 0 10px 10px 0;
+  padding: 6px 8px;
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+  background-color: rgba(8, 27, 10, 0.8);
+  border-width: var(--chopper-border-width);
+  border-bottom-width: 3px;
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+  transition-property: translate, background-color;
   transition-duration: 0.1s;
 }
 
-.codex-row:hover,
-.codex-row:focus {
+.codex-tile:hover,
+.codex-tile:focus {
+  translate: 0 -4px;
   background-color: rgba(0, 255, 148, 0.1);
 }
 
-.codex-row--shown {
-  background-color: rgba(0, 255, 148, 0.16);
-  translate: 6px 0;
+.codex-tile--shown {
+  border-width: 2px;
+  border-bottom-width: 3px;
+  border-left-color: var(--chopper-green);
+  border-right-color: var(--chopper-green);
+  border-top-color: var(--chopper-green);
+  background-color: rgba(0, 255, 148, 0.12);
 }
 
-.codex-row__face {
-  width: 36px;
-  height: 48px;
-  margin-right: 10px;
-  background-color: rgba(0, 0, 0, 0.6);
+/* The head fills the tile (size and place set from the face points), in the UI green. */
+.codex-tile__art {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   background-repeat: no-repeat;
+  -unity-background-image-tint-color: var(--chopper-green);
 }
 
-.codex-row__serial {
-  font-size: 11px;
+.codex-tile__drawn {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  right: 8px;
+  bottom: 30px;
+}
+
+.codex-tile__serial {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 10px;
   color: var(--chopper-green-dim);
-  width: 26px;
   padding: 0;
   -unity-font: url("/Assets/Fonts/Karnivore/KARNIVSV.ttf");
 }
 
-.codex-row__sign {
-  font-size: 15px;
-  letter-spacing: 4px;
-  color: var(--chopper-green);
-  padding: 0;
-  flex-grow: 1;
-}
-
-.codex-row__tag {
+.codex-tile__tag {
+  position: absolute;
+  top: 4px;
+  right: 6px;
   font-size: 10px;
   color: var(--chopper-yellow);
   padding: 0;
+}
+
+/* The call sign on a dark strip over the neck. */
+.codex-tile__sign {
+  margin: 0 -8px -6px -8px;
+  padding: 3px 0 4px 0;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--chopper-text);
+  -unity-text-align: middle-center;
+  background-color: rgba(2, 8, 4, 0.78);
+}
+
+.codex-tile--shown .codex-tile__sign {
+  color: var(--chopper-green);
 }
 
 .codex-feature {

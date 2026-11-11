@@ -31,7 +31,7 @@ namespace Chopper.UI.Home
         private const string DimmedClass = "home--dimmed";
         private const string HiddenClass = "home--hidden";
         private const string GlitchClass = "home-title--glitch";
-        private const string ShownRowClass = "codex-row--shown";
+        private const string ShownRowClass = "codex-tile--shown";
         private const string SwitchClass = "codex-feature--switch";
         private const string BadEffectClass = "codex-effect--bad";
         private const float BootCharsPerSecond = 220f;
@@ -485,41 +485,44 @@ namespace Chopper.UI.Home
             _codexList.Clear();
             _rows.Clear();
             var pilots = _model.Pilots;
+            // A grid of face tiles, as the hangar's pilot select: still art in the UI green, the call sign on a strip,
+            // the pilot's accent along the bottom edge.
+            // Wrap set here: the ScrollView's own content rules beat a USS selector.
+            var content = _codexList.contentContainer;
+            content.style.flexDirection = FlexDirection.Row;
+            content.style.flexWrap = Wrap.Wrap;
+            content.style.alignContent = Align.FlexStart;
             for (var i = 0; i < pilots.Count; i++)
             {
                 var index = i;
                 var card = pilots[i];
-                var row = new Button(() => _model.ShowPilot(index));
-                row.AddToClassList("codex-row");
-                row.style.borderLeftColor = card.Accent;
-                row.RegisterCallback<PointerEnterEvent>(_ => _model.ShowPilot(index));
-                row.RegisterCallback<FocusInEvent>(_ => _model.ShowPilot(index));
+                var tile = new Button(() => _model.ShowPilot(index));
+                tile.AddToClassList("codex-tile");
+                tile.style.borderBottomColor = card.Accent;
+                tile.RegisterCallback<PointerEnterEvent>(_ => _model.ShowPilot(index));
+                tile.RegisterCallback<FocusInEvent>(_ => _model.ShowPilot(index));
 
-                var face = new VisualElement { pickingMode = PickingMode.Ignore };
-                face.AddToClassList("codex-row__face");
                 if (card.Portrait != null)
                 {
-                    // Still art framed on the face (as the hangar's roster tiles), in the pilot's accent.
-                    face.style.backgroundImage = new StyleBackground(card.Portrait);
-                    face.style.unityBackgroundImageTintColor = card.Accent;
-                    face.style.backgroundRepeat = new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
+                    var art = new VisualElement { pickingMode = PickingMode.Ignore };
+                    art.AddToClassList("codex-tile__art");
+                    art.style.backgroundImage = new StyleBackground(card.Portrait);
                     var faceFrame = card.FaceFrame;
-                    face.RegisterCallback<GeometryChangedEvent>(_ => PilotSelectView.FrameFace(face, faceFrame));
+                    art.RegisterCallback<GeometryChangedEvent>(_ => PilotSelectView.FrameFace(art, faceFrame));
+                    tile.Add(art);
                 }
                 else
                 {
-                    var drawn = new PilotPortrait();
-                    drawn.style.flexGrow = 1;
+                    var drawn = new PilotPortrait { pickingMode = PickingMode.Ignore };
+                    drawn.AddToClassList("codex-tile__drawn");
                     drawn.Set(card.Id, card.Accent);
-                    face.Add(drawn);
+                    tile.Add(drawn);
                 }
-                row.Add(face);
-                row.Add(Text(HomeModel.Serial(i), "codex-row__serial", title: false));
-                var sign = Text(card.CallSign, "codex-row__sign", title: true);
-                row.Add(sign);
-                if (card.Id == _model.SelectedPilotId) row.Add(Text("ACTIVE", "codex-row__tag", title: true));
-                _codexList.Add(row);
-                _rows.Add(row);
+                tile.Add(Text(HomeModel.Serial(i), "codex-tile__serial", title: false));
+                if (card.Id == _model.SelectedPilotId) tile.Add(Text("ACTIVE", "codex-tile__tag", title: true));
+                tile.Add(Text(card.CallSign, "codex-tile__sign", title: true));
+                _codexList.Add(tile);
+                _rows.Add(tile);
             }
             if (_codexCount != null) _codexCount.text = TabularText.Wrap($"{pilots.Count:00} ON FILE");
             var shown = _model.ShownPilot;

@@ -299,7 +299,8 @@
 
 .pf-award {
   width: 196px;
-  height: 74px;
+  /* At least this tall; a long title wraps and the card grows, it never spills out. */
+  min-height: 74px;
   margin: 0 8px 8px 0;
   padding: 6px 10px;
   border-width: 1px;
@@ -309,11 +310,14 @@
 
 .pf-award__head {
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .pf-award__title {
   flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: normal;
   font-size: 14px;
   letter-spacing: 2px;
   color: var(--chopper-green);
@@ -321,6 +325,8 @@
 }
 
 .pf-award__count {
+  flex-shrink: 0;
+  margin-left: 6px;
   font-size: 15px;
   color: var(--chopper-yellow);
   padding: 0;

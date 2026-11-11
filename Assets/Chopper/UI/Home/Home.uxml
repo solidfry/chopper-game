@@ -95,7 +95,6 @@
         <ui:Label name="codex-count" class="codex__count chopper-title" picking-mode="Ignore" />
       </ui:VisualElement>
       <ui:VisualElement class="codex__body" picking-mode="Ignore">
-        <ui:ScrollView name="codex-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="codex__list" />
         <ui:VisualElement name="codex-feature" class="codex-feature" picking-mode="Ignore">
           <ui:VisualElement name="codex-portrait" class="codex-feature__portrait" picking-mode="Ignore">
             <hangar:PilotPortrait name="codex-drawn" class="codex-feature__drawn" picking-mode="Ignore" />
@@ -122,6 +121,8 @@
             </ui:VisualElement>
           </ui:VisualElement>
         </ui:VisualElement>
+        <!-- Roster grid (as the hangar's pilot select): tiles made by HomeView.BuildCodex -->
+        <ui:ScrollView name="codex-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="codex__grid" />
       </ui:VisualElement>
     </ui:VisualElement>
 
