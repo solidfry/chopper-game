@@ -20,6 +20,7 @@ namespace Chopper.Editor.Setup
         private const string SettingsPath = "Assets/Chopper/Data/UI/SceneTransitionSettings.asset";
         private const string PanelPath = "Assets/Chopper/UI/Settings/TransitionPanelSettings.asset";
         private const string LayoutPath = "Assets/Chopper/UI/Transitions/SceneTransition.uxml";
+        private const string NoticeLayoutPath = "Assets/Chopper/UI/Notifications/Notifications.uxml";
         private const string RootPrefabPath = "Assets/Chopper/App/RootLifetimeScope.prefab";
 
         public static SceneTransitionSettings Ensure(PanelSettings shared, AudioMixer mixer)
@@ -42,6 +43,14 @@ namespace Chopper.Editor.Setup
                 settings.RevealSound != null ? settings.RevealSound
                     : AudioAssets.Cue("TransitionReveal", AudioAssets.Clips(AudioAssets.SciFiGuns + "/Weapon 05 Load (Laser).wav"), ui, 0.35f,
                         blend: 0f, voices: 1, pitch: 1.4f));
+            // Toasts: a terminal line print; errors a low switch clunk.
+            settings.SetNotices(
+                settings.NoticeLayout != null ? settings.NoticeLayout : AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(NoticeLayoutPath),
+                settings.NoticeSound != null ? settings.NoticeSound
+                    : AudioAssets.Cue("Notice", AudioAssets.Clips("Assets/Sound/UI/Terminal/Term_Line_1.wav"), ui, 0.4f, blend: 0f, voices: 2),
+                settings.NoticeErrorSound != null ? settings.NoticeErrorSound
+                    : AudioAssets.Cue("NoticeError", AudioAssets.Clips("Assets/Sound/UI/Switch/Switch (4).wav"), ui, 0.5f, blend: 0f, voices: 1,
+                        pitch: 0.7f));
             EditorUtility.SetDirty(settings);
 
             var root = AssetDatabase.LoadAssetAtPath<RootLifetimeScope>(RootPrefabPath);

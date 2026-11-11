@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
+using Chopper.Presentation.Flow;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Menu;
 using Chopper.UI.Cockpit;
@@ -737,7 +738,9 @@ namespace Chopper.UI.Home
             if (!_model.SelectShown()) return;
             Play(_context.Sounds != null ? _context.Sounds.UINavigate : null);
             var shown = _model.Shown;
-            if (shown != null) _context.Audio.PlayVoice(shown.Value.SelectLine);
+            if (shown == null) return;
+            _context.Audio.PlayVoice(shown.Value.SelectLine);
+            _context.Notify("Pilot set", $"{shown.Value.CallSign} flies your next sortie.", NoticeKind.Success);
         }
 
         private static void Quit()

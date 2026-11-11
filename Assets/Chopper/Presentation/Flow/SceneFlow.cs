@@ -63,9 +63,11 @@ namespace Chopper.Presentation.Flow
         private int _seed = 1;
         private int _shownPercent = -1;
 
-        public SceneFlow(SceneTransitionSettings settings)
+        public SceneFlow(SceneTransitionSettings settings, NotificationFeed notices = null)
         {
             _settings = settings;
+            Notices = notices ?? new NotificationFeed();
+            Notices.Shown += OnNoticeShown;
             _root = new GameObject("Scene Flow");
             Object.DontDestroyOnLoad(_root);
             Music = new MusicPlayer(_root.transform);
@@ -91,6 +93,8 @@ namespace Chopper.Presentation.Flow
         public MusicPlayer Music { get; }
         public MixerVolumes Volumes { get; } = new();
         public TransitionModel Model { get; } = new();
+        /// <summary>Toast notices for the whole game (they live across scene changes, as the music does).</summary>
+        public NotificationFeed Notices { get; }
         /// <summary>A transition runs: a new <see cref="Load"/> is ignored.</summary>
         public bool Busy => _phase != Phase.Idle;
         public bool IsDisposed { get; private set; }
@@ -149,6 +153,13 @@ namespace Chopper.Presentation.Flow
         public bool WaitingFor(Scene scene) => _phase == Phase.Waiting && (_target == null || scene.name == _target);
 
         /// <summary>The new scene is ready to show (from its bridge). Ignored for other scenes.</summary>
+        private void OnNoticeShown(ShownNotice notice)
+        {
+            if (_settings == null) return;
+            var cue = notice.Kind == NoticeKind.Error && _settings.NoticeErrorSound != null ? _settings.NoticeErrorSound : _settings.NoticeSound;
+            Play(cue);
+        }
+
         public void SceneReady(Scene scene)
         {
             if (WaitingFor(scene)) _ready = true;
@@ -158,6 +169,7 @@ namespace Chopper.Presentation.Flow
         {
             if (IsDisposed) return;
             Music.Tick(deltaTime);
+            Notices.Tick(deltaTime);
             _phaseTime += deltaTime;
             Model.Time += deltaTime;
 

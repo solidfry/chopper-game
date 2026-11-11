@@ -1,0 +1,112 @@
+/* Toast notices (NotificationsView). Style guide card: dark-pair fill, 1px accent border, accent text.
+   Each notice carries one kind class, which sets --notice-accent and --notice-dark (palette pairs only). */
+
+.notifications {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Top right, under the screens' top bars. */
+.notifications__stack {
+  position: absolute;
+  top: 64px;
+  right: 24px;
+  width: 380px;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.notice--info,
+.notice--success { --notice-accent: var(--chopper-green); --notice-dark: var(--chopper-green-dark); }
+.notice--warning { --notice-accent: var(--chopper-yellow); --notice-dark: var(--chopper-yellow-dark); }
+.notice--error { --notice-accent: var(--chopper-red); --notice-dark: var(--chopper-red-dark); }
+.notice--reward { --notice-accent: var(--chopper-pink); --notice-dark: var(--chopper-pink-dark); }
+
+.notice {
+  margin-bottom: 10px;
+  padding: 10px 14px 0 14px;
+  background-color: var(--notice-dark);
+  border-width: 1px;
+  border-left-width: 4px;
+  border-color: var(--notice-accent);
+  opacity: 0.96;
+  translate: 0 0;
+  transition-property: translate, opacity;
+  transition-duration: 0.22s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.notice:hover {
+  opacity: 1;
+}
+
+.notice--enter {
+  translate: 420px 0;
+  opacity: 0;
+}
+
+.notice--leave {
+  translate: 60px 0;
+  opacity: 0;
+  transition-timing-function: ease-in-cubic;
+}
+
+.notice__head {
+  flex-direction: row;
+  align-items: center;
+}
+
+.notice__mark {
+  margin: 0 8px 0 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--notice-accent);
+}
+
+.notice--success .notice__mark {
+  color: var(--notice-dark);
+  background-color: var(--notice-accent);
+}
+
+.notice__title {
+  flex-grow: 1;
+  flex-shrink: 1;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+  letter-spacing: 3px;
+  white-space: normal;
+  color: var(--notice-accent);
+}
+
+.notice__count {
+  margin: 0 0 0 8px;
+  padding: 0 5px;
+  font-size: 11px;
+  color: var(--notice-dark);
+  background-color: var(--notice-accent);
+}
+
+.notice__text {
+  margin: 4px 0 0 0;
+  padding: 0;
+  font-size: 13px;
+  white-space: normal;
+  color: var(--chopper-text);
+}
+
+/* Time left: a thin bar along the bottom that runs down. */
+.notice__track {
+  height: 2px;
+  margin: 10px -14px 0 -14px;
+  background-color: var(--notice-dark);
+}
+
+.notice__timer {
+  height: 100%;
+  width: 100%;
+  background-color: var(--notice-accent);
+}

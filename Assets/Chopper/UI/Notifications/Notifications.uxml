@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+  <Style src="Notifications.uss" />
+  <!-- Toast notices over every scene (NotificationsView fills the stack). Only the notices take clicks. -->
+  <ui:VisualElement name="notifications" class="notifications" picking-mode="Ignore">
+    <ui:VisualElement name="notices" class="notifications__stack" picking-mode="Ignore" />
+  </ui:VisualElement>
+</ui:UXML>

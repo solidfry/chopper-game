@@ -19,6 +19,8 @@ namespace Chopper.Presentation.Flow
         [SerializeField, Tooltip("Own panel settings, drawn over every other panel (high sort order).")]
         private PanelSettings panelSettings;
         [SerializeField, Tooltip("UI/Transitions/SceneTransition.uxml.")] private VisualTreeAsset layout;
+        [SerializeField, Tooltip("Toast notices over every scene (UI/Notifications/Notifications.uxml); same panel settings.")]
+        private VisualTreeAsset noticeLayout;
 
         [Header("Timing (seconds, unscaled)")]
         [SerializeField, Min(0.05f), Tooltip("The blocks cover the screen.")] private float coverSeconds = 0.55f;
@@ -52,9 +54,12 @@ namespace Chopper.Presentation.Flow
         [Header("Sound (2D, on the scene flow; plays across the scene change)")]
         [SerializeField] private SoundCue coverSound;
         [SerializeField] private SoundCue revealSound;
+        [SerializeField, Tooltip("A notice comes on screen.")] private SoundCue noticeSound;
+        [SerializeField, Tooltip("An error notice comes on screen. Empty = the notice sound.")] private SoundCue noticeErrorSound;
 
         public PanelSettings PanelSettings => panelSettings;
         public VisualTreeAsset Layout => layout;
+        public VisualTreeAsset NoticeLayout => noticeLayout;
         public float CoverSeconds => coverSeconds;
         public float RevealSeconds => revealSeconds;
         public float MinHoldSeconds => minHoldSeconds;
@@ -74,6 +79,8 @@ namespace Chopper.Presentation.Flow
         public Color Glitch => glitch;
         public SoundCue CoverSound => coverSound;
         public SoundCue RevealSound => revealSound;
+        public SoundCue NoticeSound => noticeSound;
+        public SoundCue NoticeErrorSound => noticeErrorSound;
 
         public void CollectProblems(List<string> problems)
         {
@@ -81,6 +88,7 @@ namespace Chopper.Presentation.Flow
             if (layout == null) problems.Add($"{name}: no layout (UI/Transitions/SceneTransition.uxml).");
             if (coverSound != null) coverSound.CollectProblems(problems);
             if (revealSound != null) revealSound.CollectProblems(problems);
+            if (noticeLayout == null) problems.Add($"{name}: no notice layout (UI/Notifications/Notifications.uxml): toasts do not show.");
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -90,6 +98,14 @@ namespace Chopper.Presentation.Flow
             layout = tree;
             coverSound = cover;
             revealSound = reveal;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetNotices(VisualTreeAsset tree, SoundCue sound, SoundCue errorSound)
+        {
+            noticeLayout = tree;
+            noticeSound = sound;
+            noticeErrorSound = errorSound;
         }
     }
 }

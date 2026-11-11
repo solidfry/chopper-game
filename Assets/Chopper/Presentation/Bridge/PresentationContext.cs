@@ -170,6 +170,16 @@ namespace Chopper.Presentation.Bridge
         public bool PreviewTransition() => _flow != null && !_flow.IsDisposed && _flow.Preview();
 
         /// <summary>
+        /// Shows a toast notice (<see cref="NotificationFeed"/> on the scene flow, so it outlives this scene). Without a
+        /// scene flow (no root scope) it goes to the log only.
+        /// </summary>
+        public void Notify(string title, string text = null, NoticeKind kind = NoticeKind.Info, float seconds = 0f)
+        {
+            if (_flow != null && !_flow.IsDisposed) _flow.Notices.Post(title, text, kind, seconds);
+            else Debug.Log($"Notice ({kind}): {title} {text}");
+        }
+
+        /// <summary>
         /// The game's scene flow (root scope; it outlives this scene): music and volumes move to it, and this scene tells
         /// it when it is ready to show. Called when the scene loads; music already started moves over.
         /// </summary>

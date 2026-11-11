@@ -1103,6 +1103,7 @@ namespace Chopper.Presentation.Hangar
             catch (Exception e)
             {
                 Debug.LogWarning($"Matchmaking failed: {e}");
+                _context.Notify("Matchmaking failed", e.Message, NoticeKind.Error, 7f);
                 if (this != null) _model.SetMatchStatus(e.Message.ToUpperInvariant(), false);
             }
         }
