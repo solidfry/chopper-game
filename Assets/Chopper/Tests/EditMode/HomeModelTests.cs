@@ -81,5 +81,53 @@ namespace Chopper.Tests
             Assert.That(store.Pilot, Is.EqualTo(2));
             Assert.That(model.SelectedPilot?.CallSign, Is.EqualTo("VIPER"));
         }
+
+        private GameModeCatalog Modes()
+        {
+            var modes = ScriptableObject.CreateInstance<GameModeCatalog>();
+            _created.Add(modes);
+            modes.Add(new GameModeCatalog.ModeEntry { Id = "quickplay", DisplayName = "Quick Play", Available = true });
+            modes.Add(new GameModeCatalog.ModeEntry { Id = "ffa", DisplayName = "Free For All", Available = true, Queue = "ffa-queue" });
+            modes.Add(new GameModeCatalog.ModeEntry { Id = "tdm", DisplayName = "Team Deathmatch", Available = false });
+            return modes;
+        }
+
+        [Test]
+        public void Modes_OpenOnTheSavedMode_StepAndWrap_AndOnlyPlayableModesAreSaved()
+        {
+            var store = new LoadoutChoiceStore(new MemoryPrefs()) { MatchMode = "ffa" };
+            var model = new HomeModel(Catalog((1, "VIPER")), store, null, modes: Modes());
+
+            Assert.That(model.HasModes, Is.True);
+            Assert.That(model.SelectedMode?.Id, Is.EqualTo("ffa"));
+            model.ShowPage(HomePage.Modes);
+            Assert.That(model.ShownModeEntry?.Id, Is.EqualTo("ffa"), "opens on the saved mode");
+
+            model.StepMode(1);
+            Assert.That(model.ShownModeEntry?.Id, Is.EqualTo("tdm"));
+            Assert.That(model.PickShownMode(), Is.False, "an OFFLINE mode cannot be picked");
+            Assert.That(store.MatchMode, Is.EqualTo("ffa"));
+
+            model.StepMode(1);
+            Assert.That(model.ShownModeEntry?.Id, Is.EqualTo("quickplay"), "wraps forward");
+            Assert.That(model.PickShownMode(), Is.True);
+            Assert.That(store.MatchMode, Is.EqualTo("quickplay"));
+            Assert.That(model.Back(), Is.True);
+            Assert.That(model.Page, Is.EqualTo(HomePage.Main));
+        }
+
+        [Test]
+        public void Modes_UnknownOrOfflineSavedModeFallsBackToTheFirstPlayable_AndQueueFallsBack()
+        {
+            var modes = Modes();
+            Assert.That(modes.Resolve("tdm")?.Id, Is.EqualTo("quickplay"), "offline: the first playable");
+            Assert.That(modes.Resolve("gone")?.Id, Is.EqualTo("quickplay"));
+            Assert.That(GameModeCatalog.QueueOf(modes.Find("quickplay"), "Default"), Is.EqualTo("Default"));
+            Assert.That(GameModeCatalog.QueueOf(modes.Find("FFA"), "Default"), Is.EqualTo("ffa-queue"), "ids ignore case");
+            Assert.That(GameModeCatalog.QueueOf(null, "Default"), Is.EqualTo("Default"));
+
+            var model = new HomeModel(Catalog((1, "VIPER")), new LoadoutChoiceStore(new MemoryPrefs()), null);
+            Assert.That(model.HasModes, Is.False, "no catalog: PLAY goes straight to the hangar");
+        }
     }
 }

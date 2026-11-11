@@ -42,7 +42,8 @@ namespace Chopper.Presentation.Hud
 
         public PromptDevice Device { get; private set; }
 
-        /// <summary>Key name in upper case. Names: Repair, Ability, Back (leave a screen), Menu (open or close the options).</summary>
+        /// <summary>Key name in upper case. Names: Repair, Ability, Back (leave a screen), Menu (open or close the options),
+        /// Submit, Prev / Next (step through a list: codex, modes).</summary>
         public string Key(string name) => name switch
         {
             "Repair" => ActionKey(_controls.Flight.Repair),
@@ -50,6 +51,8 @@ namespace Chopper.Presentation.Hud
             "Back" => MenuKey("ESC", "<Gamepad>/buttonEast"),
             "Submit" => MenuKey("ENTER", "<Gamepad>/buttonSouth"),
             "Menu" => MenuKey("ESC", "<Gamepad>/start"),
+            "Prev" => MenuKey("Q", "<Gamepad>/leftShoulder"),
+            "Next" => MenuKey("E", "<Gamepad>/rightShoulder"),
             _ => name,
         };
 
@@ -58,7 +61,7 @@ namespace Chopper.Presentation.Hud
         {
             if (string.IsNullOrEmpty(template)) return template;
             var text = template;
-            foreach (var name in new[] { "Repair", "Ability", "Back", "Menu", "Submit" })
+            foreach (var name in new[] { "Repair", "Ability", "Back", "Menu", "Submit", "Prev", "Next" })
                 text = text.Replace("{" + name + "}", Key(name));
             return text;
         }

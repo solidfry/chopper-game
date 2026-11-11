@@ -27,6 +27,8 @@ namespace Chopper.Editor.Setup
     {
         public const string ScenePath = "Assets/Scenes/" + HomeModel.SceneName + ".unity";
         private const string LayoutPath = "Assets/Chopper/UI/Home/Home.uxml";
+        /// <summary>Game modes on the PLAY page (<see cref="GameModeCatalog"/>).</summary>
+        public const string ModesPath = "Assets/Chopper/Data/Modes/GameModeCatalog.asset";
         /// <summary>
         /// Simplified city flown over behind the menu (<see cref="HomeFlyover"/>), made from <see cref="SourceCityPath"/>:
         /// buildings and the ground near them only. It must be in the build.
@@ -56,6 +58,7 @@ namespace Chopper.Editor.Setup
                 return;
             }
             config.SetHome(layout);
+            config.SetModes(EnsureModes());
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             BuildBackdropCity();
@@ -63,6 +66,54 @@ namespace Chopper.Editor.Setup
             EnsureBuildScenes();
             Debug.Log($"Setup: home screen built ({ScenePath}), first in the build list.");
         }
+
+        /// <summary>
+        /// The mode catalog with the default modes. Modes already listed keep their edits; new defaults are added.
+        /// Only Free For All exists on the server, so Quick Play and FFA join the hangar's default queue (empty
+        /// <see cref="GameModeCatalog.ModeEntry.Queue"/>); TDM and Capture the Nuke are OFFLINE until they are built.
+        /// </summary>
+        private static GameModeCatalog EnsureModes()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<GameModeCatalog>(ModesPath);
+            if (catalog == null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(ModesPath));
+                catalog = ScriptableObject.CreateInstance<GameModeCatalog>();
+                AssetDatabase.CreateAsset(catalog, ModesPath);
+            }
+            catalog.Add(new GameModeCatalog.ModeEntry
+            {
+                Id = "quickplay", DisplayName = "Quick Play", Tagline = "Fastest way into the air",
+                Description = "Join the first open match in any live mode. Best for a short session.",
+                Rules = Lines("Any live mode", "Join in progress"), Players = "Any mode", Accent = ModeAccent.Green, Available = true,
+            });
+            catalog.Add(new GameModeCatalog.ModeEntry
+            {
+                Id = "ffa", DisplayName = "Free For All", Tagline = "Every pilot for themselves",
+                Description = "Every other chopper is a target. The first pilot to the score limit wins; else the best score when time runs out.",
+                Rules = Lines("First to 20 kills", "10 minute clock", "Respawn after 3 s"), Players = "Solo", Accent = ModeAccent.Yellow,
+                Available = true,
+            });
+            catalog.Add(new GameModeCatalog.ModeEntry
+            {
+                Id = "tdm", DisplayName = "Team Deathmatch", Tagline = "Two squads, one sky",
+                Description = "Two teams with their own spawns. No friendly fire. The first team to the kill limit wins.",
+                Rules = Lines("Two teams", "Team kill limit", "No friendly fire"), Players = "2 teams", Accent = ModeAccent.Cyan,
+                Available = false,
+            });
+            catalog.Add(new GameModeCatalog.ModeEntry
+            {
+                Id = "ctn", DisplayName = "Capture the Nuke", Tagline = "Winch it. Arm it. Drop it.",
+                Description = "Hook the nuke with your winch, arm it in your base, then fly it to the enemy base and drop it. Shoot down the carrier to stop it.",
+                Rules = Lines("Two bases", "Arm for 20 s", "Drop it in their zone"), Players = "2 teams", Accent = ModeAccent.Pink,
+                Available = false,
+            });
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssetIfDirty(catalog);
+            return catalog;
+        }
+
+        private static string Lines(params string[] lines) => string.Join("\n", lines);
 
         /// <summary>
         /// (Re)builds the menu city from the City04 art scene: the buildings (prefab links kept) and the ground chunks

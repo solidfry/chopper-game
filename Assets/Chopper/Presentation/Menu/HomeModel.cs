@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace Chopper.Presentation.Menu
 {
-    /// <summary>The home screen's pages: the main menu, the pilot codex, and the player's profile.</summary>
-    public enum HomePage { Main, Pilots, Profile }
+    /// <summary>The home screen's pages: the main menu, the pilot codex, the player's profile, and mode select (PLAY).</summary>
+    public enum HomePage { Main, Pilots, Profile, Modes }
 
     /// <summary>
     /// View model of the home screen (the main menu, scene <see cref="SceneName"/>): which page shows, the profile card
@@ -25,10 +25,16 @@ namespace Chopper.Presentation.Menu
         private readonly IPlayerIdentity _identity;
         private readonly List<PilotCard> _pilots = new();
         private readonly List<MapCatalog.MapEntry> _trainingMaps = new();
+        private readonly GameModeCatalog _modeCatalog;
+        private readonly List<GameModeCatalog.ModeEntry> _modes = new();
 
         public HomeModel(LoadoutCatalog catalog, LoadoutChoiceStore store, MapCatalog maps, ProfileService profile = null,
-            IPlayerIdentity identity = null)
+            IPlayerIdentity identity = null, GameModeCatalog modes = null)
         {
+            _modeCatalog = modes;
+            if (modes != null)
+                foreach (var mode in modes.Modes)
+                    if (mode != null) _modes.Add(mode);
             _store = store;
             _profile = profile;
             _identity = identity;
@@ -43,6 +49,8 @@ namespace Chopper.Presentation.Menu
         public event Action Changed;
         /// <summary>Only the big codex card changed.</summary>
         public event Action ShownChanged;
+        /// <summary>Only the shown mode on the PLAY page changed.</summary>
+        public event Action ModeShownChanged;
 
         public HomePage Page { get; private set; } = HomePage.Main;
 
@@ -129,6 +137,7 @@ namespace Chopper.Presentation.Menu
             if (page == Page) return;
             Page = page;
             if (page == HomePage.Pilots) ShownPilot = Math.Max(0, IndexOf(SelectedPilotId));
+            if (page == HomePage.Modes) ShownMode = Math.Max(0, _modes.IndexOf(SelectedMode));
             Changed?.Invoke();
         }
 
@@ -165,6 +174,41 @@ namespace Chopper.Presentation.Menu
         }
 
         public int IndexOf(ushort id) => _pilots.FindIndex(p => p.Id == id);
+
+        // ---- Mode select (PLAY) ----
+
+        /// <summary>Every mode in catalog order, playable or not (OFFLINE cards show what is planned).</summary>
+        public IReadOnlyList<GameModeCatalog.ModeEntry> Modes => _modes;
+        /// <summary>PLAY has a page to show (a catalog with a playable mode); without one PLAY goes straight to the hangar.</summary>
+        public bool HasModes => SelectedMode != null;
+        public int ShownMode { get; private set; }
+        public GameModeCatalog.ModeEntry ShownModeEntry => ShownMode >= 0 && ShownMode < _modes.Count ? _modes[ShownMode] : null;
+
+        /// <summary>The saved mode when it can be played, else the first playable one; null without a catalog.</summary>
+        public GameModeCatalog.ModeEntry SelectedMode => _modeCatalog != null ? _modeCatalog.Resolve(_store?.MatchMode) : null;
+
+        public void ShowMode(int index)
+        {
+            if (index < 0 || index >= _modes.Count || index == ShownMode) return;
+            ShownMode = index;
+            ModeShownChanged?.Invoke();
+        }
+
+        /// <summary>Next / previous mode card (wraps).</summary>
+        public void StepMode(int delta)
+        {
+            if (_modes.Count == 0) return;
+            ShowMode(((ShownMode + delta) % _modes.Count + _modes.Count) % _modes.Count);
+        }
+
+        /// <summary>Saves the shown mode for FIND MATCH. False when it is OFFLINE (not built yet) or nothing is shown.</summary>
+        public bool PickShownMode()
+        {
+            var shown = ShownModeEntry;
+            if (shown == null || !shown.Available || _store == null) return false;
+            _store.MatchMode = shown.Id;
+            return true;
+        }
 
         /// <summary>"01".."99": codex serial of a pilot.</summary>
         public static string Serial(int index) => (index + 1).ToString("00");

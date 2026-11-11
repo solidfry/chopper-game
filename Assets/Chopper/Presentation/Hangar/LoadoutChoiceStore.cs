@@ -57,6 +57,7 @@ namespace Chopper.Presentation.Hangar
         private const string PresetsKey = "Chopper.Hangar.Presets.";
         private const string TrainingMapKey = "Chopper.Hangar.TrainingMap";
         private const string PilotKey = "Chopper.Hangar.Pilot";
+        private const string ModeKey = "Chopper.Hangar.Mode";
         /// <summary>Longest preset name kept.</summary>
         public const int MaxPresetName = 24;
 
@@ -95,6 +96,17 @@ namespace Chopper.Presentation.Hangar
             set
             {
                 _prefs.SetString(TrainingMapKey, value ?? "");
+                _prefs.Save();
+            }
+        }
+
+        /// <summary>The game mode FIND MATCH joins (<c>GameModeCatalog</c> id; "" = none picked yet).</summary>
+        public string MatchMode
+        {
+            get => _prefs.GetString(ModeKey, "");
+            set
+            {
+                _prefs.SetString(ModeKey, value ?? "");
                 _prefs.Save();
             }
         }

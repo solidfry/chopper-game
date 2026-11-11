@@ -1,0 +1,202 @@
+/* Home screen: mode select page (PLAY), page-modes in Home.uxml, cards made by ModesPage.
+   Style guide card: dark-pair fill, 1px accent border, accent text, a rule line under the name.
+   Each card (and the detail strip) carries one accent class, which sets --mode-accent and --mode-dark. */
+
+.home__page--modes {
+  flex-direction: column;
+  padding-bottom: 48px;
+}
+
+/* ---- Accents (palette pairs only) ---- */
+.mode--green { --mode-accent: var(--chopper-green); --mode-dark: var(--chopper-green-dark); }
+.mode--cyan { --mode-accent: var(--chopper-cyan); --mode-dark: var(--chopper-cyan-dark); }
+.mode--yellow { --mode-accent: var(--chopper-yellow); --mode-dark: var(--chopper-yellow-dark); }
+.mode--red { --mode-accent: var(--chopper-red); --mode-dark: var(--chopper-red-dark); }
+.mode--pink { --mode-accent: var(--chopper-pink); --mode-dark: var(--chopper-pink-dark); }
+.mode--blue { --mode-accent: var(--chopper-blue); --mode-dark: var(--chopper-blue-dark); }
+
+/* ---- Cards ---- */
+.modes__list {
+  flex-grow: 1;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 300px;
+  /* Cards have 7px side margins: pull the row out so the outer cards line up with the header. */
+  margin: 0 -7px;
+}
+
+.mode-card {
+  flex-grow: 1;
+  flex-basis: 0;
+  margin: 0 7px;
+  padding: 14px 16px 16px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: hidden;
+  background-color: var(--mode-dark);
+  border-width: 1px;
+  border-top-width: 4px;
+  border-color: var(--mode-accent);
+  border-radius: 0;
+  opacity: 0.82;
+  transition-property: translate, opacity, border-width;
+  transition-duration: 0.12s;
+}
+
+.mode-card:hover,
+.mode-card:focus,
+.mode-card:active {
+  background-color: var(--mode-dark);
+  border-color: var(--mode-accent);
+}
+
+.mode-card--shown {
+  opacity: 1;
+  translate: 0 -8px;
+  border-width: 2px;
+  border-top-width: 8px;
+}
+
+.mode-card--offline {
+  opacity: 0.4;
+}
+
+.mode-card--offline.mode-card--shown {
+  opacity: 0.65;
+}
+
+.mode-card__top {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mode-card__serial {
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--mode-accent);
+  padding: 0;
+  margin: 0;
+}
+
+.mode-card__status {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--mode-accent);
+  padding: 2px 6px;
+  margin: 0;
+  border-width: 1px;
+  border-color: var(--mode-accent);
+}
+
+.mode-card--offline .mode-card__status {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.mode-card--selected .mode-card__status {
+  color: var(--mode-dark);
+  background-color: var(--mode-accent);
+}
+
+.mode-card__name {
+  margin: 48px 0 0 0;
+  padding: 0;
+  font-size: 30px;
+  letter-spacing: 4px;
+  white-space: normal;
+  color: var(--mode-accent);
+}
+
+.mode-card__tagline {
+  margin: 6px 0 0 0;
+  padding: 0;
+  font-size: 12px;
+  letter-spacing: 3px;
+  white-space: normal;
+  color: var(--chopper-text);
+}
+
+.mode-card__rule {
+  height: 1px;
+  margin: 14px 0;
+  background-color: var(--mode-accent);
+}
+
+.mode-card__rules {
+  flex-grow: 1;
+}
+
+.mode-card__line {
+  margin: 0 0 6px 0;
+  padding: 0;
+  font-size: 12px;
+  letter-spacing: 2px;
+  white-space: normal;
+  color: var(--chopper-text);
+}
+
+.mode-card__players {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--mode-accent);
+}
+
+/* ---- Detail strip under the cards ---- */
+.modes-detail {
+  flex-shrink: 0;
+  flex-direction: row;
+  align-items: center;
+  min-height: 110px;
+  margin-top: 22px;
+  padding: 14px 20px;
+  background-color: var(--chopper-terminal);
+  border-width: 0;
+  border-left-width: 4px;
+  border-color: var(--mode-accent);
+}
+
+.modes-detail__text {
+  flex-grow: 1;
+  flex-shrink: 1;
+  padding-right: 24px;
+}
+
+.modes-detail__name {
+  margin: 0 0 6px 0;
+  padding: 0;
+  font-size: 22px;
+  letter-spacing: 5px;
+  color: var(--mode-accent);
+}
+
+.modes-detail__body {
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+  white-space: normal;
+  max-width: 900px;
+  color: var(--chopper-text);
+}
+
+.modes-detail__actions {
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+.modes-detail__state {
+  margin: 0 0 8px 0;
+  padding: 0;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--mode-accent);
+}
+
+.modes-detail__deploy {
+  height: 48px;
+  margin: 0;
+  font-size: 18px;
+}

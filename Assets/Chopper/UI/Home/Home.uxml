@@ -1,6 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:home="Chopper.UI.Home" xmlns:hangar="Chopper.UI.Hangar" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
   <Style src="Home.uss" />
   <Style src="Profile.uss" />
+  <Style src="Modes.uss" />
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
        Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
@@ -84,6 +85,30 @@
 
       <ui:VisualElement class="home__footer" picking-mode="Ignore">
         <ui:Label text="{Submit} = SELECT    {Back} = BACK" class="home__footer-text input-prompt" picking-mode="Ignore" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Mode select (PLAY): one card per GameModeCatalog entry (made by ModesPage); hover or focus shows a mode,
+         click or DEPLOY saves it and opens the hangar, whose FIND MATCH joins its queue. -->
+    <ui:VisualElement name="page-modes" class="home__page home__page--modes home--hidden">
+      <ui:VisualElement class="codex__head" picking-mode="Ignore">
+        <ui:Button name="modes-back" text="&lt; BACK" class="home__button home__button--small chopper-title" />
+        <ui:Label text="SELECT MODE" class="codex__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="modes-queue" class="codex__count chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:VisualElement name="modes-list" class="modes__list" picking-mode="Ignore" />
+      <ui:VisualElement name="modes-detail" class="modes-detail" picking-mode="Ignore">
+        <ui:VisualElement class="modes-detail__text" picking-mode="Ignore">
+          <ui:Label name="modes-detail-name" class="modes-detail__name chopper-title" picking-mode="Ignore" />
+          <ui:Label name="modes-detail-text" class="modes-detail__body chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="modes-detail__actions" picking-mode="Ignore">
+          <ui:Label name="modes-state" class="modes-detail__state chopper-title" picking-mode="Ignore" />
+          <ui:Button name="modes-deploy" text="[ DEPLOY ]" class="home__button modes-detail__deploy chopper-title" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:VisualElement class="home__footer" picking-mode="Ignore">
+        <ui:Label text="{Submit} = DEPLOY    {Back} = BACK    {Prev} / {Next} = MODE" class="home__footer-text input-prompt" picking-mode="Ignore" />
       </ui:VisualElement>
     </ui:VisualElement>
 

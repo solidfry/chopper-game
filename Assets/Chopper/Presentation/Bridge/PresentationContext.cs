@@ -112,7 +112,7 @@ namespace Chopper.Presentation.Bridge
             : null;
         /// <summary>Home screen view model; made on first use (null without a loadout catalog). Only the home scene uses it.</summary>
         public Menu.HomeModel Home => _home ??= Config != null && Config.LoadoutCatalog != null
-            ? new Menu.HomeModel(Config.LoadoutCatalog, LoadoutChoices, Config.Maps, Profile, Identity)
+            ? new Menu.HomeModel(Config.LoadoutCatalog, LoadoutChoices, Config.Maps, Profile, Identity, Config.Modes)
             : null;
         public bool IsDisposed { get; private set; }
 

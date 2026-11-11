@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Flow;
+using Chopper.Presentation.Menu;
 using Chopper.Services.Matchmaking;
 using Cysharp.Threading.Tasks;
 using Chopper.Simulation;
@@ -1074,12 +1075,16 @@ namespace Chopper.Presentation.Hangar
             var token = CancellationTokenSource.CreateLinkedTokenSource(_search.Token, destroyCancellationToken).Token;
             var modules = new List<ushort>();
             foreach (var module in _model.Fitted) modules.Add(module != null ? module.Id : (ushort)0);
-            var request = new MatchRequest(_settings.MatchQueue, _model.Chassis.Id, modules, _model.Pilots.SelectedId);
+            // The mode picked on the home screen's PLAY page picks the queue; without one, the hangar's default queue.
+            var mode = _context.Config.Modes != null ? _context.Config.Modes.Resolve(_context.LoadoutChoices.MatchMode) : null;
+            var queue = GameModeCatalog.QueueOf(mode, _settings.MatchQueue);
+            var modeSuffix = mode != null && !string.IsNullOrEmpty(mode.DisplayName) ? " // " + mode.DisplayName.ToUpperInvariant() : "";
+            var request = new MatchRequest(queue, _model.Chassis.Id, modules, _model.Pilots.SelectedId);
             var progress = new Progress<MatchmakingStatus>(status => _model.SetMatchStatus(status switch
             {
                 MatchmakingStatus.ServerStarting => "MATCH FOUND - SERVER STARTING",
                 MatchmakingStatus.Connecting => "CONNECTING",
-                _ => "SEARCHING",
+                _ => "SEARCHING" + modeSuffix,
             }, true));
 
             try

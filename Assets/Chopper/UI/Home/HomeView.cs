@@ -16,7 +16,8 @@ namespace Chopper.UI.Home
     /// The home screen (main menu) in <c>Home.uxml</c>, over the animated <see cref="HomeBackdrop"/>.
     /// <list type="bullet">
     /// <item>Opens with a short typed boot log (any key or click skips it), then the menu slides in.</item>
-    /// <item>Menu: PLAY and HANGAR open the hangar (loadout and FIND MATCH), TRAINING starts the saved training map,
+    /// <item>Menu: PLAY opens mode select (<see cref="ModesPage"/>; DEPLOY saves the mode, then the hangar), HANGAR opens
+    /// the hangar (loadout and FIND MATCH), TRAINING starts the saved training map,
     /// PILOTS opens the codex, OPTIONS the options overlay, QUIT leaves.</item>
     /// <item>Profile card: your pilot (portrait under a <see cref="CodecScan"/>), level bar; click = codex.</item>
     /// <item>Pilot codex: every pilot, read-only, with SET AS PILOT. Q / E or the shoulder buttons step through it.</item>
@@ -59,6 +60,10 @@ namespace Chopper.UI.Home
 
         private VisualElement _pageMain;
         private VisualElement _pagePilots;
+        private VisualElement _pageModes;
+        private ModesPage _modesPage;
+        /// <summary>The page shown at the last refresh: the mode cards are built once, when their page opens.</summary>
+        private HomePage _refreshedPage = HomePage.Main;
         private VisualElement _title;
         private Label _boot;
         private Label _hint;
@@ -165,6 +170,15 @@ namespace Chopper.UI.Home
             _pageMain = _root.Q("page-main");
             _pagePilots = _root.Q("page-pilots");
             _pageProfile = _root.Q("page-profile");
+            _pageModes = _root.Q("page-modes");
+            _modesPage = _pageModes != null ? new ModesPage(_pageModes, _model) : null;
+            if (_modesPage != null)
+            {
+                if (_modesPage.Back != null) _modesPage.Back.clicked += Back;
+                _modesPage.Deploy += DeployMode;
+                _modesPage.Moved += PlayNavigate;
+            }
+            _refreshedPage = HomePage.Main;
             _profilePage = _pageProfile != null ? new ProfilePage(_pageProfile) : null;
             if (_profilePage?.Back != null) _profilePage.Back.clicked += Back;
             _title = _root.Q("title");
@@ -174,7 +188,9 @@ namespace Chopper.UI.Home
             _city = _root.Q("city");
             _shownCity = null;
 
-            AddNav("nav-play", OpenHangar, () => "DEPLOY: BUILD YOUR CHOPPER, THEN FIND A MATCH");
+            AddNav("nav-play", OpenModes, () => _model.HasModes
+                ? $"DEPLOY: PICK A MODE ({_model.SelectedMode.DisplayName.ToUpperInvariant()}), BUILD YOUR CHOPPER, FIND A MATCH"
+                : "DEPLOY: BUILD YOUR CHOPPER, THEN FIND A MATCH");
             AddNav("nav-training", StartTraining, () =>
                 _model.HasTrainingMap ? $"FLY SOLO // {_model.TrainingMapName}" : "NO TRAINING MAP SET UP");
             AddNav("nav-hangar", OpenHangar, () => "CHASSIS, MODULES, SKINS AND PILOT");
@@ -253,6 +269,14 @@ namespace Chopper.UI.Home
             if (_profile != null) _profile.clicked -= OpenProfile;
             if (_profilePage?.Back != null) _profilePage.Back.clicked -= Back;
             _profilePage = null;
+            if (_modesPage != null)
+            {
+                if (_modesPage.Back != null) _modesPage.Back.clicked -= Back;
+                _modesPage.Deploy -= DeployMode;
+                _modesPage.Moved -= PlayNavigate;
+                _modesPage.Dispose();
+                _modesPage = null;
+            }
             if (_codexSelect != null) _codexSelect.clicked -= SelectPilot;
             if (_codexBack != null) _codexBack.clicked -= Back;
             if (_codexPrev != null) _codexPrev.clicked -= PreviousPilot;
@@ -289,9 +313,15 @@ namespace Chopper.UI.Home
             if (back) Back();
             else if (start) OpenOptions();
 
-            if (_model.Page != HomePage.Pilots || OptionsOpen) return;
+            if (OptionsOpen || (_model.Page != HomePage.Pilots && _model.Page != HomePage.Modes)) return;
             var previous = (keyboard != null && keyboard.qKey.wasPressedThisFrame) || (gamepad != null && gamepad.leftShoulder.wasPressedThisFrame);
             var next = (keyboard != null && keyboard.eKey.wasPressedThisFrame) || (gamepad != null && gamepad.rightShoulder.wasPressedThisFrame);
+            if (_model.Page == HomePage.Modes)
+            {
+                if (previous) StepMode(-1);
+                if (next) StepMode(1);
+                return;
+            }
             if (previous) PreviousPilot();
             if (next) NextPilot();
         }
@@ -401,6 +431,14 @@ namespace Chopper.UI.Home
             _pageMain?.EnableInClassList(HiddenClass, _model.Page != HomePage.Main);
             _pagePilots?.EnableInClassList(HiddenClass, !codex);
             _pageProfile?.EnableInClassList(HiddenClass, !profile);
+            var modes = _model.Page == HomePage.Modes;
+            _pageModes?.EnableInClassList(HiddenClass, !modes);
+            if (modes && _refreshedPage != HomePage.Modes && _modesPage != null)
+            {
+                _modesPage.Build();
+                _modesPage.FocusShown();
+            }
+            _refreshedPage = _model.Page;
             ShowProfile();
             if (profile) ShowProfilePage();
             if (codex)
@@ -599,6 +637,44 @@ namespace Chopper.UI.Home
 
         private void OpenCodex() => _model.ShowPage(HomePage.Pilots);
 
+        /// <summary>PLAY: the mode select page; straight to the hangar when no mode catalog is set up.</summary>
+        private void OpenModes()
+        {
+            if (!_model.HasModes)
+            {
+                OpenHangar();
+                return;
+            }
+            Play(_context.Sounds != null ? _context.Sounds.UIClick : null);
+            _model.ShowPage(HomePage.Modes);
+        }
+
+        /// <summary>A mode card or DEPLOY: save the mode, then the hangar (its FIND MATCH joins that mode's queue).</summary>
+        private void DeployMode()
+        {
+            if (!_model.PickShownMode()) return;
+            OpenHangar();
+        }
+
+        private void StepMode(int delta)
+        {
+            _model.StepMode(delta);
+            _modesPage?.FocusShown();
+            PlayNavigate();
+        }
+
+        private void PlayNavigate() => Play(_context.Sounds != null ? _context.Sounds.UINavigate : null);
+
+        private void FocusNav(string elementName)
+        {
+            foreach (var (button, _, _) in _nav)
+                if (button.name == elementName)
+                {
+                    button.Focus();
+                    return;
+                }
+        }
+
         private void OpenProfile() => _model.ShowPage(HomePage.Profile);
 
         /// <summary>The profile page; without an account avatar, the selected pilot's live portrait stands in.</summary>
@@ -634,7 +710,7 @@ namespace Chopper.UI.Home
             var from = _model.Page;
             if (!_model.Back()) return;
             if (from == HomePage.Profile) _profile?.Focus();
-            else if (_nav.Count > 0) _nav[3].Button.Focus();
+            else FocusNav(from == HomePage.Modes ? "nav-play" : "nav-pilots");
         }
 
         private void PreviousPilot()

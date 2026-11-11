@@ -4,6 +4,7 @@ using Chopper.Presentation.Camera;
 using Chopper.Presentation.Effects;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
+using Chopper.Presentation.Menu;
 using Chopper.Presentation.Visuals;
 using Chopper.Simulation.Config;
 using Chopper.Simulation.Loadout;
@@ -54,6 +55,8 @@ namespace Chopper.Presentation.Config
         private EnvironmentSettings environment;
         [SerializeField, Tooltip("Every playable map (training list, match pool). Setup step 10 links it.")]
         private MapCatalog maps;
+        [SerializeField, Tooltip("Game modes on the PLAY page and their matchmaker queues. Setup step 11 links it.")]
+        private GameModeCatalog modes;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
         public SkinLibrary Skins => skins;
@@ -73,6 +76,7 @@ namespace Chopper.Presentation.Config
         public HangarSettings Hangar => hangar;
         public EnvironmentSettings Environment => environment;
         public MapCatalog Maps => maps;
+        public GameModeCatalog Modes => modes;
 
         public void CollectProblems(List<string> problems)
         {
@@ -92,6 +96,7 @@ namespace Chopper.Presentation.Config
             Require(hangar, "hangar settings (press '7. Build hangar')", problems);
             Require(hangarLayout, "hangar layout (press '7. Build hangar')", problems);
             Require(homeLayout, "home layout (press '11. Build home screen')", problems);
+            Require(modes, "game mode catalog (press '11. Build home screen')", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
@@ -103,6 +108,7 @@ namespace Chopper.Presentation.Config
             if (hangar != null) hangar.CollectProblems(problems);
             if (environment != null) environment.CollectProblems(problems);
             if (maps != null) maps.CollectProblems(problems);
+            if (modes != null) modes.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -142,6 +148,9 @@ namespace Chopper.Presentation.Config
 
         /// <summary>Editor only: used by the home screen step.</summary>
         public void SetHome(VisualTreeAsset layout) => homeLayout = layout;
+
+        /// <summary>Editor only: used by the home screen step.</summary>
+        public void SetModes(GameModeCatalog catalog) => modes = catalog;
 
         /// <summary>Editor only: used by the city match scene step.</summary>
         public void SetEnvironment(EnvironmentSettings settings) => environment = settings;

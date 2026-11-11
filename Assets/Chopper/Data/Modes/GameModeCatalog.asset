@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c6044e00793f5544b51ebb377d59593, type: 3}
+  m_Name: GameModeCatalog
+  m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Menu.GameModeCatalog
+  modes:
+  - Id: quickplay
+    DisplayName: Quick Play
+    Tagline: Fastest way into the air
+    Description: Join the first open match in any live mode. Best for a short session.
+    Rules: 'Any live mode
+
+      Join in progress'
+    Players: Any mode
+    Accent: 0
+    Available: 1
+    Queue: 
+  - Id: ffa
+    DisplayName: Free For All
+    Tagline: Every pilot for themselves
+    Description: Every other chopper is a target. The first pilot to the score limit wins; else the best score when time runs out.
+    Rules: 'First to 20 kills
+
+      10 minute clock
+
+      Respawn after 3 s'
+    Players: Solo
+    Accent: 2
+    Available: 1
+    Queue: 
+  - Id: tdm
+    DisplayName: Team Deathmatch
+    Tagline: Two squads, one sky
+    Description: Two teams with their own spawns. No friendly fire. The first team to the kill limit wins.
+    Rules: 'Two teams
+
+      Team kill limit
+
+      No friendly fire'
+    Players: 2 teams
+    Accent: 1
+    Available: 0
+    Queue: 
+  - Id: ctn
+    DisplayName: Capture the Nuke
+    Tagline: Winch it. Arm it. Drop it.
+    Description: Hook the nuke with your winch, arm it in your base, then fly it to the enemy base and drop it. Shoot down the carrier to stop it.
+    Rules: 'Two bases
+
+      Arm for 20 s
+
+      Drop it in their zone'
+    Players: 2 teams
+    Accent: 4
+    Available: 0
+    Queue: 
