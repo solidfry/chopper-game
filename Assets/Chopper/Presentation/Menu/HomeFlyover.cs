@@ -69,6 +69,7 @@ namespace Chopper.Presentation.Menu
 
         private UnityEngine.Camera _camera;
         private RenderTexture _raw;
+        private UnityEngine.Camera _screenCamera;
         private RenderTexture _display;
         private RenderTexture _blurHalf;
         private RenderTexture _blur;
@@ -92,6 +93,8 @@ namespace Chopper.Presentation.Menu
         public Vector3 Centre => _centre;
         /// <summary>The camera orbit radius, metres.</summary>
         public float Radius => _radius;
+        /// <summary>Building bounds (core and sprawl): the menu choppers climb over them.</summary>
+        public System.Collections.Generic.IReadOnlyList<Bounds> Buildings => _buildings;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetBridge(PresentationBridge value) => bridge = value;
@@ -111,11 +114,29 @@ namespace Chopper.Presentation.Menu
         private void OnDestroy()
         {
             if (_camera != null) _camera.targetTexture = null;
+            if (_screenCamera != null) Destroy(_screenCamera.gameObject);
             Release(ref _raw);
             Release(ref _display);
             Release(ref _blurHalf);
             Release(ref _blur);
             if (_quantize != null) Destroy(_quantize);
+        }
+
+        /// <summary>
+        /// With the city in a texture no camera draws to the screen ("No cameras rendering"). This one does: it draws
+        /// nothing (empty culling mask) and only clears, so the UI panel has a screen to sit on.
+        /// </summary>
+        private void EnsureScreenCamera()
+        {
+            if (_screenCamera != null) return;
+            var go = new GameObject("Screen Camera");
+            go.transform.SetParent(transform, false);
+            _screenCamera = go.AddComponent<UnityEngine.Camera>();
+            _screenCamera.cullingMask = 0;
+            _screenCamera.clearFlags = CameraClearFlags.SolidColor;
+            _screenCamera.backgroundColor = Color.black;
+            _screenCamera.depth = _camera.depth + 1;
+            _screenCamera.useOcclusionCulling = false;
         }
 
         private static void Release(ref RenderTexture texture)
@@ -154,6 +175,7 @@ namespace Chopper.Presentation.Menu
             _display.Create();
             if (_quantize == null) _quantize = new Material(quantizeShader) { hideFlags = HideFlags.HideAndDontSave };
             _camera.targetTexture = _raw;
+            EnsureScreenCamera();
             return _display;
         }
 

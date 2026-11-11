@@ -26,25 +26,43 @@ namespace Chopper.Presentation.Menu
         [SerializeField, Range(0, 12)] private int count = 6;
         [SerializeField, Tooltip("Model scale (bigger than life so they read at menu distance).")]
         private float scale = 5f;
-        [SerializeField, Tooltip("Flight speed along the loop, metres per second.")]
-        private float speed = 70f;
-        [SerializeField] private float tracerSpeed = 700f;
-        [SerializeField] private float tracerLength = 45f;
+        [Header("Combat flight")]
+        [SerializeField, Tooltip("Top speed, metres per second (fast attack choppers: about 75).")]
+        private float maxSpeed = 75f;
+        [SerializeField, Tooltip("Most acceleration the rotor gives, m/s² (sets how hard they turn and stop).")]
+        private float maxAcceleration = 24f;
+        [SerializeField, Tooltip("Flight band above the city ground, metres.")]
+        private Vector2 altitude = new(140f, 460f);
+        [SerializeField, Tooltip("Arena radius as a share of the camera orbit radius.")]
+        private float arenaScale = 1.1f;
+        [SerializeField, Tooltip("Seconds of chase before a break, min and max.")]
+        private Vector2 chaseSeconds = new(5f, 10f);
+        [SerializeField, Tooltip("Seconds of a break (hard jink away), min and max.")]
+        private Vector2 breakSeconds = new(1.5f, 3f);
+        [SerializeField, Tooltip("Fire when the target is closer than this and within the cone.")]
+        private float fireRange = 600f;
+        [SerializeField, Tooltip("Half-angle of the gun cone, degrees.")]
+        private float fireCone = 14f;
+        [SerializeField] private float tracerSpeed = 900f;
+        [SerializeField] private float tracerLength = 55f;
         [SerializeField] private float tracerWidth = 1.6f;
+
+        private enum Mode { Chase, Break }
 
         private sealed class Flyer
         {
             public Transform Root;
             public readonly List<(Transform Part, Vector3 Spin)> Spinners = new();
-            public float Phase;
-            public float Radius;
-            public float Height;
-            public float Rate;
-            public float NextBurst;
-            public int ShotsLeft;
-            public float NextShot;
-            public Flyer Target;
+            public Vector3 Position;
             public Vector3 Velocity;
+            public Vector3 Acceleration;
+            public Flyer Target;
+            public Mode Mode;
+            public float ModeEnd;
+            public Vector3 BreakDirection;
+            public float NextShot;
+            public int ShotsLeft;
+            public float NextBurst;
         }
 
         private sealed class Tracer
@@ -125,18 +143,24 @@ namespace Chopper.Presentation.Menu
                 var chassis = catalog.Chassis[i % catalog.Chassis.Count];
                 var root = BuildChopper(chassis);
                 if (root == null) continue;
+                // Start spread round the arena, heading round it, at cruise speed.
+                var angle = i * Mathf.PI * 2f / count;
+                var start = flyover.Centre + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Arena * 0.7f +
+                            Vector3.up * Random.Range(altitude.x, altitude.y);
+                var heading = new Vector3(-Mathf.Sin(angle), 0f, Mathf.Cos(angle));
                 _flyers.Add(new Flyer
                 {
                     Root = root,
-                    Phase = i * 2.39996f,
-                    // Spread round the camera ring: some inside it, some just outside.
-                    Radius = flyover.Radius * Random.Range(0.45f, 1.05f),
-                    Height = Random.Range(260f, 500f),
-                    Rate = speed / Mathf.Max(flyover.Radius, 1f) * Random.Range(0.8f, 1.2f) * (i % 2 == 0 ? 1f : -1f),
-                    NextBurst = Time.unscaledTime + Random.Range(0.5f, 3f),
+                    Position = start,
+                    Velocity = heading * maxSpeed * 0.7f,
+                    Mode = Mode.Chase,
+                    ModeEnd = Time.unscaledTime + Random.Range(chaseSeconds.x, chaseSeconds.y),
                 });
+                root.SetPositionAndRotation(start, Quaternion.LookRotation(heading));
                 CollectSpinners(_flyers[^1], chassis);
             }
+            // Duels: each chopper hunts the next one round (a chase ring keeps everyone busy).
+            for (var i = 0; i < _flyers.Count; i++) _flyers[i].Target = _flyers.Count > 1 ? _flyers[(i + 1) % _flyers.Count] : null;
 
             for (var i = 0; i < TracerPool; i++) _tracers.Add(MakeTracerEntry(i));
         }
@@ -239,68 +263,124 @@ namespace Chopper.Presentation.Menu
 
         // ---- Flight and fire ----
 
-        /// <summary>A figure-eight round the city centre, with height drift; faces along its velocity and banks.</summary>
-        private Vector3 PathPoint(Flyer flyer, float t)
-        {
-            var a = flyer.Phase + t * flyer.Rate;
-            var centre = flyover.Centre;
-            return centre + new Vector3(Mathf.Cos(a) * flyer.Radius, flyer.Height + Mathf.Sin(a * 3f + flyer.Phase) * 30f,
-                Mathf.Sin(2f * a) * flyer.Radius * 0.55f);
-        }
+        private float Arena => flyover.Radius * arenaScale;
 
+        /// <summary>
+        /// Steering: a wanted velocity (chase a point behind the target, or break away hard), then acceleration toward it
+        /// within the rotor's limit, plus arena, altitude and tower avoidance. Attitude from the thrust: the rotor points
+        /// along acceleration + gravity, so turns bank, speeding up dips the nose and braking flares it.
+        /// </summary>
         private void Fly(Flyer flyer, float t, float dt)
         {
-            var position = PathPoint(flyer, t);
-            var ahead = PathPoint(flyer, t + 0.4f);
-            var further = PathPoint(flyer, t + 0.8f);
-            var velocity = (ahead - position) / 0.4f;
-            var nextVelocity = (further - ahead) / 0.4f;
-            flyer.Velocity = velocity;
-            var forward = velocity.sqrMagnitude > 0.01f ? velocity.normalized : flyer.Root.forward;
-            // Bank into the turn (sign of the yaw change), and pitch the nose down a little as choppers do.
-            var turn = Vector3.SignedAngle(new Vector3(velocity.x, 0f, velocity.z), new Vector3(nextVelocity.x, 0f, nextVelocity.z), Vector3.up);
-            var bank = Mathf.Clamp(-turn * 1.5f, -45f, 45f);
-            var rotation = Quaternion.LookRotation(forward, Vector3.up) * Quaternion.Euler(8f, 0f, bank);
-            flyer.Root.SetPositionAndRotation(position, Quaternion.Slerp(flyer.Root.rotation, rotation, 1f - Mathf.Exp(-6f * dt)));
+            if (dt <= 0f) return;
+            var centre = flyover.Centre;
+            var target = flyer.Target;
+
+            // Mode: chase for a while, then break (a hard jink to one side and up or down), then chase again.
+            if (t >= flyer.ModeEnd)
+            {
+                if (flyer.Mode == Mode.Chase)
+                {
+                    flyer.Mode = Mode.Break;
+                    flyer.ModeEnd = t + Random.Range(breakSeconds.x, breakSeconds.y);
+                    var side = Vector3.Cross(Vector3.up, flyer.Velocity.sqrMagnitude > 1f ? flyer.Velocity.normalized : flyer.Root.forward).normalized;
+                    flyer.BreakDirection = (side * (Random.value < 0.5f ? 1f : -1f) + Vector3.up * Random.Range(-0.5f, 0.6f)).normalized;
+                }
+                else
+                {
+                    flyer.Mode = Mode.Chase;
+                    flyer.ModeEnd = t + Random.Range(chaseSeconds.x, chaseSeconds.y);
+                }
+            }
+            // Being shot at from close behind: break early.
+            if (flyer.Mode == Mode.Chase && IsChasedClosely(flyer) && Random.value < dt * 0.6f) flyer.ModeEnd = t;
+
+            Vector3 wanted;
+            if (flyer.Mode == Mode.Break || target == null)
+                wanted = (flyer.Velocity.normalized * 0.4f + flyer.BreakDirection).normalized * maxSpeed;
+            else
+            {
+                // Pursuit: lead the target and sit a little behind and above it.
+                var toTarget = target.Position - flyer.Position;
+                var lead = Mathf.Clamp(toTarget.magnitude / maxSpeed, 0f, 2.5f);
+                var behind = target.Velocity.sqrMagnitude > 1f ? target.Velocity.normalized : Vector3.forward;
+                var aimPoint = target.Position + target.Velocity * lead - behind * 90f + Vector3.up * 15f;
+                var toAim = aimPoint - flyer.Position;
+                // Ease off when close, so they do not ram (but stay fast).
+                var speed = Mathf.Lerp(maxSpeed * 0.75f, maxSpeed, Mathf.InverseLerp(80f, 400f, toAim.magnitude));
+                wanted = toAim.normalized * speed;
+            }
+
+            // Arena: past its edge, turn back towards the centre.
+            var flat = new Vector3(flyer.Position.x - centre.x, 0f, flyer.Position.z - centre.z);
+            var over = flat.magnitude - Arena;
+            if (over > 0f) wanted += -flat.normalized * Mathf.Min(over * 0.6f, maxSpeed * 1.5f);
+
+            // Altitude band, and climb over towers ahead (they have no colliders).
+            var height = flyer.Position.y - centre.y;
+            if (height < altitude.x) wanted.y += (altitude.x - height) * 0.8f;
+            if (height > altitude.y) wanted.y -= (height - altitude.y) * 0.8f;
+            var look = flyer.Position + flyer.Velocity * 2f;
+            foreach (var b in flyover.Buildings)
+            {
+                if (look.x < b.min.x - 40f || look.x > b.max.x + 40f || look.z < b.min.z - 40f || look.z > b.max.z + 40f) continue;
+                if (look.y < b.max.y + 40f) wanted.y = Mathf.Max(wanted.y, (b.max.y + 60f - flyer.Position.y) * 1.2f);
+            }
+
+            // Acceleration toward the wanted velocity, limited by the rotor.
+            var acceleration = Vector3.ClampMagnitude((wanted - flyer.Velocity) * 2.5f, maxAcceleration);
+            flyer.Acceleration = Vector3.Lerp(flyer.Acceleration, acceleration, 1f - Mathf.Exp(-8f * dt));
+            flyer.Velocity = Vector3.ClampMagnitude(flyer.Velocity + flyer.Acceleration * dt, maxSpeed * 1.15f);
+            flyer.Position += flyer.Velocity * dt;
+
+            // Attitude: rotor up = thrust (a + g); nose along the flight path, or onto the target while in the gun cone.
+            var up = (flyer.Acceleration + Vector3.up * 9.81f).normalized;
+            var heading = flyer.Velocity.sqrMagnitude > 1f ? flyer.Velocity.normalized : flyer.Root.forward;
+            if (target != null && flyer.Mode == Mode.Chase && InGunCone(flyer, target, fireCone * 2f)) heading = (target.Position - flyer.Position).normalized;
+            var forward = Vector3.ProjectOnPlane(heading, up);
+            if (forward.sqrMagnitude < 0.001f) forward = flyer.Root.forward;
+            var rotation = Quaternion.LookRotation(forward.normalized, up);
+            flyer.Root.SetPositionAndRotation(flyer.Position, Quaternion.Slerp(flyer.Root.rotation, rotation, 1f - Mathf.Exp(-7f * dt)));
             foreach (var (part, spin) in flyer.Spinners) part.Rotate(spin * dt, Space.Self);
         }
 
-        private void Shoot(Flyer flyer, float t)
+        private bool IsChasedClosely(Flyer flyer)
         {
-            if (flyer.ShotsLeft <= 0)
-            {
-                if (t < flyer.NextBurst) return;
-                flyer.Target = Nearest(flyer);
-                if (flyer.Target == null) return;
-                flyer.ShotsLeft = Random.Range(5, 10);
-                flyer.NextShot = t;
-                flyer.NextBurst = t + Random.Range(1.5f, 4f);
-            }
-            if (t < flyer.NextShot) return;
-            flyer.NextShot = t + 0.07f;
-            flyer.ShotsLeft--;
-
-            var muzzle = flyer.Root.position + flyer.Root.forward * 4f * scale;
-            // Lead the target a little, with a spread so most rounds miss close by.
-            var aim = flyer.Target.Root.position + flyer.Target.Velocity * 0.25f + Random.insideUnitSphere * 18f;
-            Fire(muzzle, (aim - muzzle).normalized, (aim - muzzle).magnitude);
+            foreach (var other in _flyers)
+                if (other.Target == flyer && other.Mode == Mode.Chase && (other.Position - flyer.Position).sqrMagnitude < 250f * 250f &&
+                    InGunCone(other, flyer, fireCone * 1.5f))
+                    return true;
+            return false;
         }
 
-        private Flyer Nearest(Flyer from)
+        private bool InGunCone(Flyer shooter, Flyer target, float cone)
         {
-            Flyer best = null;
-            var bestDistance = float.MaxValue;
-            foreach (var other in _flyers)
+            var to = target.Position - shooter.Position;
+            if (to.sqrMagnitude > fireRange * fireRange) return false;
+            return Vector3.Angle(shooter.Root.forward, to) <= cone;
+        }
+
+        /// <summary>Bursts only with the nose on the target, in range; tracers along the nose with a little spread.</summary>
+        private void Shoot(Flyer flyer, float t)
+        {
+            var target = flyer.Target;
+            if (target == null || flyer.Mode != Mode.Chase) return;
+            if (flyer.ShotsLeft <= 0)
             {
-                if (other == from) continue;
-                var d = (other.Root.position - from.Root.position).sqrMagnitude;
-                if (d < bestDistance)
-                {
-                    bestDistance = d;
-                    best = other;
-                }
+                if (t < flyer.NextBurst || !InGunCone(flyer, target, fireCone)) return;
+                flyer.ShotsLeft = Random.Range(6, 14);
+                flyer.NextShot = t;
+                flyer.NextBurst = t + Random.Range(0.6f, 1.6f);
             }
-            return best;
+            if (t < flyer.NextShot) return;
+            flyer.NextShot = t + 0.06f;
+            flyer.ShotsLeft--;
+
+            var muzzle = flyer.Position + flyer.Root.forward * 4f * scale - flyer.Root.up * 1.5f * scale;
+            var toTarget = target.Position + target.Velocity * ((target.Position - muzzle).magnitude / tracerSpeed) - muzzle;
+            var direction = Vector3.Slerp(flyer.Root.forward, toTarget.normalized, 0.6f);
+            direction = Quaternion.Euler(Random.Range(-1.2f, 1.2f), Random.Range(-1.2f, 1.2f), 0f) * direction;
+            Fire(muzzle, direction.normalized, toTarget.magnitude);
         }
 
         private void Fire(Vector3 start, Vector3 direction, float range)
