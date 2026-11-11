@@ -128,4 +128,19 @@ namespace Chopper.Presentation.Events
             Kind = kind;
         }
     }
+
+    /// <summary>
+    /// This client's link to the server closed: lost, timed out, refused, or the server stopped. <see cref="WasConnected"/>
+    /// is false when the connect itself failed (no server at the address, or a different game version).
+    /// </summary>
+    public readonly struct ConnectionLost
+    {
+        public readonly Unity.NetCode.NetworkStreamDisconnectReason Reason;
+        public readonly bool WasConnected;
+        public ConnectionLost(Unity.NetCode.NetworkStreamDisconnectReason reason, bool wasConnected)
+        {
+            Reason = reason;
+            WasConnected = wasConnected;
+        }
+    }
 }

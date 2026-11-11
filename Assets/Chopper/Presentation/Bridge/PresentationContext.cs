@@ -36,6 +36,8 @@ namespace Chopper.Presentation.Bridge
         private SoundLoop _ambience;
         /// <summary>0 = chase view, 1 = cockpit view; moves slowly, so the sound changes with the camera blend.</summary>
         private float _cockpitMuffle;
+        /// <summary>The server link closed (notice shown); <see cref="_leftAfterLinkLost"/> once the way out started.</summary>
+        private bool _linkLost, _leftAfterLinkLost;
         /// <summary>Only <c>Flight/Scoreboard</c> is on here; the flight actions are read by the simulation.</summary>
         private readonly Simulation.Input.PlayerControls _controls = new();
 
@@ -59,6 +61,7 @@ namespace Chopper.Presentation.Bridge
             _owned.Add(new CombatFeedback(this));
             _owned.Add(new MatchFeedback(this));
             _owned.Add(new TargetingFeedback(this));
+            _owned.Add(Events.Subscribe<ConnectionLost>(OnConnectionLost));
             _controls.Flight.Scoreboard.Enable();
             Prompts = new InputPrompts(_controls);
             Prompts.Changed += ApplyPromptKeys;
@@ -166,6 +169,37 @@ namespace Chopper.Presentation.Bridge
             return true;
         }
 
+        /// <summary>Shows why the link closed, then leaves (<see cref="LeaveAfterLinkLost"/>, from <see cref="Tick"/>).</summary>
+        private void OnConnectionLost(ConnectionLost message)
+        {
+            if (_linkLost) return;
+            _linkLost = true;
+            Debug.LogWarning($"Server link closed: {message.Reason} (was connected: {message.WasConnected}).");
+            Notify(ConnectionNotice.Title(message.WasConnected), ConnectionNotice.Text(message.Reason, message.WasConnected),
+                NoticeKind.Error, 8f);
+        }
+
+        /// <summary>
+        /// Not done in <see cref="OnConnectionLost"/>: that runs inside the client world's update, which must not
+        /// dispose itself. A match goes back to the home screen (the hangar without one), worlds stopped once the screen
+        /// is covered. A menu scene (the hangar joining a server) stops the dead worlds at once and stays, ready for the
+        /// next join; the hangar sees the worlds are gone and stops waiting. False while a transition runs (try again).
+        /// </summary>
+        private bool LeaveAfterLinkLost()
+        {
+            if (!IsMatchScene)
+            {
+                Simulation.Session.LocalSession.Stop();
+                _linkLost = false;
+                return false;
+            }
+            MenuOpen = false;
+            if (CanOpenHome) return LoadScene(Menu.HomeModel.SceneName, Simulation.Session.LocalSession.Stop, "LINK LOST");
+            if (CanOpenHangar) return LoadScene(HangarStage.SceneName, Simulation.Session.LocalSession.Stop, "LINK LOST");
+            Simulation.Session.LocalSession.Stop();
+            return true;
+        }
+
         /// <summary>Editor tuning: runs the transition with no scene change. False with no scene flow or while one runs.</summary>
         public bool PreviewTransition() => _flow != null && !_flow.IsDisposed && _flow.Preview();
 
@@ -257,6 +291,7 @@ namespace Chopper.Presentation.Bridge
         public void Tick(float deltaTime, float unscaledDeltaTime)
         {
             _audio.Tick(unscaledDeltaTime);
+            if (_linkLost && !_leftAfterLinkLost) _leftAfterLinkLost = LeaveAfterLinkLost();
             UpdateMusicLevel();
             UpdateOutsideSounds(unscaledDeltaTime);
             // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.

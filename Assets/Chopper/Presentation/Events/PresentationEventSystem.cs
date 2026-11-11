@@ -1,6 +1,7 @@
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Match;
+using Chopper.Simulation.Session;
 using Unity.Entities;
 using Unity.NetCode;
 
@@ -28,6 +29,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _missileDetonations;
         private EntityQuery _clusterSplits;
         private EntityQuery _chopperHits;
+        private EntityQuery _disconnects;
         private int _localNetworkId;
 
         protected override void OnCreate()
@@ -45,12 +47,19 @@ namespace Chopper.Presentation.Events
             _missileDetonations = Rpc<MissileDetonatedRpc>();
             _clusterSplits = Rpc<ClusterSplitRpc>();
             _chopperHits = Rpc<ChopperHitRpc>();
+            _disconnects = GetEntityQuery(ComponentType.ReadOnly<ClientDisconnect>());
         }
 
         protected override void OnUpdate()
         {
             if (TryGetContext(out var context))
+            {
                 Publish(context.Events);
+                // Kept until a scene's presentation hears it: a link lost during a scene load reaches the next scene.
+                foreach (var disconnect in SystemAPI.Query<RefRO<ClientDisconnect>>())
+                    context.Events.Publish(new ConnectionLost(disconnect.ValueRO.Reason, disconnect.ValueRO.WasConnected != 0));
+                EntityManager.DestroyEntity(_disconnects);
+            }
 
             EntityManager.DestroyEntity(_hitConfirms);
             EntityManager.DestroyEntity(_damageTaken);

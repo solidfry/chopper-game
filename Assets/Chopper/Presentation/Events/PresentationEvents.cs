@@ -29,6 +29,7 @@ namespace Chopper.Presentation.Events
             builder.AddMessageBroker<RocketLaunched>();
             builder.AddMessageBroker<MissileDetonated>();
             builder.AddMessageBroker<ChopperHit>();
+            builder.AddMessageBroker<ConnectionLost>();
             _provider = builder.BuildServiceProvider();
         }
 

@@ -1120,13 +1120,23 @@ namespace Chopper.Presentation.Hangar
             // The server picked the map (random from the match pool); it tells us on connect.
             _model.SetMatchStatus("LOADING MAP", true);
             var scene = await AnnouncedMapScene(token);
+            if (scene == null)
+            {
+                // The link closed before the map came (the context showed why and stopped the worlds).
+                _launching = false;
+                if (this != null) _model.SetMatchStatus("CONNECTION FAILED", false);
+                return;
+            }
             _context.LoadScene(scene, label: "MATCH // " + SceneFlow.Pretty(scene));
         }
 
         /// <summary>Seconds to wait for the server's map before loading <see cref="matchScene"/> (an older server build).</summary>
         private const float MapAnnouncementTimeout = 20f;
 
-        /// <summary>The scene of the map the joined server announced (<see cref="AnnouncedMap"/>, sent on connect).</summary>
+        /// <summary>
+        /// The scene of the map the joined server announced (<see cref="AnnouncedMap"/>, sent on connect). Null when the
+        /// client world is gone: the link closed and the context stopped the worlds.
+        /// </summary>
         private async UniTask<string> AnnouncedMapScene(CancellationToken token)
         {
             var maps = _context.Config != null ? _context.Config.Maps : null;
@@ -1134,9 +1144,11 @@ namespace Chopper.Presentation.Hangar
             while (Time.realtimeSinceStartup < until)
             {
                 token.ThrowIfCancellationRequested();
+                var client = false;
                 foreach (var world in Unity.Entities.World.All)
                 {
                     if (!world.IsCreated || !Unity.NetCode.ClientServerWorldExtensions.IsClient(world)) continue;
+                    client = true;
                     using var query = world.EntityManager.CreateEntityQuery(typeof(AnnouncedMap));
                     if (query.IsEmpty) continue;
                     var id = query.GetSingleton<AnnouncedMap>().MapId;
@@ -1145,6 +1157,7 @@ namespace Chopper.Presentation.Hangar
                     Debug.LogWarning($"Server map {id} is not in this build's map catalog; loading {matchScene}.");
                     return matchScene;
                 }
+                if (!client) return null;
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
             Debug.LogWarning($"The server did not say its map in {MapAnnouncementTimeout} s; loading {matchScene}.");
