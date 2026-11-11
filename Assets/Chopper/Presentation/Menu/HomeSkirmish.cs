@@ -43,10 +43,20 @@ namespace Chopper.Presentation.Menu
         private float fireRange = 600f;
         [SerializeField, Tooltip("Half-angle of the gun cone, degrees.")]
         private float fireCone = 14f;
-        [SerializeField, Range(0.3f, 6f), Tooltip("How fast the wanted direction may change (per second): lower = wider, softer turns.")]
-        private float steerEase = 1.4f;
-        [SerializeField, Range(0.5f, 10f), Tooltip("How fast thrust (and so bank and pitch) builds and fades (per second).")]
-        private float thrustEase = 2.2f;
+        [SerializeField, Tooltip("Fastest turn, degrees per second (sets the tightest circle at speed).")]
+        private float maxTurnRate = 42f;
+        [SerializeField, Tooltip("How fast the turn rate builds and fades, degrees per second² (roll in / roll out).")]
+        private float turnAcceleration = 30f;
+        [SerializeField, Tooltip("Turn rate per degree of heading error (lower = lazier, never springy).")]
+        private float turnGain = 0.9f;
+        [SerializeField, Tooltip("Steepest climb or dive, degrees.")]
+        private float maxClimbAngle = 25f;
+        [SerializeField, Tooltip("How fast the climb angle changes, degrees per second.")]
+        private float climbRate = 18f;
+        [SerializeField, Tooltip("How fast speed changes, m/s².")]
+        private float speedChange = 9f;
+        [SerializeField, Range(0.5f, 10f), Tooltip("Smoothing of the felt thrust (bank and pitch), per second.")]
+        private float thrustEase = 4f;
         [SerializeField, Range(0.5f, 10f), Tooltip("How fast the body follows its attitude (per second).")]
         private float bodyEase = 3.5f;
         [SerializeField] private float tracerSpeed = 900f;
@@ -62,8 +72,11 @@ namespace Chopper.Presentation.Menu
             public Vector3 Position;
             public Vector3 Velocity;
             public Vector3 Acceleration;
-            /// <summary>The wanted velocity, eased (direction changes build over a second or two).</summary>
-            public Vector3 SmoothWanted;
+            /// <summary>Heading, degrees (0 = +Z); turn rate, degrees per second; climb angle, degrees; speed, m/s.</summary>
+            public float Yaw;
+            public float YawRate;
+            public float Climb;
+            public float Speed;
             /// <summary>0 = nose along the flight path, 1 = nose on the target; eased.</summary>
             public float AimBlend;
             public Flyer Target;
@@ -169,6 +182,8 @@ namespace Chopper.Presentation.Menu
                     Root = root,
                     Position = start,
                     Velocity = heading * maxSpeed * 0.7f,
+                    Yaw = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg,
+                    Speed = maxSpeed * 0.7f,
                     Mode = Mode.Chase,
                     ModeEnd = Time.unscaledTime + Random.Range(chaseSeconds.x, chaseSeconds.y),
                 });
@@ -282,9 +297,10 @@ namespace Chopper.Presentation.Menu
         private float Arena => flyover.Radius * arenaScale;
 
         /// <summary>
-        /// Steering: a wanted velocity (chase a point behind the target, or break away hard), then acceleration toward it
-        /// within the rotor's limit, plus arena, altitude and tower avoidance. Attitude from the thrust: the rotor points
-        /// along acceleration + gravity, so turns bank, speeding up dips the nose and braking flares it.
+        /// Steering: a wanted velocity (chase a point behind the target, or break away hard), with arena, altitude and
+        /// tower avoidance; then bank-to-turn flight toward it (limited, eased turn rate; limited climb and speed change).
+        /// Attitude from the thrust: the rotor points along acceleration + gravity, so turns bank, speeding up dips the
+        /// nose and braking flares it.
         /// </summary>
         private void Fly(Flyer flyer, float t, float dt)
         {
@@ -330,35 +346,50 @@ namespace Chopper.Presentation.Menu
             // Arena: past its edge, turn back towards the centre.
             var flat = new Vector3(flyer.Position.x - centre.x, 0f, flyer.Position.z - centre.z);
             var over = flat.magnitude - Arena;
-            if (over > 0f) wanted += -flat.normalized * Mathf.Min(over * 0.6f, maxSpeed * 1.5f);
+            if (over > 0f) wanted = Vector3.Lerp(wanted, -flat.normalized * maxSpeed, Mathf.Clamp01(over / 300f));
 
             // Altitude band, and climb over towers ahead (they have no colliders).
             var height = flyer.Position.y - centre.y;
             if (height < altitude.x) wanted.y += (altitude.x - height) * 0.8f;
             if (height > altitude.y) wanted.y -= (height - altitude.y) * 0.8f;
-            var look = flyer.Position + flyer.Velocity * 2f;
+            var look = flyer.Position + flyer.Velocity * 4f;
             foreach (var b in flyover.Buildings)
             {
                 if (look.x < b.min.x - 40f || look.x > b.max.x + 40f || look.z < b.min.z - 40f || look.z > b.max.z + 40f) continue;
                 if (look.y < b.max.y + 40f) wanted.y = Mathf.Max(wanted.y, (b.max.y + 60f - flyer.Position.y) * 1.2f);
             }
 
-            // Ease the wanted velocity (no snap on a mode or target change), then accelerate toward it within the rotor
-            // limit; thrust builds and fades over time (a jerk limit), so banks roll in and out.
-            if (flyer.SmoothWanted == Vector3.zero) flyer.SmoothWanted = flyer.Velocity;
-            flyer.SmoothWanted = Vector3.Lerp(flyer.SmoothWanted, wanted, 1f - Mathf.Exp(-steerEase * dt));
-            var acceleration = Vector3.ClampMagnitude((flyer.SmoothWanted - flyer.Velocity) * 1.2f, maxAcceleration);
-            flyer.Acceleration = Vector3.Lerp(flyer.Acceleration, acceleration, 1f - Mathf.Exp(-thrustEase * dt));
-            flyer.Velocity = Vector3.ClampMagnitude(flyer.Velocity + flyer.Acceleration * dt, maxSpeed * 1.15f);
+            // Bank-to-turn flight, no springs (they overshoot and swing back): the heading turns at a rate that is itself
+            // limited and eased (roll in, roll out); climb angle and speed change at limited rates. A chopper that passes
+            // its target simply keeps turning in a wide arc.
+            var oldVelocity = flyer.Velocity;
+            var flatWanted = new Vector2(wanted.x, wanted.z);
+            if (flatWanted.sqrMagnitude > 0.01f)
+            {
+                var wantedYaw = Mathf.Atan2(flatWanted.x, flatWanted.y) * Mathf.Rad2Deg;
+                var error = Mathf.DeltaAngle(flyer.Yaw, wantedYaw);
+                var targetRate = Mathf.Clamp(error * turnGain, -maxTurnRate, maxTurnRate);
+                flyer.YawRate = Mathf.MoveTowards(flyer.YawRate, targetRate, turnAcceleration * dt);
+            }
+            flyer.Yaw += flyer.YawRate * dt;
+            var wantedClimb = Mathf.Clamp(Mathf.Atan2(wanted.y, Mathf.Max(flatWanted.magnitude, 1f)) * Mathf.Rad2Deg, -maxClimbAngle, maxClimbAngle);
+            flyer.Climb = Mathf.MoveTowards(flyer.Climb, wantedClimb, climbRate * dt);
+            flyer.Speed = Mathf.MoveTowards(flyer.Speed, Mathf.Min(wanted.magnitude, maxSpeed), speedChange * dt);
+            var direction = Quaternion.Euler(-flyer.Climb, flyer.Yaw, 0f) * Vector3.forward;
+            flyer.Velocity = direction * flyer.Speed;
             flyer.Position += flyer.Velocity * dt;
 
-            // Attitude: rotor up = thrust (a + g); nose along the flight path, or onto the target while in the gun cone.
+            // Attitude: rotor up = thrust (a + g), from the real change in velocity (smoothed a little: no jitter), so the
+            // bank follows the turn rate and the nose dips or flares with speed changes.
+            var acceleration = (flyer.Velocity - oldVelocity) / dt;
+            flyer.Acceleration = Vector3.Lerp(flyer.Acceleration, Vector3.ClampMagnitude(acceleration, maxAcceleration), 1f - Mathf.Exp(-thrustEase * dt));
             var up = (flyer.Acceleration + Vector3.up * 9.81f).normalized;
-            var heading = flyer.Velocity.sqrMagnitude > 1f ? flyer.Velocity.normalized : flyer.Root.forward;
+            var heading = direction;
+            // In the gun cone the nose swings a little onto the target (pedal turn), eased in and out.
             var aiming = target != null && flyer.Mode == Mode.Chase && InGunCone(flyer, target, fireCone * 2f);
-            flyer.AimBlend = Mathf.MoveTowards(flyer.AimBlend, aiming ? 1f : 0f, dt * 1.5f);
+            flyer.AimBlend = Mathf.MoveTowards(flyer.AimBlend, aiming ? 1f : 0f, dt * 0.8f);
             if (target != null && flyer.AimBlend > 0f)
-                heading = Vector3.Slerp(heading, (target.Position - flyer.Position).normalized, Mathf.SmoothStep(0f, 0.7f, flyer.AimBlend));
+                heading = Vector3.Slerp(heading, (target.Position - flyer.Position).normalized, Mathf.SmoothStep(0f, 0.35f, flyer.AimBlend));
             var forward = Vector3.ProjectOnPlane(heading, up);
             if (forward.sqrMagnitude < 0.001f) forward = flyer.Root.forward;
             var rotation = Quaternion.LookRotation(forward.normalized, up);
