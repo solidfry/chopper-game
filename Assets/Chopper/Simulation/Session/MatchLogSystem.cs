@@ -31,7 +31,8 @@ namespace Chopper.Simulation.Session
     /// damage kind, distance, both positions, victim's life length.</item>
     /// <item><c>shots</c> and <c>hits</c>: summed per second per (player, weapon) and (player, target, weapon, kind):
     /// count, damage, mean distance. Crashes, bounds and damage over time are hits with actor 0 or the attacker.</item>
-    /// <item><c>flare</c>, <c>decoy</c> (a heat seeker lost its target), <c>missile</c> (end: impact, proximity, expired).</item>
+    /// <item><c>flare</c>, <c>decoy</c> (a heat seeker lost its target), <c>missile</c> (end: impact, proximity, expired),
+    /// <c>repair</c> (health mended by one field repair), <c>ability</c> (pilot ability started).</item>
     /// <item><c>pos</c>: every second, each chopper as [id, x, y, z, speed, health].</item>
     /// <item><c>load</c>: from <see cref="LoadLogSystem"/>.</item>
     /// </list>
@@ -104,9 +105,7 @@ namespace Chopper.Simulation.Session
                 return;
             }
             _toConsole = true;
-            var entity = EntityManager.CreateEntity();
-            EntityManager.SetName(entity, "MatchLog");
-            EntityManager.AddBuffer<MatchLogEntry>(entity);
+            // The buffer itself belongs to MatchStatsSystem, which also clears it after this system.
             OpenFile();
         }
 
@@ -333,9 +332,21 @@ namespace Chopper.Simulation.Session
                         Position("pos", entry.ActorPosition);
                         End();
                         break;
+                    case MatchLogKind.Repair:
+                        Begin(entry.Time, "repair");
+                        Field("id", entry.Actor);
+                        Field("hp", entry.Amount);
+                        End();
+                        break;
+                    case MatchLogKind.Ability:
+                        Begin(entry.Time, "ability");
+                        Field("id", entry.Actor);
+                        Field("ability", ((AbilityKind)entry.Detail).ToString());
+                        Position("pos", entry.ActorPosition);
+                        End();
+                        break;
                 }
             }
-            buffer.Clear();
         }
 
         private void WriteSums(double now)

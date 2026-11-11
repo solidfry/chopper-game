@@ -1,0 +1,70 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:home="Chopper.UI.Home" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
+  <Style src="MatchResults.uss" />
+  <!-- End-of-match screen (MatchResultsView): the cards from the Figma "EndGame" frame (kills green, deaths red,
+       score yellow), the pilot, the XP count-up and level bar, and an award card for each pilot. Lists are filled
+       from code; the step classes (results, step 1 to 4) bring the parts in one after the other. -->
+  <ui:VisualElement name="results" class="results results--hidden">
+    <ui:VisualElement class="results__shade" picking-mode="Ignore" />
+    <home:CodecScan name="scan" class="results__scan" picking-mode="Ignore" />
+
+    <ui:VisualElement class="results__frame" picking-mode="Ignore">
+      <!-- Title -->
+      <ui:VisualElement class="results__head" picking-mode="Ignore">
+        <ui:Label text="// DEBRIEF" class="results__kicker chopper-title" picking-mode="Ignore" />
+        <ui:Label text="MATCH ENDED" class="results__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="banner" text="VICTORY" class="results__banner chopper-title" picking-mode="Ignore" />
+        <ui:Label name="next" class="results__next chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+
+      <!-- Pilot and the three cards -->
+      <ui:VisualElement class="results__cards" picking-mode="Ignore">
+        <ui:VisualElement name="pilot" class="results-pilot" picking-mode="Ignore">
+          <ui:VisualElement name="pilot-picture" class="results-pilot__picture" picking-mode="Ignore" />
+          <home:CodecScan class="results-pilot__scan" picking-mode="Ignore" />
+          <ui:Label name="pilot-name" class="results-pilot__name chopper-title" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="results-card results-card--kills" picking-mode="Ignore">
+          <ui:Label name="kills" text="0" class="results-card__value chopper-title" picking-mode="Ignore" />
+          <ui:Label text="KILLS" class="results-card__label chopper-title" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="results-card results-card--deaths" picking-mode="Ignore">
+          <ui:Label name="deaths" text="0" class="results-card__value chopper-title" picking-mode="Ignore" />
+          <ui:Label text="DEATHS" class="results-card__label chopper-title" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="results-card results-card--score" picking-mode="Ignore">
+          <ui:Label name="score" text="0" class="results-card__value chopper-title" picking-mode="Ignore" />
+          <ui:Label name="score-label" text="SCORE" class="results-card__label chopper-title" picking-mode="Ignore" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- XP and awards -->
+      <ui:VisualElement class="results__lower" picking-mode="Ignore">
+        <ui:VisualElement class="results-xp" picking-mode="Ignore">
+          <ui:Label text="// EXPERIENCE" class="results__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="xp-lines" class="results-xp__lines" picking-mode="Ignore" />
+          <ui:VisualElement class="results-xp__total-row" picking-mode="Ignore">
+            <ui:Label text="TOTAL" class="results-xp__total-label chopper-title" picking-mode="Ignore" />
+            <ui:Label name="xp-total" text="+0" class="results-xp__total chopper-title" picking-mode="Ignore" />
+          </ui:VisualElement>
+          <ui:VisualElement class="results-xp__level-row" picking-mode="Ignore">
+            <ui:Label name="level" text="LVL 1" class="results-xp__level chopper-title" picking-mode="Ignore" />
+            <ui:Label name="level-up" text="LEVEL UP" class="results-xp__level-up chopper-title" picking-mode="Ignore" />
+            <ui:Label name="level-need" class="results-xp__need chopper-body" picking-mode="Ignore" />
+          </ui:VisualElement>
+          <cockpit:SegmentBar name="level-bar" segments="24" gap="3" class="results-xp__bar" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="results-awards" picking-mode="Ignore">
+          <ui:Label text="// COMMENDATIONS" class="results__section chopper-title" picking-mode="Ignore" />
+          <ui:ScrollView name="awards" mode="Vertical" horizontal-scroller-visibility="Hidden" class="results-awards__list" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- Buttons -->
+      <ui:VisualElement class="results__buttons" picking-mode="Ignore">
+        <ui:Button name="play-again" text="[ PLAY AGAIN ]" class="results__button results__button--primary chopper-title" />
+        <ui:Button name="home" text="[ HOME ]" class="results__button chopper-title" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

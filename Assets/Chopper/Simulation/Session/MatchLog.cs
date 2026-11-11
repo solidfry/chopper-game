@@ -18,6 +18,10 @@ namespace Chopper.Simulation.Session
         MissileDecoyed = 4,
         /// <summary>A missile detonated or ran out; <see cref="MatchLogEntry.Detail"/> is a <see cref="MissileOutcome"/>.</summary>
         MissileEnd = 5,
+        /// <summary>A field repair ended; <see cref="MatchLogEntry.Amount"/> is the health it mended.</summary>
+        Repair = 6,
+        /// <summary>The actor started their pilot ability; <see cref="MatchLogEntry.Detail"/> is its <see cref="AbilityKind"/>.</summary>
+        Ability = 7,
     }
 
     public enum MissileOutcome : byte
@@ -30,8 +34,9 @@ namespace Chopper.Simulation.Session
 
     /// <summary>
     /// Server only. One gameplay event for the match log. Simulation systems (Burst) append to the singleton buffer when
-    /// it exists (<c>SystemAPI.TryGetSingletonBuffer</c>); <see cref="MatchLogSystem"/> makes it only when logging is on,
-    /// writes the entries as JSON lines and clears it each frame. Network ids: 0 = no player (environment, training
+    /// it exists (<c>SystemAPI.TryGetSingletonBuffer</c>). <see cref="Match.MatchStatsSystem"/> makes it on every server,
+    /// counts the match stats from it and clears it each frame; <see cref="MatchLogSystem"/> (when logging is on) reads it
+    /// first and writes the entries as JSON lines. Network ids: 0 = no player (environment, training
     /// target).
     /// </summary>
     [InternalBufferCapacity(0)]

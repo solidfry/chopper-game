@@ -23,7 +23,7 @@ namespace Chopper.Simulation.Match
         {
             TimeLimit = 600f,
             ScoreLimit = 20,
-            PostGameDuration = 10f,
+            PostGameDuration = 20f,
             KillCreditSeconds = 5f,
         };
     }

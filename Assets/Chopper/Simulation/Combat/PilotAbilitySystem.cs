@@ -39,6 +39,8 @@ namespace Chopper.Simulation.Combat
             var deltaTime = SystemAPI.Time.DeltaTime;
             var isServer = state.WorldUnmanaged.IsServer();
             var pulses = new NativeList<Pulse>(2, Allocator.Temp);
+            var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log);
+            var elapsed = SystemAPI.Time.ElapsedTime;
 
             foreach (var (input, config, ability, countermeasure, transform, entity) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<AbilityConfig>, RefRW<AbilityState>, RefRW<CountermeasureState>,
@@ -51,6 +53,17 @@ namespace Chopper.Simulation.Combat
                 if (!input.ValueRO.Ability.IsSet || !Abilities.TryActivate(ref now, config.ValueRO)) continue;
 
                 var cfg = config.ValueRO;
+                // The log buffer is server only: one entry per ability started (match stats, match log).
+                if (hasLog)
+                    log.Add(new Session.MatchLogEntry
+                    {
+                        Kind = Session.MatchLogKind.Ability,
+                        Time = elapsed,
+                        Actor = SystemAPI.HasComponent<GhostOwner>(entity) ? SystemAPI.GetComponent<GhostOwner>(entity).NetworkId : 0,
+                        Detail = (byte)cfg.Kind,
+                        ActorPosition = transform.ValueRO.Position,
+                        Distance = -1f,
+                    });
                 if (cfg.Kind is AbilityKind.Ghost or AbilityKind.StripDown)
                 {
                     ref var flares = ref countermeasure.ValueRW;

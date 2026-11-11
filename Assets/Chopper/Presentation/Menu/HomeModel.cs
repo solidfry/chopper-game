@@ -20,12 +20,14 @@ namespace Chopper.Presentation.Menu
         public const string SceneName = "Home";
 
         private readonly LoadoutChoiceStore _store;
+        private readonly Results.PilotProgress _progress;
         private readonly List<PilotCard> _pilots = new();
         private readonly List<MapCatalog.MapEntry> _trainingMaps = new();
 
-        public HomeModel(LoadoutCatalog catalog, LoadoutChoiceStore store, MapCatalog maps)
+        public HomeModel(LoadoutCatalog catalog, LoadoutChoiceStore store, MapCatalog maps, Results.PilotProgress progress = null)
         {
             _store = store;
+            _progress = progress;
             if (catalog != null)
                 foreach (var pilot in catalog.Pilots)
                     if (pilot != null) _pilots.Add(new PilotCard(pilot, locked: false));
@@ -86,9 +88,17 @@ namespace Chopper.Presentation.Menu
 
         /// <summary>Player name on the profile card. Steam names later (plan: progression, Steam).</summary>
         public string OperatorName => "OPERATOR";
-        /// <summary>No progression yet: level 1, empty bar.</summary>
-        public int Level => 1;
-        public float LevelProgress => 0f;
+        /// <summary>From the local XP total (<see cref="Results.PilotProgress"/>); level 1 and an empty bar without it.</summary>
+        public int Level => _progress != null ? Results.PilotLevels.Level(_progress.TotalXp, out _, out _) : 1;
+        public float LevelProgress
+        {
+            get
+            {
+                if (_progress == null) return 0f;
+                Results.PilotLevels.Level(_progress.TotalXp, out var into, out var needed);
+                return needed > 0 ? (float)into / needed : 0f;
+            }
+        }
 
         public bool HasTrainingMap => TrainingMap != null;
         /// <summary>Scene of <see cref="TrainingMap"/>; null when none.</summary>

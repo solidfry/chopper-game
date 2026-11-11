@@ -9,7 +9,7 @@ namespace Chopper.Simulation.Match
     {
         [SerializeField, Tooltip("Seconds.")] private float timeLimit = 600f;
         [SerializeField] private int scoreLimit = 20;
-        [SerializeField, Tooltip("Seconds.")] private float postGameDuration = 10f;
+        [SerializeField, Tooltip("Seconds.")] private float postGameDuration = 20f;
         [SerializeField, Tooltip("Seconds.")] private float killCreditSeconds = 5f;
 
         private sealed class Baker : Baker<MatchRulesAuthoring>

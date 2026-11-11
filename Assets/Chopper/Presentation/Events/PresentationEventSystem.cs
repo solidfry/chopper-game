@@ -22,6 +22,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _playersLeft;
         private EntityQuery _kills;
         private EntityQuery _matchStates;
+        private EntityQuery _matchStats;
         private EntityQuery _remoteRockets;
         private EntityQuery _localRockets;
         private EntityQuery _missileDetonations;
@@ -38,6 +39,7 @@ namespace Chopper.Presentation.Events
             _playersLeft = Rpc<PlayerLeftRpc>();
             _kills = Rpc<KillFeedRpc>();
             _matchStates = Rpc<MatchStateRpc>();
+            _matchStats = Rpc<MatchStatsRpc>();
             _remoteRockets = Rpc<RocketLaunchRpc>();
             _localRockets = GetEntityQuery(ComponentType.ReadOnly<LocalRocketLaunch>());
             _missileDetonations = Rpc<MissileDetonatedRpc>();
@@ -56,6 +58,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_playersLeft);
             EntityManager.DestroyEntity(_kills);
             EntityManager.DestroyEntity(_matchStates);
+            EntityManager.DestroyEntity(_matchStats);
             EntityManager.DestroyEntity(_remoteRockets);
             EntityManager.DestroyEntity(_localRockets);
             EntityManager.DestroyEntity(_missileDetonations);
@@ -75,6 +78,8 @@ namespace Chopper.Presentation.Events
             // Match state first, so scores and kills land in the right match.
             foreach (var rpc in SystemAPI.Query<RefRO<MatchStateRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new MatchStateChanged((MatchPhase)rpc.ValueRO.Phase, rpc.ValueRO.TimeRemaining, rpc.ValueRO.WinnerNetworkId));
+            foreach (var rpc in SystemAPI.Query<RefRO<MatchStatsRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                events.Publish(new MatchStatsReceived(rpc.ValueRO.NetworkId, rpc.ValueRO.ToStats()));
             foreach (var rpc in SystemAPI.Query<RefRO<ScoreRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new ScoreChanged(rpc.ValueRO.NetworkId, rpc.ValueRO.Kills, rpc.ValueRO.Deaths));
             foreach (var rpc in SystemAPI.Query<RefRO<PlayerLeftRpc>>().WithAll<ReceiveRpcCommandRequest>())

@@ -16,6 +16,7 @@ namespace Chopper.Editor.Setup
         private const string ThemePath = "Assets/Chopper/UI/Theme/ChopperRuntimeTheme.tss";
         private const string HudLayoutPath = "Assets/Chopper/UI/Hud/ChopperHud.uxml";
         private const string OptionsLayoutPath = "Assets/Chopper/UI/Options/OptionsMenu.uxml";
+        private const string ResultsLayoutPath = "Assets/Chopper/UI/Results/MatchResults.uxml";
         private const string CameraSettingsPath = "Assets/Chopper/Data/Camera/CameraSettings.asset";
         private const string SpeedLineShaderPath = "Assets/Chopper/Presentation/Camera/SpeedLine.shader";
 
@@ -61,6 +62,9 @@ namespace Chopper.Editor.Setup
                     config.OptionsLayout != null ? config.OptionsLayout : options,
                     config.Camera != null ? config.Camera : cameraSettings);
             }
+
+            if (config.ResultsLayout == null)
+                config.SetResults(AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(ResultsLayoutPath));
 
             if (config.CockpitScreensLayout == null || config.CockpitScreensPanel == null)
                 config.SetCockpitScreens(

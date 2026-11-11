@@ -4,7 +4,7 @@ using Chopper.Presentation.Events;
 
 namespace Chopper.Presentation.Feedback
 {
-    /// <summary>Fills the <see cref="Hud.MatchHudModel"/> from match messages and plays the match end sound.</summary>
+    /// <summary>Fills the <see cref="Hud.MatchHudModel"/> and the results (<see cref="Results.MatchResultsModel"/>) from match messages and plays the match end sound.</summary>
     public sealed class MatchFeedback : IDisposable
     {
         private readonly PresentationContext _context;
@@ -21,6 +21,7 @@ namespace Chopper.Presentation.Feedback
                 events.Subscribe<PlayerLeft>(m => context.Match.RemovePlayer(m.NetworkId)),
                 events.Subscribe<PlayerKilled>(m => context.Match.AddKill(m.KillerNetworkId, m.VictimNetworkId)),
                 events.Subscribe<MatchStateChanged>(OnMatchState),
+                events.Subscribe<MatchStatsReceived>(m => context.Results.ApplyStats(m.NetworkId, m.Stats)),
             };
         }
 
@@ -33,6 +34,7 @@ namespace Chopper.Presentation.Feedback
         {
             var wasOver = _context.Match.BannerVisible;
             _context.Match.SetMatch(state.Phase, state.TimeRemaining, state.WinnerNetworkId);
+            _context.Results.SetMatch(state.Phase, state.WinnerNetworkId);
 
             var sounds = _context.Sounds;
             if (!wasOver && _context.Match.BannerVisible && sounds != null)

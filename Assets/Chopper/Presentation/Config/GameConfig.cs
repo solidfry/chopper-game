@@ -38,6 +38,7 @@ namespace Chopper.Presentation.Config
         private PanelSettings panelSettings;
         [SerializeField] private VisualTreeAsset hudLayout;
         [SerializeField, Tooltip("In-game options overlay (Escape).")] private VisualTreeAsset optionsLayout;
+        [SerializeField, Tooltip("End-of-match screen (stats, awards, XP). Setup links it.")] private VisualTreeAsset resultsLayout;
         [SerializeField, Tooltip("Retro HUD look: presets, intensities, gameplay reactions. Empty = plain UI HUD.")]
         private HudLookSettings hudLook;
         [SerializeField, Tooltip("Hangar screen (loadout and skin). Setup step 7 links it.")] private VisualTreeAsset hangarLayout;
@@ -63,6 +64,7 @@ namespace Chopper.Presentation.Config
         public PanelSettings PanelSettings => panelSettings;
         public VisualTreeAsset HudLayout => hudLayout;
         public VisualTreeAsset OptionsLayout => optionsLayout;
+        public VisualTreeAsset ResultsLayout => resultsLayout;
         public HudLookSettings HudLook => hudLook;
         public VisualTreeAsset HangarLayout => hangarLayout;
         public VisualTreeAsset HomeLayout => homeLayout;
@@ -82,6 +84,7 @@ namespace Chopper.Presentation.Config
             Require(panelSettings, "panel settings", problems);
             Require(hudLayout, "HUD layout", problems);
             Require(optionsLayout, "options layout", problems);
+            Require(resultsLayout, "match results layout", problems);
             Require(hudLook, "HUD look settings", problems);
             Require(cockpitScreensLayout, "cockpit screens layout", problems);
             Require(cockpitScreensPanel, "cockpit screens panel settings", problems);
@@ -133,6 +136,9 @@ namespace Chopper.Presentation.Config
             hangar = settings;
             hangarLayout = layout;
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetResults(VisualTreeAsset layout) => resultsLayout = layout;
 
         /// <summary>Editor only: used by the home screen step.</summary>
         public void SetHome(VisualTreeAsset layout) => homeLayout = layout;

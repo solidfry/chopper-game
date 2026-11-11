@@ -5,6 +5,7 @@ using Chopper.UI.Audio;
 using Chopper.UI.Cockpit;
 using Chopper.UI.Hud;
 using Chopper.UI.Options;
+using Chopper.UI.Results;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -55,6 +56,7 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(hud);
             EditorUtility.SetDirty(sounds);
             EnsureOptions(config, bridge);
+            EnsureResults(config, bridge);
             EnsureCockpitScreens(config, bridge);
             EditorSceneManager.MarkSceneDirty(bridge.gameObject.scene);
             Selection.activeGameObject = bridge.gameObject;
@@ -104,6 +106,39 @@ namespace Chopper.Editor.Setup
             var sounds = go.GetComponent<UISoundBinder>();
             if (sounds == null) sounds = Undo.AddComponent<UISoundBinder>(go);
             Undo.RecordObject(sounds, "Configure Options");
+            sounds.SetBridge(bridge);
+
+            EditorUtility.SetDirty(panel);
+            EditorUtility.SetDirty(view);
+            EditorUtility.SetDirty(sounds);
+        }
+
+        /// <summary>End-of-match screen: its own flat panel (not the HUD's bent render texture), under the options overlay.</summary>
+        private static void EnsureResults(GameConfig config, PresentationBridge bridge)
+        {
+            var view = Object.FindAnyObjectByType<MatchResultsView>(FindObjectsInactive.Include);
+            GameObject go;
+            if (view != null)
+            {
+                go = view.gameObject;
+            }
+            else
+            {
+                go = new GameObject("Match Results");
+                Undo.RegisterCreatedObjectUndo(go, "Add Match Results");
+            }
+
+            var panel = EnsurePanelRenderer(go, config != null ? config.PanelSettings : null, config != null ? config.ResultsLayout : null,
+                sortingOrder: 50);
+
+            view = go.GetComponent<MatchResultsView>();
+            if (view == null) view = Undo.AddComponent<MatchResultsView>(go);
+            Undo.RecordObject(view, "Configure Match Results");
+            view.SetBridge(bridge);
+
+            var sounds = go.GetComponent<UISoundBinder>();
+            if (sounds == null) sounds = Undo.AddComponent<UISoundBinder>(go);
+            Undo.RecordObject(sounds, "Configure Match Results");
             sounds.SetBridge(bridge);
 
             EditorUtility.SetDirty(panel);

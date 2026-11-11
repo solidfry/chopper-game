@@ -38,6 +38,8 @@ namespace Chopper.Simulation.Combat
         [GhostField] public byte Phase;
         /// <summary>Seconds of lock left (<see cref="RepairPhase.Locked"/>).</summary>
         [GhostField(Quantization = 100)] public float LockLeft;
+        /// <summary>Server only (not sent): health mended by the repair running now, for the match stats.</summary>
+        public float Healed;
 
         public RepairPhase State => (RepairPhase)Phase;
     }

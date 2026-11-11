@@ -153,6 +153,8 @@ namespace Chopper.Editor.Setup
                 problems.Add(new SetupProblem("Open scene has no HUD. Press 'Set up open scene'."));
             if (Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include) == null)
                 problems.Add(new SetupProblem("Open scene has no options overlay (Escape menu). Press '3. Set up open scene'."));
+            if (Object.FindAnyObjectByType<Chopper.UI.Results.MatchResultsView>(FindObjectsInactive.Include) == null)
+                problems.Add(new SetupProblem("Open scene has no end-of-match screen (MatchResultsView). Press '3. Set up open scene'."));
 
             // A UIDocument next to a PanelRenderer builds the same layout twice: the UI shows double.
             foreach (var panel in Object.FindObjectsByType<UnityEngine.UIElements.PanelRenderer>(FindObjectsInactive.Include))

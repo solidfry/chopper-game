@@ -1,0 +1,522 @@
+/* End-of-match screen (MatchResults.uxml). Palette roles from ChopperTheme.uss: kills green, deaths red, score
+   yellow; awards glory green, funny pink, shame red. Cards: dark-pair fill, 1px accent border, label strip under a line. */
+
+.results {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 1;
+  transition-property: opacity;
+  transition-duration: 0.35s;
+}
+
+.results--hidden {
+  display: none;
+  opacity: 0;
+}
+
+.results__shade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(2, 10, 4, 0.94);
+}
+
+.results__scan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.6;
+}
+
+.results__frame {
+  flex-grow: 1;
+  padding: 56px 180px 48px 180px;
+}
+
+/* ---- Title ---- */
+.results__head {
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.results__kicker {
+  font-size: 15px;
+  color: var(--chopper-green-dim);
+  letter-spacing: 6px;
+  padding: 0;
+}
+
+.results__title {
+  font-size: 96px;
+  color: var(--chopper-green);
+  letter-spacing: 8px;
+  padding: 0;
+  -unity-text-align: middle-center;
+  translate: 0 -20px;
+  opacity: 0;
+  transition-property: opacity, translate, letter-spacing;
+  transition-duration: 0.45s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.results--step-1 .results__title {
+  opacity: 1;
+  translate: 0 0;
+  letter-spacing: 6px;
+}
+
+.results__banner {
+  font-size: 28px;
+  color: var(--chopper-yellow);
+  letter-spacing: 6px;
+  padding: 0;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.3s;
+  transition-delay: 0.25s;
+}
+
+.results--step-1 .results__banner {
+  opacity: 1;
+}
+
+.results__banner--won {
+  color: var(--chopper-green);
+}
+
+.results__banner--lost {
+  color: var(--chopper-red);
+}
+
+.results__next {
+  position: absolute;
+  right: 0;
+  top: 4px;
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  letter-spacing: 3px;
+}
+
+/* ---- Cards ---- */
+.results__cards {
+  flex-direction: row;
+  height: 270px;
+  margin-bottom: 28px;
+}
+
+.results-card {
+  width: 270px;
+  margin-left: 24px;
+  border-width: 1px;
+  opacity: 0;
+  translate: 0 24px;
+  transition-property: opacity, translate;
+  transition-duration: 0.35s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.results--step-2 .results-card {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.results-card--deaths {
+  transition-delay: 0.08s;
+}
+
+.results-card--score {
+  flex-grow: 1;
+  transition-delay: 0.16s;
+}
+
+.results-card__value {
+  flex-grow: 1;
+  font-size: 110px;
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.results-card__label {
+  height: 52px;
+  border-top-width: 1px;
+  font-size: 20px;
+  letter-spacing: 4px;
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.results-card--kills {
+  background-color: var(--chopper-green-dark);
+  border-color: var(--chopper-green);
+}
+
+.results-card--kills .results-card__value,
+.results-card--kills .results-card__label {
+  color: var(--chopper-green);
+  border-color: var(--chopper-green);
+}
+
+.results-card--deaths {
+  background-color: var(--chopper-red-dark);
+  border-color: var(--chopper-red);
+}
+
+.results-card--deaths .results-card__value,
+.results-card--deaths .results-card__label {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.results-card--score {
+  background-color: var(--chopper-yellow-dark);
+  border-color: var(--chopper-yellow);
+}
+
+.results-card--score .results-card__value,
+.results-card--score .results-card__label {
+  color: var(--chopper-yellow);
+  border-color: var(--chopper-yellow);
+}
+
+/* ---- Pilot (2:3, the live portrait) ---- */
+.results-pilot {
+  width: 180px;
+  height: 270px;
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-dark);
+  overflow: hidden;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.4s;
+}
+
+.results--step-2 .results-pilot {
+  opacity: 1;
+}
+
+.results-pilot__picture {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  -unity-background-scale-mode: stretch-to-fill;
+}
+
+.results-pilot__scan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.5;
+}
+
+.results-pilot__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30px;
+  font-size: 16px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  background-color: rgba(8, 27, 10, 0.85);
+  border-top-width: 1px;
+  border-color: var(--chopper-green);
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+/* ---- XP and awards ---- */
+.results__lower {
+  flex-direction: row;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.results__section {
+  font-size: 15px;
+  color: var(--chopper-green-dim);
+  letter-spacing: 5px;
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.results-xp {
+  width: 474px;
+  padding: 16px 20px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.3s;
+}
+
+.results--step-3 .results-xp {
+  opacity: 1;
+}
+
+.results-xp__lines {
+  flex-grow: 1;
+}
+
+.results-xp-line {
+  flex-direction: row;
+  height: 28px;
+  align-items: center;
+  opacity: 0;
+  translate: -16px 0;
+  transition-property: opacity, translate;
+  transition-duration: 0.2s;
+}
+
+.results-xp-line--in {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.results-xp-line__label {
+  flex-grow: 1;
+  font-size: 17px;
+  color: var(--chopper-text);
+  letter-spacing: 3px;
+  padding: 0;
+}
+
+.results-xp-line__amount {
+  font-size: 17px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.results-xp__total-row {
+  flex-direction: row;
+  align-items: center;
+  border-top-width: 1px;
+  border-color: var(--chopper-green-dim);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.results-xp__total-label {
+  flex-grow: 1;
+  font-size: 20px;
+  color: var(--chopper-green);
+  letter-spacing: 4px;
+  padding: 0;
+}
+
+.results-xp__total {
+  font-size: 30px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.results-xp__level-row {
+  flex-direction: row;
+  align-items: flex-end;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.results-xp__level {
+  font-size: 26px;
+  color: var(--chopper-green);
+  letter-spacing: 3px;
+  padding: 0;
+}
+
+.results-xp__level-up {
+  font-size: 18px;
+  color: var(--chopper-pink);
+  letter-spacing: 4px;
+  margin-left: 14px;
+  padding: 0;
+  opacity: 0;
+  scale: 1.6 1.6;
+  transition-property: opacity, scale;
+  transition-duration: 0.25s;
+  transition-timing-function: ease-out-back;
+}
+
+.results-xp__level-up--on {
+  opacity: 1;
+  scale: 1 1;
+}
+
+.results-xp__need {
+  flex-grow: 1;
+  -unity-text-align: lower-right;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.results-xp__bar {
+  height: 18px;
+  --bar-fill: var(--chopper-green);
+  --bar-track: var(--chopper-green-faint);
+}
+
+/* Awards: one card per pilot, own card first */
+.results-awards {
+  flex-grow: 1;
+  margin-left: 24px;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.3s;
+}
+
+.results--step-4 .results-awards {
+  opacity: 1;
+}
+
+.results-awards__list {
+  flex-grow: 1;
+}
+
+.results-player {
+  flex-direction: row;
+  align-items: stretch;
+  margin-bottom: 8px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+  opacity: 0;
+  translate: 24px 0;
+  transition-property: opacity, translate;
+  transition-duration: 0.25s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.results-player--in {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.results-player--local {
+  border-color: var(--chopper-green);
+  border-left-width: 4px;
+}
+
+.results-player__who {
+  width: 210px;
+  padding: 8px 12px;
+  border-right-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.results-player__place {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  letter-spacing: 3px;
+  padding: 0;
+}
+
+.results-player__name {
+  font-size: 19px;
+  color: var(--chopper-text);
+  letter-spacing: 2px;
+  padding: 0;
+}
+
+.results-player--local .results-player__name {
+  color: var(--chopper-green);
+}
+
+.results-player__kd {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.results-player__awards {
+  flex-direction: row;
+  flex-wrap: wrap;
+  flex-grow: 1;
+  padding: 6px 8px;
+  align-items: center;
+}
+
+.results-award {
+  min-width: 180px;
+  max-width: 300px;
+  margin: 3px;
+  padding: 5px 9px;
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-dark);
+}
+
+.results-award__title {
+  font-size: 15px;
+  color: var(--chopper-green);
+  letter-spacing: 2px;
+  padding: 0;
+}
+
+.results-award__line {
+  font-size: 12px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+}
+
+.results-award--funny {
+  border-color: var(--chopper-pink);
+  background-color: var(--chopper-pink-dark);
+}
+
+.results-award--funny .results-award__title {
+  color: var(--chopper-pink);
+}
+
+.results-award--shame {
+  border-color: var(--chopper-red);
+  background-color: var(--chopper-red-dark);
+}
+
+.results-award--shame .results-award__title {
+  color: var(--chopper-red);
+}
+
+/* ---- Buttons ---- */
+.results__buttons {
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.results__button {
+  height: 50px;
+  min-width: 220px;
+  margin-left: 14px;
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.45);
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.12s;
+}
+
+.results__button:hover,
+.results__button:focus {
+  background-color: var(--chopper-green);
+  color: var(--chopper-green-dark);
+  border-color: var(--chopper-yellow);
+}
+
+.results__button--primary {
+  border-color: var(--chopper-green);
+}

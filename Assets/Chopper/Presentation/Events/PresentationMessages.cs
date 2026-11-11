@@ -76,6 +76,14 @@ namespace Chopper.Presentation.Events
         public MatchStateChanged(MatchPhase phase, float timeRemaining, int winner) { Phase = phase; TimeRemaining = timeRemaining; WinnerNetworkId = winner; }
     }
 
+    /// <summary>The match ended: one player's stats from the server (one message per player).</summary>
+    public readonly struct MatchStatsReceived
+    {
+        public readonly int NetworkId;
+        public readonly PlayerMatchStats Stats;
+        public MatchStatsReceived(int networkId, PlayerMatchStats stats) { NetworkId = networkId; Stats = stats; }
+    }
+
     /// <summary>A rocket was launched: our own (predicted, at once) or another player's (from the server).</summary>
     public readonly struct RocketLaunched
     {

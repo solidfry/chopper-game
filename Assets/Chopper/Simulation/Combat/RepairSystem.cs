@@ -20,9 +20,27 @@ namespace Chopper.Simulation.Combat
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;
-            foreach (var (repair, config, health, input) in SystemAPI
-                         .Query<RefRW<ChopperRepair>, RefRO<RepairConfig>, RefRW<Health>, RefRO<ChopperInput>>())
-                Repair.Step(ref repair.ValueRW, config.ValueRO, ref health.ValueRW, input.ValueRO.Repair, deltaTime);
+            var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log);
+            var now = SystemAPI.Time.ElapsedTime;
+            foreach (var (repair, config, health, input, chopper) in SystemAPI
+                         .Query<RefRW<ChopperRepair>, RefRO<RepairConfig>, RefRW<Health>, RefRO<ChopperInput>>()
+                         .WithEntityAccess())
+            {
+                ref var current = ref repair.ValueRW;
+                current.Healed += Repair.Step(ref current, config.ValueRO, ref health.ValueRW, input.ValueRO.Repair, deltaTime);
+                // One log entry when a repair stops (done, let go, shot): the health it mended.
+                if (current.State == RepairPhase.Repairing || current.Healed <= 0f) continue;
+                if (hasLog)
+                    log.Add(new Session.MatchLogEntry
+                    {
+                        Kind = Session.MatchLogKind.Repair,
+                        Time = now,
+                        Actor = SystemAPI.HasComponent<GhostOwner>(chopper) ? SystemAPI.GetComponent<GhostOwner>(chopper).NetworkId : 0,
+                        Amount = current.Healed,
+                        Distance = -1f,
+                    });
+                current.Healed = 0f;
+            }
         }
     }
 }
