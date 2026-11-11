@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
+using Chopper.Presentation.Profile;
 using Chopper.Presentation.Results;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Match;
@@ -137,7 +138,7 @@ namespace Chopper.Tests
             hud.SetLocalPlayer(1);
             hud.ApplyScore(1, 2, 0);
             hud.ApplyScore(2, 0, 2);
-            var progress = new PilotProgress(new MemoryPrefs());
+            var progress = new ProfileService(new PrefsProfileStore(new MemoryPrefs()));
             var model = new MatchResultsModel(hud, progress);
 
             model.SetMatch(MatchPhase.PostGame, 1);
@@ -156,6 +157,9 @@ namespace Chopper.Tests
             model.ApplyStats(2, new PlayerMatchStats { Deaths = 2 });
             model.Tick(1f);
             Assert.That(progress.TotalXp, Is.EqualTo(gained), "A late message does not add XP again.");
+
+            Assert.That(progress.Profile.matches, Is.EqualTo(1));
+            Assert.That(progress.Profile.kills, Is.EqualTo(2));
 
             model.Dismiss();
             Assert.That(model.Visible, Is.False);

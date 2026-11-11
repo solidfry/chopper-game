@@ -322,3 +322,300 @@
   opacity: 1;
   transition-duration: 0.06s;
 }
+
+/* ---- Scroll bars (every ScrollView): a thin terminal rail ----
+   A 2px dim track line and a 4px solid green thumb. The size never changes; hover and drag only light the thumb up.
+   Selectors start at the ScrollView and name the scroller's direction, so they beat the default theme in every state
+   (at rest it draws a thin white bar; on hover it widens the thumb). */
+.unity-scroll-view .unity-scroller--vertical {
+  width: 10px;
+  min-width: 10px;
+  margin-left: 6px;
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-scroll-view .unity-scroller--horizontal {
+  height: 10px;
+  min-height: 10px;
+  margin-top: 6px;
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-scroll-view .unity-scroller .unity-scroller__low-button,
+.unity-scroll-view .unity-scroller .unity-scroller__high-button {
+  display: none;
+}
+
+.unity-scroll-view .unity-scroller .unity-scroller__slider {
+  flex-grow: 1;
+  margin: 0;
+  padding: 0;
+}
+
+.unity-scroll-view .unity-scroller--vertical .unity-scroller__slider,
+.unity-scroll-view .unity-scroller--vertical:hover .unity-scroller__slider {
+  width: 10px;
+  min-width: 10px;
+}
+
+.unity-scroll-view .unity-scroller--horizontal .unity-scroller__slider,
+.unity-scroll-view .unity-scroller--horizontal:hover .unity-scroller__slider {
+  height: 10px;
+  min-height: 10px;
+}
+
+.unity-scroll-view .unity-scroller .unity-base-slider__tracker,
+.unity-scroll-view .unity-scroller:hover .unity-base-slider__tracker {
+  background-color: var(--chopper-green-faint);
+  background-image: none;
+  border-width: 0;
+  border-radius: 0;
+  margin: 0;
+}
+
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__tracker,
+.unity-scroll-view .unity-scroller--vertical:hover .unity-base-slider__tracker {
+  position: absolute;
+  width: 2px;
+  left: 4px;
+  right: auto;
+  top: 0;
+  bottom: 0;
+}
+
+.unity-scroll-view .unity-scroller--horizontal .unity-base-slider__tracker,
+.unity-scroll-view .unity-scroller--horizontal:hover .unity-base-slider__tracker {
+  position: absolute;
+  height: 2px;
+  top: 4px;
+  bottom: auto;
+  left: 0;
+  right: 0;
+}
+
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger,
+.unity-scroll-view .unity-scroller:hover .unity-base-slider__dragger,
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger:hover,
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger:active {
+  background-color: var(--chopper-green);
+  background-image: none;
+  border-width: 0;
+  border-radius: 0;
+  opacity: 0.45;
+  transition-property: opacity;
+  transition-duration: 0.12s;
+}
+
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__dragger,
+.unity-scroll-view .unity-scroller--vertical:hover .unity-base-slider__dragger {
+  width: 4px;
+  left: 3px;
+  margin: 0;
+}
+
+.unity-scroll-view .unity-scroller--horizontal .unity-base-slider__dragger,
+.unity-scroll-view .unity-scroller--horizontal:hover .unity-base-slider__dragger {
+  height: 4px;
+  top: 3px;
+  margin: 0;
+}
+
+.unity-scroll-view .unity-scroller:hover .unity-base-slider__dragger,
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger:active {
+  opacity: 1;
+}
+
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger-border {
+  display: none;
+}
+
+/* ---- Other built-in controls, so none shows the default grey look ----
+   Selectors are as strong as the default theme's (no extra :enabled), so a screen's own classes still win. */
+
+/* Button with no screen class: the terminal button (dim box, green text; green fill on hover). */
+.unity-button {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+  color: var(--chopper-green);
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  letter-spacing: 2px;
+  padding: 4px 14px;
+}
+
+.unity-button:hover,
+.unity-button:focus {
+  background-color: var(--chopper-green);
+  border-color: var(--chopper-green);
+  color: var(--chopper-green-dark);
+}
+
+.unity-button:active {
+  background-color: var(--chopper-text);
+  color: var(--chopper-green-dark);
+}
+
+.unity-button:disabled {
+  opacity: 0.4;
+}
+
+/* Toggle on: the box fills faint green with a green border. */
+.unity-toggle:checked .unity-toggle__checkmark {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+}
+
+/* Toggle button group (segmented choice). */
+.unity-toggle-button-group .unity-button:checked {
+  background-color: var(--chopper-green);
+  color: var(--chopper-green-dark);
+  border-color: var(--chopper-green);
+}
+
+/* Radio button: a square, like the toggle. */
+.unity-radio-button__checkmark-background {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.unity-radio-button:hover .unity-radio-button__checkmark-background {
+  border-color: var(--chopper-green);
+}
+
+.unity-radio-button__checkmark {
+  background-color: var(--chopper-green);
+  border-radius: 0;
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+/* Progress bar: a dim track and a green fill, the title in text colour. */
+.unity-progress-bar__background {
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+.unity-progress-bar__progress {
+  background-color: var(--chopper-green);
+  border-radius: 0;
+}
+
+.unity-progress-bar__title {
+  color: var(--chopper-text);
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  font-size: 12px;
+}
+
+/* Min-max slider: the range in green between two square thumbs. */
+.unity-min-max-slider__tracker {
+  background-color: var(--chopper-green-dim);
+  border-width: 0;
+  border-radius: 0;
+  height: 2px;
+}
+
+.unity-min-max-slider__dragger {
+  background-color: var(--chopper-green-faint);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green);
+  border-radius: 0;
+}
+
+.unity-min-max-slider__min-thumb,
+.unity-min-max-slider__max-thumb {
+  background-color: var(--chopper-green);
+  border-width: 0;
+  border-radius: 0;
+}
+
+/* Foldout: a green arrow and title, the content indented under a faint rule. */
+.unity-foldout__text {
+  color: var(--chopper-green);
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  letter-spacing: 2px;
+}
+
+.unity-foldout__checkmark {
+  -unity-background-image-tint-color: var(--chopper-green);
+}
+
+.unity-foldout__toggle:hover .unity-foldout__text {
+  color: var(--chopper-text);
+}
+
+.unity-foldout__content {
+  border-left-width: 1px;
+  border-color: var(--chopper-green-faint);
+  padding-left: 8px;
+}
+
+/* List and tree rows: a faint fill and a green bar for the selection (not the default blue). */
+.unity-collection-view__item {
+  color: var(--chopper-text);
+  background-color: rgba(0, 0, 0, 0);
+  border-left-width: 3px;
+  border-color: rgba(0, 0, 0, 0);
+}
+
+.unity-collection-view__item:hover {
+  background-color: var(--chopper-green-faint);
+}
+
+.unity-collection-view__item--selected,
+.unity-collection-view__item--selected:hover {
+  background-color: var(--chopper-green-faint);
+  border-color: var(--chopper-green);
+  color: var(--chopper-green);
+}
+
+.unity-collection-view--with-border {
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+}
+
+/* Tabs: labels in a row; the open tab green with a line under it (the Figma nav). */
+.unity-tab-view__header-container {
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-dim);
+}
+
+.unity-tab__header {
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 0;
+  border-bottom-width: 2px;
+  border-color: rgba(0, 0, 0, 0);
+  padding: 6px 14px;
+}
+
+.unity-tab__header-label {
+  color: var(--chopper-green-dim);
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  letter-spacing: 3px;
+}
+
+.unity-tab__header:hover .unity-tab__header-label {
+  color: var(--chopper-text);
+}
+
+.unity-tab__header:checked {
+  border-color: var(--chopper-green);
+}
+
+.unity-tab__header:checked .unity-tab__header-label {
+  color: var(--chopper-green);
+}
+
+/* Help box: a terminal note. */
+.unity-help-box {
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
+  border-radius: 0;
+  color: var(--chopper-text);
+}

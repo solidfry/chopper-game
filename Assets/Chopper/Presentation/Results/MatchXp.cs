@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Chopper.Presentation.Hangar;
 using Chopper.Simulation.Match;
 using UnityEngine;
 
@@ -19,8 +18,8 @@ namespace Chopper.Presentation.Results
     }
 
     /// <summary>
-    /// XP for one match, from the server's stats and the awards (edit-mode tests: MatchXpTests). Local only for now:
-    /// <see cref="PilotProgress"/> keeps the total until progression and Cloud Save exist (plan Phase 5).
+    /// XP for one match, from the server's stats and the awards (edit-mode tests: MatchResultsTests). The profile
+    /// (<see cref="Profile.ProfileService"/>) keeps the total.
     /// </summary>
     public static class MatchXp
     {
@@ -70,26 +69,6 @@ namespace Chopper.Presentation.Results
                 needed = Cost(level);
             }
             return level;
-        }
-    }
-
-    /// <summary>The player's XP total. PlayerPrefs now (through <see cref="IHangarPrefs"/>), Cloud Save later.</summary>
-    public sealed class PilotProgress
-    {
-        private const string XpKey = "Chopper.Profile.Xp";
-        private readonly IHangarPrefs _prefs;
-
-        public PilotProgress(IHangarPrefs prefs) => _prefs = prefs;
-
-        public int TotalXp => _prefs.GetInt(XpKey, 0);
-
-        public int Level => PilotLevels.Level(TotalXp, out _, out _);
-
-        public void Add(int xp)
-        {
-            if (xp <= 0) return;
-            _prefs.SetInt(XpKey, TotalXp + xp);
-            _prefs.Save();
         }
     }
 }

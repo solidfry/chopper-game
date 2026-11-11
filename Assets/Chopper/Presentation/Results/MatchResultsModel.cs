@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Hud;
+using Chopper.Presentation.Profile;
 using Chopper.Simulation.Match;
 using UnityEngine;
 
@@ -24,8 +25,8 @@ namespace Chopper.Presentation.Results
     /// <summary>
     /// View model for the end-of-match screen. The server sends every player's stats when the match ends
     /// (<see cref="MatchStatsReceived"/>); after a short settle (they come as one message per player) this builds the
-    /// awards (<see cref="MatchAwards"/>), the local XP (<see cref="MatchXp"/>), adds the XP to <see cref="PilotProgress"/>
-    /// once, and raises <see cref="Built"/>. Names and places come from the <see cref="MatchHudModel"/> scoreboard.
+    /// awards (<see cref="MatchAwards"/>), the local XP (<see cref="MatchXp"/>), records the match in the profile
+    /// (<see cref="ProfileService"/>) once, and raises <see cref="Built"/>. Names and places come from the <see cref="MatchHudModel"/> scoreboard.
     /// Edit-mode tests: MatchResultsModelTests.
     /// </summary>
     public sealed class MatchResultsModel
@@ -34,7 +35,7 @@ namespace Chopper.Presentation.Results
         public const float SettleSeconds = 0.25f;
 
         private readonly MatchHudModel _match;
-        private readonly PilotProgress _progress;
+        private readonly ProfileService _profile;
         private readonly Dictionary<int, PlayerMatchStats> _stats = new();
         private readonly List<ResultsPlayer> _players = new();
         private readonly List<XpLine> _xpLines = new();
@@ -44,11 +45,14 @@ namespace Chopper.Presentation.Results
         private float _settle = -1f;
         private bool _dismissed;
 
-        public MatchResultsModel(MatchHudModel match, PilotProgress progress)
+        public MatchResultsModel(MatchHudModel match, ProfileService profile)
         {
             _match = match;
-            _progress = progress;
+            _profile = profile;
         }
+
+        /// <summary>Achievement ids this match unlocked (empty until built).</summary>
+        public IReadOnlyList<string> NewAchievements { get; private set; } = Array.Empty<string>();
 
         /// <summary>The screen has data for this match (<see cref="Players"/>, <see cref="XpLines"/> and the rest).</summary>
         public bool Ready { get; private set; }
@@ -88,6 +92,7 @@ namespace Chopper.Presentation.Results
                 // A new match: the old results go.
                 _stats.Clear();
                 _players.Clear();
+                NewAchievements = Array.Empty<string>();
                 Local = null;
                 Ready = false;
                 _settle = -1f;
@@ -166,9 +171,11 @@ namespace Chopper.Presentation.Results
                 // The XP is added once per match; a late stats message only redraws.
                 if (firstBuild)
                 {
-                    XpBefore = _progress != null ? _progress.TotalXp : 0;
+                    XpBefore = _profile != null ? _profile.TotalXp : 0;
                     XpGained = gained;
-                    _progress?.Add(gained);
+                    if (_profile != null)
+                        NewAchievements = _profile.RecordMatch(new MatchOutcome(Local.Stats, Local.Awards, Won, Draw, Local.Place,
+                            _players.Count, gained, Score, _match.LocalPilotText));
                 }
             }
             else

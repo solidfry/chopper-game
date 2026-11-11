@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Hangar;
+using Chopper.Presentation.Profile;
 using Chopper.Simulation.Session;
 using Chopper.Simulation.Loadout;
 using UnityEngine;
 
 namespace Chopper.Presentation.Menu
 {
-    /// <summary>The home screen's pages: the main menu, and the pilot codex.</summary>
-    public enum HomePage { Main, Pilots }
+    /// <summary>The home screen's pages: the main menu, the pilot codex, and the player's profile.</summary>
+    public enum HomePage { Main, Pilots, Profile }
 
     /// <summary>
     /// View model of the home screen (the main menu, scene <see cref="SceneName"/>): which page shows, the profile card
@@ -20,14 +21,17 @@ namespace Chopper.Presentation.Menu
         public const string SceneName = "Home";
 
         private readonly LoadoutChoiceStore _store;
-        private readonly Results.PilotProgress _progress;
+        private readonly ProfileService _profile;
+        private readonly IPlayerIdentity _identity;
         private readonly List<PilotCard> _pilots = new();
         private readonly List<MapCatalog.MapEntry> _trainingMaps = new();
 
-        public HomeModel(LoadoutCatalog catalog, LoadoutChoiceStore store, MapCatalog maps, Results.PilotProgress progress = null)
+        public HomeModel(LoadoutCatalog catalog, LoadoutChoiceStore store, MapCatalog maps, ProfileService profile = null,
+            IPlayerIdentity identity = null)
         {
             _store = store;
-            _progress = progress;
+            _profile = profile;
+            _identity = identity;
             if (catalog != null)
                 foreach (var pilot in catalog.Pilots)
                     if (pilot != null) _pilots.Add(new PilotCard(pilot, locked: false));
@@ -87,18 +91,13 @@ namespace Chopper.Presentation.Menu
         }
 
         /// <summary>Player name on the profile card. Steam names later (plan: progression, Steam).</summary>
-        public string OperatorName => "OPERATOR";
-        /// <summary>From the local XP total (<see cref="Results.PilotProgress"/>); level 1 and an empty bar without it.</summary>
-        public int Level => _progress != null ? Results.PilotLevels.Level(_progress.TotalXp, out _, out _) : 1;
-        public float LevelProgress
-        {
-            get
-            {
-                if (_progress == null) return 0f;
-                Results.PilotLevels.Level(_progress.TotalXp, out var into, out var needed);
-                return needed > 0 ? (float)into / needed : 0f;
-            }
-        }
+        public string OperatorName => _identity != null ? _identity.DisplayName : "OPERATOR";
+        /// <summary>The player's lifetime record (null in tests without one).</summary>
+        public ProfileService Profile => _profile;
+        public IPlayerIdentity Identity => _identity;
+        /// <summary>From the profile's XP; level 1 and an empty bar without one.</summary>
+        public int Level => _profile != null ? _profile.Level : 1;
+        public float LevelProgress => _profile != null ? _profile.LevelProgress : 0f;
 
         public bool HasTrainingMap => TrainingMap != null;
         /// <summary>Scene of <see cref="TrainingMap"/>; null when none.</summary>

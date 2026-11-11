@@ -605,6 +605,42 @@ Built (7 Nov, written without the editor, not compiled):
   - Clean the names: length cap and no control characters (`LoadoutChoiceStore.CleanName` does this for preset names).
 - **Remote Config** for XP rates, unlock costs, weapon tuning without new builds.
 
+### 6a. Profile data (built 11 Nov, local; server-written later)
+
+What exists now (all in `Assets/Chopper/Presentation/Profile`, tests `ProfileTests`):
+- `PlayerProfile`: one serializable record (JsonUtility; `version` field for format steps). XP total; matches, wins, draws;
+  lifetime kills, deaths, shots, hits, damage dealt and taken, best streak, longest kill, first bloods, crashes, bounds
+  deaths, rams, missile hits, missiles dodged, flares, repairs, hull mended, abilities; award counts by title; unlocked
+  achievements with time; the last 10 matches (time, result, place of N, K/D, score, XP, pilot, awards).
+- `ProfileRules.Record` (pure) adds one match; `Achievements` (15 lifetime goals, ids are save keys) unlock from it.
+- `IProfileStore`: `PrefsProfileStore` now (PlayerPrefs key `Chopper.Profile`). `ProfileService` loads, records and saves.
+- `IPlayerIdentity`: name, avatar texture, source. `LocalIdentity` now ("OPERATOR", no avatar).
+- Flow now: the server counts the match stats (`MatchStatsSystem`) and sends them to every client; the client's results
+  model works out awards and XP and records the match in the local profile. **A player could edit their local save:
+  fine for now, not for ranked play.**
+- Screens: the results screen, and the home screen's profile page (profile card > PILOT PROFILE).
+
+Target (server managed; the screens do not change, only the store and who writes):
+1. **Who writes:** the dedicated server, at match end, posts each player's stats, awards and result to a **Cloud Code**
+   module (service account). Awards and XP move to the server side (the pure `MatchAwards` / `MatchXp` / `ProfileRules`
+   code can run in the server build or be ported to the Cloud Code module), so clients only display results.
+2. **Where it lives:** **Cloud Save**, player data, in a protected access class (server writes, the client reads):
+   - `profile`: the `PlayerProfile` record above (totals, award counts, achievements).
+   - `recent_matches`: the last 10 (or 20) summaries, kept small.
+   - Later: `mastery` per chassis, `currency`, `unlocks` (they gate loadouts: the server checks them at spawn).
+   - Full match logs stay out of Cloud Save (they are the Edgegap match logs for analysis).
+3. **Leaderboards** (UGS Leaderboards): season kills, wins, XP; a skill rating later for the Matchmaker.
+4. **Steam:**
+   - `SteamIdentity : IPlayerIdentity`: persona name, and the large friend avatar
+     (`SteamFriends.GetLargeFriendAvatar` > `SteamUtils.GetImageRGBA` > a `Texture2D`, flipped). The avatar can arrive
+     after the name: raise `Changed`. Screens already fall back to the pilot portrait while it is null.
+   - Sign-in: Steam session ticket > Unity Authentication (Steam provider), so Cloud Save keys on the Steam account.
+   - Achievements: mirror the `Achievements` ids as Steam achievements; set them when the profile unlocks one.
+   - Other players' names and avatars (scoreboard, results cards): the server sends each player's display name with the
+     network id (see the names item above); avatars are fetched on the client from the Steam id.
+5. **Moving over:** read the local `Chopper.Profile` once at first online sign-in and offer it as the start (or drop
+   it: local stats are not trusted). Then `CloudProfileStore` replaces `PrefsProfileStore` in `PresentationContext`.
+
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 
 The owner owns these. ECS does not matter for them: weather and effects are client presentation only (GameObjects in

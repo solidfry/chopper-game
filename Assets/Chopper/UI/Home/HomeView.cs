@@ -73,6 +73,8 @@ namespace Chopper.UI.Home
         private readonly List<VisualElement> _glass = new();
 
         private Button _profile;
+        private VisualElement _pageProfile;
+        private ProfilePage _profilePage;
         private VisualElement _profilePortrait;
         private PilotPortrait _profileDrawn;
         private CodecScan _profileScan;
@@ -162,6 +164,9 @@ namespace Chopper.UI.Home
 
             _pageMain = _root.Q("page-main");
             _pagePilots = _root.Q("page-pilots");
+            _pageProfile = _root.Q("page-profile");
+            _profilePage = _pageProfile != null ? new ProfilePage(_pageProfile) : null;
+            if (_profilePage?.Back != null) _profilePage.Back.clicked += Back;
             _title = _root.Q("title");
             _boot = _root.Q<Label>("boot-log");
             _hint = _root.Q<Label>("nav-hint");
@@ -186,7 +191,7 @@ namespace Chopper.UI.Home
             _profileRole = _root.Q<Label>("profile-role");
             _profileLevel = _root.Q<Label>("profile-level");
             _profileXp = _root.Q<SegmentBar>("profile-xp");
-            if (_profile != null) _profile.clicked += OpenCodex;
+            if (_profile != null) _profile.clicked += OpenProfile;
 
             foreach (var (button, _, _) in _nav) AddGlass(button);
             if (_profile != null) AddGlass(_profile);
@@ -245,7 +250,9 @@ namespace Chopper.UI.Home
             _prompts = null;
             foreach (var (button, action, _) in _nav) button.clicked -= action;
             _nav.Clear();
-            if (_profile != null) _profile.clicked -= OpenCodex;
+            if (_profile != null) _profile.clicked -= OpenProfile;
+            if (_profilePage?.Back != null) _profilePage.Back.clicked -= Back;
+            _profilePage = null;
             if (_codexSelect != null) _codexSelect.clicked -= SelectPilot;
             if (_codexBack != null) _codexBack.clicked -= Back;
             if (_codexPrev != null) _codexPrev.clicked -= PreviousPilot;
@@ -390,9 +397,12 @@ namespace Chopper.UI.Home
             if (_root == null) return;
             _root.EnableInClassList(LiveClass, _model.LiveBackdrop);
             var codex = _model.Page == HomePage.Pilots;
-            _pageMain?.EnableInClassList(HiddenClass, codex);
+            var profile = _model.Page == HomePage.Profile;
+            _pageMain?.EnableInClassList(HiddenClass, _model.Page != HomePage.Main);
             _pagePilots?.EnableInClassList(HiddenClass, !codex);
+            _pageProfile?.EnableInClassList(HiddenClass, !profile);
             ShowProfile();
+            if (profile) ShowProfilePage();
             if (codex)
             {
                 BuildCodex();
@@ -586,6 +596,19 @@ namespace Chopper.UI.Home
 
         private void OpenCodex() => _model.ShowPage(HomePage.Pilots);
 
+        private void OpenProfile() => _model.ShowPage(HomePage.Profile);
+
+        /// <summary>The profile page; without an account avatar, the selected pilot's live portrait stands in.</summary>
+        private void ShowProfilePage()
+        {
+            if (_profilePage == null) return;
+            var pilot = _model.SelectedPilot;
+            var hasAvatar = _profilePage.Show(_model.Profile, _model.Identity, pilot?.CallSign, pilot?.Accent ?? Color.white);
+            if (!hasAvatar && pilot != null) ShowFace(_profilePage.AvatarPicture, null, pilot.Value);
+            if (_profilePage.Scan != null) _profilePage.Scan.tint = pilot?.Accent ?? new Color(0f, 1f, 0.58f);
+            _profilePage.Back?.Focus();
+        }
+
         private void OpenOptions()
         {
             if (options == null) return;
@@ -605,7 +628,10 @@ namespace Chopper.UI.Home
                 FinishBoot();
                 return;
             }
-            if (_model.Back() && _nav.Count > 0) _nav[3].Button.Focus();
+            var from = _model.Page;
+            if (!_model.Back()) return;
+            if (from == HomePage.Profile) _profile?.Focus();
+            else if (_nav.Count > 0) _nav[3].Button.Focus();
         }
 
         private void PreviousPilot()

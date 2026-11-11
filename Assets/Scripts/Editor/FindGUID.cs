@@ -1,7 +1,7 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 
-namespace Editor
+namespace Chopper.LegacyTools
 {
     public class GuidToAssetPath : EditorWindow
     {

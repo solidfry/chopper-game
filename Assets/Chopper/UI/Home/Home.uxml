@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:home="Chopper.UI.Home" xmlns:hangar="Chopper.UI.Hangar" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
   <Style src="Home.uss" />
+  <Style src="Profile.uss" />
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
        Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
@@ -62,7 +63,7 @@
         <ui:Label name="nav-hint" text="&gt; " class="home-nav__hint chopper-body" picking-mode="Ignore" />
       </ui:VisualElement>
 
-      <!-- Profile card: your pilot; click opens the codex -->
+      <!-- Profile card: your pilot and level; click opens the profile page -->
       <ui:Button name="profile" class="home-profile">
         <ui:VisualElement name="profile-portrait" class="home-profile__portrait" picking-mode="Ignore">
           <hangar:PilotPortrait name="profile-drawn" class="home-profile__drawn" picking-mode="Ignore" />
@@ -77,6 +78,7 @@
             <ui:Label name="profile-level" class="home-profile__level chopper-title" picking-mode="Ignore" />
             <cockpit:SegmentBar name="profile-xp" segments="12" gap="3" class="home-profile__xp" picking-mode="Ignore" />
           </ui:VisualElement>
+          <ui:Label text="[ VIEW PROFILE ]" class="home-profile__open chopper-title" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:Button>
 
@@ -120,6 +122,78 @@
             </ui:VisualElement>
           </ui:VisualElement>
         </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Player profile (ProfilePage): who you are, lifetime stats, the award case, achievements, recent matches.
+         Lists are filled from code. The data is local now; the server writes it later (plan section 6). -->
+    <ui:VisualElement name="page-profile" class="home__page home__page--profile home--hidden">
+      <ui:VisualElement class="codex__head" picking-mode="Ignore">
+        <ui:Button name="profile-back" text="&lt; BACK" class="home__button home__button--small chopper-title" />
+        <ui:Label text="PILOT PROFILE" class="codex__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="pf-source" class="codex__count chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:VisualElement class="pf__body" picking-mode="Ignore">
+        <!-- Left: identity, level, the big cards -->
+        <ui:VisualElement class="pf__left" picking-mode="Ignore">
+          <ui:VisualElement class="pf-id" picking-mode="Ignore">
+            <ui:VisualElement name="pf-avatar" class="pf-id__avatar" picking-mode="Ignore">
+              <home:CodecScan name="pf-scan" class="home__scan" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="pf-id__text" picking-mode="Ignore">
+              <ui:Label text="// OPERATOR" class="home__section chopper-title" picking-mode="Ignore" />
+              <ui:Label name="pf-name" class="pf-id__name chopper-title" picking-mode="Ignore" />
+              <ui:Label name="pf-pilot" class="pf-id__pilot chopper-title" picking-mode="Ignore" />
+              <ui:Label name="pf-level" class="pf-id__level chopper-title" picking-mode="Ignore" />
+              <cockpit:SegmentBar name="pf-xp" segments="20" gap="3" class="pf-id__xp" picking-mode="Ignore" />
+              <ui:Label name="pf-xp-text" class="pf-id__xp-text chopper-body" picking-mode="Ignore" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="pf-cards" picking-mode="Ignore">
+            <ui:VisualElement class="pf-card pf-card--kills" picking-mode="Ignore">
+              <ui:Label name="pf-kills" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="KILLS" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="pf-card pf-card--deaths" picking-mode="Ignore">
+              <ui:Label name="pf-deaths" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="DEATHS" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="pf-card pf-card--ratio" picking-mode="Ignore">
+              <ui:Label name="pf-ratio" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="K / D" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="pf-cards" picking-mode="Ignore">
+            <ui:VisualElement class="pf-card pf-card--small" picking-mode="Ignore">
+              <ui:Label name="pf-matches" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="MATCHES" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="pf-card pf-card--small" picking-mode="Ignore">
+              <ui:Label name="pf-wins" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="WINS" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="pf-card pf-card--small" picking-mode="Ignore">
+              <ui:Label name="pf-winrate" class="pf-card__value chopper-title" picking-mode="Ignore" />
+              <ui:Label text="WIN RATE" class="pf-card__label chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Middle: service record -->
+        <ui:VisualElement class="pf__middle" picking-mode="Ignore">
+          <ui:Label text="// SERVICE RECORD" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="pf-record" class="pf-record" picking-mode="Ignore" />
+          <ui:Label text="// RECENT MATCHES" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="pf-recent" class="pf-recent" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <!-- Right: award case and achievements -->
+        <ui:ScrollView name="pf-right" mode="Vertical" horizontal-scroller-visibility="Hidden" class="pf__right">
+          <ui:Label name="pf-awards-title" text="// AWARD CASE" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="pf-awards" class="pf-awards" picking-mode="Ignore" />
+          <ui:Label name="pf-achievements-title" text="// ACHIEVEMENTS" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="pf-achievements" class="pf-achievements" picking-mode="Ignore" />
+        </ui:ScrollView>
       </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>

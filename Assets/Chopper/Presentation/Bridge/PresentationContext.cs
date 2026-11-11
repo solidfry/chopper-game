@@ -9,6 +9,7 @@ using Chopper.Presentation.Feedback;
 using Chopper.Presentation.Flow;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Hud;
+using Chopper.Presentation.Profile;
 using Chopper.Presentation.Results;
 using UnityEngine;
 
@@ -51,8 +52,8 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals = new EffectPool(moduleRoot);
             HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
             PilotPortrait = new Pilots.PilotPortraitRig(config != null && config.HudLook != null ? config.HudLook.PilotPortrait : null);
-            Progress = new PilotProgress(new PlayerPrefsHangarPrefs());
-            Results = new MatchResultsModel(Match, Progress);
+            Profile = new ProfileService(new PrefsProfileStore(new PlayerPrefsHangarPrefs()));
+            Results = new MatchResultsModel(Match, Profile);
             if (cameraRig != null && config != null) cameraRig.UseSettings(config.Camera);
 
             _owned.Add(new CombatFeedback(this));
@@ -80,8 +81,10 @@ namespace Chopper.Presentation.Bridge
         public MatchHudModel Match { get; } = new();
         /// <summary>End-of-match screen: stats, awards, XP (<see cref="Feedback.MatchFeedback"/> fills it).</summary>
         public MatchResultsModel Results { get; }
-        /// <summary>The player's XP and level (local saves until Cloud Save).</summary>
-        public PilotProgress Progress { get; }
+        /// <summary>The player's lifetime record: XP, totals, awards, achievements (local saves until Cloud Save).</summary>
+        public ProfileService Profile { get; }
+        /// <summary>Name and avatar (local now, Steam later).</summary>
+        public IPlayerIdentity Identity { get; } = new LocalIdentity();
         /// <summary>Screen markers on other choppers and ground targets, and the rocket lead indicator.</summary>
         public WorldMarkerModel Markers { get; } = new();
         /// <summary>Retro HUD look: the HUD view attaches its document; gameplay drives glitches.</summary>
@@ -109,7 +112,7 @@ namespace Chopper.Presentation.Bridge
             : null;
         /// <summary>Home screen view model; made on first use (null without a loadout catalog). Only the home scene uses it.</summary>
         public Menu.HomeModel Home => _home ??= Config != null && Config.LoadoutCatalog != null
-            ? new Menu.HomeModel(Config.LoadoutCatalog, LoadoutChoices, Config.Maps, Progress)
+            ? new Menu.HomeModel(Config.LoadoutCatalog, LoadoutChoices, Config.Maps, Profile, Identity)
             : null;
         public bool IsDisposed { get; private set; }
 

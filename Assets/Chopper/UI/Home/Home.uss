@@ -38,8 +38,10 @@
   flex-direction: row;
   align-items: center;
   height: 36px;
+  flex-shrink: 0;
   padding: 0 16px;
-  background-color: var(--chopper-terminal);
+  /* Clear, so it reads as UI over the city, not as a block of scenery; only the thin rule under it. */
+  background-color: rgba(0, 0, 0, 0);
   border-bottom-width: 1px;
   border-color: var(--chopper-green-dim);
 }
@@ -439,6 +441,7 @@
   height: 40px;
   padding: 0 22px;
   margin: 0 8px 0 0;
+  -unity-text-align: middle-center;
   font-size: 15px;
   letter-spacing: 4px;
   color: var(--chopper-green);
@@ -470,10 +473,17 @@
 .codex__head {
   flex-direction: row;
   align-items: center;
+  /* The page header: one fixed height on every page (codex, profile), never squeezed by a tall body. */
+  height: 56px;
+  flex-shrink: 0;
   margin-bottom: 18px;
 }
 
 .codex__title {
+  /* As tall as the BACK button, text centred: the two sit on one line. */
+  height: 40px;
+  margin: 0;
+  -unity-text-align: middle-left;
   font-size: 34px;
   letter-spacing: 12px;
   color: var(--chopper-green);

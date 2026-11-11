@@ -1,0 +1,425 @@
+/* Player profile page (Home.uxml, page-profile; ProfilePage.cs). Palette roles from ChopperTheme.uss: kills green,
+   deaths red, score and ratio yellow; awards glory green, funny pink, shame red; locked items dim. */
+
+.home-profile__open {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--chopper-green-dim);
+  padding: 6px 0 0 0;
+}
+
+.home-profile:hover .home-profile__open,
+.home-profile:focus .home-profile__open {
+  color: var(--chopper-green);
+}
+
+.home__page--profile {
+  flex-direction: column;
+}
+
+.pf__body {
+  flex-direction: row;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.pf__left {
+  width: 560px;
+  flex-direction: column;
+}
+
+.pf__middle {
+  width: 460px;
+  margin-left: 24px;
+  flex-direction: column;
+}
+
+.pf__right {
+  flex-grow: 1;
+  margin-left: 24px;
+}
+
+/* ---- Identity ---- */
+.pf-id {
+  flex-direction: row;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+}
+
+.pf-id__avatar {
+  width: 150px;
+  height: 225px;
+  flex-shrink: 0;
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-dark);
+  -unity-background-scale-mode: stretch-to-fill;
+}
+
+.pf-id__avatar--square {
+  height: 150px;
+}
+
+.pf-id__text {
+  flex-grow: 1;
+  padding-left: 18px;
+  justify-content: flex-end;
+}
+
+.pf-id__name {
+  font-size: 30px;
+  letter-spacing: 6px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.pf-id__pilot {
+  font-size: 15px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  padding: 0;
+  margin-bottom: 18px;
+}
+
+.pf-id__level {
+  font-size: 40px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  padding: 0;
+  text-shadow: 0 0 14px rgba(0, 255, 148, 0.4);
+}
+
+.pf-id__xp {
+  height: 14px;
+  margin-top: 6px;
+  --bar-fill: var(--chopper-green);
+  --bar-track: var(--chopper-green-faint);
+}
+
+.pf-id__xp-text {
+  color: var(--chopper-green-dim);
+  padding: 4px 0 0 0;
+}
+
+/* ---- Cards (as the results screen) ---- */
+.pf-cards {
+  flex-direction: row;
+  /* Cards keep 6px each side; the row pulls the outer 6px back, so the edges line up (no :last-child in USS). */
+  margin: 0 -6px 14px -6px;
+}
+
+.pf-card {
+  flex-grow: 1;
+  flex-basis: 0;
+  height: 150px;
+  margin: 0 6px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+}
+
+.pf-card--small {
+  height: 100px;
+}
+
+.pf-card__value {
+  flex-grow: 1;
+  font-size: 54px;
+  color: var(--chopper-text);
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.pf-card--small .pf-card__value {
+  font-size: 34px;
+}
+
+.pf-card__label {
+  height: 34px;
+  border-top-width: 1px;
+  border-color: var(--chopper-green-dim);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--chopper-green-dim);
+  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.pf-card--kills {
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-dark);
+}
+
+.pf-card--kills .pf-card__value,
+.pf-card--kills .pf-card__label {
+  color: var(--chopper-green);
+  border-color: var(--chopper-green);
+}
+
+.pf-card--deaths {
+  border-color: var(--chopper-red);
+  background-color: var(--chopper-red-dark);
+}
+
+.pf-card--deaths .pf-card__value,
+.pf-card--deaths .pf-card__label {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.pf-card--ratio {
+  border-color: var(--chopper-yellow);
+  background-color: var(--chopper-yellow-dark);
+}
+
+.pf-card--ratio .pf-card__value,
+.pf-card--ratio .pf-card__label {
+  color: var(--chopper-yellow);
+  border-color: var(--chopper-yellow);
+}
+
+/* ---- Service record: label / value rows ---- */
+.pf-record {
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+}
+
+.pf-row {
+  flex-direction: row;
+  align-items: center;
+  height: 26px;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.pf-row__label {
+  flex-grow: 1;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.pf-row__value {
+  font-size: 16px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+/* ---- Recent matches ---- */
+.pf-recent {
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+  padding: 4px 0;
+}
+
+.pf-match {
+  flex-direction: row;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-left-width: 3px;
+  border-color: var(--chopper-green-dim);
+  margin: 2px 0;
+}
+
+.pf-match--won {
+  border-color: var(--chopper-green);
+}
+
+.pf-match--lost {
+  border-color: var(--chopper-red);
+}
+
+.pf-match__result {
+  width: 64px;
+  font-size: 14px;
+  letter-spacing: 3px;
+  padding: 0;
+  color: var(--chopper-green-dim);
+}
+
+.pf-match--won .pf-match__result {
+  color: var(--chopper-green);
+}
+
+.pf-match--lost .pf-match__result {
+  color: var(--chopper-red);
+}
+
+.pf-match__place {
+  width: 56px;
+  font-size: 14px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.pf-match__kd {
+  flex-grow: 1;
+  font-size: 13px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.pf-match__xp {
+  width: 72px;
+  font-size: 14px;
+  color: var(--chopper-yellow);
+  -unity-text-align: middle-right;
+  padding: 0;
+}
+
+.pf-match__when {
+  width: 80px;
+  font-size: 12px;
+  color: var(--chopper-green-dim);
+  -unity-text-align: middle-right;
+  padding: 0;
+}
+
+.pf-empty {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  padding: 8px 12px;
+}
+
+/* ---- Award case ---- */
+.pf-awards {
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.pf-award {
+  width: 196px;
+  height: 74px;
+  margin: 0 8px 8px 0;
+  padding: 6px 10px;
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-dark);
+}
+
+.pf-award__head {
+  flex-direction: row;
+  align-items: center;
+}
+
+.pf-award__title {
+  flex-grow: 1;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.pf-award__count {
+  font-size: 15px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.pf-award__line {
+  font-size: 11px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 2px 0 0 0;
+}
+
+.pf-award--funny {
+  border-color: var(--chopper-pink);
+  background-color: var(--chopper-pink-dark);
+}
+
+.pf-award--funny .pf-award__title {
+  color: var(--chopper-pink);
+}
+
+.pf-award--shame {
+  border-color: var(--chopper-red);
+  background-color: var(--chopper-red-dark);
+}
+
+.pf-award--shame .pf-award__title {
+  color: var(--chopper-red);
+}
+
+.pf-award--locked {
+  opacity: 0.35;
+  border-color: var(--chopper-green-dim);
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.pf-award--locked .pf-award__title {
+  color: var(--chopper-green-dim);
+}
+
+/* ---- Achievements ---- */
+.pf-achievements {
+  flex-direction: column;
+}
+
+.pf-ach {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
+}
+
+.pf-ach--done {
+  border-color: var(--chopper-green);
+  border-left-width: 4px;
+}
+
+.pf-ach__text {
+  flex-grow: 1;
+}
+
+.pf-ach__title {
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.pf-ach--done .pf-ach__title {
+  color: var(--chopper-green);
+}
+
+.pf-ach__line {
+  font-size: 12px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.pf-ach__progress {
+  width: 200px;
+  margin-left: 12px;
+}
+
+.pf-ach__bar {
+  height: 10px;
+  --bar-fill: var(--chopper-green);
+  --bar-track: var(--chopper-green-faint);
+}
+
+.pf-ach__amount {
+  font-size: 12px;
+  color: var(--chopper-green-dim);
+  -unity-text-align: middle-right;
+  padding: 2px 0 0 0;
+}
+
+.pf-ach--done .pf-ach__amount {
+  color: var(--chopper-yellow);
+}
