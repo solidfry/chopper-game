@@ -33,6 +33,7 @@ namespace Chopper.Editor.Setup
             root.Add(new Button(() => Do(CityAssets.EnsureAll)) { text = "8. Import city (CityForge)" });
             root.Add(new Button(() => Do(CityLookSetup.Apply)) { text = "9. City look (fog, SSAO, bloom)" });
             root.Add(new Button(() => Do(() => MapSceneSetup.Apply(ConfigAssets.Load()))) { text = "10. City match scenes (light, probes)" });
+            root.Add(new Button(() => Do(() => HomeSetup.Apply(ConfigAssets.Load()))) { text = "11. Build home screen (main menu)" });
             root.Add(new Button(() => Do(() =>
             {
                 var config = ConfigAssets.EnsureAll();
@@ -45,6 +46,7 @@ namespace Chopper.Editor.Setup
                 CityAssets.EnsureAll();
                 CityLookSetup.Apply();
                 MapSceneSetup.Apply(config);
+                HomeSetup.Apply(config);
             })) { text = "Do all" });
 
             var configRow = new Button(() =>

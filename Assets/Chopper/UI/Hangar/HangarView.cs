@@ -100,6 +100,7 @@ namespace Chopper.UI.Hangar
         private Button _launch;
         private DropdownField _trainingMap;
         private Button _findMatch;
+        private Button _home;
         private Label _matchStatus;
         /// <summary>Unscaled time the current search started; -1 when not searching.</summary>
         private float _searchStart = -1f;
@@ -204,6 +205,7 @@ namespace Chopper.UI.Hangar
             _launch = _root.Q<Button>("launch");
             _trainingMap = _root.Q<DropdownField>("training-map");
             _findMatch = _root.Q<Button>("find-match");
+            _home = _root.Q<Button>("home");
             _matchStatus = _root.Q<Label>("match-status");
 
             _preset.RegisterValueChangedCallback(OnPresetChanged);
@@ -214,6 +216,11 @@ namespace Chopper.UI.Hangar
             _launch.clicked += OnLaunch;
             _trainingMap?.RegisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked += OnFindMatch;
+            if (_home != null)
+            {
+                _home.clicked += OnHome;
+                _home.EnableInClassList(HiddenClass, !bridge.Context.CanOpenHome);
+            }
             _model.MatchStatusChanged += RefreshMatch;
             _pilots = new PilotSelectView(_root, _model.Pilots, bridge.Context);
             _prompts = new InputPromptLabels(_root, bridge.Context.Prompts);
@@ -232,6 +239,7 @@ namespace Chopper.UI.Hangar
             _launch.clicked -= OnLaunch;
             _trainingMap?.UnregisterValueChangedCallback(OnTrainingMapChanged);
             _findMatch.clicked -= OnFindMatch;
+            if (_home != null) _home.clicked -= OnHome;
             _model.MatchStatusChanged -= RefreshMatch;
             _pilots?.Dispose();
             _pilots = null;
@@ -250,6 +258,8 @@ namespace Chopper.UI.Hangar
                 // Back out of a slot first: the loadout can be changed while a search runs.
                 if (_model.Back()) (_model.Searching ? _findMatch : _launch)?.Focus();
                 else if (_model.Searching) _model.CancelSearch();
+                // Overview, no search: back to the main menu.
+                else OnHome();
             }
             TickSearchTime();
             TurnChopper();
@@ -762,6 +772,13 @@ namespace Chopper.UI.Hangar
                 tile.Add(tag);
                 _skins.Add(tile);
             }
+        }
+
+        /// <summary>Back to the main menu (home screen), if it is in the build.</summary>
+        private void OnHome()
+        {
+            if (_model.Searching) _model.CancelSearch();
+            bridge.Context.OpenHome();
         }
 
         private void OnBack()

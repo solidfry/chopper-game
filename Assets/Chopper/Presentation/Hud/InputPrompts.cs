@@ -48,6 +48,7 @@ namespace Chopper.Presentation.Hud
             "Repair" => ActionKey(_controls.Flight.Repair),
             "Ability" => ActionKey(_controls.Flight.Ability),
             "Back" => MenuKey("ESC", "<Gamepad>/buttonEast"),
+            "Submit" => MenuKey("ENTER", "<Gamepad>/buttonSouth"),
             "Menu" => MenuKey("ESC", "<Gamepad>/start"),
             _ => name,
         };
@@ -57,7 +58,7 @@ namespace Chopper.Presentation.Hud
         {
             if (string.IsNullOrEmpty(template)) return template;
             var text = template;
-            foreach (var name in new[] { "Repair", "Ability", "Back", "Menu" })
+            foreach (var name in new[] { "Repair", "Ability", "Back", "Menu", "Submit" })
                 text = text.Replace("{" + name + "}", Key(name));
             return text;
         }

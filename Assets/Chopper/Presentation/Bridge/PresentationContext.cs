@@ -25,6 +25,7 @@ namespace Chopper.Presentation.Bridge
         private readonly List<IDisposable> _owned = new();
         private readonly UnityEngine.SceneManagement.Scene _scene;
         private HangarModel _hangar;
+        private Menu.HomeModel _home;
         private SceneFlow _flow;
         private MusicLibrary.Set _musicSet;
         private AudioClip _musicOverride;
@@ -93,7 +94,27 @@ namespace Chopper.Presentation.Bridge
         public HangarModel Hangar => _hangar ??= Config != null && Config.LoadoutCatalog != null
             ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked(), Config.Maps)
             : null;
+        /// <summary>Home screen view model; made on first use (null without a loadout catalog). Only the home scene uses it.</summary>
+        public Menu.HomeModel Home => _home ??= Config != null && Config.LoadoutCatalog != null
+            ? new Menu.HomeModel(Config.LoadoutCatalog, LoadoutChoices, Config.Maps)
+            : null;
         public bool IsDisposed { get; private set; }
+
+        /// <summary>The home scene is in the build and not the open one.</summary>
+        public bool CanOpenHome => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != Menu.HomeModel.SceneName &&
+                                   Application.CanStreamedLevelBeLoaded(Menu.HomeModel.SceneName);
+
+        /// <summary>Back to the main menu (stops a local match once the screen is covered).</summary>
+        public void OpenHome()
+        {
+            if (!CanOpenHome) return;
+            MenuOpen = false;
+            LoadScene(Menu.HomeModel.SceneName, Simulation.Session.LocalSession.Stop, "HOME");
+        }
+
+        /// <summary>Starts a local training match on <paramref name="scene"/> (worlds start once the screen is covered).</summary>
+        public bool StartTraining(string scene, string label = null) =>
+            !string.IsNullOrEmpty(scene) && LoadScene(scene, () => Simulation.Session.LocalSession.Start(), label);
 
         /// <summary>The hangar scene is in the build, so a match can go back to it.</summary>
         public bool CanOpenHangar => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != HangarStage.SceneName &&

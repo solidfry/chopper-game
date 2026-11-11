@@ -1,0 +1,619 @@
+/* Home screen (HomeView). Colours come from the theme tokens (ChopperTheme.uss). "home--ready" is added after the
+   boot log: the nav, profile and footer slide and fade in. */
+
+.home {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgb(2, 8, 4);
+}
+
+.home__backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Darker at the left, so the menu reads over the grid. */
+.home__shade {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 46%;
+  background-image: none;
+  background-color: rgba(0, 6, 2, 0.55);
+  border-right-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.home--hidden {
+  display: none;
+}
+
+/* ---- Top bar ---- */
+.home__bar {
+  flex-direction: row;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  background-color: var(--chopper-terminal);
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-dim);
+}
+
+.home__bar-text {
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.8;
+  padding: 0 0 0 18px;
+}
+
+.home__bar-deco {
+  margin-left: 14px;
+}
+
+.home__bar-fill {
+  flex-grow: 1;
+}
+
+.home__clock {
+  color: var(--chopper-yellow);
+}
+
+/* ---- Pages ---- */
+.home__page {
+  flex-grow: 1;
+  flex-direction: row;
+  padding: 48px 64px 32px 64px;
+}
+
+.home__left {
+  width: 40%;
+  min-width: 420px;
+  flex-direction: column;
+}
+
+/* ---- Title: three stacked copies; the two ghosts split apart in a glitch ---- */
+.home-title {
+  height: 132px;
+  margin-bottom: 4px;
+}
+
+.home-title__line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 92px;
+  letter-spacing: 10px;
+  color: var(--chopper-green);
+  padding: 0;
+  text-shadow: 0 0 22px rgba(0, 255, 148, 0.55);
+  transition-property: translate, opacity;
+  transition-duration: 0.06s;
+}
+
+.home-title__line--ghost-a {
+  color: var(--chopper-pink);
+  opacity: 0;
+  text-shadow: none;
+}
+
+.home-title__line--ghost-b {
+  color: var(--chopper-cyan);
+  opacity: 0;
+  text-shadow: none;
+}
+
+.home-title--glitch .home-title__line--ghost-a {
+  opacity: 0.85;
+  translate: -7px 2px;
+}
+
+.home-title--glitch .home-title__line--ghost-b {
+  opacity: 0.85;
+  translate: 6px -3px;
+}
+
+.home-title--glitch .home-title__line {
+  translate: 2px 0;
+}
+
+.home-title__sub {
+  position: absolute;
+  left: 6px;
+  top: 98px;
+  font-size: 22px;
+  letter-spacing: 14px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+/* ---- Boot log: typed lines; fades once ready ---- */
+.home__boot {
+  font-size: 12px;
+  color: var(--chopper-green);
+  opacity: 0.75;
+  white-space: normal;
+  height: 96px;
+  margin: 8px 0 12px 0;
+  padding: 0;
+  transition-property: opacity, height, margin;
+  transition-duration: 0.4s;
+}
+
+.home--ready .home__boot {
+  opacity: 0.35;
+  height: 40px;
+}
+
+/* ---- Navigation ---- */
+.home-nav {
+  flex-direction: column;
+  opacity: 0;
+  translate: -40px 0;
+  transition-property: opacity, translate;
+  transition-duration: 0.45s;
+  transition-timing-function: ease-out-cubic;
+}
+
+.home--ready .home-nav {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.home-nav__item {
+  flex-direction: row;
+  align-items: center;
+  height: 54px;
+  width: 380px;
+  margin: 0 0 6px 0;
+  padding: 0 18px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-width: 0;
+  border-left-width: 3px;
+  border-color: var(--chopper-green-dim);
+  transition-property: background-color, border-color, translate, width;
+  transition-duration: 0.12s;
+}
+
+.home-nav__item:hover,
+.home-nav__item:focus {
+  background-color: var(--chopper-green);
+  border-color: var(--chopper-yellow);
+  translate: 14px 0;
+  width: 420px;
+}
+
+.home-nav__index {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  width: 40px;
+  padding: 0;
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVSV.ttf");
+}
+
+.home-nav__label {
+  font-size: 26px;
+  letter-spacing: 8px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.home-nav__item:hover .home-nav__label,
+.home-nav__item:focus .home-nav__label,
+.home-nav__item:hover .home-nav__index,
+.home-nav__item:focus .home-nav__index {
+  color: var(--chopper-green-dark);
+}
+
+.home-nav__item--quit .home-nav__label {
+  color: var(--chopper-red);
+}
+
+.home-nav__item--quit:hover,
+.home-nav__item--quit:focus {
+  background-color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.home-nav__hint {
+  font-size: 14px;
+  color: var(--chopper-yellow);
+  margin-top: 14px;
+  padding: 0;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.4s;
+}
+
+.home--ready .home-nav__hint {
+  opacity: 1;
+}
+
+/* ---- Profile card (top right) ---- */
+.home-profile {
+  position: absolute;
+  right: 64px;
+  top: 48px;
+  width: 420px;
+  height: 172px;
+  flex-direction: row;
+  padding: 12px;
+  margin: 0;
+  background-color: var(--chopper-panel);
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  opacity: 0;
+  translate: 40px 0;
+  transition-property: opacity, translate, border-color, background-color;
+  transition-duration: 0.45s, 0.45s, 0.12s, 0.12s;
+}
+
+.home--ready .home-profile {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.home-profile:hover,
+.home-profile:focus {
+  border-color: var(--chopper-green);
+  background-color: rgba(0, 255, 148, 0.08);
+}
+
+.home-profile__portrait {
+  width: 106px;
+  height: 146px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-width: 1px;
+  border-color: var(--chopper-green);
+  -unity-background-scale-mode: scale-and-crop;
+  overflow: hidden;
+}
+
+.home-profile__drawn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.home__scan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.home-profile__text {
+  flex-grow: 1;
+  padding-left: 16px;
+}
+
+.home__section {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--chopper-green-dim);
+  margin: 10px 0 4px 0;
+  padding: 0;
+}
+
+.home-profile__text > .home__section {
+  margin-top: 0;
+}
+
+.home-profile__name {
+  font-size: 22px;
+  letter-spacing: 6px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.home-profile__sign {
+  font-size: 15px;
+  letter-spacing: 5px;
+  color: var(--chopper-green);
+  padding: 0;
+  margin-top: 2px;
+}
+
+.home-profile__role {
+  font-size: 12px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.home-profile__level-row {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.home-profile__level {
+  font-size: 13px;
+  color: var(--chopper-yellow);
+  padding: 0;
+  width: 74px;
+}
+
+.home-profile__xp {
+  flex-grow: 1;
+  height: 10px;
+  color: var(--chopper-yellow);
+}
+
+/* ---- Footer ---- */
+.home__footer {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  bottom: 18px;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.home__footer-text {
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.7;
+  padding: 0;
+}
+
+/* ---- Shared buttons ---- */
+.home__button {
+  height: 40px;
+  padding: 0 22px;
+  margin: 0 8px 0 0;
+  font-size: 15px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.5);
+  border-width: 1px;
+  border-color: var(--chopper-green);
+}
+
+.home__button:hover,
+.home__button:focus {
+  color: var(--chopper-green-dark);
+  background-color: var(--chopper-green);
+}
+
+.home__button:disabled {
+  opacity: 0.4;
+}
+
+.home__button--small {
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+/* ---- Pilot codex ---- */
+.home__page--pilots {
+  flex-direction: column;
+}
+
+.codex__head {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.codex__title {
+  font-size: 34px;
+  letter-spacing: 12px;
+  color: var(--chopper-green);
+  padding: 0 0 0 18px;
+  text-shadow: 0 0 16px rgba(0, 255, 148, 0.45);
+}
+
+.codex__count {
+  flex-grow: 1;
+  -unity-text-align: middle-right;
+  font-size: 13px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.codex__body {
+  flex-grow: 1;
+  flex-direction: row;
+}
+
+.codex__list {
+  width: 300px;
+  margin-right: 28px;
+  background-color: rgba(0, 0, 0, 0.45);
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.codex-row {
+  flex-direction: row;
+  align-items: center;
+  height: 58px;
+  margin: 0;
+  padding: 4px 10px;
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 0;
+  border-left-width: 3px;
+  border-color: rgba(0, 0, 0, 0);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--chopper-green-faint);
+  transition-property: background-color, translate;
+  transition-duration: 0.1s;
+}
+
+.codex-row:hover,
+.codex-row:focus {
+  background-color: rgba(0, 255, 148, 0.1);
+}
+
+.codex-row--shown {
+  background-color: rgba(0, 255, 148, 0.16);
+  translate: 6px 0;
+}
+
+.codex-row__face {
+  width: 36px;
+  height: 48px;
+  margin-right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  -unity-background-scale-mode: scale-and-crop;
+}
+
+.codex-row__serial {
+  font-size: 11px;
+  color: var(--chopper-green-dim);
+  width: 26px;
+  padding: 0;
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVSV.ttf");
+}
+
+.codex-row__sign {
+  font-size: 15px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  padding: 0;
+  flex-grow: 1;
+}
+
+.codex-row__tag {
+  font-size: 10px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.codex-feature {
+  flex-grow: 1;
+  flex-direction: row;
+  transition-property: opacity, translate;
+  transition-duration: 0.18s;
+}
+
+/* One frame on a change: the card jumps in from the right. */
+.codex-feature--switch {
+  opacity: 0.2;
+  translate: 24px 0;
+  transition-duration: 0s;
+}
+
+.codex-feature__portrait {
+  width: 330px;
+  height: 462px;
+  margin-right: 32px;
+  background-color: rgba(0, 0, 0, 0.65);
+  border-width: 2px;
+  border-color: var(--chopper-green);
+  -unity-background-scale-mode: scale-and-crop;
+  overflow: hidden;
+}
+
+.codex-feature__drawn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.codex-feature__serial {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 13px;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.codex-feature__rec {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-red);
+  padding: 0;
+}
+
+.codex-feature__text {
+  flex-grow: 1;
+  flex-shrink: 1;
+  max-width: 640px;
+}
+
+.codex-feature__role {
+  font-size: 14px;
+  letter-spacing: 6px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.codex-feature__sign {
+  font-size: 64px;
+  letter-spacing: 10px;
+  padding: 0;
+  margin-bottom: 4px;
+  text-shadow: 0 0 20px rgba(0, 255, 148, 0.35);
+}
+
+.codex-feature__body {
+  font-size: 15px;
+  color: var(--chopper-text);
+  white-space: normal;
+  padding: 0;
+}
+
+.codex-feature__ability {
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: var(--chopper-yellow);
+  padding: 0;
+  margin-bottom: 2px;
+}
+
+.codex-feature__meta {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+  margin-top: 4px;
+}
+
+.codex-feature__effects {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.codex-effect {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--chopper-green);
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  padding: 3px 8px;
+  margin: 0 6px 6px 0;
+}
+
+.codex-effect--bad {
+  color: var(--chopper-red);
+  border-color: var(--chopper-red);
+}
+
+.codex-feature__actions {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 22px;
+}
+
+.codex-feature__state {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--chopper-yellow);
+  padding: 0 0 0 10px;
+}

@@ -1,0 +1,119 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:home="Chopper.UI.Home" xmlns:hangar="Chopper.UI.Hangar" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
+  <Style src="Home.uss" />
+  <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
+       Lists are filled from code. "home--ready" (added after the boot log) brings the menu in. -->
+  <ui:VisualElement name="home" class="home">
+    <home:HomeBackdrop class="home__backdrop" picking-mode="Ignore" />
+    <ui:VisualElement class="home__shade" picking-mode="Ignore" />
+
+    <!-- Top bar -->
+    <ui:VisualElement class="home__bar" picking-mode="Ignore">
+      <ui:Label text="AWN//OS 2.6" class="home__bar-text chopper-title" />
+      <ui:Label text="0451-K7" class="chopper-deco-seven home__bar-deco" picking-mode="Ignore" />
+      <ui:VisualElement class="home__bar-fill" picking-mode="Ignore" />
+      <ui:Label name="link-status" text="LINK // LOCAL" class="home__bar-text chopper-title" />
+      <ui:Label name="clock" text="00:00:00" class="home__bar-text home__clock chopper-title" />
+    </ui:VisualElement>
+
+    <!-- Main page -->
+    <ui:VisualElement name="page-main" class="home__page home__page--main" picking-mode="Ignore">
+      <ui:VisualElement class="home__left" picking-mode="Ignore">
+        <ui:VisualElement name="title" class="home-title" picking-mode="Ignore">
+          <ui:Label text="AIRWING" class="home-title__line home-title__line--ghost-a chopper-title" />
+          <ui:Label text="AIRWING" class="home-title__line home-title__line--ghost-b chopper-title" />
+          <ui:Label text="AIRWING" class="home-title__line chopper-title" />
+          <ui:Label text="N I T R O" class="home-title__sub chopper-title" />
+        </ui:VisualElement>
+        <ui:Label name="boot-log" class="home__boot chopper-body" picking-mode="Ignore" />
+
+        <ui:VisualElement name="nav" class="home-nav">
+          <ui:Button name="nav-play" class="home-nav__item">
+            <ui:Label text="01" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="PLAY" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-training" class="home-nav__item">
+            <ui:Label text="02" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="TRAINING" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-hangar" class="home-nav__item">
+            <ui:Label text="03" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="HANGAR" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-pilots" class="home-nav__item">
+            <ui:Label text="04" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="PILOTS" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-options" class="home-nav__item">
+            <ui:Label text="05" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="OPTIONS" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-quit" class="home-nav__item home-nav__item--quit">
+            <ui:Label text="06" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="QUIT" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+        </ui:VisualElement>
+        <ui:Label name="nav-hint" text="&gt; " class="home-nav__hint chopper-body" picking-mode="Ignore" />
+      </ui:VisualElement>
+
+      <!-- Profile card: your pilot; click opens the codex -->
+      <ui:Button name="profile" class="home-profile">
+        <ui:VisualElement name="profile-portrait" class="home-profile__portrait" picking-mode="Ignore">
+          <hangar:PilotPortrait name="profile-drawn" class="home-profile__drawn" picking-mode="Ignore" />
+          <home:CodecScan name="profile-scan" class="home__scan" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="home-profile__text" picking-mode="Ignore">
+          <ui:Label text="// OPERATOR" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:Label name="profile-name" class="home-profile__name chopper-title" picking-mode="Ignore" />
+          <ui:Label name="profile-sign" class="home-profile__sign chopper-title" picking-mode="Ignore" />
+          <ui:Label name="profile-role" class="home-profile__role chopper-body" picking-mode="Ignore" />
+          <ui:VisualElement class="home-profile__level-row" picking-mode="Ignore">
+            <ui:Label name="profile-level" class="home-profile__level chopper-title" picking-mode="Ignore" />
+            <cockpit:SegmentBar name="profile-xp" segments="12" gap="3" class="home-profile__xp" picking-mode="Ignore" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:Button>
+
+      <ui:VisualElement class="home__footer" picking-mode="Ignore">
+        <ui:Label text="{Submit} = SELECT    {Back} = BACK" class="home__footer-text input-prompt" picking-mode="Ignore" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Pilot codex -->
+    <ui:VisualElement name="page-pilots" class="home__page home__page--pilots home--hidden">
+      <ui:VisualElement class="codex__head" picking-mode="Ignore">
+        <ui:Button name="codex-back" text="&lt; BACK" class="home__button home__button--small chopper-title" />
+        <ui:Label text="PILOT CODEX" class="codex__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="codex-count" class="codex__count chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:VisualElement class="codex__body" picking-mode="Ignore">
+        <ui:ScrollView name="codex-list" class="codex__list" />
+        <ui:VisualElement name="codex-feature" class="codex-feature" picking-mode="Ignore">
+          <ui:VisualElement name="codex-portrait" class="codex-feature__portrait" picking-mode="Ignore">
+            <hangar:PilotPortrait name="codex-drawn" class="codex-feature__drawn" picking-mode="Ignore" />
+            <home:CodecScan name="codex-scan" class="home__scan" picking-mode="Ignore" />
+            <ui:Label name="codex-serial" class="codex-feature__serial chopper-title" picking-mode="Ignore" />
+            <ui:Label text="REC" class="codex-feature__rec chopper-title" picking-mode="Ignore" />
+          </ui:VisualElement>
+          <ui:VisualElement class="codex-feature__text" picking-mode="Ignore">
+            <ui:Label name="codex-role" class="codex-feature__role chopper-title" picking-mode="Ignore" />
+            <ui:Label name="codex-sign" class="codex-feature__sign chopper-title" picking-mode="Ignore" />
+            <ui:Label text="// PASSIVE" class="home__section chopper-title" picking-mode="Ignore" />
+            <ui:Label name="codex-passive" class="codex-feature__body chopper-body" picking-mode="Ignore" />
+            <ui:Label text="// ABILITY" class="home__section chopper-title" picking-mode="Ignore" />
+            <ui:Label name="codex-ability-name" class="codex-feature__ability chopper-title" picking-mode="Ignore" />
+            <ui:Label name="codex-ability-text" class="codex-feature__body chopper-body" picking-mode="Ignore" />
+            <ui:Label name="codex-ability-meta" class="codex-feature__meta chopper-title" picking-mode="Ignore" />
+            <ui:Label text="// TRAITS" class="home__section chopper-title" picking-mode="Ignore" />
+            <ui:VisualElement name="codex-effects" class="codex-feature__effects" picking-mode="Ignore" />
+            <ui:VisualElement class="codex-feature__actions" picking-mode="Ignore">
+              <ui:Button name="codex-prev" text="&lt;" class="home__button home__button--small chopper-title" />
+              <ui:Button name="codex-select" text="[ SET AS PILOT ]" class="home__button chopper-title" />
+              <ui:Button name="codex-next" text="&gt;" class="home__button home__button--small chopper-title" />
+              <ui:Label name="codex-state" class="codex-feature__state chopper-title" picking-mode="Ignore" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

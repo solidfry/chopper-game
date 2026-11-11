@@ -35,6 +35,27 @@
   padding: 0;
 }
 
+.hangar__bar-home {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  padding: 2px 10px;
+  margin: 0 14px 0 0;
+}
+
+.hangar__bar-home:hover,
+.hangar__bar-home:focus {
+  color: var(--chopper-green-dark);
+  background-color: var(--chopper-green);
+}
+
+.hangar__bar-home.hangar--hidden {
+  display: none;
+}
+
 .hangar__bar-nav {
   flex-grow: 1;
 }

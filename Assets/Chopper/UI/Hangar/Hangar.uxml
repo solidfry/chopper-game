@@ -10,6 +10,8 @@
     </ui:VisualElement>
 
     <ui:VisualElement class="hangar__bar">
+      <!-- Back to the main menu (home screen); hidden when the home scene is not in the build -->
+      <ui:Button name="home" text="&lt; HOME" class="hangar__bar-home chopper-title" />
       <ui:Label text="HANGAR//SYS" class="hangar__bar-text chopper-title" />
       <!-- Decoration only (segment readout): no information. -->
       <ui:Label text="0451-K7" class="chopper-deco-seven hangar__bar-deco" picking-mode="Ignore" />

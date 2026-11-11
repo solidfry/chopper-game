@@ -41,6 +41,7 @@ namespace Chopper.Presentation.Config
         [SerializeField, Tooltip("Retro HUD look: presets, intensities, gameplay reactions. Empty = plain UI HUD.")]
         private HudLookSettings hudLook;
         [SerializeField, Tooltip("Hangar screen (loadout and skin). Setup step 7 links it.")] private VisualTreeAsset hangarLayout;
+        [SerializeField, Tooltip("Home screen (main menu, pilot codex). Setup step 11 links it.")] private VisualTreeAsset homeLayout;
         [SerializeField, Tooltip("Live cockpit screens: the pages drawn on the cockpit displays.")]
         private VisualTreeAsset cockpitScreensLayout;
         [SerializeField, Tooltip("Draws the cockpit screen pages into the render texture the kit's screen material reads.")]
@@ -64,6 +65,7 @@ namespace Chopper.Presentation.Config
         public VisualTreeAsset OptionsLayout => optionsLayout;
         public HudLookSettings HudLook => hudLook;
         public VisualTreeAsset HangarLayout => hangarLayout;
+        public VisualTreeAsset HomeLayout => homeLayout;
         public VisualTreeAsset CockpitScreensLayout => cockpitScreensLayout;
         public PanelSettings CockpitScreensPanel => cockpitScreensPanel;
         public HangarSettings Hangar => hangar;
@@ -86,6 +88,7 @@ namespace Chopper.Presentation.Config
             Require(skins, "skin library (press '5. Import part kits')", problems);
             Require(hangar, "hangar settings (press '7. Build hangar')", problems);
             Require(hangarLayout, "hangar layout (press '7. Build hangar')", problems);
+            Require(homeLayout, "home layout (press '11. Build home screen')", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
@@ -130,6 +133,9 @@ namespace Chopper.Presentation.Config
             hangar = settings;
             hangarLayout = layout;
         }
+
+        /// <summary>Editor only: used by the home screen step.</summary>
+        public void SetHome(VisualTreeAsset layout) => homeLayout = layout;
 
         /// <summary>Editor only: used by the city match scene step.</summary>
         public void SetEnvironment(EnvironmentSettings settings) => environment = settings;

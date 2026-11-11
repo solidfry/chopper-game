@@ -801,6 +801,7 @@ ground, realistically. Design notes:
 - [ ] Lobby screen from the Figma design: team A (Dream Cyan) / team B (Lightning Yellow) player cards, VS mark.
 - [ ] Server list screen from the Figma design.
 - [ ] Menus (home, modes, nav bar with Console Green active tab) from the Figma designs, as part of the UI Toolkit migration (section 1b).
+  - 11 Nov: home screen built (`UI/Home`, Setup step 11) with nav, profile card and pilot codex. Next: match end, mode select and matchmaking, boot and briefing, controls, notifications, clean-up.
 - [ ] Team colours on world markers (Dream Cyan / Lightning Yellow) when TDM exists.
 - [ ] Optional: a safe boost "bulge" (always-on lens distortion or a custom pass) if the boost needs more punch.
 - [ ] **Damage model (owner TODO, 29 Oct; written 5 Nov, not yet compiled: hit points with every hit, impact-speed crash and landing damage, `ChopperHitRpc`, sparks, smoke and fire in `DamageEffectsSystem`; see the handoff, Phase 4 list):** more realistic damage. Particles at the point of impact on the chopper (sparks, smoke; the hit point must travel with the hit message to presentation). Hitting walls or the ground damages the chopper (from the impact speed at the contact, not only the speed loss per tick that `EnvironmentDamageSystem` uses now). Landing too fast damages it (vertical speed at touchdown over a safe limit). Server decides the damage; clients only show effects.

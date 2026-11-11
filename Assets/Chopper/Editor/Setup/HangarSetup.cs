@@ -88,9 +88,12 @@ namespace Chopper.Editor.Setup
             if (!scenes.Contains(ScenePath)) yield return ("The hangar scene is not in the build settings. Press '7. Build hangar'.", null);
             if (!scenes.Any(p => Path.GetFileNameWithoutExtension(p) == ChopperBootstrap.TrainingRangeScene))
                 yield return ($"{ChopperBootstrap.TrainingRangeScene} is not in the build settings: the hangar cannot launch it.", null);
-            if (scenes.Length > 0 && scenes[0] != ScenePath)
-                yield return ($"The first build scene is {scenes[0]}, not the hangar: the game starts there. Press '7. Build hangar'.", null);
-            foreach (var path in scenes.Where(p => p != ScenePath && !IsMatchScene(p)))
+            var first = File.Exists(HomeSetup.ScenePath) ? HomeSetup.ScenePath : ScenePath;
+            if (scenes.Length > 0 && scenes[0] != first)
+                yield return ($"The first build scene is {scenes[0]}, not {Path.GetFileNameWithoutExtension(first)}: the game starts there. " +
+                              "Press '11. Build home screen' (or '7. Build hangar').", null);
+            if (!File.Exists(HomeSetup.ScenePath)) yield return ("No home screen (main menu). Press '11. Build home screen'.", null);
+            foreach (var path in scenes.Where(p => p != ScenePath && p != HomeSetup.ScenePath && !IsMatchScene(p)))
                 yield return ($"Old scene {path} is in the build (missing scripts). Press '7. Build hangar' to turn it off.", null);
         }
 
@@ -304,15 +307,17 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>
-        /// Client build scenes: the hangar first (the game starts there), then the match scene. The old 2023 scenes stay
+        /// Client build scenes: the home screen first (step 11; the game starts there), the hangar, then the match scenes. The old 2023 scenes stay
         /// in the list but off: their scripts are gone (missing-script warnings, wrong start scene) until they are ported.
         /// </summary>
         private static void EnsureBuildScenes()
         {
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
-            foreach (var scene in scenes.Skip(1)) scene.enabled = IsMatchScene(scene.path);
+            foreach (var scene in scenes.Skip(1)) scene.enabled = IsMatchScene(scene.path) || scene.path == HomeSetup.ScenePath;
             EditorBuildSettings.scenes = scenes.ToArray();
+            // The home screen (step 11) stays first when it exists.
+            HomeSetup.EnsureBuildScenes();
         }
 
         /// <summary>The training range and the city match scenes (Map_&lt;kit&gt;, step 10).</summary>

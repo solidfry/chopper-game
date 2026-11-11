@@ -76,6 +76,9 @@ Rules:
 | 8 Nov | Bots: pilot, navigator, brain | compiled, tested |
 | 9 Nov | Rocket lead always on (dim free aim at the first hit; hidden at open sky), seeker lock grace (`lockGraceSeconds`, 1.5 s), socket scale baked (`ChassisSocket.Scale`), explosion layer under crash sounds, `ChassisClass` | written without the editor |
 | 11 Nov | Scene Jumper editor window (`Editor/Tools/SceneJumper.cs`, Chopper > Scene Jumper, Ctrl+Shift+J): open, add, play-from, favourites, recent, play-mode start scene | written without the editor |
+| 11 Nov | UI Toolkit port, step 1: home screen (`Home.unity`, Setup step 11): animated city-grid backdrop (`HomeBackdrop`), glitch title, typed boot log, nav (PLAY, TRAINING, HANGAR, PILOTS, OPTIONS, QUIT), profile card with codec scan (`CodecScan`), pilot codex page; options get MAIN MENU, hangar gets < HOME (Escape at overview) | written without the editor |
+
+**Editor steps owed (11 Nov, home screen):** compile; press Setup 1 then 11 (makes `Assets/Scenes/Home.unity`, first in the build list); Validate; play Home: boot log, nav, codex, options, training, hangar and back; run HomeModelTests. The old `MainMenu` scene is untouched until the clean-up step.
 
 **Editor steps still owed (9 Nov work):** compile; reimport the chopper prefabs (socket scale); let Unity reimport `Assets/Sound/Impacts`; run GuidanceTests; in play check the dim free-aim reticle, a lock that survives a short jink, and crash sounds. Older owed steps are in the history file (4c–4e).
 

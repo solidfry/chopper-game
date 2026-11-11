@@ -23,6 +23,8 @@ namespace Chopper.UI.Options
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the HUD look and the audio service.")]
         private PresentationBridge bridge;
+        [SerializeField, Tooltip("Escape / Start opens and closes it. Off on the home screen: the home view decides.")]
+        private bool toggleWithEscape = true;
 
         private PresentationContext _context;
         private PanelRenderer _renderer;
@@ -35,6 +37,7 @@ namespace Chopper.UI.Options
         private Toggle _reduceEffects;
         private Button _resume;
         private Button _hangar;
+        private Button _home;
         private InputPromptLabels _prompts;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
         private readonly List<(Slider Slider, HudGroup Group)> _hudOpacity = new();
@@ -46,6 +49,15 @@ namespace Chopper.UI.Options
         private readonly List<string> _viewNames = new();
 
         public bool IsOpen { get; private set; }
+
+        /// <summary>Editor only: used by the setup tool (home screen: false).</summary>
+        public void SetToggleWithEscape(bool value) => toggleWithEscape = value;
+
+        /// <summary>Opens the overlay (home screen OPTIONS).</summary>
+        public void Open()
+        {
+            if (_root != null) SetOpen(true);
+        }
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetBridge(PresentationBridge value) => bridge = value;
@@ -77,6 +89,7 @@ namespace Chopper.UI.Options
             _reduceEffects = _root.Q<Toggle>("reduce-effects");
             _resume = _root.Q<Button>("resume");
             _hangar = _root.Q<Button>("hangar");
+            _home = _root.Q<Button>("home");
 
             _mouseSteer.choices = _steerNames;
             _mouseSteer.RegisterValueChangedCallback(OnMouseSteerChanged);
@@ -89,6 +102,7 @@ namespace Chopper.UI.Options
             _reduceEffects.RegisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked += Close;
             if (_hangar != null) _hangar.clicked += OpenHangar;
+            if (_home != null) _home.clicked += OpenHome;
 
             _volumes.Clear();
             AddVolume("volume-master", AudioChannel.Master);
@@ -130,6 +144,7 @@ namespace Chopper.UI.Options
             _reduceEffects.UnregisterValueChangedCallback(OnReduceEffectsChanged);
             _resume.clicked -= Close;
             if (_hangar != null) _hangar.clicked -= OpenHangar;
+            if (_home != null) _home.clicked -= OpenHome;
             foreach (var (slider, _) in _volumes) slider.UnregisterValueChangedCallback(OnVolumeChanged);
             foreach (var (slider, _) in _hudOpacity) slider.UnregisterValueChangedCallback(OnHudOpacityChanged);
             _root = null;
@@ -139,10 +154,20 @@ namespace Chopper.UI.Options
         {
             var escape = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             var start = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
-            if ((escape || start) && _root != null) SetOpen(!IsOpen);
+            if (toggleWithEscape && (escape || start) && _root != null) SetOpen(!IsOpen);
         }
 
-        private void Close() => SetOpen(false);
+        public void Close()
+        {
+            if (_root != null) SetOpen(false);
+        }
+
+        /// <summary>Leave for the main menu (stops a local match).</summary>
+        private void OpenHome()
+        {
+            IsOpen = false;
+            _context.OpenHome();
+        }
 
         /// <summary>Leave the match for the hangar (change the loadout). The cursor stays free there.</summary>
         private void OpenHangar()
@@ -170,6 +195,7 @@ namespace Chopper.UI.Options
             foreach (var (slider, channel) in _volumes) slider.SetValueWithoutNotify(_context.Audio.GetVolume(channel));
             foreach (var (slider, group) in _hudOpacity) slider.SetValueWithoutNotify(_context.HudOpacity.Get(group));
             _hangar?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHangar);
+            _home?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHome);
             _resume.Focus();
         }
 
