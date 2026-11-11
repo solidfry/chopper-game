@@ -25,12 +25,12 @@ namespace Chopper.Presentation.Menu
         private Material tracerMaterial;
         [SerializeField, Range(0, 12)] private int count = 6;
         [SerializeField, Tooltip("Model scale (bigger than life so they read at menu distance).")]
-        private float scale = 5f;
+        private float scale = 3f;
         [Header("Combat flight")]
         [SerializeField, Tooltip("Top speed, metres per second (fast attack choppers: about 75).")]
         private float maxSpeed = 75f;
         [SerializeField, Tooltip("Most acceleration the rotor gives, m/s² (sets how hard they turn and stop).")]
-        private float maxAcceleration = 24f;
+        private float maxAcceleration = 14f;
         [SerializeField, Tooltip("Flight band above the city ground, metres.")]
         private Vector2 altitude = new(140f, 460f);
         [SerializeField, Tooltip("Arena radius as a share of the camera orbit radius.")]
@@ -43,6 +43,12 @@ namespace Chopper.Presentation.Menu
         private float fireRange = 600f;
         [SerializeField, Tooltip("Half-angle of the gun cone, degrees.")]
         private float fireCone = 14f;
+        [SerializeField, Range(0.3f, 6f), Tooltip("How fast the wanted direction may change (per second): lower = wider, softer turns.")]
+        private float steerEase = 1.4f;
+        [SerializeField, Range(0.5f, 10f), Tooltip("How fast thrust (and so bank and pitch) builds and fades (per second).")]
+        private float thrustEase = 2.2f;
+        [SerializeField, Range(0.5f, 10f), Tooltip("How fast the body follows its attitude (per second).")]
+        private float bodyEase = 3.5f;
         [SerializeField] private float tracerSpeed = 900f;
         [SerializeField] private float tracerLength = 55f;
         [SerializeField] private float tracerWidth = 1.6f;
@@ -56,6 +62,10 @@ namespace Chopper.Presentation.Menu
             public Vector3 Position;
             public Vector3 Velocity;
             public Vector3 Acceleration;
+            /// <summary>The wanted velocity, eased (direction changes build over a second or two).</summary>
+            public Vector3 SmoothWanted;
+            /// <summary>0 = nose along the flight path, 1 = nose on the target; eased.</summary>
+            public float AimBlend;
             public Flyer Target;
             public Mode Mode;
             public float ModeEnd;
@@ -130,10 +140,16 @@ namespace Chopper.Presentation.Menu
             if (wireMaterial != null)
             {
                 _chopperWire = new Material(wireMaterial) { name = "Home Chopper Wire" };
-                _chopperWire.SetFloat("_GridSize", 0.6f);
-                _chopperWire.SetFloat("_MajorEvery", 3f);
-                _chopperWire.SetColor("_LineColour", new Color(0.35f, 1.8f, 1f));
-                _chopperWire.SetFloat("_RimStrength", 0.7f);
+                // A clean silhouette: dark body, bright outline (rim), a few panel lines; no dense grid (it turns the
+                // small, moving shapes into noise at the menu's pixel size).
+                _chopperWire.SetFloat("_GridSize", 6f);
+                _chopperWire.SetFloat("_MajorEvery", 1f);
+                _chopperWire.SetFloat("_MinorStrength", 0f);
+                _chopperWire.SetFloat("_LineWidth", 1.2f);
+                _chopperWire.SetColor("_LineColour", new Color(0.3f, 1.5f, 0.85f));
+                _chopperWire.SetColor("_FillColour", new Color(0.01f, 0.09f, 0.05f, 1f));
+                _chopperWire.SetFloat("_RimPower", 2.2f);
+                _chopperWire.SetFloat("_RimStrength", 1.6f);
                 _chopperWire.SetFloat("_WindowChance", 0f);
                 _chopperWire.SetFloat("_ScanStrength", 0f);
             }
@@ -327,20 +343,26 @@ namespace Chopper.Presentation.Menu
                 if (look.y < b.max.y + 40f) wanted.y = Mathf.Max(wanted.y, (b.max.y + 60f - flyer.Position.y) * 1.2f);
             }
 
-            // Acceleration toward the wanted velocity, limited by the rotor.
-            var acceleration = Vector3.ClampMagnitude((wanted - flyer.Velocity) * 2.5f, maxAcceleration);
-            flyer.Acceleration = Vector3.Lerp(flyer.Acceleration, acceleration, 1f - Mathf.Exp(-8f * dt));
+            // Ease the wanted velocity (no snap on a mode or target change), then accelerate toward it within the rotor
+            // limit; thrust builds and fades over time (a jerk limit), so banks roll in and out.
+            if (flyer.SmoothWanted == Vector3.zero) flyer.SmoothWanted = flyer.Velocity;
+            flyer.SmoothWanted = Vector3.Lerp(flyer.SmoothWanted, wanted, 1f - Mathf.Exp(-steerEase * dt));
+            var acceleration = Vector3.ClampMagnitude((flyer.SmoothWanted - flyer.Velocity) * 1.2f, maxAcceleration);
+            flyer.Acceleration = Vector3.Lerp(flyer.Acceleration, acceleration, 1f - Mathf.Exp(-thrustEase * dt));
             flyer.Velocity = Vector3.ClampMagnitude(flyer.Velocity + flyer.Acceleration * dt, maxSpeed * 1.15f);
             flyer.Position += flyer.Velocity * dt;
 
             // Attitude: rotor up = thrust (a + g); nose along the flight path, or onto the target while in the gun cone.
             var up = (flyer.Acceleration + Vector3.up * 9.81f).normalized;
             var heading = flyer.Velocity.sqrMagnitude > 1f ? flyer.Velocity.normalized : flyer.Root.forward;
-            if (target != null && flyer.Mode == Mode.Chase && InGunCone(flyer, target, fireCone * 2f)) heading = (target.Position - flyer.Position).normalized;
+            var aiming = target != null && flyer.Mode == Mode.Chase && InGunCone(flyer, target, fireCone * 2f);
+            flyer.AimBlend = Mathf.MoveTowards(flyer.AimBlend, aiming ? 1f : 0f, dt * 1.5f);
+            if (target != null && flyer.AimBlend > 0f)
+                heading = Vector3.Slerp(heading, (target.Position - flyer.Position).normalized, Mathf.SmoothStep(0f, 0.7f, flyer.AimBlend));
             var forward = Vector3.ProjectOnPlane(heading, up);
             if (forward.sqrMagnitude < 0.001f) forward = flyer.Root.forward;
             var rotation = Quaternion.LookRotation(forward.normalized, up);
-            flyer.Root.SetPositionAndRotation(flyer.Position, Quaternion.Slerp(flyer.Root.rotation, rotation, 1f - Mathf.Exp(-7f * dt)));
+            flyer.Root.SetPositionAndRotation(flyer.Position, Quaternion.Slerp(flyer.Root.rotation, rotation, 1f - Mathf.Exp(-bodyEase * dt)));
             foreach (var (part, spin) in flyer.Spinners) part.Rotate(spin * dt, Space.Self);
         }
 
