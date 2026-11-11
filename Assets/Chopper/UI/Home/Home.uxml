@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:home="Chopper.UI.Home" xmlns:hangar="Chopper.UI.Hangar" xmlns:cockpit="Chopper.UI.Cockpit" editor-extension-mode="False">
   <Style src="Home.uss" />
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
-       Lists are filled from code. "home--ready" (added after the boot log) brings the menu in. -->
+       Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
     <home:HomeBackdrop class="home__backdrop" picking-mode="Ignore" />
     <ui:VisualElement class="home__shade" picking-mode="Ignore" />
