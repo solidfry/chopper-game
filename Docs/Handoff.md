@@ -75,6 +75,7 @@ Rules:
 | 8 Nov | Solo network test, match log | compiled, run in builds |
 | 8 Nov | Bots: pilot, navigator, brain | compiled, tested |
 | 9 Nov | Rocket lead always on (dim free aim at the first hit; hidden at open sky), seeker lock grace (`lockGraceSeconds`, 1.5 s), socket scale baked (`ChassisSocket.Scale`), explosion layer under crash sounds, `ChassisClass` | written without the editor |
+| 11 Nov | Scene Jumper editor window (`Editor/Tools/SceneJumper.cs`, Chopper > Scene Jumper, Ctrl+Shift+J): open, add, play-from, favourites, recent, play-mode start scene | written without the editor |
 
 **Editor steps still owed (9 Nov work):** compile; reimport the chopper prefabs (socket scale); let Unity reimport `Assets/Sound/Impacts`; run GuidanceTests; in play check the dim free-aim reticle, a lock that survives a short jink, and crash sounds. Older owed steps are in the history file (4c–4e).
 
