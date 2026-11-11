@@ -168,14 +168,21 @@ namespace Chopper.Editor.Setup
 
         /// <summary>
         /// Portrait art: <c>Textures/Pilots/Callsign.png</c> and its normal map <c>Callsign_n.png</c> (import settings
-        /// fixed here: normal map type, 1024 max). Fills pilots with no portrait only, so tuned face points are kept.
+        /// fixed here: normal map type, 1024 max, no power-of-two resize). Fills pilots with no portrait only, so tuned face points are kept.
         /// </summary>
         private static bool LinkArt(IEnumerable<PilotDefinition> pilots)
         {
             var changed = false;
             foreach (var pilot in pilots)
             {
-                if (pilot.Portrait != null || string.IsNullOrEmpty(pilot.CallSign)) continue;
+                if (pilot.Portrait != null)
+                {
+                    // Linked already: still keep its import settings right (art made before the shape fix).
+                    Import(AssetDatabase.GetAssetPath(pilot.Portrait), normal: false);
+                    if (pilot.Face.NormalMap != null) Import(AssetDatabase.GetAssetPath(pilot.Face.NormalMap), normal: true);
+                    continue;
+                }
+                if (string.IsNullOrEmpty(pilot.CallSign)) continue;
                 var file = pilot.CallSign.Substring(0, 1) + pilot.CallSign.Substring(1).ToLowerInvariant();
                 var artPath = $"{ArtFolder}/{file}.png";
                 var normalPath = $"{ArtFolder}/{file}_n.png";
@@ -196,9 +203,11 @@ namespace Chopper.Editor.Setup
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
             var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
             if (importer.textureType == type && importer.maxTextureSize == 1024 && importer.wrapMode == TextureWrapMode.Clamp &&
-                (normal || importer.alphaIsTransparency)) return;
+                importer.npotScale == TextureImporterNPOTScale.None && (normal || importer.alphaIsTransparency)) return;
             importer.textureType = type;
             importer.maxTextureSize = 1024;
+            // The art is 2:3 (e.g. 1024x1536): no power-of-two resize, which squeezed it to 1:2 and stretched every face.
+            importer.npotScale = TextureImporterNPOTScale.None;
             importer.wrapMode = TextureWrapMode.Clamp;
             if (!normal) importer.alphaIsTransparency = true;
             importer.SaveAndReimport();

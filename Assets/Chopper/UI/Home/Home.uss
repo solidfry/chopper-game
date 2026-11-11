@@ -662,7 +662,10 @@
   padding: 0;
 }
 
-.codex-feature__sign {
+.codex-feature__sign,
+.codex-feature__sign.chopper-title {
+  /* The big call sign in Karnivore Dot (owner's pick for this one display name). */
+  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOD.ttf");
   font-size: 64px;
   letter-spacing: 10px;
   padding: 0;
