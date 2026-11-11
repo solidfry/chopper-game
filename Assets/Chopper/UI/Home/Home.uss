@@ -334,12 +334,13 @@
 }
 
 .home-profile__portrait {
-  width: 106px;
-  height: 146px;
+  /* 2:3, the live portrait's shape (PilotPortraitRig 256 x 384) */
+  width: 98px;
+  height: 147px;
   background-color: rgba(0, 0, 0, 0.6);
   border-width: 1px;
   border-color: var(--chopper-green);
-  -unity-background-scale-mode: scale-and-crop;
+  -unity-background-scale-mode: stretch-to-fill;
   overflow: hidden;
 }
 
@@ -532,7 +533,7 @@
   height: 48px;
   margin-right: 10px;
   background-color: rgba(0, 0, 0, 0.6);
-  -unity-background-scale-mode: scale-and-crop;
+  background-repeat: no-repeat;
 }
 
 .codex-row__serial {
@@ -572,13 +573,14 @@
 }
 
 .codex-feature__portrait {
-  width: 330px;
-  height: 462px;
+  /* 2:3, the live portrait's shape */
+  width: 320px;
+  height: 480px;
   margin-right: 32px;
   background-color: rgba(0, 0, 0, 0.65);
   border-width: 2px;
   border-color: var(--chopper-green);
-  -unity-background-scale-mode: scale-and-crop;
+  -unity-background-scale-mode: stretch-to-fill;
   overflow: hidden;
 }
 

@@ -65,6 +65,8 @@ namespace Chopper.UI.Home
         private Label _clock;
         private readonly List<(Button Button, Action Action, Func<string> Hint)> _nav = new();
 
+        private float _portraitTick;
+        private float _portraitGlitch;
         private VisualElement _city;
         private Texture _shownCity;
         /// <summary>Frosted glass layers (blurred city cut to their element), placed each frame.</summary>
@@ -263,6 +265,7 @@ namespace Chopper.UI.Home
             TickGlitch(time);
             TickClock();
             PlaceGlass();
+            AnimatePortrait();
             var dimmed = _model.Page != HomePage.Main || OptionsOpen;
             _model.SetDimmed(dimmed);
             _root.EnableInClassList(DimmedClass, dimmed);
@@ -419,15 +422,51 @@ namespace Chopper.UI.Home
             if (_profileScan != null) _profileScan.tint = card.Accent;
         }
 
-        /// <summary>The pilot's art, else the drawn helmet; the frame in the pilot's accent.</summary>
-        private static void ShowFace(VisualElement frame, PilotPortrait drawn, in PilotCard card)
+        /// <summary>
+        /// The pilot's live portrait (the shared <see cref="Presentation.Pilots.PilotPortraitRig"/>, in the pilot's accent,
+        /// as on the hangar select screen); without the rig the still art tinted in the accent; without art the drawn
+        /// helmet. The frame in the pilot's accent. One pilot at a time is live: the codex card, else the profile card.
+        /// </summary>
+        private void ShowFace(VisualElement frame, PilotPortrait drawn, in PilotCard card)
         {
             if (frame == null) return;
-            frame.style.backgroundImage = card.Portrait != null ? new StyleBackground(card.Portrait) : new StyleBackground(StyleKeyword.None);
+            var rig = _context.PilotPortrait;
+            var live = card.Portrait != null && rig != null && rig.Texture != null;
+            if (live)
+            {
+                card.ShowOn(rig);
+                rig.UiColour = false;
+                frame.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rig.Texture));
+                frame.style.unityBackgroundImageTintColor = Color.white;
+            }
+            else
+            {
+                frame.style.backgroundImage = card.Portrait != null ? new StyleBackground(card.Portrait) : new StyleBackground(StyleKeyword.None);
+                frame.style.unityBackgroundImageTintColor = card.Accent;
+            }
             frame.style.borderTopColor = frame.style.borderBottomColor = frame.style.borderLeftColor = frame.style.borderRightColor = card.Accent;
             if (drawn == null) return;
             drawn.style.display = card.Portrait == null ? DisplayStyle.Flex : DisplayStyle.None;
             drawn.Set(card.Id, card.Accent);
+        }
+
+        /// <summary>Animates the live portrait (blink, breath, voice), facing the menu camera, as the hangar does.</summary>
+        private void AnimatePortrait()
+        {
+            var now = Time.unscaledTime;
+            var deltaTime = _portraitTick > 0f ? now - _portraitTick : 0f;
+            _portraitTick = now;
+            var rig = _context.PilotPortrait;
+            if (rig == null || !rig.HasPilot) return;
+            var camera = UnityEngine.Camera.main;
+            var facing = camera != null ? Quaternion.LookRotation(-camera.transform.forward, camera.transform.up) : Quaternion.identity;
+            _portraitGlitch = Mathf.MoveTowards(_portraitGlitch, 0f, deltaTime * 3f);
+            rig.Tick(deltaTime, new Presentation.Pilots.PilotPortraitInput
+            {
+                Facing = facing,
+                Voice = rig.OwnVoice(_context.Audio),
+                Glitch = _portraitGlitch,
+            });
         }
 
         private void BuildCodex()
@@ -448,7 +487,15 @@ namespace Chopper.UI.Home
 
                 var face = new VisualElement { pickingMode = PickingMode.Ignore };
                 face.AddToClassList("codex-row__face");
-                if (card.Portrait != null) face.style.backgroundImage = new StyleBackground(card.Portrait);
+                if (card.Portrait != null)
+                {
+                    // Still art framed on the face (as the hangar's roster tiles), in the pilot's accent.
+                    face.style.backgroundImage = new StyleBackground(card.Portrait);
+                    face.style.unityBackgroundImageTintColor = card.Accent;
+                    face.style.backgroundRepeat = new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
+                    var faceFrame = card.FaceFrame;
+                    face.RegisterCallback<GeometryChangedEvent>(_ => PilotSelectView.FrameFace(face, faceFrame));
+                }
                 else
                 {
                     var drawn = new PilotPortrait();
@@ -477,6 +524,7 @@ namespace Chopper.UI.Home
             for (var i = 0; i < _rows.Count; i++) _rows[i].EnableInClassList(ShownRowClass, i == _model.ShownPilot);
 
             ShowFace(_codexPortrait, _codexDrawn, card);
+            _portraitGlitch = 1f;
             if (_codexScan != null)
             {
                 _codexScan.tint = card.Accent;

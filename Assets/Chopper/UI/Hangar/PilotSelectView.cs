@@ -298,7 +298,7 @@ namespace Chopper.UI.Hangar
         /// covers the tile. It never moves so far that a gap shows. Background size and position in pixels: they need
         /// the element's size.
         /// </summary>
-        private static void FrameFace(VisualElement art, Vector4 frame)
+        internal static void FrameFace(VisualElement art, Vector4 frame)
         {
             var size = art.contentRect.size;
             if (size.x < 1f || size.y < 1f) return;
