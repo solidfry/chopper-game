@@ -27,6 +27,7 @@ namespace Chopper.UI.Home
     public sealed class HomeView : MonoBehaviour
     {
         private const string ReadyClass = "home--ready";
+        private const string LiveClass = "home--live";
         private const string HiddenClass = "home--hidden";
         private const string GlitchClass = "home-title--glitch";
         private const string ShownRowClass = "codex-row--shown";
@@ -325,6 +326,7 @@ namespace Chopper.UI.Home
         private void Refresh()
         {
             if (_root == null) return;
+            _root.EnableInClassList(LiveClass, _model.LiveBackdrop);
             var codex = _model.Page == HomePage.Pilots;
             _pageMain?.EnableInClassList(HiddenClass, codex);
             _pagePilots?.EnableInClassList(HiddenClass, !codex);

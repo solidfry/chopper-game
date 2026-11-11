@@ -93,7 +93,7 @@ namespace Chopper.Editor.Setup
                 yield return ($"The first build scene is {scenes[0]}, not {Path.GetFileNameWithoutExtension(first)}: the game starts there. " +
                               "Press '11. Build home screen' (or '7. Build hangar').", null);
             if (!File.Exists(HomeSetup.ScenePath)) yield return ("No home screen (main menu). Press '11. Build home screen'.", null);
-            foreach (var path in scenes.Where(p => p != ScenePath && p != HomeSetup.ScenePath && !IsMatchScene(p)))
+            foreach (var path in scenes.Where(p => p != ScenePath && p != HomeSetup.ScenePath && p != HomeSetup.BackdropScenePath && !IsMatchScene(p)))
                 yield return ($"Old scene {path} is in the build (missing scripts). Press '7. Build hangar' to turn it off.", null);
         }
 
@@ -314,7 +314,7 @@ namespace Chopper.Editor.Setup
         {
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
-            foreach (var scene in scenes.Skip(1)) scene.enabled = IsMatchScene(scene.path) || scene.path == HomeSetup.ScenePath;
+            foreach (var scene in scenes.Skip(1)) scene.enabled = IsMatchScene(scene.path) || scene.path == HomeSetup.ScenePath || scene.path == HomeSetup.BackdropScenePath;
             EditorBuildSettings.scenes = scenes.ToArray();
             // The home screen (step 11) stays first when it exists.
             HomeSetup.EnsureBuildScenes();

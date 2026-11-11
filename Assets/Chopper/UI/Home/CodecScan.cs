@@ -37,71 +37,80 @@ namespace Chopper.UI.Home
             _burstSeed++;
         }
 
+        private readonly System.Collections.Generic.List<(Rect Rect, Color Colour)> _quads = new();
+
+        // Plain quads, not Painter2D: a large painter fill can tessellate to half a rectangle (a diagonal wedge).
         private void Draw(MeshGenerationContext context)
         {
             var rect = contentRect;
             var w = rect.width;
             var h = rect.height;
             if (w < 2f || h < 2f) return;
-            var painter = context.painter2D;
             var time = Time.unscaledTime;
+            _quads.Clear();
 
             // Tint wash.
-            painter.fillColor = new Color(tint.r, tint.g, tint.b, 0.08f);
-            painter.BeginPath();
-            AddRect(painter, new Rect(0f, 0f, w, h));
-            painter.Fill();
+            _quads.Add((new Rect(0f, 0f, w, h), new Color(tint.r, tint.g, tint.b, 0.08f)));
 
             // Scanlines every 3 px.
-            painter.fillColor = new Color(0f, 0f, 0f, 0.32f);
-            for (var y = 0f; y < h; y += 3f)
-            {
-                painter.BeginPath();
-                AddRect(painter, new Rect(0f, y, w, 1f));
-                painter.Fill();
-            }
+            var line = new Color(0f, 0f, 0f, 0.32f);
+            for (var y = 0f; y < h; y += 3f) _quads.Add((new Rect(0f, y, w, 1f), line));
 
             // Rolling band.
             var band = Mathf.Repeat(time * 0.35f, 1.4f) * h - h * 0.2f;
             for (var i = 0; i < 8; i++)
-            {
-                painter.fillColor = new Color(tint.r, tint.g, tint.b, 0.025f * (8 - i));
-                painter.BeginPath();
-                AddRect(painter, new Rect(0f, band + i * 4f, w, 4f));
-                painter.Fill();
-            }
+                _quads.Add((new Rect(0f, band + i * 4f, w, 4f), new Color(tint.r, tint.g, tint.b, 0.025f * (8 - i))));
 
-            // Edge shade (a cheap vignette: four soft bars).
+            // Edge shade (a cheap vignette: four soft bars per step).
             for (var i = 0; i < 5; i++)
             {
-                var a = 0.09f * (5 - i);
+                var shade = new Color(0f, 0f, 0f, 0.09f * (5 - i));
                 var d = i * 4f;
-                painter.fillColor = new Color(0f, 0f, 0f, a);
-                painter.BeginPath();
-                AddRect(painter, new Rect(d, d, w - 2f * d, 4f));
-                AddRect(painter, new Rect(d, h - d - 4f, w - 2f * d, 4f));
-                AddRect(painter, new Rect(d, d + 4f, 4f, h - 2f * d - 8f));
-                AddRect(painter, new Rect(w - d - 4f, d + 4f, 4f, h - 2f * d - 8f));
-                painter.Fill();
+                _quads.Add((new Rect(d, d, w - 2f * d, 4f), shade));
+                _quads.Add((new Rect(d, h - d - 4f, w - 2f * d, 4f), shade));
+                _quads.Add((new Rect(d, d + 4f, 4f, h - 2f * d - 8f), shade));
+                _quads.Add((new Rect(w - d - 4f, d + 4f, 4f, h - 2f * d - 8f), shade));
             }
 
-            if (time >= _burstUntil) return;
-            // Glitch burst: displaced bright bars and blocks, fading out.
-            var strength = (_burstUntil - time) / BurstSeconds;
-            var frame = Mathf.FloorToInt(time * 30f);
-            for (var i = 0; i < 9; i++)
+            if (time < _burstUntil)
             {
-                var r = Rand(_burstSeed, frame, i);
-                var y = r * h;
-                var bar = 2f + 10f * Rand(_burstSeed, frame, i + 40);
-                var shift = (Rand(_burstSeed, frame, i + 80) - 0.5f) * w * 0.3f;
-                painter.fillColor = new Color(tint.r, tint.g, tint.b, 0.45f * strength);
-                painter.BeginPath();
-                AddRect(painter, new Rect(Mathf.Max(0f, shift), y, w * (0.4f + 0.6f * r), bar));
-                painter.Fill();
+                // Glitch burst: displaced bright bars, fading out.
+                var strength = (_burstUntil - time) / BurstSeconds;
+                var frame = Mathf.FloorToInt(time * 30f);
+                for (var i = 0; i < 9; i++)
+                {
+                    var r = Rand(_burstSeed, frame, i);
+                    var bar = 2f + 10f * Rand(_burstSeed, frame, i + 40);
+                    var shift = (Rand(_burstSeed, frame, i + 80) - 0.5f) * w * 0.3f;
+                    _quads.Add((new Rect(Mathf.Max(0f, shift), r * h, w * (0.4f + 0.6f * r), bar),
+                        new Color(tint.r, tint.g, tint.b, 0.45f * strength)));
+                }
             }
+
+            Emit(context, _quads);
         }
 
+        private static void Emit(MeshGenerationContext context, System.Collections.Generic.List<(Rect Rect, Color Colour)> quads)
+        {
+            if (quads.Count == 0) return;
+            var mesh = context.Allocate(quads.Count * 4, quads.Count * 6);
+            for (var i = 0; i < quads.Count; i++)
+            {
+                var (r, c) = quads[i];
+                Color32 colour = c;
+                mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMin, r.yMin, Vertex.nearZ), tint = colour });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMax, r.yMin, Vertex.nearZ), tint = colour });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMax, r.yMax, Vertex.nearZ), tint = colour });
+                mesh.SetNextVertex(new Vertex { position = new Vector3(r.xMin, r.yMax, Vertex.nearZ), tint = colour });
+                var b = (ushort)(i * 4);
+                mesh.SetNextIndex(b);
+                mesh.SetNextIndex((ushort)(b + 1));
+                mesh.SetNextIndex((ushort)(b + 2));
+                mesh.SetNextIndex(b);
+                mesh.SetNextIndex((ushort)(b + 2));
+                mesh.SetNextIndex((ushort)(b + 3));
+            }
+        }
         private static float Rand(int a, int b, int c)
         {
             unchecked
@@ -110,16 +119,6 @@ namespace Chopper.UI.Home
                 x = (x ^ (x >> 13)) * 1274126177u;
                 return ((x ^ (x >> 16)) & 0xFFFF) / 65535f;
             }
-        }
-
-        /// <summary>A closed rectangle subpath (Painter2D has no rectangle call).</summary>
-        private static void AddRect(Painter2D painter, Rect r)
-        {
-            painter.MoveTo(new Vector2(r.xMin, r.yMin));
-            painter.LineTo(new Vector2(r.xMax, r.yMin));
-            painter.LineTo(new Vector2(r.xMax, r.yMax));
-            painter.LineTo(new Vector2(r.xMin, r.yMax));
-            painter.ClosePath();
         }
     }
 }

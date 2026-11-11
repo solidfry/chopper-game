@@ -76,59 +76,86 @@
   flex-direction: column;
 }
 
-/* ---- Title: three stacked copies; the two ghosts split apart in a glitch ---- */
+/* ---- Logo: four same-size layers (916 x 468 source). The wings slide in once ready; in a glitch NITRO jumps and
+   flickers, AIRWING shifts the other way. ---- */
 .home-title {
-  height: 140px;
-  margin-bottom: 4px;
+  width: 540px;
+  height: 276px;
+  margin: -40px 0 -36px -24px;
 }
 
-.home-title__line {
+.home-logo {
   position: absolute;
   left: 0;
   top: 0;
-  font-size: 92px;
-  letter-spacing: 10px;
-  color: var(--chopper-green);
-  padding: 0;
-  text-shadow: 0 0 22px rgba(0, 255, 148, 0.55);
+  right: 0;
+  bottom: 0;
+  -unity-background-scale-mode: scale-to-fit;
   transition-property: translate, opacity;
   transition-duration: 0.06s;
 }
 
-.home-title__line--ghost-a {
-  color: var(--chopper-pink);
+.home-logo--nitro {
+  background-image: url("Logo/Nitro.png");
+}
+
+.home-logo--airwing {
+  background-image: url("Logo/Airwing.png");
+}
+
+.home-logo--wing-left {
+  background-image: url("Logo/WingLeft.png");
   opacity: 0;
-  text-shadow: none;
+  translate: 90px 0;
+  transition-duration: 0.5s;
+  transition-timing-function: ease-out-back;
 }
 
-.home-title__line--ghost-b {
-  color: var(--chopper-cyan);
+.home-logo--wing-right {
+  background-image: url("Logo/WingRight.png");
   opacity: 0;
-  text-shadow: none;
+  translate: -90px 0;
+  transition-duration: 0.5s;
+  transition-timing-function: ease-out-back;
 }
 
-.home-title--glitch .home-title__line--ghost-a {
-  opacity: 0.85;
-  translate: -7px 2px;
+.home--ready .home-logo--wing-left,
+.home--ready .home-logo--wing-right {
+  opacity: 1;
+  translate: 0 0;
 }
 
-.home-title--glitch .home-title__line--ghost-b {
-  opacity: 0.85;
-  translate: 6px -3px;
+.home-title--glitch .home-logo--nitro {
+  translate: 7px 2px;
+  opacity: 0.55;
 }
 
-.home-title--glitch .home-title__line {
-  translate: 2px 0;
+.home-title--glitch .home-logo--airwing {
+  translate: -4px 0;
 }
 
-.home-title__sub {
+/* ---- Live map backdrop (HomeFlyover): the drawn grid goes, a CRT layer covers the camera image ---- */
+.home__crt {
   position: absolute;
-  left: 6px;
-  top: 108px;
-  font-size: 22px;
-  letter-spacing: 14px;
-  color: var(--chopper-yellow);
-  padding: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  opacity: 0.75;
+}
+
+.home--live {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.home--live .home__backdrop,
+.home--live .home__shade {
+  display: none;
+}
+
+.home--live .home__crt {
+  display: flex;
 }
 
 /* ---- Boot log: typed lines; fades once ready ---- */

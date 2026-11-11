@@ -9,6 +9,7 @@ using Chopper.UI.Options;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -26,6 +27,17 @@ namespace Chopper.Editor.Setup
     {
         public const string ScenePath = "Assets/Scenes/" + HomeModel.SceneName + ".unity";
         private const string LayoutPath = "Assets/Chopper/UI/Home/Home.uxml";
+        /// <summary>
+        /// Simplified city flown over behind the menu (<see cref="HomeFlyover"/>), made from <see cref="SourceCityPath"/>:
+        /// buildings and the ground near them only. It must be in the build.
+        /// </summary>
+        public const string BackdropScenePath = "Assets/Scenes/HomeCity.unity";
+        private const string SourceCityPath = "Assets/Scenes/City04.unity";
+        /// <summary>Ground chunks further than this (metres) from the buildings are left out.</summary>
+        private const float GroundMargin = 600f;
+        private const string VolumePath = "Assets/Chopper/Data/Rendering/HomeTerminal.asset";
+        private const string WirePath = "Assets/Chopper/Data/Rendering/HomeCityWire.mat";
+        private const string GroundWirePath = "Assets/Chopper/Data/Rendering/HomeGroundWire.mat";
         private static readonly Color Background = new(0.008f, 0.031f, 0.016f);
 
         public static void Apply(GameConfig config)
@@ -44,9 +56,112 @@ namespace Chopper.Editor.Setup
             config.SetHome(layout);
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
+            BuildBackdropCity();
             EnsureScene(config);
             EnsureBuildScenes();
             Debug.Log($"Setup: home screen built ({ScenePath}), first in the build list.");
+        }
+
+        /// <summary>
+        /// (Re)builds the menu city from the City04 art scene: the buildings (prefab links kept) and the ground chunks
+        /// near them, without colliders or authoring scripts; no far backdrop, lights, smoke, traffic or markers. Every
+        /// renderer gets the terminal wireframe material (<c>Chopper/TerminalWire</c>). Skipped when the source scene is missing.
+        /// </summary>
+        private static void BuildBackdropCity()
+        {
+            if (!File.Exists(SourceCityPath))
+            {
+                Debug.LogWarning($"Setup: no {SourceCityPath}; the home screen keeps its drawn grid. Press step 8 first.");
+                return;
+            }
+            var wasOpen = SceneManager.GetSceneByPath(SourceCityPath).isLoaded;
+            var source = wasOpen ? SceneManager.GetSceneByPath(SourceCityPath) : EditorSceneManager.OpenScene(SourceCityPath, OpenSceneMode.Additive);
+            var target = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            try
+            {
+                var buildings = source.GetRootGameObjects().FirstOrDefault(g => g.name == "Buildings");
+                var ground = source.GetRootGameObjects().FirstOrDefault(g => g.name == "Terrain");
+                if (buildings == null)
+                {
+                    Debug.LogWarning($"Setup: {SourceCityPath} has no Buildings root.");
+                    return;
+                }
+                var area = new Bounds();
+                var found = false;
+                foreach (var r in buildings.GetComponentsInChildren<Renderer>())
+                {
+                    if (!found) area = r.bounds;
+                    else area.Encapsulate(r.bounds);
+                    found = true;
+                }
+                area.Expand(new Vector3(GroundMargin * 2f, 10000f, GroundMargin * 2f));
+
+                CopyChildren(buildings, target, _ => true, EnsureWireMaterial(WirePath, ground: false));
+                if (ground != null)
+                    CopyChildren(ground, target, child => child.GetComponentsInChildren<Renderer>().Any(r => r.bounds.Intersects(area)),
+                        EnsureWireMaterial(GroundWirePath, ground: true));
+
+                EditorSceneManager.SaveScene(target, BackdropScenePath);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(target, true);
+                if (!wasOpen) EditorSceneManager.CloseScene(source, true);
+            }
+        }
+
+        /// <summary>
+        /// A terminal wireframe material (<c>Chopper/TerminalWire</c>). The ground one is dimmer with a coarser grid and
+        /// no windows, so the towers stand out. Made once; tune the assets.
+        /// </summary>
+        private static Material EnsureWireMaterial(string path, bool ground)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            var shader = Shader.Find("Chopper/TerminalWire");
+            if (shader == null)
+            {
+                Debug.LogWarning("Setup: shader Chopper/TerminalWire is missing; the menu city keeps its own materials.");
+                return null;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            material = new Material(shader) { enableInstancing = true };
+            if (ground)
+            {
+                material.SetColor("_LineColour", new Color(0.1f, 0.7f, 0.4f));
+                material.SetFloat("_GridSize", 12f);
+                material.SetFloat("_MinorStrength", 0.1f);
+                material.SetFloat("_RimStrength", 0.15f);
+                material.SetFloat("_WindowChance", 0f);
+                material.SetFloat("_ScanStrength", 0f);
+            }
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        /// <summary>Copies a root's children (prefab links kept) under a same-named root, then strips colliders and scripts.</summary>
+
+        private static void CopyChildren(GameObject root, Scene target, System.Func<GameObject, bool> keep, Material wire)
+        {
+            var copy = new GameObject(root.name);
+            SceneManager.MoveGameObjectToScene(copy, target);
+            foreach (Transform child in root.transform)
+            {
+                if (!keep(child.gameObject)) continue;
+                var prefab = PrefabUtility.GetCorrespondingObjectFromSource(child.gameObject);
+                var made = prefab != null && PrefabUtility.IsOutermostPrefabInstanceRoot(child.gameObject)
+                    ? (GameObject)PrefabUtility.InstantiatePrefab(prefab, target)
+                    : Object.Instantiate(child.gameObject);
+                made.name = child.name;
+                made.transform.SetParent(copy.transform, false);
+                made.transform.SetLocalPositionAndRotation(child.localPosition, child.localRotation);
+                made.transform.localScale = child.localScale;
+                foreach (var collider in made.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
+                foreach (var script in made.GetComponentsInChildren<MonoBehaviour>(true)) Object.DestroyImmediate(script);
+                if (wire == null) continue;
+                foreach (var renderer in made.GetComponentsInChildren<Renderer>(true))
+                    renderer.sharedMaterials = Enumerable.Repeat(wire, renderer.sharedMaterials.Length).ToArray();
+            }
         }
 
         private static void EnsureScene(GameConfig config)
@@ -83,13 +198,29 @@ namespace Chopper.Editor.Setup
             camera.tag = "MainCamera";
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Background;
-            camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+            camera.nearClipPlane = 1f;
+            camera.farClipPlane = 20000f;
+            camera.fieldOfView = 50f;
+            camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
 
             var bridgeObject = FindOrCreate(scene, "Presentation");
             var bridge = bridgeObject.GetComponent<PresentationBridge>();
             if (bridge == null) bridge = bridgeObject.AddComponent<PresentationBridge>();
             bridge.Configure(config, null);
             bridge.SetMusic(Chopper.Presentation.Audio.MusicLibrary.Set.Menu);
+
+            // Live map behind the menu, in the terminal look.
+            var flyover = camera.GetComponent<HomeFlyover>();
+            if (flyover == null) flyover = camera.gameObject.AddComponent<HomeFlyover>();
+            flyover.SetBridge(bridge);
+            flyover.SetScene(Path.GetFileNameWithoutExtension(BackdropScenePath));
+            var volumeObject = FindOrCreate(scene, "Home Volume");
+            var volume = volumeObject.GetComponent<Volume>();
+            if (volume == null) volume = volumeObject.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.sharedProfile = EnsureVolume();
+            EditorUtility.SetDirty(flyover);
+            EditorUtility.SetDirty(volume);
 
             // Options overlay over the home panel; the home view opens and closes it (no Escape toggle of its own).
             var optionsObject = FindOrCreate(scene, "Options");
@@ -110,6 +241,59 @@ namespace Chopper.Editor.Setup
             foreach (var component in new Object[] { camera, bridge, optionsPanel, options, optionsSounds, panel, view, sounds })
                 EditorUtility.SetDirty(component);
             EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        /// <summary>
+        /// The terminal look: no colour, a green tint, high contrast, bloom on the city lights, grain, a dark vignette and
+        /// a little colour fringe. Made once; tune the asset.
+        /// </summary>
+        private static VolumeProfile EnsureVolume()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(VolumePath);
+            // The first version tinted before desaturating (URP desaturates last, so it came out grey): remake it.
+            if (profile != null && profile.Has<ChannelMixer>()) return profile;
+            if (profile != null) AssetDatabase.DeleteAsset(VolumePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(VolumePath));
+            profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, VolumePath);
+
+            // Green monochrome: every output channel is the brightness (0.3 R + 0.59 G + 0.11 B), scaled to the
+            // console green (0.35, 1, 0.62). Saturation stays 0, so the tint survives.
+            var mixer = profile.Add<ChannelMixer>(true);
+            SetMix(mixer.redOutRedIn, mixer.redOutGreenIn, mixer.redOutBlueIn, 0.35f);
+            SetMix(mixer.greenOutRedIn, mixer.greenOutGreenIn, mixer.greenOutBlueIn, 1f);
+            SetMix(mixer.blueOutRedIn, mixer.blueOutGreenIn, mixer.blueOutBlueIn, 0.62f);
+            var colour = profile.Add<ColorAdjustments>(true);
+            colour.contrast.value = 50f;
+            colour.postExposure.value = 0f;
+            var bloom = profile.Add<Bloom>(true);
+            bloom.threshold.value = 0.7f;
+            bloom.intensity.value = 1.6f;
+            bloom.scatter.value = 0.7f;
+            bloom.tint.value = new Color(0.5f, 1f, 0.75f);
+            var grain = profile.Add<FilmGrain>(true);
+            grain.intensity.value = 0.45f;
+            var vignette = profile.Add<Vignette>(true);
+            vignette.intensity.value = 0.45f;
+            vignette.smoothness.value = 0.45f;
+            vignette.color.value = new Color(0f, 0.04f, 0.02f);
+            var fringe = profile.Add<ChromaticAberration>(true);
+            fringe.intensity.value = 0.2f;
+            foreach (var component in profile.components)
+            {
+                component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+                AssetDatabase.AddObjectToAsset(component, profile);
+            }
+            EditorUtility.SetDirty(profile);
+            return profile;
+        }
+
+        /// <summary>One output channel = brightness × <paramref name="scale"/> (mixer values are percent).</summary>
+        private static void SetMix(ClampedFloatParameter red, ClampedFloatParameter green, ClampedFloatParameter blue, float scale)
+        {
+            red.value = 30f * scale;
+            green.value = 59f * scale;
+            blue.value = 11f * scale;
         }
 
         private static PanelRenderer Panel(GameObject go, PanelSettings settings, VisualTreeAsset layout, int sortingOrder)
@@ -147,6 +331,14 @@ namespace Chopper.Editor.Setup
             if (!File.Exists(ScenePath)) return;
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
+            // The home backdrop city loads by name, so it must be in the build. (The full City04 art scene was the
+            // backdrop for a short time on 11 Nov; it does not belong in the build.)
+            scenes.RemoveAll(s => s.path == SourceCityPath);
+            if (File.Exists(BackdropScenePath))
+            {
+                scenes.RemoveAll(s => s.path == BackdropScenePath);
+                scenes.Add(new EditorBuildSettingsScene(BackdropScenePath, true));
+            }
             EditorBuildSettings.scenes = scenes.ToArray();
         }
     }

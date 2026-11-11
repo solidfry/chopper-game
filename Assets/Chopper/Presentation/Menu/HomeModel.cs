@@ -39,6 +39,16 @@ namespace Chopper.Presentation.Menu
         public event Action ShownChanged;
 
         public HomePage Page { get; private set; } = HomePage.Main;
+
+        /// <summary>A real map is up behind the menu (<see cref="HomeFlyover"/>): the view swaps its drawn grid for a CRT layer.</summary>
+        public bool LiveBackdrop { get; private set; }
+
+        public void SetLiveBackdrop(bool live)
+        {
+            if (live == LiveBackdrop) return;
+            LiveBackdrop = live;
+            Changed?.Invoke();
+        }
         public IReadOnlyList<PilotCard> Pilots => _pilots;
         public int ShownPilot { get; private set; }
         public PilotCard? Shown => ShownPilot >= 0 && ShownPilot < _pilots.Count ? _pilots[ShownPilot] : null;

@@ -3,7 +3,9 @@
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
        Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
+    <!-- Drawn city grid; hidden once the live map backdrop (HomeFlyover) is up, then the CRT layer goes over it -->
     <home:HomeBackdrop class="home__backdrop" picking-mode="Ignore" />
+    <home:CodecScan class="home__crt" picking-mode="Ignore" />
     <ui:VisualElement class="home__shade" picking-mode="Ignore" />
 
     <!-- Top bar -->
@@ -18,11 +20,12 @@
     <!-- Main page -->
     <ui:VisualElement name="page-main" class="home__page home__page--main" picking-mode="Ignore">
       <ui:VisualElement class="home__left" picking-mode="Ignore">
+        <!-- The logo: four stacked layers of the same size (UI/Home/Logo); wings slide in, NITRO glitches -->
         <ui:VisualElement name="title" class="home-title" picking-mode="Ignore">
-          <ui:Label text="AIRWING" class="home-title__line home-title__line--ghost-a chopper-title" />
-          <ui:Label text="AIRWING" class="home-title__line home-title__line--ghost-b chopper-title" />
-          <ui:Label text="AIRWING" class="home-title__line chopper-title" />
-          <ui:Label text="N I T R O" class="home-title__sub chopper-title" />
+          <ui:VisualElement class="home-logo home-logo--nitro" picking-mode="Ignore" />
+          <ui:VisualElement class="home-logo home-logo--wing-left" picking-mode="Ignore" />
+          <ui:VisualElement class="home-logo home-logo--wing-right" picking-mode="Ignore" />
+          <ui:VisualElement class="home-logo home-logo--airwing" picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:Label name="boot-log" class="home__boot chopper-body" picking-mode="Ignore" />
 

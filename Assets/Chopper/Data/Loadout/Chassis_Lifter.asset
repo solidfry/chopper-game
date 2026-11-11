@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.ChassisDefinition
   id: 4
   displayName: Lifter
+  chassisClass: 4
   description: 'Heaviest. Winch, repair, best nuke carrier: slow to turn, strongest climb.'
   baseHealth: 110
   weightBudget: 100
@@ -24,6 +25,8 @@ MonoBehaviour:
     CollectiveUp: 16.05
     CollectiveDown: 18
     CollectiveResponse: 3.8999999
+    DiveLiftCut: 1
+    DiveResponse: 16
     GravityScale: 1.9
     TiltCompensation: 1
     MaxCompensatedTiltDegrees: 60
