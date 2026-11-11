@@ -33,9 +33,10 @@ namespace Chopper.Editor.Setup
         /// </summary>
         public const string BackdropScenePath = "Assets/Scenes/HomeCity.unity";
         private const string SourceCityPath = "Assets/Scenes/City04.unity";
-        /// <summary>Ground chunks further than this (metres) from the buildings are left out.</summary>
-        private const float GroundMargin = 600f;
+        /// <summary>Side of the flat menu floor, metres.</summary>
+        private const float GroundSize = 16000f;
         private const string VolumePath = "Assets/Chopper/Data/Rendering/HomeTerminal.asset";
+        private const string TracerPath = "Assets/Chopper/Data/Rendering/HomeTracer.mat";
         private const string FocusVolumePath = "Assets/Chopper/Data/Rendering/HomeFocus.asset";
         private const string WirePath = "Assets/Chopper/Data/Rendering/HomeCityWire.mat";
         private const string GroundWirePath = "Assets/Chopper/Data/Rendering/HomeGroundWire.mat";
@@ -65,8 +66,9 @@ namespace Chopper.Editor.Setup
 
         /// <summary>
         /// (Re)builds the menu city from the City04 art scene: the buildings (prefab links kept) and the ground chunks
-        /// near them, without colliders or authoring scripts; no far backdrop, lights, smoke, traffic or markers. Every
-        /// renderer gets the terminal wireframe material (<c>Chopper/TerminalWire</c>). Skipped when the source scene is missing.
+        /// (no crater: a flat floor instead), without colliders or authoring scripts; no backdrop, lights, smoke, traffic
+        /// or markers. Every renderer gets the terminal wireframe material (<c>Chopper/TerminalWire</c>). Skipped when the
+        /// source scene is missing.
         /// </summary>
         private static void BuildBackdropCity()
         {
@@ -81,26 +83,22 @@ namespace Chopper.Editor.Setup
             try
             {
                 var buildings = source.GetRootGameObjects().FirstOrDefault(g => g.name == "Buildings");
-                var ground = source.GetRootGameObjects().FirstOrDefault(g => g.name == "Terrain");
                 if (buildings == null)
                 {
                     Debug.LogWarning($"Setup: {SourceCityPath} has no Buildings root.");
                     return;
                 }
-                var area = new Bounds();
-                var found = false;
-                foreach (var r in buildings.GetComponentsInChildren<Renderer>())
-                {
-                    if (!found) area = r.bounds;
-                    else area.Encapsulate(r.bounds);
-                    found = true;
-                }
-                area.Expand(new Vector3(GroundMargin * 2f, 10000f, GroundMargin * 2f));
+                CopyChildren(buildings, target, _ => true, EnsureWireMaterial(WirePath, ground: false), keepColliders: false);
 
-                CopyChildren(buildings, target, _ => true, EnsureWireMaterial(WirePath, ground: false));
-                if (ground != null)
-                    CopyChildren(ground, target, child => child.GetComponentsInChildren<Renderer>().Any(r => r.bounds.Intersects(area)),
-                        EnsureWireMaterial(GroundWirePath, ground: true));
+                // No crater: one flat wire-grid floor at the buildings' base height, wide enough for the sprawl copies
+                // HomeFlyover adds round the core at run time.
+                var baseHeight = buildings.GetComponentsInChildren<Renderer>().Select(r => r.bounds.min.y).DefaultIfEmpty(0f).Min();
+                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                floor.name = "Ground";
+                SceneManager.MoveGameObjectToScene(floor, target);
+                floor.transform.SetPositionAndRotation(new Vector3(0f, baseHeight - 0.5f, 0f), Quaternion.identity);
+                floor.transform.localScale = new Vector3(GroundSize / 10f, 1f, GroundSize / 10f);
+                floor.GetComponent<Renderer>().sharedMaterial = EnsureWireMaterial(GroundWirePath, ground: true);
 
                 EditorSceneManager.SaveScene(target, BackdropScenePath);
             }
@@ -142,7 +140,7 @@ namespace Chopper.Editor.Setup
 
         /// <summary>Copies a root's children (prefab links kept) under a same-named root, then strips colliders and scripts.</summary>
 
-        private static void CopyChildren(GameObject root, Scene target, System.Func<GameObject, bool> keep, Material wire)
+        private static void CopyChildren(GameObject root, Scene target, System.Func<GameObject, bool> keep, Material wire, bool keepColliders)
         {
             var copy = new GameObject(root.name);
             SceneManager.MoveGameObjectToScene(copy, target);
@@ -157,7 +155,9 @@ namespace Chopper.Editor.Setup
                 made.transform.SetParent(copy.transform, false);
                 made.transform.SetLocalPositionAndRotation(child.localPosition, child.localRotation);
                 made.transform.localScale = child.localScale;
-                foreach (var collider in made.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
+                // The ground keeps its colliders: the menu camera tests them to stay clear of the crater walls.
+                if (!keepColliders)
+                    foreach (var collider in made.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
                 foreach (var script in made.GetComponentsInChildren<MonoBehaviour>(true)) Object.DestroyImmediate(script);
                 if (wire == null) continue;
                 foreach (var renderer in made.GetComponentsInChildren<Renderer>(true))
@@ -229,6 +229,13 @@ namespace Chopper.Editor.Setup
             focus.weight = 0f;
             focus.sharedProfile = EnsureFocusVolume();
             flyover.SetFocusVolume(focus);
+            flyover.SetQuantizeShader(Shader.Find("Hidden/Chopper/PixelQuantize"));
+            // Choppers dogfighting over the city.
+            var skirmish = camera.GetComponent<HomeSkirmish>();
+            if (skirmish == null) skirmish = camera.gameObject.AddComponent<HomeSkirmish>();
+            skirmish.Configure(bridge, flyover, AssetDatabase.LoadAssetAtPath<Material>(WirePath), EnsureTracerMaterial());
+            flyover.SetSkirmish(skirmish);
+            EditorUtility.SetDirty(skirmish);
             EditorUtility.SetDirty(flyover);
             EditorUtility.SetDirty(volume);
             EditorUtility.SetDirty(focus);
@@ -324,6 +331,20 @@ namespace Chopper.Editor.Setup
             }
             EditorUtility.SetDirty(profile);
             return profile;
+        }
+
+        /// <summary>Menu tracers: URP Unlit, a bright (above 1) green so bloom makes them glow. Made once.</summary>
+        private static Material EnsureTracerMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(TracerPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) return null;
+            Directory.CreateDirectory(Path.GetDirectoryName(TracerPath));
+            material = new Material(shader);
+            material.SetColor("_BaseColor", new Color(1.5f, 6f, 3f, 1f));
+            AssetDatabase.CreateAsset(material, TracerPath);
+            return material;
         }
 
         /// <summary>One output channel = brightness × <paramref name="scale"/> (mixer values are percent).</summary>

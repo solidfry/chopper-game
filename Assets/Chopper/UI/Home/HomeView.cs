@@ -65,6 +65,11 @@ namespace Chopper.UI.Home
         private Label _clock;
         private readonly List<(Button Button, Action Action, Func<string> Hint)> _nav = new();
 
+        private VisualElement _city;
+        private Texture _shownCity;
+        /// <summary>Frosted glass layers (blurred city cut to their element), placed each frame.</summary>
+        private readonly List<VisualElement> _glass = new();
+
         private Button _profile;
         private VisualElement _profilePortrait;
         private PilotPortrait _profileDrawn;
@@ -127,6 +132,7 @@ namespace Chopper.UI.Home
                 return;
             }
             _model.Changed += Refresh;
+            _model.ShotCut += OnShotCut;
             _model.ShownChanged += ShowPilot;
             _bootText = string.Join("\n", BootLines);
             _renderer = GetComponent<PanelRenderer>();
@@ -138,6 +144,7 @@ namespace Chopper.UI.Home
             if (_model != null)
             {
                 _model.Changed -= Refresh;
+                _model.ShotCut -= OnShotCut;
                 _model.ShownChanged -= ShowPilot;
             }
             if (_renderer != null) _renderer.UnregisterUIReloadCallback(OnUIReload);
@@ -157,6 +164,8 @@ namespace Chopper.UI.Home
             _boot = _root.Q<Label>("boot-log");
             _hint = _root.Q<Label>("nav-hint");
             _clock = _root.Q<Label>("clock");
+            _city = _root.Q("city");
+            _shownCity = null;
 
             AddNav("nav-play", OpenHangar, () => "DEPLOY: BUILD YOUR CHOPPER, THEN FIND A MATCH");
             AddNav("nav-training", StartTraining, () =>
@@ -176,6 +185,9 @@ namespace Chopper.UI.Home
             _profileLevel = _root.Q<Label>("profile-level");
             _profileXp = _root.Q<SegmentBar>("profile-xp");
             if (_profile != null) _profile.clicked += OpenCodex;
+
+            foreach (var (button, _, _) in _nav) AddGlass(button);
+            if (_profile != null) AddGlass(_profile);
 
             _codexList = _root.Q<ScrollView>("codex-list");
             _codexCount = _root.Q<Label>("codex-count");
@@ -238,6 +250,8 @@ namespace Chopper.UI.Home
             if (_codexNext != null) _codexNext.clicked -= NextPilot;
             _root.UnregisterCallback<PointerDownEvent>(OnAnyPointer, TrickleDown.TrickleDown);
             _rows.Clear();
+            _glass.Clear();
+            _city = null;
             _root = null;
         }
 
@@ -248,6 +262,7 @@ namespace Chopper.UI.Home
             TickBoot(Time.unscaledDeltaTime);
             TickGlitch(time);
             TickClock();
+            PlaceGlass();
             var dimmed = _model.Page != HomePage.Main || OptionsOpen;
             _model.SetDimmed(dimmed);
             _root.EnableInClassList(DimmedClass, dimmed);
@@ -314,6 +329,46 @@ namespace Chopper.UI.Home
             _title.AddToClassList(GlitchClass);
             _glitchEnd = time + UnityEngine.Random.Range(0.06f, 0.16f);
             _nextGlitch = time + UnityEngine.Random.Range(1.8f, 5f);
+        }
+
+        /// <summary>The backdrop camera cut: a short CRT glitch over the city hides the jump.</summary>
+        private void OnShotCut() => _root?.Q<CodecScan>(className: "home__crt")?.Burst();
+
+        /// <summary>A glass layer under the element's content (first child, not picked).</summary>
+        private void AddGlass(VisualElement owner)
+        {
+            var glass = new VisualElement { pickingMode = PickingMode.Ignore };
+            glass.AddToClassList("home-glass");
+            glass.style.backgroundRepeat = new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
+            owner.Insert(0, glass);
+            _glass.Add(glass);
+        }
+
+        /// <summary>
+        /// The live city image, and each glass layer showing the blurred city at the panel size, shifted so the part
+        /// under the element lines up with the city behind it (follows buttons as they slide).
+        /// </summary>
+        private void PlaceGlass()
+        {
+            var city = _model.BackdropTexture;
+            if (_city != null && city != _shownCity)
+            {
+                _shownCity = city;
+                _city.style.backgroundImage = city is RenderTexture rt ? new StyleBackground(Background.FromRenderTexture(rt)) : new StyleBackground(StyleKeyword.None);
+            }
+
+            var blur = _model.BlurTexture as RenderTexture;
+            var panel = _root.worldBound;
+            foreach (var glass in _glass)
+            {
+                glass.style.display = blur != null ? DisplayStyle.Flex : DisplayStyle.None;
+                if (blur == null) continue;
+                glass.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(blur));
+                var bound = glass.worldBound;
+                glass.style.backgroundSize = new BackgroundSize(new Length(panel.width), new Length(panel.height));
+                glass.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, new Length(panel.x - bound.x));
+                glass.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, new Length(panel.y - bound.y));
+            }
         }
 
         private void TickClock()

@@ -43,16 +43,29 @@ namespace Chopper.Presentation.Menu
         /// <summary>A real map is up behind the menu (<see cref="HomeFlyover"/>): the view swaps its drawn grid for a CRT layer.</summary>
         public bool LiveBackdrop { get; private set; }
 
+        /// <summary>The backdrop camera cut to a new shot (the view flashes a CRT glitch).</summary>
+        public event Action ShotCut;
+
+        public void NotifyCut() => ShotCut?.Invoke();
+
         /// <summary>A submenu (codex, options) is open: the backdrop blurs and darkens so the text reads (<see cref="HomeFlyover"/>).</summary>
         public bool Dimmed { get; private set; }
 
         /// <summary>Set by the view each frame; no event (the flyover fades towards it).</summary>
         public void SetDimmed(bool dimmed) => Dimmed = dimmed;
 
-        public void SetLiveBackdrop(bool live)
+        /// <summary>The city image for the UI (low resolution, quantized), or null when the camera draws to the screen.</summary>
+        public Texture BackdropTexture { get; private set; }
+
+        /// <summary>A soft blurred copy of the city for the glass behind buttons; null without the pixel look.</summary>
+        public Texture BlurTexture { get; private set; }
+
+        public void SetLiveBackdrop(bool live, Texture texture = null, Texture blur = null)
         {
-            if (live == LiveBackdrop) return;
+            if (live == LiveBackdrop && texture == BackdropTexture && blur == BlurTexture) return;
             LiveBackdrop = live;
+            BackdropTexture = texture;
+            BlurTexture = blur;
             Changed?.Invoke();
         }
         public IReadOnlyList<PilotCard> Pilots => _pilots;

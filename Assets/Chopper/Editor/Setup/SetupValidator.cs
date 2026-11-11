@@ -125,6 +125,12 @@ namespace Chopper.Editor.Setup
         {
             // The hangar is a menu scene: no chase camera, HUD or gameplay subscene.
             if (Object.FindAnyObjectByType<Chopper.Presentation.Hangar.HangarStage>() != null) return;
+            // So is the home screen (main menu): check its own parts instead.
+            if (Object.FindAnyObjectByType<Chopper.UI.Home.HomeView>(FindObjectsInactive.Include) != null)
+            {
+                CheckHomeScene(problems);
+                return;
+            }
 
             var bridge = Object.FindAnyObjectByType<PresentationBridge>();
             if (bridge == null)
@@ -156,6 +162,22 @@ namespace Chopper.Editor.Setup
             // Gameplay content lives in the subscene; a closed one is opened for the check and closed again.
             if (!GameplaySceneSetup.WithGameplayScene(scene => CheckGameplayScene(scene, problems), save: false))
                 problems.Add(new SetupProblem("No gameplay subscene found (a SubScene whose scene has a ChopperSpawner)."));
+        }
+
+        /// <summary>The home screen: bridge, options overlay, the live city camera and its scene in the build.</summary>
+        private static void CheckHomeScene(List<SetupProblem> problems)
+        {
+            const string rerun = "Press '11. Build home screen'.";
+            var bridge = Object.FindAnyObjectByType<PresentationBridge>();
+            if (bridge == null || bridge.Config == null) problems.Add(new SetupProblem($"Home scene has no presentation bridge with a game config. {rerun}", bridge));
+            if (Object.FindAnyObjectByType<OptionsMenuView>(FindObjectsInactive.Include) == null)
+                problems.Add(new SetupProblem($"Home scene has no options overlay. {rerun}"));
+            var flyover = Object.FindAnyObjectByType<Chopper.Presentation.Menu.HomeFlyover>(FindObjectsInactive.Include);
+            if (flyover == null) problems.Add(new SetupProblem($"Home scene has no city camera (HomeFlyover): the drawn grid shows instead. {rerun}"));
+            if (Object.FindAnyObjectByType<Chopper.Presentation.Menu.HomeSkirmish>(FindObjectsInactive.Include) == null)
+                problems.Add(new SetupProblem($"Home scene has no menu choppers (HomeSkirmish). {rerun}", flyover));
+            if (!EditorBuildSettings.scenes.Any(s => s.enabled && s.path == HomeSetup.BackdropScenePath))
+                problems.Add(new SetupProblem($"{HomeSetup.BackdropScenePath} is not in the build: the menu has no live city. {rerun}"));
         }
 
         private static void CheckGameplayScene(Scene scene, List<SetupProblem> problems)

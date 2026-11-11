@@ -5,6 +5,8 @@
   <ui:VisualElement name="home" class="home">
     <!-- Drawn city grid; hidden once the live map backdrop (HomeFlyover) is up, then the CRT layer goes over it -->
     <home:HomeBackdrop class="home__backdrop" picking-mode="Ignore" />
+    <!-- The live city as chunky pixels (HomeFlyover's low resolution, quantized texture; set from code) -->
+    <ui:VisualElement name="city" class="home__city" picking-mode="Ignore" />
     <home:CodecScan class="home__crt" picking-mode="Ignore" />
     <ui:VisualElement class="home__shade" picking-mode="Ignore" />
 

@@ -466,6 +466,7 @@ GameObject:
   - component: {fileID: 847372243}
   - component: {fileID: 847372242}
   - component: {fileID: 847372241}
+  - component: {fileID: 847372246}
   - component: {fileID: 847372245}
   m_Layer: 0
   m_Name: Main Camera
@@ -601,20 +602,54 @@ MonoBehaviour:
   m_GameObject: {fileID: 847372240}
   m_Enabled: 1
   m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3593f897f06fa4840990eb1435de7e3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Menu.HomeSkirmish
+  bridge: {fileID: 604190260}
+  flyover: {fileID: 847372246}
+  wireMaterial: {fileID: 2100000, guid: c29c15c2beb3c494a8f158c60a9c5c31, type: 2}
+  tracerMaterial: {fileID: 2100000, guid: 3af44fd441bd09c4c8fc177584e777a5, type: 2}
+  count: 6
+  scale: 5
+  speed: 70
+  tracerSpeed: 700
+  tracerLength: 45
+  tracerWidth: 1.6
+--- !u!114 &847372246
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 847372240}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1338cb03f8788bf45abee640ffd0e914, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Menu.HomeFlyover
   bridge: {fileID: 604190260}
   sceneName: HomeCity
   focusRoot: Buildings
-  radiusScale: 0.75
-  heightScale: 0.55
+  radiusShare: 0.95
+  radiusScale: 1.8
+  height: 560
+  lookHeight: 120
+  fieldOfView: 50
+  screenOffset: 0.38
+  sprawlRings: 1
+  skirmish: {fileID: 847372245}
+  shotSeconds: {x: 4, y: 7}
   orbitSeconds: 240
-  bob: 25
+  bob: 20
+  clearance: 40
   fogColour: {r: 0.01, g: 0.05, b: 0.03, a: 1}
   fogDensity: 0.00045
   focusVolume: {fileID: 1312600689}
   focusFadeSeconds: 0.25
+  quantizeShader: {fileID: 4800000, guid: 0b5319d5931cdd04b9b57098ceeb2396, type: 3}
+  pixelSize: 2
+  levels: 6
+  dither: 0.8
 --- !u!1 &1312600688
 GameObject:
   m_ObjectHideFlags: 0

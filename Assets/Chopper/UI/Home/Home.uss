@@ -163,6 +163,37 @@
   display: flex;
 }
 
+.home__city {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  -unity-background-scale-mode: stretch-to-fill;
+}
+
+.home--live .home__city {
+  display: flex;
+}
+
+/* Frosted glass under buttons and cards: the blurred city, cut to the element (HomeView sets image and offset). */
+.home-glass {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  -unity-background-image-tint-color: rgb(110, 150, 125);
+  transition-property: opacity;
+  transition-duration: 0.12s;
+}
+
+.home-nav__item:hover .home-glass,
+.home-nav__item:focus .home-glass {
+  opacity: 0;
+}
+
 /* Submenu open over the live city (with the blur Volume): a dark wash so the text reads. */
 .home--live.home--dimmed .home__shade {
   display: flex;
