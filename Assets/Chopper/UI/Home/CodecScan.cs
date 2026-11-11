@@ -87,6 +87,17 @@ namespace Chopper.UI.Home
                 }
             }
 
+            // Cut to the element: a parent may not clip (a render texture portrait does not show under overflow: hidden).
+            for (var i = _quads.Count - 1; i >= 0; i--)
+            {
+                var (r, c) = _quads[i];
+                var xMin = Mathf.Max(0f, r.xMin);
+                var yMin = Mathf.Max(0f, r.yMin);
+                var xMax = Mathf.Min(w, r.xMax);
+                var yMax = Mathf.Min(h, r.yMax);
+                if (xMax <= xMin || yMax <= yMin) _quads.RemoveAt(i);
+                else _quads[i] = (Rect.MinMaxRect(xMin, yMin, xMax, yMax), c);
+            }
             Emit(context, _quads);
         }
 

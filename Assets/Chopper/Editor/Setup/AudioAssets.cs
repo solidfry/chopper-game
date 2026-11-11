@@ -157,6 +157,19 @@ namespace Chopper.Editor.Setup
                 Slot(library.RepairInterrupted, () => Cue("RepairInterrupted", Clips(SciFiGuns + "/Weapon 12 Stop (Laser).wav"), ui, 0.6f,
                     blend: 0f, voices: 1, cooldown: 0.3f, pitch: 0.8f)));
 
+            // Match results: terminal blips (Tools/Sound/make_terminal_sounds.py). Ticks are many and quick: short cooldown, small pitch spread.
+            const string terminal = "Assets/Sound/UI/Terminal/";
+            library.InitialiseResults(
+                Slot(library.ResultsWindow, () => Cue("ResultsWindow", Clips(terminal + "Term_Window.wav"), ui, 0.55f, blend: 0f, voices: 2,
+                    cooldown: 0.05f)),
+                Slot(library.ResultsTick, () => Cue("ResultsTick", Clips(terminal + "Term_Tick_1.wav", terminal + "Term_Tick_2.wav",
+                    terminal + "Term_Tick_3.wav"), ui, 0.3f, blend: 0f, voices: 3, cooldown: 0.035f)),
+                Slot(library.ResultsLine, () => Cue("ResultsLine", Clips(terminal + "Term_Line_1.wav", terminal + "Term_Line_2.wav"), ui, 0.5f,
+                    blend: 0f, voices: 2, cooldown: 0.04f)),
+                Slot(library.ResultsAward, () => Cue("ResultsAward", Clips(terminal + "Term_Award.wav"), ui, 0.55f, blend: 0f, voices: 3,
+                    cooldown: 0.05f)),
+                Slot(library.ResultsLevelUp, () => Cue("ResultsLevelUp", Clips(terminal + "Term_Level.wav"), ui, 0.7f, blend: 0f, voices: 1)));
+
             // Pilot ability (placeholders): an energy blast on use, a short switch when ready, crackling lightning when jammed.
             library.InitialiseAbility(
                 Slot(library.AbilityActivate, () => Cue("AbilityActivate", Clips(SciFi + "/Impact/explosion_energy.wav"), ui, 0.5f, blend: 0f,

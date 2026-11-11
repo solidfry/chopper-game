@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chopper.Presentation.Audio;
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Results;
 using Chopper.UI.Cockpit;
@@ -60,6 +61,8 @@ namespace Chopper.UI.Results
         private float _shownAt;
         private int _step;
         private int _shownLevel;
+        private int _shownXp = -1;
+        private bool _silent;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetBridge(PresentationBridge value) => bridge = value;
@@ -201,6 +204,7 @@ namespace Chopper.UI.Results
             foreach (var player in _model.Players)
                 if (player != _model.Local) AddPlayer(player);
             _shownLevel = 0;
+            _shownXp = -1;
         }
 
         private void AddPlayer(ResultsPlayer player)
@@ -246,7 +250,9 @@ namespace Chopper.UI.Results
         private void Jump()
         {
             _shownAt = Time.unscaledTime - 60f;
+            _silent = true;
             Animate(60f);
+            _silent = false;
         }
 
         private void Animate(float t)
@@ -255,9 +261,14 @@ namespace Chopper.UI.Results
 
             var local = _model.Local;
             var count = Ease(Mathf.Clamp01((t - CardsAt) / CountSeconds));
-            _kills.text = Count(local != null ? local.Kills : 0, count);
-            _deaths.text = Count(local != null ? local.Deaths : 0, count);
-            _score.text = Count(_model.Score, count);
+            var kills = Count(local != null ? local.Kills : 0, count);
+            var deaths = Count(local != null ? local.Deaths : 0, count);
+            var score = Count(_model.Score, count);
+            // A tick each time a number rolls (the cue's cooldown keeps it a fast clatter, not a buzz).
+            if (_kills.text != kills || _deaths.text != deaths || _score.text != score) Play(Sounds?.ResultsTick);
+            _kills.text = kills;
+            _deaths.text = deaths;
+            _score.text = score;
 
             // XP lines one by one; the total follows them.
             var shownXp = 0;
@@ -265,6 +276,7 @@ namespace Chopper.UI.Results
             for (var i = 0; i < _lineElements.Count; i++)
             {
                 var on = t >= XpAt + XpLineSeconds * (i + 1);
+                if (on && !_lineElements[i].ClassListContains("results-xp-line--in")) Play(Sounds?.ResultsLine);
                 _lineElements[i].EnableInClassList("results-xp-line--in", on);
                 if (on && i < lines.Count) shownXp += lines[i].Amount;
             }
@@ -278,21 +290,42 @@ namespace Chopper.UI.Results
             var startLevel = PilotLevels.Level(_model.XpBefore, out _, out _);
             _level.text = $"LVL {level}";
             _levelNeed.text = $"{into} / {needed} XP";
+            if (xp != _shownXp && _shownXp >= 0 && fill > 0f) Play(Sounds?.ResultsTick);
+            _shownXp = xp;
             _levelBar.value = needed > 0 ? (float)into / needed : 0f;
             if (level != _shownLevel)
             {
-                if (_shownLevel != 0 && level > _shownLevel) _scan?.Burst();
+                if (_shownLevel != 0 && level > _shownLevel)
+                {
+                    _scan?.Burst();
+                    Play(Sounds?.ResultsLevelUp);
+                }
                 _shownLevel = level;
             }
             _levelUp.EnableInClassList("results-xp__level-up--on", level > startLevel);
 
             for (var i = 0; i < _playerElements.Count; i++)
-                _playerElements[i].EnableInClassList("results-player--in", t >= AwardsAt + AwardStagger * i);
+            {
+                var on = t >= AwardsAt + AwardStagger * i;
+                if (on && !_playerElements[i].ClassListContains("results-player--in")) Play(Sounds?.ResultsAward);
+                _playerElements[i].EnableInClassList("results-player--in", on);
+            }
+        }
+
+        private SoundLibrary Sounds => _context.Sounds;
+
+        /// <summary>A results sound, unless the screen is jumping to its end state.</summary>
+        private void Play(SoundCue cue)
+        {
+            if (_silent || cue == null) return;
+            _context.Audio.Play(cue);
         }
 
         private void SetStep(int step)
         {
             if (step == _step) return;
+            // Each panel that pops in: the window sound (not when the screen hides or resets).
+            if (step > _step && step > 0) Play(Sounds?.ResultsWindow);
             _step = step;
             for (var i = 1; i <= 4; i++) _root.EnableInClassList(StepClass + i, step >= i);
         }

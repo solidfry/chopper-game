@@ -90,6 +90,13 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("The camera moves to a slot or back to the overview.")] private SoundCue slotFocus;
         [SerializeField, Tooltip("A new chassis scans in.")] private SoundCue chassisScan;
 
+        [Header("Match results (terminal blips: Tools/Sound/make_terminal_sounds.py)")]
+        [SerializeField, Tooltip("A panel of the results screen pops open.")] private SoundCue resultsWindow;
+        [SerializeField, Tooltip("A number rolls while it counts up (fast, short).")] private SoundCue resultsTick;
+        [SerializeField, Tooltip("One XP line prints.")] private SoundCue resultsLine;
+        [SerializeField, Tooltip("An award card stamps down.")] private SoundCue resultsAward;
+        [SerializeField, Tooltip("The level bar passes a level.")] private SoundCue resultsLevelUp;
+
         public AudioMixer Mixer => mixer;
         public AudioMixerGroup MusicGroup => musicGroup;
         public AudioMixerGroup VoiceGroup => voiceGroup;
@@ -146,6 +153,11 @@ namespace Chopper.Presentation.Audio
         public SoundCue ModuleRemove => moduleRemove;
         public SoundCue SlotFocus => slotFocus;
         public SoundCue ChassisScan => chassisScan;
+        public SoundCue ResultsWindow => resultsWindow;
+        public SoundCue ResultsTick => resultsTick;
+        public SoundCue ResultsLine => resultsLine;
+        public SoundCue ResultsAward => resultsAward;
+        public SoundCue ResultsLevelUp => resultsLevelUp;
 
         public void CollectProblems(List<string> problems)
         {
@@ -208,6 +220,16 @@ namespace Chopper.Presentation.Audio
             abilityActivate = activate;
             abilityReady = ready;
             jammed = jam;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseResults(SoundCue window, SoundCue tick, SoundCue line, SoundCue award, SoundCue levelUp)
+        {
+            resultsWindow = window;
+            resultsTick = tick;
+            resultsLine = line;
+            resultsAward = award;
+            resultsLevelUp = levelUp;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
