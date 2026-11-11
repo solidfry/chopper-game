@@ -605,6 +605,23 @@ Built (7 Nov, written without the editor, not compiled):
   - Clean the names: length cap and no control characters (`LoadoutChoiceStore.CleanName` does this for preset names).
 - **Remote Config** for XP rates, unlock costs, weapon tuning without new builds.
 
+## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
+
+The owner owns these. ECS does not matter for them: weather and effects are client presentation only (GameObjects in
+the match scene, never in a subscene, stripped from the server build), driven by the replicated map conditions
+(`Simulation/Visuals/MapConditions.cs`). The real test is **Unity 6 + URP with Render Graph** support. Plan: one
+adapter per asset behind `EnvironmentSettings`, so assets can be swapped.
+
+| Asset | Use | Notes (not checked against the current store pages) |
+|---|---|---|
+| [UniStorm](https://assetstore.unity.com/packages/tools/particles-effects/unistorm-volumetric-clouds-sky-modular-weather-and-cloud-shadows-2714) | Weather, sky, clouds, time of day | Has a URP version, kept up to date. It drives sun, fog, sky and ambient itself: it would fight `EnvironmentSettings`, the height fog and the city look. Either let it own the sky or use only its precipitation and lightning. First choice of the two weather assets. |
+| [Weather Maker](https://assetstore.unity.com/packages/tools/particles-effects/weather-maker-volumetric-clouds-and-weather-system-for-unity-60955) | Weather, volumetric clouds | Built for the built-in pipeline first; URP support has been partial; not sure it is still maintained. Check for Unity 6 URP first. |
+| [L.V.E 2023](https://assetstore.unity.com/packages/tools/terrain/l-v-e-2023-lava-volcano-environment-2023-253816) | Lava, volcano (City04) | Lava flows, glow, eruptions, smoke. Check that it ships a URP package. |
+| [Fire & Smoke Dynamic Nature](https://assetstore.unity.com/packages/vfx/particles/fire-explosions/fire-smoke-dynamic-nature-217775) | Crash fires, wrecks, building smoke, PYRE burn | Particles: low risk. Check whether it uses VFX Graph or Shuriken (they plug into `EffectPool` differently). |
+| [Procedural Lightning](https://assetstore.unity.com/packages/tools/particles-effects/procedural-lightning-high-performance-and-shocking-lightning-34217) | Storm lightning, HEX Blackout, EMP, chain lightning weapon | Script-driven lines, works in URP, cheap: low risk. |
+
+Order when picked up: Procedural Lightning and Fire & Smoke first (low risk), then UniStorm on a copy of a map scene.
+
 ## 7. Game modes
 
 Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs` + states `InitialisingGame` → `PreGame` → `StartGame` → `InProgressGame` → `PostGame`). `GameMode` SO extended with `ModeType`, score limit, time limit, respawn rules, team count.
