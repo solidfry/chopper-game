@@ -132,9 +132,25 @@ namespace Chopper.Editor.Setup
             EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneLinux64 &&
             EditorUserBuildSettings.standaloneBuildSubtarget == StandaloneBuildSubtarget.Server;
 
+        /// <summary>
+        /// Unity 6.6: the Entities content build checks the build window's *selected* subtarget (internal
+        /// <c>EditorUserBuildSettings.selectedStandaloneBuildSubtarget</c>), not the active one. If it still says Player,
+        /// the check wants the Linux Mono player module (not installed; only the server one is) and the build fails at
+        /// once with 0 errors ("Unable to build with the current configuration"). Set it to Server before the build.
+        /// </summary>
+        private static void SelectServerSubtarget()
+        {
+            var property = typeof(EditorUserBuildSettings).GetProperty("selectedStandaloneBuildSubtarget",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            if (property != null && property.CanWrite) property.SetValue(null, StandaloneBuildSubtarget.Server);
+            else Debug.LogWarning("Server build: cannot set the selected subtarget; if the build fails at once, select Linux Server in Build Profiles.");
+        }
+
         private static void BuildNow()
         {
             Directory.CreateDirectory(OutputFolder);
+            SelectServerSubtarget();
             // Entities makes a folder named after the product; "Airwing: Nitro" has a ':' that Windows paths cannot hold.
             // The server never shows its name, so build it without the colon and put the name back after.
             var productName = PlayerSettings.productName;
