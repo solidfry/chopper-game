@@ -2,7 +2,10 @@
 City_Shanties: a slum town dug into the inner wall of the rim (style option "shanties"). Clusters of shacks climb
 the cliff: each shack's back is cut into the rock, its front stands out on steel stilts down to the slope below; stairs
 zigzag from roof to roof, cables sag between neighbours, windows are lit and a few neon signs hang on the fronts.
-One Building placed at the city origin (terrain space), like the roads.
+One Building placed at the city origin (terrain space), like the roads, holds the decks, stilts, stairs, cables,
+signs and the row colliders. The shacks themselves are instances (12 Nov 2026, build size): a few shack models
+(`shack_models`, one per width and height step) placed through the layout (`b.instances`), so the wall town's mesh
+data is a few small models plus the thin parts, not 5000 shacks baked into one mesh.
 
 Style settings (styles.py, "shanties"): step (degrees between cluster spots round the wall), chance (a spot gets a
 cluster), levels (shacks per cluster, low..high), height (lowest and highest floor above the crater floor, m),
@@ -16,11 +19,27 @@ import numpy as np
 
 from . import roads
 from .buildings import _shack
-from .kit import L0, L01, Rect
+from .kit import Building, L0, L01, Rect
 from .terrain import polyline_distance
 
 DEFAULTS = dict(step=2.4, chance=0.55, levels=(2, 7), height=(5.0, 120.0), start=0.0, size=((4.0, 8.0), (2.8, 3.6)))
 NEON = ("neon_pink", "neon_cyan", "neon_green")
+HEIGHT_STEPS = 3      # shack heights per style: low, middle, high of size[1]
+BACK, FRONT = -2.5, 2.5   # local z of a shack's back (in the rock) and front (one depth for every model)
+
+
+def _widths(s):
+    low, high = s["size"][0]
+    return list(range(math.ceil(low), math.floor(high) + 1)) or [round((low + high) / 2)]
+
+
+def _heights(s):
+    low, high = s["size"][1]
+    return [round(low + (high - low) * k / (HEIGHT_STEPS - 1), 2) for k in range(HEIGHT_STEPS)]
+
+
+def _model_name(w, k):
+    return f"Shack_W{w}_H{k}"
 
 
 def shanties(city, terrain, style):
@@ -61,6 +80,9 @@ def shanties(city, terrain, style):
             return None
         return x, z, (-ux, -uz)
 
+    widths, heights = _widths(s), _heights(s)
+    b.instances = []            # (model name, position, yaw): the shacks, placed through the layout
+    b.instance_points = []      # their corners (audit.py: the row colliders cover them, not this mesh)
     spots = []
     for angle in np.arange(0.0, 360.0, s["step"]):
         if rng.random() > s["chance"]:
@@ -77,27 +99,27 @@ def shanties(city, terrain, style):
             if level > floor + s["height"][1]:
                 break
             per = max(1, wide - k // 2 - rng.randint(0, 1))
-            sizes = [(rng.uniform(*s["size"][0]), rng.uniform(*s["size"][1])) for _ in range(per)]
+            sizes = [(rng.choice(widths), rng.randrange(HEIGHT_STEPS)) for _ in range(per)]
             gaps = [rng.uniform(0.6, 2.5) for _ in range(per)]
-            total = sum(w for w, _h in sizes) + sum(gaps[:-1])
+            total = sum(w for w, _k in sizes) + sum(gaps[:-1])
             u = drift - total / 2
             row = []
-            for (w, h), gap in zip(sizes, gaps):
+            for (w, k_h), gap in zip(sizes, gaps):
                 spot = wall_at(a0 + (u + w / 2) / reach, level)
                 if spot is not None:
-                    row.append((spot[0], level, spot[1], w, h, spot[2]))
+                    row.append((spot[0], level, spot[1], w, heights[k_h], spot[2]))
                 u += w + gap
             if not row:
                 break
             levels.append(row)
             drift += rng.uniform(-3.0, 3.0)    # each level a little off the one below
-            level += max(h for _w, h in sizes) + rng.uniform(0.4, 2.5)
+            level += max(heights[k_h] for _w, k_h in sizes) + rng.uniform(0.4, 2.5)
         if len(levels) >= 2:
             spots.append(levels)
     for levels in spots:
         for k, row in enumerate(levels):
             for x, y, z, w, h, facing in row:
-                _wall_shack(b, terrain, x, y, z, w, h, facing)
+                _wall_shack(b, terrain, x, y, z, w, h, _model_name(w, heights.index(h)), facing)
             for (xa, y, za, wa, _ha, fa), (xb, _y, zb, wb, _hb, _fb) in zip(row, row[1:]):
                 _deck(b, terrain, (xa, za), (xb, zb), y, fa)
             if k % 2 == 0:
@@ -155,30 +177,51 @@ def _yaw(facing):
     return math.degrees(math.atan2(facing[0], facing[1]))
 
 
-def _wall_shack(b, terrain, x, y, z, w, h, facing):
-    """A shack with its back 2.5 m in the rock and its front out over the slope, on stilts to the ground below."""
+def _wall_shack(b, terrain, x, y, z, w, h, model, facing):
+    """A shack (an instance of `model`, see shack_models) with its back 2.5 m in the rock and its front out over the
+    slope, on stilts to the ground below; a neon sign on some."""
     rng = b.rng
-    depth = rng.uniform(4.0, 6.0)
-    back, front = -2.5, depth - 2.5           # local z of the back and the front (0 = the wall at floor height)
-    with b.turned(x, z, _yaw(facing)):
-        rect = Rect(x - w / 2, x + w / 2, z + back, z + front)
-        _shack(b, rect, y, h)
-        b.span(rect.x0 - 0.2, rect.x1 + 0.2, y - 0.25, y, rect.z0, rect.z1 + 0.6, "metal", L01)   # floor deck
-        b.collider(rect.x0 - 0.2, rect.x1 + 0.2, y - 0.25, y, rect.z0, rect.z1 + 0.6)
-        if rng.random() < 0.25:
-            b.span(x - w * 0.3, x + w * 0.3, y + h - 0.9, y + h - 0.3, z + front + 0.05, z + front + 0.15,
-                   rng.choice(NEON), L01)
-    # Stilts under the front corners, down to the slope (terrain heights at their world positions).
+    yaw = _yaw(facing)
+    b.instances.append((model, (x, y, z), yaw))
     nx, nz = facing
     tx, tz = -nz, nx
+    b.instance_points += [(x + tx * side * w / 2 + nx * d, y + h + 0.12, z + tz * side * w / 2 + nz * d)
+                          for side in (-1, 1) for d in (BACK, FRONT)]     # for the audit (colliders cover them)
+    if rng.random() < 0.25:
+        with b.turned(x, z, yaw):
+            b.span(x - w * 0.3, x + w * 0.3, y + h - 0.9, y + h - 0.3, z + FRONT + 0.05, z + FRONT + 0.15, rng.choice(NEON), L01)
+    # Stilts under the two front corners, down to the slope (terrain heights at their world positions).
     for side in (-1, 1):
-        for reach in (front - 0.2, front * 0.4):
-            sx, sz = x + tx * side * (w / 2 - 0.2) + nx * reach, z + tz * side * (w / 2 - 0.2) + nz * reach
-            ground = float(terrain.sample(sx, sz)) - 0.5
-            if y - ground < 0.4:
-                continue
-            b.span(sx - 0.1, sx + 0.1, ground, y - 0.25, sz - 0.1, sz + 0.1, "metal", L01)
-            b.collider(sx - 0.15, sx + 0.15, ground, y - 0.25, sz - 0.15, sz + 0.15)
+        reach = FRONT - 0.2
+        sx, sz = x + tx * side * (w / 2 - 0.2) + nx * reach, z + tz * side * (w / 2 - 0.2) + nz * reach
+        ground = float(terrain.sample(sx, sz)) - 0.5
+        if y - ground < 0.4:
+            continue
+        b.span(sx - 0.1, sx + 0.1, ground, y - 0.25, sz - 0.1, sz + 0.1, "metal", L01)
+
+
+def shack_models(style):
+    """The shack models the wall town places (one per width and height step): walls, roof, door, windows and the
+    floor deck, in a local frame (wall at z = 0, floor at y = 0, front towards +z). No colliders: the row boxes in
+    City_Shanties cover them. Empty when the style has no wall town."""
+    settings = style.get("shanties")
+    if not settings:
+        return []
+    s = dict(DEFAULTS, **settings)
+    look = dict(style, lit=min(0.4, style["lit"] * 3.0))
+    out = []
+    for w in _widths(s):
+        for k, h in enumerate(_heights(s)):
+            name = _model_name(w, k)
+            m = Building(dict(name=name, type="props", seed=sum(map(ord, name)), plot=(w + 0.6, FRONT - BACK + 0.6)), look)
+            rect = Rect(-w / 2, w / 2, BACK, FRONT)
+            _shack(m, rect, 0.0, h)
+            m.span(rect.x0 - 0.2, rect.x1 + 0.2, -0.25, 0.0, rect.z0, rect.z1 + 0.6, "metal", L01)   # floor deck
+            m.colliders = []
+            m.skip_uncovered = True
+            m.ground_level = -0.25   # the floor deck's underside
+            out.append(m)
+    return out
 
 
 def _deck(b, terrain, p, q, y, facing):
@@ -201,7 +244,7 @@ def _deck(b, terrain, p, q, y, facing):
         while k <= mz + length / 2:
             b.span(rail - 0.03, rail + 0.03, y, y + 1.0, k - 0.03, k + 0.03, "metal")
             b.box((rail, y + 2.3, k), (0.12, 0.12, 0.12), b.lit_swatch(), L0)
-            k += 1.6
+            k += 3.2                           # a post and a bulb every 3.2 m (was 1.6: build size)
         b.collider(mx - 0.9, mx + 0.9, y - 0.2, y + 1.0, mz - length / 2, mz + length / 2)
     ground = float(terrain.sample(mx, mz)) - 0.5
     if y - ground > 0.5:
@@ -219,7 +262,7 @@ def _stair(b, low, high, facing):
     if math.dist(a, c) < 0.5:
         return
     b.beam(a, c, 0.5, "metal", L01)
-    steps = max(1, int(abs(c[1] - a[1]) / 0.3))
+    steps = max(1, int(abs(c[1] - a[1]) / 0.9))     # a tread every 0.9 m of rise (was 0.3: build size)
     for k in range(1, steps):
         t = k / steps
         p = tuple(a[i] + (c[i] - a[i]) * t for i in range(3))
@@ -239,5 +282,5 @@ def _cables(b, spots):
             d = math.hypot(q[0] - p[0], q[2] - p[2])
             if 12.0 < d < 70.0 and abs(q[1] - p[1]) < 8.0 and (best is None or d < best[0]):
                 best = (d, q)
-        if best is not None and b.rng.random() < 0.6:
-            roads._cable(b, p, best[1], sag=1.5 + best[0] * 0.04, pieces=5)
+        if best is not None and b.rng.random() < 0.3:
+            roads._cable(b, p, best[1], sag=1.5 + best[0] * 0.04, pieces=3)

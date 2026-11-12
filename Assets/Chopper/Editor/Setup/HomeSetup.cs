@@ -208,7 +208,16 @@ namespace Chopper.Editor.Setup
                 made.transform.localScale = child.localScale;
                 // The ground keeps its colliders: the menu camera tests them to stay clear of the crater walls.
                 if (!keepColliders)
+                {
+                    // Unpack first: a script removed from a prefab instance stays in the scene as a missing script
+                    // (2489 of them after the 12 Nov city re-import). Then drop the collider and marker objects whole.
+                    if (PrefabUtility.IsPartOfPrefabInstance(made))
+                        PrefabUtility.UnpackPrefabInstance(made, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                    foreach (var part in made.GetComponentsInChildren<Transform>(true)
+                                 .Where(t => t != made.transform && t.name is "Colliders" or "Markers").ToArray())
+                        Object.DestroyImmediate(part.gameObject);
                     foreach (var collider in made.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
+                }
                 foreach (var script in made.GetComponentsInChildren<MonoBehaviour>(true)) Object.DestroyImmediate(script);
                 if (wire == null) continue;
                 foreach (var renderer in made.GetComponentsInChildren<Renderer>(true))

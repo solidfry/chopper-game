@@ -80,7 +80,7 @@ float TB_Fbm(float2 p, int octaves)
 float3 TB_Linear(float3 c)
 {
     float3 low = c / 12.92;
-    float3 high = pow((c + 0.055) / 1.055, 2.4);
+    float3 high = pow(max((c + 0.055) / 1.055, 0.0), 2.4);
     return lerp(high, low, step(c, 0.04045));
 }
 

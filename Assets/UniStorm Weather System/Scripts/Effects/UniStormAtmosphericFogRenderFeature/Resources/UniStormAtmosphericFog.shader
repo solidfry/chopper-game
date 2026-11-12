@@ -37,7 +37,6 @@
 #include "Lighting.cginc"
 #pragma multi_compile DIRECTIONAL POINT SPOT
 #pragma multi_compile_instancing
-#pragma enable_d3d11_debug_symbols
 
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
 		UNITY_DECLARE_TEX2D(_NoiseTex);

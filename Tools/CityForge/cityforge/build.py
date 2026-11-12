@@ -37,6 +37,7 @@ class State:
         self.kit, self.style, self.built, self.images, self.problems = kit_name, style, built, images, problems
         self.district, self.lineup, self.choppers = [], [], []
         self.placements = {}  # building name -> Unity position of its plot centre in the district
+        self.part_instances = []  # (model name, position, yaw): models that city parts place (shanties' shacks)
         self.terrain, self.terrain_chunks, self.terrain_shown = None, [], []
         self.surface = None
         self.centre, self.channel_z = (0.0, 0.0, 0.0), None
@@ -163,6 +164,7 @@ def _make_roads(scene, state, city, export_collection, material):
     made = [b for b in made if b is not None]
     collection = _collection(scene, DISTRICT_COLLECTION)
     _add_parts(state, made, export_collection, material, collection)
+    _add_part_instances(state, made, shanties.shack_models(state.style), export_collection, material, collection)
     # Tower cranes last: they need the finished district to stay clear of it (cranes.py).
     if state.terrain is not None:
         _add_parts(state, [cranes.cranes(city, state, _clearance(state))], export_collection, material, collection)
@@ -184,6 +186,24 @@ def _add_parts(state, made, export_collection, material, collection):
         collection.objects.link(obj)
         state.district.append(obj)
         state.placements.setdefault(b.name, (0.0, 0.0, 0.0))
+
+
+def _add_part_instances(state, made, models, export_collection, material, collection):
+    """Models that city parts place many times (the shanties' shacks): exported like buildings, then one district copy
+    (shared mesh) per instance; the instances go into the layout (terrain.json) so Unity places prefabs."""
+    for b in models:
+        state.problems[b.name] = audit.check(b)
+        state.built[b.name] = _building_objects(b, export_collection, material, state.style)
+    for part in made:
+        for k, (name, position, yaw) in enumerate(getattr(part, "instances", None) or []):
+            if name not in state.built:
+                continue
+            obj = bpy.data.objects.new(f"District_{name}_{k:04d}", state.built[name]["objects"][0].data)
+            collection.objects.link(obj)
+            obj.location = geo.to_blender(position)
+            obj.rotation_euler = (0.0, 0.0, math.radians(-yaw))
+            state.district.append(obj)
+            state.part_instances.append((name, position, yaw))
 
 
 def _wall_hit(state, city):
@@ -696,6 +716,8 @@ def export_terrain(state, out_dir):
         "layout": ([{"building": name, "position": _r(p), "yaw": yaw} for name, p, yaw in state.layout.instances]
                    + [{"building": name, "position": [0.0, 0.0, 0.0], "yaw": 0.0}
                       for name in roads.CITY_PARTS if name in state.built]
+                   + [{"building": name, "position": _r(p), "yaw": round(yaw, 3)}
+                      for name, p, yaw in state.part_instances]
                    if state.layout is not None else
                    [{"building": name, "position": _r((p[0] - cx, p[1], p[2] - cz)), "yaw": 0.0}
                     for name, p in state.placements.items()]),

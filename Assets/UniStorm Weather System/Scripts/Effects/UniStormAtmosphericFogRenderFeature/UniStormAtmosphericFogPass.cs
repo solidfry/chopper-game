@@ -53,7 +53,7 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
         settings.SunSource = null;
         settings.MoonSource = null;
 
-        Light[] directionalLights = Light.GetLights(LightType.Directional, 0);
+        Light[] directionalLights = Array.FindAll(UnityEngine.Object.FindObjectsByType<Light>(), l => l.type == LightType.Directional && (l.cullingMask & 1) != 0);
 
         foreach (Light directionalLight in directionalLights)
         {

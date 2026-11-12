@@ -149,7 +149,9 @@ def check(b):
     over = max(max(plot.x0 - p.x, p.x - plot.x1, plot.z0 - p.z, p.z - plot.z1) for p in points)
     if over > OVERHANG:
         problems.append(f"plot       mesh hangs {over:.1f} m over the plot edge (limit {OVERHANG})")
-    bounds = [(min(p[k] for p in points), max(p[k] for p in points)) for k in range(3)]
+    # Parts that place models through the layout (shanties' shacks) give those models' corners: the colliders cover them.
+    placed = points + list(getattr(b, "instance_points", []))
+    bounds = [(min(p[k] for p in placed), max(p[k] for p in placed)) for k in range(3)]
     collider_top = 0.0
     for collider in b.colliders:
         centre, size, yaw = collider

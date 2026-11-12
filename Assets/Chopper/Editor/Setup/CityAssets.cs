@@ -669,6 +669,9 @@ namespace Chopper.Editor.Setup
             // Flat-shaded low poly: keep the FBX normals (hard edges), no tangents needed (world-space normal output).
             if (importer.importNormals != ModelImporterNormals.Import) { importer.importNormals = ModelImporterNormals.Import; changed = true; }
             if (importer.importTangents != ModelImporterTangents.None) { importer.importTangents = ModelImporterTangents.None; changed = true; }
+            // Smaller build data (the wall town and utilities were 113 MB uncompressed). Low, not Medium: map-wide meshes
+            // span about 2.3 km, and stronger quantisation would move vertices by centimetres.
+            if (importer.meshCompression != ModelImporterMeshCompression.Low) { importer.meshCompression = ModelImporterMeshCompression.Low; changed = true; }
             changed |= AddRemap(importer, source, material);
             if (second != null && !string.IsNullOrEmpty(secondSource)) changed |= AddRemap(importer, secondSource, second);
             if (changed) importer.SaveAndReimport();

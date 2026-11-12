@@ -128,7 +128,11 @@ namespace Chopper.Editor.Setup
             public float[] position;
         }
 
-        private enum Map { Colour, Data, Normal }
+        /// <summary>Colour and Normal keep the baked size; the others are capped at <see cref="DetailMapSize"/> (build size,
+        /// 12 Nov 2026). Mask = one channel read as .r (occlusion): BC4 on desktop.</summary>
+        private enum Map { Colour, Emission, Data, Mask, Normal }
+
+        private const int DetailMapSize = 1024;
 
         public static void EnsureAll()
         {
@@ -289,7 +293,7 @@ namespace Chopper.Editor.Setup
             foreach (var set in manifest.textureSets)
             {
                 var normal = Texture($"{folder}/{set.normal}", Map.Normal, set.size);
-                var occlusion = Texture($"{folder}/{set.occlusion}", Map.Data, set.size);
+                var occlusion = Texture($"{folder}/{set.occlusion}", Map.Mask, set.size);
                 foreach (var skin in manifest.skins)
                 {
                     var files = skin.sets?.FirstOrDefault(s => s.set == set.name);
@@ -302,7 +306,7 @@ namespace Chopper.Editor.Setup
                     }
                     var colour = Texture($"{folder}/{files.colour}", Map.Colour, set.size);
                     var metalSmooth = Texture($"{folder}/{files.metalSmooth}", Map.Data, set.size);
-                    var emission = Texture($"{folder}/{files.emission}", Map.Colour, set.size);
+                    var emission = Texture($"{folder}/{files.emission}", Map.Emission, set.size);
                     var material = EnsureMaterial(MaterialPath(folder, manifest, set.name, skin.key), colour, metalSmooth, normal,
                         occlusion, emission);
                     if (material != null) materials[(set.name, skin.key)] = material;
@@ -466,9 +470,9 @@ namespace Chopper.Editor.Setup
                     material = new Material(shader) { name = Path.GetFileNameWithoutExtension(path) };
                     material.SetTexture("_BaseColourMap", Texture($"{folder}/{files.colour}", Map.Colour, set.size));
                     material.SetTexture("_BaseMetalSmooth", Texture($"{folder}/{files.metalSmooth}", Map.Data, set.size));
-                    material.SetTexture("_BaseEmission", Texture($"{folder}/{set.emission}", Map.Colour, set.size));
+                    material.SetTexture("_BaseEmission", Texture($"{folder}/{set.emission}", Map.Emission, set.size));
                     material.SetTexture("_NormalMap", Texture($"{folder}/{set.normal}", Map.Normal, set.size));
-                    material.SetTexture("_OcclusionMap", Texture($"{folder}/{set.occlusion}", Map.Data, set.size));
+                    material.SetTexture("_OcclusionMap", Texture($"{folder}/{set.occlusion}", Map.Mask, set.size));
                     material.SetTexture("_SkinMask", Texture($"{folder}/{set.skinMask}", Map.Data, set.size));
                     material.SetTexture("_SkinWear", Texture($"{folder}/{set.skinWear}", Map.Data, set.size));
                     material.SetFloat("_EmissionStrength", 3f);
@@ -493,13 +497,21 @@ namespace Chopper.Editor.Setup
             if (AssetImporter.GetAtPath(path) is TextureImporter importer)
             {
                 var normal = map == Map.Normal;
-                var srgb = map == Map.Colour;
+                var srgb = map is Map.Colour or Map.Emission;
                 var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
                 var maxSize = Mathf.Clamp(Mathf.NextPowerOfTwo(Mathf.Max(size, 32)), 32, 8192);
+                if (map is not (Map.Colour or Map.Normal)) maxSize = Mathf.Min(maxSize, DetailMapSize);
+                var standalone = importer.GetPlatformTextureSettings("Standalone");
+                var bc4 = map == Map.Mask;
                 if (importer.textureType != type || importer.sRGBTexture != srgb || !importer.mipmapEnabled ||
                     importer.filterMode != FilterMode.Trilinear || importer.wrapMode != TextureWrapMode.Clamp ||
-                    importer.maxTextureSize != maxSize)
+                    importer.maxTextureSize != maxSize ||
+                    standalone.overridden != bc4 || (bc4 && (standalone.format != TextureImporterFormat.BC4 || standalone.maxTextureSize != maxSize)))
                 {
+                    standalone.overridden = bc4;
+                    standalone.maxTextureSize = maxSize;
+                    standalone.format = bc4 ? TextureImporterFormat.BC4 : TextureImporterFormat.Automatic;
+                    importer.SetPlatformTextureSettings(standalone);
                     importer.textureType = type;
                     importer.sRGBTexture = srgb;
                     importer.mipmapEnabled = true;

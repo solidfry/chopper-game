@@ -60,7 +60,7 @@ float BW_Fbm(float2 p, int octaves)
 
 float3 BW_Linear(float3 c)
 {
-    return lerp(pow((c + 0.055) / 1.055, 2.4), c / 12.92, step(c, 0.04045));
+    return lerp(pow(max((c + 0.055) / 1.055, 0.0), 2.4), c / 12.92, step(c, 0.04045));
 }
 
 

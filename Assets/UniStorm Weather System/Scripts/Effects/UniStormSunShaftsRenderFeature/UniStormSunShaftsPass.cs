@@ -21,7 +21,7 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
         {
             if (sunTransform == null)
             {
-                Light[] lights = Light.GetLights(LightType.Directional, ~0);
+                Light[] lights = System.Array.FindAll(UnityEngine.Object.FindObjectsByType<Light>(), l => l.type == LightType.Directional);
                 if (lights.Length > 0)
                 {
                     Light sunLight = lights.FirstOrDefault(x => x.name.Equals(settings.celestialName));

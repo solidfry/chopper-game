@@ -205,7 +205,6 @@
 
 			 #pragma vertex vert
 			 #pragma fragment fragScreen
-	   #pragma enable_d3d11_debug_symbols
 
 			 ENDCG
 		}
@@ -217,7 +216,6 @@
 
 				 #pragma vertex vert_radial
 				 #pragma fragment frag_radial
-		   #pragma enable_d3d11_debug_symbols
 
 				 ENDCG
 		}
@@ -229,7 +227,6 @@
 
 				#pragma vertex vert
 				#pragma fragment frag_depth
-		  #pragma enable_d3d11_debug_symbols
 
 				ENDCG
 		}
@@ -241,7 +238,6 @@
 
 				#pragma vertex vert
 				#pragma fragment frag_nodepth
-		  #pragma enable_d3d11_debug_symbols
 
 				ENDCG
 		}
@@ -253,7 +249,6 @@
 
 				#pragma vertex vert
 				#pragma fragment fragAdd
-		  #pragma enable_d3d11_debug_symbols
 
 				ENDCG
 		}

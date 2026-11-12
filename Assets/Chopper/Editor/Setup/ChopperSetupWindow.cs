@@ -47,6 +47,7 @@ namespace Chopper.Editor.Setup
                 CityLookSetup.Apply();
                 MapSceneSetup.Apply(config);
                 HomeSetup.Apply(config);
+                TextureBudget.EnsureAll();
             })) { text = "Do all" });
 
             var configRow = new Button(() =>
@@ -61,6 +62,7 @@ namespace Chopper.Editor.Setup
                 if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() && System.IO.File.Exists(HangarSetup.ScenePath))
                     EditorSceneManager.OpenScene(HangarSetup.ScenePath);
             }) { text = "Open hangar scene" });
+            root.Add(new Button(() => Do(TextureBudget.EnsureAll)) { text = "Texture budget (build size)" });
             root.Add(new Button(ServerBuild.BuildLinux) { text = "Build Linux server (Edgegap)" });
             root.Add(new Button(ClientBuild.BuildWindows) { text = "Build Windows client (test)" });
 

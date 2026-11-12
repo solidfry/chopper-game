@@ -114,8 +114,9 @@ STYLES = {
             backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
         ),
         # Slum town dug into the crater wall (shanties.py).
-        # Dense and tall (5 Nov 2026, owner): spots every 1.2 degrees, clusters up to 16 levels, up to 210 m.
-        shanties=dict(step=1.2, chance=0.8, levels=(4, 16), height=(5.0, 210.0), start=0.6),
+        # Dense and tall (5 Nov 2026, owner): clusters up to 16 levels, up to 210 m. Spots every 1.6 degrees (was 1.2;
+        # 12 Nov 2026, build size).
+        shanties=dict(step=1.6, chance=0.8, levels=(4, 16), height=(5.0, 210.0), start=0.6),
     ),
 }
 

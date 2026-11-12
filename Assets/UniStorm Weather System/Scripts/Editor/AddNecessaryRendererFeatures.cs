@@ -47,7 +47,7 @@ namespace UniStorm
         private static void SetForwardRendererToUniStormSystem()
         {
 #if UNITY_2021_3_OR_NEWER
-            UniStorm.UniStormSystem unistormSystem = UnityEngine.Object.FindFirstObjectByType<UniStorm.UniStormSystem>();
+            UniStorm.UniStormSystem unistormSystem = UnityEngine.Object.FindAnyObjectByType<UniStorm.UniStormSystem>();
             if (unistormSystem != null && scriptableRendererData != null)
             {
                 unistormSystem.urpForwardRendererData = scriptableRendererData as UniversalRendererData;
