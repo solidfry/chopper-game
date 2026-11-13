@@ -73,6 +73,7 @@ namespace Chopper.Editor.Setup
 
             if (config.Spawn == null) config.SetSpawn(SpawnAssets.EnsureSettings());
             if (config.Bots == null) config.SetBots(BotAssets.EnsureSettings(config.LoadoutCatalog));
+            if (config.Progression == null) config.SetProgression(ProgressionAssets.EnsureSettings());
 
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();

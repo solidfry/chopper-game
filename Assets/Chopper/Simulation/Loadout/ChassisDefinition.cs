@@ -81,7 +81,7 @@ namespace Chopper.Simulation.Loadout
                 problems.Add($"{name}: default loadout needs one entry per slot ({slots?.Length ?? 0}).");
         }
 
-        public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel);
+        public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel, chassisClass);
 
         /// <summary>Editor only: the setup tool sets the class (also on old assets).</summary>
         public void SetClass(ChassisClass value) => chassisClass = value;

@@ -52,9 +52,13 @@ namespace Chopper.Simulation.Loadout
         public float WeightBudget { get; }
         public IReadOnlyList<SlotType> Slots { get; }
         public int UnlockLevel { get; }
+        /// <summary>Role. Chassis mastery is counted per class, so variants of one class share it.</summary>
+        public ChassisClass Class { get; }
 
-        public ChassisSpec(ushort id, string name, float baseHealth, float weightBudget, IReadOnlyList<SlotType> slots, int unlockLevel = 0)
+        public ChassisSpec(ushort id, string name, float baseHealth, float weightBudget, IReadOnlyList<SlotType> slots, int unlockLevel = 0,
+            ChassisClass chassisClass = ChassisClass.None)
         {
+            Class = chassisClass;
             Id = id;
             Name = name;
             BaseHealth = baseHealth;
@@ -71,14 +75,20 @@ namespace Chopper.Simulation.Loadout
         public string Name { get; }
         public SlotType Slot { get; }
         public ModuleStats Stats { get; }
-        /// <summary>Player level needed to use it.</summary>
+        /// <summary>Account level needed to use it.</summary>
         public int UnlockLevel { get; }
+        /// <summary>Mastery level of the chassis class it is fitted on (part chain tiers). 0 = no mastery needed.</summary>
+        public int MasteryLevel { get; }
+        /// <summary>The tier before this one in its part chain; 0 = first tier or not in a chain.</summary>
+        public ushort ParentId { get; }
         /// <summary>Empty = fits every chassis.</summary>
         public IReadOnlyCollection<ushort> AllowedChassis { get; }
 
         public ModuleSpec(ushort id, string name, SlotType slot, ModuleStats stats, int unlockLevel = 0,
-            IReadOnlyCollection<ushort> allowedChassis = null)
+            IReadOnlyCollection<ushort> allowedChassis = null, int masteryLevel = 0, ushort parentId = 0)
         {
+            MasteryLevel = masteryLevel;
+            ParentId = parentId;
             Id = id;
             Name = name;
             Slot = slot;
@@ -121,11 +131,18 @@ namespace Chopper.Simulation.Loadout
         bool TryGetModule(ushort id, out ModuleSpec module);
     }
 
-    /// <summary>What a player has unlocked. On the server this comes from Cloud Save, never from the client.</summary>
+    /// <summary>
+    /// What a player has unlocked (plan section 6a-1). On the server this comes from Cloud Save, never from the client.
+    /// </summary>
     public interface IPlayerUnlocks
     {
+        /// <summary>Account level.</summary>
         int Level { get; }
         bool Owns(ushort moduleId);
+        /// <summary>Mastery level of a chassis class. A source without mastery data does not lock on it.</summary>
+        int ChassisLevel(ChassisClass chassisClass) => int.MaxValue;
+        /// <summary>Mastery level of a pilot. A source without mastery data does not lock on it.</summary>
+        int PilotLevel(ushort pilotId) => int.MaxValue;
     }
 
     public enum LoadoutError : byte
@@ -140,6 +157,8 @@ namespace Chopper.Simulation.Loadout
         ModuleLocked,
         NotOwned,
         OverWeight,
+        /// <summary>The chassis class mastery is too low for this part chain tier.</summary>
+        MasteryLocked,
     }
 
     public readonly struct LoadoutResult

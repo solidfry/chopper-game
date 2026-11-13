@@ -626,6 +626,7 @@ namespace Chopper.Presentation.Hangar
                 LoadoutError.OverWeight => "OVER WEIGHT: REMOVE A MODULE",
                 LoadoutError.ChassisLocked => "CHASSIS LOCKED",
                 LoadoutError.ModuleLocked or LoadoutError.NotOwned => $"{slot}: MODULE LOCKED",
+                LoadoutError.MasteryLocked => $"{slot}: NEEDS MORE CHASSIS MASTERY",
                 LoadoutError.WrongSlotType or LoadoutError.WrongChassis => $"{slot}: MODULE DOES NOT FIT",
                 _ => result.ToString().ToUpperInvariant(),
             };

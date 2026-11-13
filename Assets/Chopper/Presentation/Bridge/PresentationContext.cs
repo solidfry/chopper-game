@@ -54,8 +54,9 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals = new EffectPool(moduleRoot);
             HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
             PilotPortrait = new Pilots.PilotPortraitRig(config != null && config.HudLook != null ? config.HudLook.PilotPortrait : null);
-            Profile = new ProfileService(new PrefsProfileStore(new PlayerPrefsHangarPrefs()));
-            Results = new MatchResultsModel(Match, Profile);
+            var progression = config != null ? config.Progression : null;
+            Profile = new ProfileService(new PrefsProfileStore(new PlayerPrefsHangarPrefs()), progression);
+            Results = new MatchResultsModel(Match, Profile, progression, LocalFlight);
             if (cameraRig != null && config != null) cameraRig.UseSettings(config.Camera);
 
             _owned.Add(new CombatFeedback(this));
@@ -66,6 +67,19 @@ namespace Chopper.Presentation.Bridge
             Prompts = new InputPrompts(_controls);
             Prompts.Changed += ApplyPromptKeys;
             ApplyPromptKeys();
+        }
+
+        /// <summary>
+        /// The chassis class and pilot the player chose in the hangar: the whole match's mastery XP goes to them.
+        /// Local for now; the server will count the real flight time per chassis and pilot (plan section 6a-1).
+        /// </summary>
+        private Simulation.Progression.FlightShare LocalFlight()
+        {
+            var chassisClass = Simulation.Loadout.ChassisClass.None;
+            if (Config != null && Config.LoadoutCatalog != null && LoadoutChoices.TryLoad(out var selection, out _) &&
+                Config.LoadoutCatalog.TryGetChassis(selection.ChassisId, out var chassis))
+                chassisClass = chassis.Class;
+            return new Simulation.Progression.FlightShare(chassisClass, LoadoutChoices.Pilot, 1f);
         }
 
         /// <summary>Key names for on-screen prompts, for the input device in use.</summary>

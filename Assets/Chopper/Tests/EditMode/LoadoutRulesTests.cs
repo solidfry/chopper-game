@@ -32,7 +32,10 @@ namespace Chopper.Tests
             private readonly HashSet<ushort> _owned;
             public Unlocks(int level, params ushort[] owned) { Level = level; _owned = new HashSet<ushort>(owned); }
             public int Level { get; }
+            /// <summary>Mastery of every chassis class.</summary>
+            public int Mastery = 99;
             public bool Owns(ushort moduleId) => _owned.Contains(moduleId);
+            public int ChassisLevel(ChassisClass chassisClass) => Mastery;
         }
 
         private static readonly SlotType[] ScoutSlots =
@@ -103,6 +106,23 @@ namespace Chopper.Tests
 
             var notOwned = new Unlocks(99, Minigun, Rockets, Flares, Engine);
             Assert.That(LoadoutRules.Validate(ScoutWith(AgileRotor, 0), MakeCatalog(), notOwned).Error, Is.EqualTo(LoadoutError.NotOwned));
+        }
+
+        [Test]
+        public void Validate_RejectsAChainTierAboveTheChassisMastery()
+        {
+            const ushort RacingRotor = 153;
+            var catalog = MakeCatalog().Add(new ModuleSpec(RacingRotor, "Racing", SlotType.Rotor, Stats(10f, turn: 1.4f),
+                masteryLevel: 5, parentId: AgileRotor));
+            var unlocks = new Unlocks(99, Minigun, Rockets, Flares, AgileRotor, RacingRotor, Engine) { Mastery = 4 };
+
+            var result = LoadoutRules.Validate(ScoutWith(RacingRotor, 0), catalog, unlocks);
+            Assert.That(result.Error, Is.EqualTo(LoadoutError.MasteryLocked));
+            Assert.That(result.Slot, Is.EqualTo(3));
+            Assert.That(LoadoutRules.Validate(ScoutWith(AgileRotor, 0), catalog, unlocks).IsValid, Is.True, "No mastery needed.");
+
+            unlocks.Mastery = 5;
+            Assert.That(LoadoutRules.Validate(ScoutWith(RacingRotor, 0), catalog, unlocks).IsValid, Is.True);
         }
 
         [Test]

@@ -641,7 +641,7 @@ Target (server managed; the screens do not change, only the store and who writes
 5. **Moving over:** read the local `Chopper.Profile` once at first online sign-in and offer it as the start (or drop
    it: local stats are not trusted). Then `CloudProfileStore` replaces `PrefsProfileStore` in `PresentationContext`.
 
-### 6a-1. Three progression tracks (design proposed 13 Nov — not agreed, not built)
+### 6a-1. Three progression tracks (design agreed 13 Nov — step 1 built 13 Nov, written without the editor)
 
 **One XP source, three tracks.** A match gives one XP number (`MatchXp`, as now). The same XP goes to:
 - **Account** (all of it).
@@ -664,10 +664,10 @@ The server counts the seconds flown per chassis class and per pilot (next to `Ma
 **Data (one mechanism for all items):**
 - `ProgressionSettings` asset on `GameConfig`: XP rates (the `MatchXp` constants move here), one level curve per track,
   the caps, the XP factor for bot kills.
-- `UnlockRule { Track, Level }` on every chassis, module, pilot and skin. It replaces the `unlockLevel` fields.
-  `Track` = Account, ChassisClass or Pilot (the item's own class or pilot).
-- `PartLine` asset: ordered tiers with a parent, over the existing `ModuleDefinition`s.
-- Pure code: `LevelCurve.LevelOf(xp)`, `MasterySplit` (XP by flight time), `UnlockRules.IsUnlocked(rule, progress)`.
+- As built (simpler than first proposed): no `UnlockRule` struct and no `PartLine` asset. An item keeps its
+  `unlockLevel` (account) and a module adds `masteryLevel` (mastery of the chassis class it is fitted on) and
+  `parent` (the tier before it). Both levels must be reached. Pilots and skins get a mastery field when they need one.
+- Pure code: `LevelCurve.Level(xp)`, `MasterySplit` (XP by flight time), `LoadoutRules.Validate` (`MasteryLocked`).
 - `IPlayerUnlocks` grows: `Level`, `ChassisLevel(class)`, `PilotLevel(id)`, `Owns(id)` (for later purchases).
 - `LoadoutRules.Validate` also checks the pilot and the skin: this is the server check for skin unlocks.
 
@@ -691,9 +691,10 @@ bar; the module list becomes the chain view), pilot select (pilot level and next
 **Build order:** 1) pure rules, settings asset, profile v2, tests. 2) screens. 3) server component and spawn check.
 4) Cloud Code and Cloud Save.
 
-**Open decisions:** mastery per chassis class or per variant (proposed: class); pilot rewards cosmetic only (proposed:
-yes); weapons on the account track or their own mastery (proposed: account); bot kill XP factor (proposed: 0.5);
-currency (proposed: later).
+**Decisions (owner, 13 Nov):** mastery per chassis class; pilot rewards cosmetic only; weapons on the account track;
+bot kill XP factor 0.5 (not built: needs a bot kill count in the match stats, step 3); currency later.
+
+**Progress:** step 1 built 13 Nov (not compiled). Steps 2 to 4 open. Limits: see the handoff, section 4a.
 
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 

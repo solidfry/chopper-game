@@ -18,7 +18,11 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, TextArea] private string description;
         [SerializeField] private SlotType slot;
         [SerializeField] private ModuleStats stats = ModuleStats.None;
-        [SerializeField] private int unlockLevel;
+        [SerializeField, Tooltip("Account level needed.")] private int unlockLevel;
+        [SerializeField, Tooltip("Part chain: mastery level of the chassis class it is fitted on. 0 = no mastery needed.")]
+        private int masteryLevel;
+        [SerializeField, Tooltip("Part chain: the tier before this one (same slot). Empty = first tier or not in a chain.")]
+        private ModuleDefinition parent;
         [SerializeField, Tooltip("Empty = fits every chassis.")]
         private ChassisDefinition[] allowedChassis = System.Array.Empty<ChassisDefinition>();
         [SerializeField, Tooltip("Mesh shown on the chassis socket (hangar and in game).")]
@@ -43,6 +47,9 @@ namespace Chopper.Simulation.Loadout
         public WeaponDefinition Weapon => weapon;
         public ModuleAbilityDefinition Ability => ability;
         public ModuleStats Stats => stats;
+        public int UnlockLevel => unlockLevel;
+        public int MasteryLevel => masteryLevel;
+        public ModuleDefinition Parent => parent;
 
         public void CollectProblems(List<string> problems)
         {
@@ -56,6 +63,31 @@ namespace Chopper.Simulation.Loadout
                 problems.Add($"{name}: a hitscan weapon must be in the Nose slot.");
             if ((weapon is RocketWeaponDefinition || weapon is GuidedMissileDefinition) && slot != SlotType.Pylon)
                 problems.Add($"{name}: rockets and missiles must be in a Pylon slot.");
+            CollectChainProblems(problems);
+        }
+
+        /// <summary>Longest part chain the check follows (a longer one is a loop or a mistake).</summary>
+        private const int MaxChainLength = 8;
+
+        /// <summary>A tier must be in its parent's slot, must not need less than its parent, and the chain must end.</summary>
+        private void CollectChainProblems(List<string> problems)
+        {
+            if (masteryLevel < 0) problems.Add($"{name}: mastery level must not be below 0.");
+            if (parent == null) return;
+            if (parent == this) { problems.Add($"{name}: a module must not be its own chain parent."); return; }
+            if (parent.slot != slot) problems.Add($"{name}: chain parent {parent.name} is in another slot.");
+            if (parent.masteryLevel > masteryLevel || parent.unlockLevel > unlockLevel)
+                problems.Add($"{name}: needs a lower level than its chain parent {parent.name}.");
+            var step = parent;
+            for (var i = 0; i < MaxChainLength && step != null; i++) step = step.parent;
+            if (step != null) problems.Add($"{name}: part chain is a loop or longer than {MaxChainLength} tiers.");
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetChain(ModuleDefinition chainParent, int mastery)
+        {
+            parent = chainParent;
+            masteryLevel = mastery;
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -78,7 +110,8 @@ namespace Chopper.Simulation.Loadout
             var chassisIds = new ushort[allowedChassis.Length];
             for (var i = 0; i < allowedChassis.Length; i++)
                 chassisIds[i] = allowedChassis[i] != null ? allowedChassis[i].Id : (ushort)0;
-            return new ModuleSpec(id, displayName, slot, stats, unlockLevel, chassisIds);
+            return new ModuleSpec(id, displayName, slot, stats, unlockLevel, chassisIds, masteryLevel,
+                parent != null ? parent.id : (ushort)0);
         }
 
         /// <summary>Editor only: used by the default catalog tool.</summary>
