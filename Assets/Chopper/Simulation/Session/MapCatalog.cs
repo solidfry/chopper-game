@@ -22,6 +22,13 @@ namespace Chopper.Simulation.Session
             [Tooltip("Scene name (in the build settings), e.g. Map_City04.")] public string Scene;
             [Tooltip("The player can pick it for training.")] public bool InTraining = true;
             [Tooltip("Matchmaking can pick it for an online match.")] public bool InMatchPool = true;
+            [Tooltip("Times of day the server picks from (random per match). Empty = Night. Press Setup 10 after a change.")]
+            public List<Visuals.TimeOfDay> Times = new() { Visuals.TimeOfDay.Night };
+            [Tooltip("Weathers the server picks from (random per match). Empty = Clear. Press Setup 10 after a change.")]
+            public List<Visuals.Weather> Weathers = new() { Visuals.Weather.Clear };
+
+            public byte TimeMask => Visuals.Conditions.Mask(Times);
+            public byte WeatherMask => Visuals.Conditions.Mask(Weathers);
         }
 
         [SerializeField] private List<MapEntry> maps = new();

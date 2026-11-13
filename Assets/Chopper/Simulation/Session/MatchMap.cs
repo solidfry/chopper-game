@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
+using Chopper.Simulation.Visuals;
 
 namespace Chopper.Simulation.Session
 {
@@ -10,12 +11,19 @@ namespace Chopper.Simulation.Session
     public struct MatchMap : IComponentData
     {
         public byte MapId;
+        /// <summary>Times of day the server may pick (bit n = <see cref="TimeOfDay"/> n; 0 = the default).</summary>
+        public byte AllowedTimes;
+        /// <summary>Weathers the server may pick (bit n = <see cref="Weather"/> n; 0 = the default).</summary>
+        public byte AllowedWeathers;
     }
 
-    /// <summary>Server → client, once per connection: which map this server runs, so an online client loads it.</summary>
+    /// <summary>Server → client, once per connection: which map this server runs (so an online client loads it), and
+    /// the match's time of day and weather.</summary>
     public struct MatchMapAnnouncement : IRpcCommand
     {
         public byte MapId;
+        public TimeOfDay Time;
+        public Weather Weather;
     }
 
     /// <summary>Client: the map the server announced (<see cref="MatchMapAnnouncement"/>). The hangar waits for it
@@ -39,6 +47,7 @@ namespace Chopper.Simulation.Session
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<MatchMap>();
+            state.RequireForUpdate<MatchConditions>();
             state.RequireForUpdate(SystemAPI.QueryBuilder().WithAll<NetworkId>().WithNone<MatchMapSent>().Build());
         }
 
@@ -46,12 +55,16 @@ namespace Chopper.Simulation.Session
         public void OnUpdate(ref SystemState state)
         {
             var map = SystemAPI.GetSingleton<MatchMap>();
+            var conditions = SystemAPI.GetSingleton<MatchConditions>();
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             foreach (var (_, connection) in SystemAPI.Query<RefRO<NetworkId>>().WithNone<MatchMapSent>().WithEntityAccess())
             {
                 ecb.AddComponent<MatchMapSent>(connection);
                 var rpc = ecb.CreateEntity();
-                ecb.AddComponent(rpc, new MatchMapAnnouncement { MapId = map.MapId });
+                ecb.AddComponent(rpc, new MatchMapAnnouncement
+                {
+                    MapId = map.MapId, Time = conditions.Time, Weather = conditions.Weather,
+                });
                 ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = connection });
             }
             ecb.Playback(state.EntityManager);
@@ -81,6 +94,12 @@ namespace Chopper.Simulation.Session
                     ecb.SetComponent(existing, new AnnouncedMap { MapId = mapId });
                 else
                     ecb.AddComponent(ecb.CreateEntity(), new AnnouncedMap { MapId = mapId });
+                // The match's sky: a client-side MatchConditions singleton for presentation.
+                var conditions = new MatchConditions { Time = announcement.ValueRO.Time, Weather = announcement.ValueRO.Weather };
+                if (SystemAPI.TryGetSingletonEntity<MatchConditions>(out var sky))
+                    ecb.SetComponent(sky, conditions);
+                else
+                    ecb.AddComponent(ecb.CreateEntity(), conditions);
                 ecb.DestroyEntity(rpc);
             }
             ecb.Playback(state.EntityManager);

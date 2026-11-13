@@ -8,6 +8,8 @@ namespace Chopper.Presentation.Visuals
 {
     /// <summary>
     /// The look of each <see cref="TimeOfDay"/> and <see cref="Weather"/> (cosmetic). Hangs off the GameConfig.
+    /// 13 Nov: the server now picks the conditions and the client <c>EnvironmentSystem</c> applies them through the
+    /// scene's <c>EnvironmentDriver</c> (UniStorm) or, with none, this look. The notes below are the older plan.
     /// Now (5 Nov 2026): Setup step 10 bakes one look (the map's default, Night + Clear) into each city match scene:
     /// sun, ambient light, background, and reflection probes baked under that light.
     /// Planned, not built: the server picks the conditions per match; a client presentation system applies the look
@@ -47,6 +49,20 @@ namespace Chopper.Presentation.Visuals
 
         [SerializeField] private List<TimeOfDayLook> times = new();
         [SerializeField] private List<WeatherLook> weathers = new();
+
+        [Header("Editor preview (ignored in builds)")]
+        [SerializeField, Tooltip("Editor only: show these conditions in play mode, whatever the server picked (cosmetic).")]
+        private bool previewOverride;
+        [SerializeField] private TimeOfDay previewTime = TimeOfDay.Day;
+        [SerializeField] private Weather previewWeather = Weather.Clear;
+
+        /// <summary>True in the editor when the preview override is on.</summary>
+        public bool TryGetPreview(out TimeOfDay time, out Weather weather)
+        {
+            time = previewTime;
+            weather = previewWeather;
+            return Application.isEditor && previewOverride;
+        }
 
         public IReadOnlyList<TimeOfDayLook> Times => times;
         public IReadOnlyList<WeatherLook> Weathers => weathers;

@@ -71,7 +71,7 @@ namespace Chopper.Editor.Setup
                 var mapId = entry.Id;
                 EditorUtility.SetDirty(catalog);
                 AssetDatabase.SaveAssetIfDirty(catalog);
-                Build(config, environment, map.Kit, map.Terrain, mapId);
+                Build(config, environment, map.Kit, map.Terrain, mapId, entry.TimeMask, entry.WeatherMask);
                 built++;
             }
             if (!string.IsNullOrEmpty(returnTo) && File.Exists(returnTo)) EditorSceneManager.OpenScene(returnTo, OpenSceneMode.Single);
@@ -137,7 +137,7 @@ namespace Chopper.Editor.Setup
             var trainingId = training.Id;
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssetIfDirty(catalog);
-            EnsureMapIdentity(TrainingGameplayScene, trainingId);
+            EnsureMapIdentity(TrainingGameplayScene, trainingId, training.TimeMask, training.WeatherMask);
             catalog = AssetDatabase.LoadAssetAtPath<MapCatalog>(CatalogPath);
             if (config != null && config.Maps != catalog)
             {
@@ -149,7 +149,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>A <see cref="MatchMapAuthoring"/> with the map id on the scene's spawner (or a new object).</summary>
-        private static void EnsureMapIdentity(string scenePath, byte id)
+        private static void EnsureMapIdentity(string scenePath, byte id, byte times, byte weathers)
         {
             if (!File.Exists(scenePath)) return;
             var open = SceneManager.GetSceneByPath(scenePath);
@@ -157,7 +157,7 @@ namespace Chopper.Editor.Setup
             try
             {
                 var identity = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MatchMapAuthoring>(true)).FirstOrDefault();
-                if (identity != null && identity.MapId == id) return;
+                if (identity != null && identity.MapId == id && identity.AllowedTimes == times && identity.AllowedWeathers == weathers) return;
                 if (identity == null)
                 {
                     var spawner = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)).FirstOrDefault();
@@ -165,7 +165,7 @@ namespace Chopper.Editor.Setup
                     if (spawner == null) SceneManager.MoveGameObjectToScene(host, scene);
                     identity = host.AddComponent<MatchMapAuthoring>();
                 }
-                identity.Set(id);
+                identity.Set(id, times, weathers);
                 EditorUtility.SetDirty(identity);
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
@@ -178,9 +178,10 @@ namespace Chopper.Editor.Setup
 
         // -- scenes -------------------------------------------------------------------------------------------------
 
-        private static void Build(GameConfig config, EnvironmentSettings environment, string kit, CityAssets.TerrainData terrain, byte mapId)
+        private static void Build(GameConfig config, EnvironmentSettings environment, string kit, CityAssets.TerrainData terrain, byte mapId,
+            byte times, byte weathers)
         {
-            var gameplayPath = BuildGameplayScene(kit, terrain, mapId);
+            var gameplayPath = BuildGameplayScene(kit, terrain, mapId, times, weathers);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             EditorSceneManager.SaveScene(scene, ScenePath(kit));
@@ -200,6 +201,7 @@ namespace Chopper.Editor.Setup
                 EditorUtility.SetDirty(camera);
             }
             ApplyLook(scene, look);
+            EnsureEnvironmentDriver(scene);
             CityAssets.PlaceProbes(scene, terrain.size, kit);
             CityLookSetup.EnsureVolume(CityLookSetup.EnsureProfile());
             EditorSceneManager.SaveScene(scene);
@@ -209,7 +211,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>The map's gameplay subscene: rebuilt each time (only generated content).</summary>
-        private static string BuildGameplayScene(string kit, CityAssets.TerrainData terrain, byte mapId)
+        private static string BuildGameplayScene(string kit, CityAssets.TerrainData terrain, byte mapId, byte times, byte weathers)
         {
             var path = GameplayScenePath(kit);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -222,7 +224,7 @@ namespace Chopper.Editor.Setup
                 spawner.transform.SetPositionAndRotation(spawn, facing);
                 spawner.AddComponent<ChopperSpawnerAuthoring>();
                 // Which map this is: the server tells online clients (MatchMapAnnounceSystem).
-                spawner.AddComponent<MatchMapAuthoring>().Set(mapId);
+                spawner.AddComponent<MatchMapAuthoring>().Set(mapId, times, weathers);
 
                 var settings = new GameObject("Gameplay Settings");
                 SceneManager.MoveGameObjectToScene(settings, scene);
@@ -275,6 +277,24 @@ namespace Chopper.Editor.Setup
             var component = go.AddComponent(type);
             type.GetProperty("SceneAsset")?.SetValue(component, asset);
             EditorUtility.SetDirty(component);
+        }
+
+        /// <summary>
+        /// The sky driver (an <see cref="EnvironmentDriver"/> subclass, e.g. the UniStorm one when UniStorm is in the
+        /// project) on an "Environment" object; it fills its own defaults (FillDefaults). Found by type, so this setup
+        /// does not need the sky asset's assembly. None found: the plain look (EnvironmentSystem) is used.
+        /// </summary>
+        private static void EnsureEnvironmentDriver(Scene scene)
+        {
+            var type = TypeCache.GetTypesDerivedFrom<EnvironmentDriver>().FirstOrDefault(t => !t.IsAbstract);
+            if (type == null) return;
+            var existing = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren(type, true)).FirstOrDefault();
+            if (existing != null) return;
+            var go = new GameObject("Environment");
+            SceneManager.MoveGameObjectToScene(go, scene);
+            var driver = go.AddComponent(type);
+            type.GetMethod("FillDefaults")?.Invoke(driver, null);
+            EditorUtility.SetDirty(driver);
         }
 
         /// <summary>Sun (or moon), ambient trilight and no sky box: the parts of the look that are built now.</summary>

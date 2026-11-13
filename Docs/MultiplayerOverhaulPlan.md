@@ -696,6 +696,7 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
   PostProcessing v1 came with it: built-in pipeline only, does nothing in URP; remove it.
 
 **Plan: sky, weather, time of day**
+- 13 Nov: steps 1 and 2 written (server pick + announcement, EnvironmentSystem, UniStorm driver). Not done: shaders reading `_ChopperCityLights` / `_ChopperWetness`, height fog tint from UniStorm, APV lighting scenarios, server-build stripping of UniStorm, quality per preset.
 1. Server picks conditions per match (map entry: allowed times and weathers, weights) into a replicated singleton
    (`MapConditions` ghost component). Time is fixed per match (fair, and lighting can be pre-baked); optional slow drift
    later from the server tick, so every client sees the same sky.
