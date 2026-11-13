@@ -118,6 +118,77 @@ STYLES = {
         # 12 Nov 2026, build size).
         shanties=dict(step=1.6, chance=0.8, levels=(4, 16), height=(5.0, 210.0), start=0.6),
     ),
+    # City05 (working name): a mining town in a high alpine valley. Ranges of eroded granite peaks with snow above
+    # about 380 m, a broad valley out to the east, a few rock benches with flat tops. Plan 6c terrain, 13 Nov 2026.
+    "alpine": dict(
+        kit="City05",
+        biome="alpine",
+        storey=3.6, lit=0.14, lit_cool=0.4, shop_lit=0.5, neon=0.4, wear=0.8, obstruction_height=30.0, props=1.0,
+        edge_radius=0.0,
+        budgets=dict(lod0=24000, lod1=0.8, lod2=400),
+        palette={
+            "hull": ("#7c7f80", None, 0.0, 0.18),         # granite-grey concrete
+            "hull_light": ("#9a9c9b", None, 0.0, 0.2),
+            "hull_dark": ("#383a3c", None, 0.15, 0.25),
+            "concrete": ("#6c6e6f", None, 0.0, 0.15),
+            "glass": ("#1f2c33", None, 0.3, 0.88),
+            "spare": ("#d9b77a", "#8a6a3a", 0.0, 0.5),
+            "missile": ("#cfe3ea", "#5f8590", 0.0, 0.5),
+            "carbon": ("#262624", None, 0.0, 0.2),
+            "hazard": ("#6c7052", None, 0.0, 0.12),       # tundra (terrain fallback)
+            "warhead": ("#6a6c6e", None, 0.0, 0.15),      # granite (terrain fallback)
+            "exhaust": ("#ffb347", "#ff7a1e", 0.0, 0.5),
+        },
+        layout=dict(city=(760.0, 600.0), variants={"tower": 4, "block": 6, "slum": 3, "industrial": 6}),
+        terrain=dict(
+            shape="alpine", seed=23, step=3.0, rise=14.0, dunes=2.0, strata=0.0, gullies=(),
+            mesas=dict(count=4, ring=(560.0, 760.0), radius=(50.0, 80.0), height=(40.0, 80.0), cliff=12.0, talus=40.0),
+            # The valley out: a broad trough to the east, the floor falling gently.
+            canyon=dict(width=(160.0, 230.0), wall=90.0, floor=(-4.0, -30.0), wiggle=140.0, start=170.0),
+            alpine=dict(height=(520.0, 1100.0), cell=1300.0, warp=420.0, start=110.0, ramp=620.0, sharp=1.5,
+                        snow=(420.0, 70.0), foothills=55.0),
+            erosion=dict(),
+            mesh=dict(budget=380000, inner=(1, 2, 4), outer=(2, 4, 8)),
+            backdrop=dict(rings=56, segments=256, edge_smooth=300.0),
+        ),
+    ),
+    # City06 (working name): an outpost town on a high plateau beside a deep ravine. The ravine winds across the map
+    # (150 to 240 m deep, stepped walls, a river floor), side gullies cut into the plateau, the storm drain falls into
+    # it. Plan 6c terrain, 13 Nov 2026.
+    "ravine": dict(
+        kit="City06",
+        biome="rain_desert",
+        storey=3.6, lit=0.14, lit_cool=0.35, shop_lit=0.55, neon=0.6, wear=1.0, obstruction_height=30.0, props=1.0,
+        edge_radius=0.0,
+        budgets=dict(lod0=24000, lod1=0.8, lod2=400),
+        palette={
+            "hull": ("#857b6c", None, 0.0, 0.18),
+            "hull_light": ("#a2998a", None, 0.0, 0.2),
+            "hull_dark": ("#3c3a36", None, 0.15, 0.25),
+            "concrete": ("#6e6c66", None, 0.0, 0.15),
+            "glass": ("#202e34", None, 0.3, 0.88),
+            "spare": ("#d9b77a", "#8a6a3a", 0.0, 0.5),
+            "missile": ("#cfe3ea", "#5f8590", 0.0, 0.5),
+            "carbon": ("#262624", None, 0.0, 0.2),
+            "hazard": ("#8f7c60", None, 0.0, 0.12),
+            "warhead": ("#6e5141", None, 0.0, 0.15),
+            "exhaust": ("#ffb347", "#ff7a1e", 0.0, 0.5),
+        },
+        layout=dict(city=(700.0, 560.0), variants={"tower": 4, "block": 6, "slum": 6, "industrial": 4}),
+        terrain=dict(
+            shape="ravine", seed=57, step=3.0, rise=24.0, dunes=7.0, strata=9.0, gullies=(),
+            # A low rim far out (the plateau edge), a few mesas on the plateau.
+            # No rim: the plateau runs out to the map edge (the backdrop carries on round it).
+            plateau=dict(radius=1300.0, width=90.0, height=0.0, warp=160.0, wall=0.0, wall_at=150.0, crest=0.0),
+            mesas=dict(count=5, ring=(520.0, 900.0), radius=(45.0, 90.0), height=(35.0, 70.0), cliff=10.0, talus=40.0),
+            canyon=dict(width=(200.0, 420.0), wall=24.0, floor=(-8.0, -40.0), wiggle=0.0, start=40.0),
+            ravine=dict(depth=(150.0, 240.0), floor=(46.0, 72.0), wall=(85.0, 150.0), benches=3, wiggle=70.0,
+                        branches=(10, (160.0, 420.0), 0.75)),
+            erosion=dict(),
+            mesh=dict(budget=380000, inner=(1, 2, 4), outer=(2, 4, 8)),
+            backdrop=dict(rings=56, segments=256, edge_smooth=300.0),
+        ),
+    ),
 }
 
 

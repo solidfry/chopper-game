@@ -16,6 +16,7 @@ from mathutils import Vector
 
 from . import audit, buildings, choppers, cranes, kit, layout, roads, shanties, specs, styles, terrain, terrain_biomes, traffic, wear
 from .pf import geo, palette
+from .erosion import DEFAULTS as _EROSION_DEFAULTS
 
 EXPORT_COLLECTION = "CityForge: export"
 DISTRICT_COLLECTION = "CityForge: district"
@@ -676,6 +677,8 @@ def export_terrain(state, out_dir):
         collection.hide_viewport = True
     masks, normals = f"{state.kit}_TerrainMasks.png", f"{state.kit}_TerrainNormal.png"
     t.write_surface(os.path.join(folder, masks), os.path.join(folder, normals))
+    detail = f"{state.kit}_TerrainDetail.png"
+    t.write_detail(os.path.join(folder, detail))
     table = terrain_biomes.write_table(os.path.join(folder, f"{state.kit}_BiomeTable.png"))
     raw = f"{state.kit}_Height.raw"
     low, high = t.write_raw(os.path.join(folder, raw))
@@ -684,7 +687,8 @@ def export_terrain(state, out_dir):
         "kit": state.kit,
         "generator": "Tools/CityForge (terrain.py)",
         "axes": "Unity space, metres. Origin = the city centre on the ground (city floor y = 0).",
-        "size": t.values["size"], "step": terrain.STEP, "chunkSize": terrain.STEP * terrain.CHUNK_CELLS,
+        "size": t.values["size"], "step": t.step, "chunkSize": t.step * t.chunk_cells,
+        "shape": t.values["shape"],
         "lod": {"levels": len(terrain.LOD_FACTORS), "screenHeights": list(LOD_SCREEN_HEIGHTS),
                 "note": "Grid step per LOD = step x the chunk's stepFactors (edge chunks have half the detail). "
                         "Skirts hang 10 m down from every chunk edge, so LOD seams show no cracks."},
@@ -694,7 +698,17 @@ def export_terrain(state, out_dir):
                     "resolution": t.values["surface"]["resolution"],
                     "note": "Whole map, centred on the origin; first image row = +Z edge. uv = xz / size + 0.5. Both "
                             "linear (sRGB off), bilinear, clamp. Masks RGBA: R flow, G hollow, B made ground (city, "
-                            "roads, channel), A scree. Normal RGB = world normal * 0.5 + 0.5 (Unity axes)."},
+                            "roads, channel), A scree. Normal RGB = world normal * 0.5 + 0.5 (Unity axes).",
+                    "detail": f"Terrain/{detail}",
+                    "detailNote": "Same layout and import as the masks. RGBA: R slope (0..60 degrees), G sediment left by "
+                                  "erosion, B snow (snowLine), A eroded water flow. Not read by the shader yet."},
+        "erosion": ({"on": True, "passes": [list(p) for p in (t.values["erosion"].get("passes")
+                                                                or _EROSION_DEFAULTS["passes"])],
+                     "seconds": round(t.timings.get("erosion", 0.0), 1),
+                     "note": "Droplet + thermal erosion on a fine grid (cityforge/erosion.py); the mesh is the eroded "
+                             "field at `step`, the normal map and masks come from the finest pass."}
+                    if t.fine is not None else {"on": False}),
+        "snowLine": list(t.snow_line()) if t.snow_line() else None,
         "biomes": dict(table, file=f"Terrain/{table['file']}", current=state.biome,
                        note="Biome table: one row of 16 pixels per biome (terrain_biomes.row). Import sRGB off, point, "
                             "no mipmaps, no compression. _BiomeIndex = row."),
@@ -703,6 +717,9 @@ def export_terrain(state, out_dir):
                       "resolution": t.count, "min": round(low, 3), "max": round(high, 3),
                       "rows": "first row = -Z edge"},
         "chunks": chunks,
+        "detailPlan": ({"budget": t.values["mesh"].get("budget"),
+                        "note": "Per-chunk LOD0 step chosen by height error per triangle (terrain.chunk_plan); "
+                                "stepFactors x step = grid step per LOD."} if t.values.get("mesh") else None),
         "backdrop": {"parts": backdrop,
                      "note": "Far scenery out to 20 km (mountains, the canyon bending away, the megacity skyline beyond "
                              "the walls). No colliders; outside the flight bounds. Hide its far edge with fog."},
