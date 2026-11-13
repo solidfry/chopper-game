@@ -641,6 +641,60 @@ Target (server managed; the screens do not change, only the store and who writes
 5. **Moving over:** read the local `Chopper.Profile` once at first online sign-in and offer it as the start (or drop
    it: local stats are not trusted). Then `CloudProfileStore` replaces `PrefsProfileStore` in `PresentationContext`.
 
+### 6a-1. Three progression tracks (design proposed 13 Nov — not agreed, not built)
+
+**One XP source, three tracks.** A match gives one XP number (`MatchXp`, as now). The same XP goes to:
+- **Account** (all of it).
+- **Chassis class mastery**: the share of flight time on each `ChassisClass` in the match.
+- **Pilot mastery**: the share of flight time with each pilot in the match.
+
+The server counts the seconds flown per chassis class and per pilot (next to `MatchStatsSystem`).
+
+**What each track unlocks** (each track has its own job, so they do not compete):
+| Track | Unlocks | Power? |
+|---|---|---|
+| Account level (cap about 50) | Breadth: chassis, pilots, weapon families (rocket types, guns; lasers and the railgun late) | New options |
+| Chassis mastery (per class, cap about 20) | Depth: part chain tiers (`PartLine`: rotor, engine, armour) for that class, variants, chassis skins | Side-grades |
+| Pilot mastery (per pilot, cap about 15) | Identity: portrait styles, titles for the name plate, voice sets, pilot skins | None |
+
+- Rule: an unlock is a trade, not a plain upgrade. The weight budget keeps a new player competitive.
+- Part chain tier rule: the parent tier is unlocked AND chassis mastery is at level N. This replaces "part mastery"
+  from the parts section (one less track).
+
+**Data (one mechanism for all items):**
+- `ProgressionSettings` asset on `GameConfig`: XP rates (the `MatchXp` constants move here), one level curve per track,
+  the caps, the XP factor for bot kills.
+- `UnlockRule { Track, Level }` on every chassis, module, pilot and skin. It replaces the `unlockLevel` fields.
+  `Track` = Account, ChassisClass or Pilot (the item's own class or pilot).
+- `PartLine` asset: ordered tiers with a parent, over the existing `ModuleDefinition`s.
+- Pure code: `LevelCurve.LevelOf(xp)`, `MasterySplit` (XP by flight time), `UnlockRules.IsUnlocked(rule, progress)`.
+- `IPlayerUnlocks` grows: `Level`, `ChassisLevel(class)`, `PilotLevel(id)`, `Owns(id)` (for later purchases).
+- `LoadoutRules.Validate` also checks the pilot and the skin: this is the server check for skin unlocks.
+
+**Storage:** `PlayerProfile` version 2 adds `chassisXp` (class, XP) and `pilotXp` (pilot id, XP).
+- Only XP is stored. Levels and unlocks are worked out from XP and the settings: no unlock list to migrate, and the
+  curve can change later.
+
+**Server authority (in steps):**
+1. Local (now): the client records, as today. The hangar shows the locks. Not safe for ranked play.
+2. The server holds a `PlayerProgress` component on the player entity (account level, chassis levels, pilot levels).
+   `ChopperRespawnSystem` validates the loadout against it. Bots (`BotIds.IsBot`) pass every check and get no grant.
+3. Cloud: at connect the server reads the player's protected Cloud Save data through Cloud Code; at match end it posts
+   the results and Cloud Code runs the same pure grant code. The client only reads.
+
+**Limits against farming:** XP only when the match completes; bot kills give a factor (0.5 proposed); no XP in local
+or private sessions.
+
+**Screens:** results (three bars: account, chassis, pilot), home profile (three tracks), hangar chassis card (mastery
+bar; the module list becomes the chain view), pilot select (pilot level and next reward).
+
+**Build order:** 1) pure rules, settings asset, profile v2, tests. 2) screens. 3) server component and spawn check.
+4) Cloud Code and Cloud Save.
+
+**Open decisions:** mastery per chassis class or per variant (proposed: class); pilot rewards cosmetic only (proposed:
+yes); weapons on the account track or their own mastery (proposed: account); bot kill XP factor (proposed: 0.5);
+currency (proposed: later).
+
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 
 The owner owns these. ECS does not matter for them: weather and effects are client presentation only (GameObjects in
