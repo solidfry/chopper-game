@@ -10,6 +10,8 @@ namespace Chopper.Simulation.Combat
         [SerializeField] private Vector3 size = new(2000f, 600f, 2000f);
         [SerializeField] private float damagePerSecond = 15f;
 
+        public Vector3 Size => size;
+
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = new Color(0.22f, 1f, 0.53f, 0.6f);

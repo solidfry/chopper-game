@@ -19,7 +19,7 @@ namespace Chopper.Editor.Setup
 {
     /// <summary>
     /// Setup step 10, city match scenes. For each exported city (step 8) builds <c>Assets/Scenes/Map_&lt;kit&gt;.unity</c>:
-    /// the presentation bridge, HUD and camera rig (same as step 3), a gameplay SubScene (spawner over a mesa,
+    /// the presentation bridge, HUD and camera rig (same as step 3), a gameplay SubScene (spawner and spawn points over the mesas,
     /// arena bounds from the map's flight bounds, netcode physics settings), the city SubScene, the sun, ambient
     /// light and background of the map's time of day (<see cref="EnvironmentSettings"/>), the city post volume (step 9),
     /// and reflection probes baked under that light. Adds the scene to the build settings.
@@ -33,7 +33,7 @@ namespace Chopper.Editor.Setup
         public const Weather DefaultWeather = Weather.Clear;
         private const string EnvironmentPath = "Assets/Chopper/Data/Rendering/EnvironmentSettings.asset";
         public const string CatalogPath = "Assets/Chopper/Data/Maps/MapCatalog.asset";
-        private const string TrainingGameplayScene = "Assets/Scenes/TrainingRange/TrainingRange_Gameplay.unity";
+        internal const string TrainingGameplayScene = "Assets/Scenes/TrainingRange/TrainingRange_Gameplay.unity";
         private const string SubSceneType = "Unity.Scenes.SubScene, Unity.Scenes";
         /// <summary>Spawn this high over the chosen mesa top (m).</summary>
         private const float SpawnHeight = 30f;
@@ -225,6 +225,7 @@ namespace Chopper.Editor.Setup
                 spawner.AddComponent<ChopperSpawnerAuthoring>();
                 // Which map this is: the server tells online clients (MatchMapAnnounceSystem).
                 spawner.AddComponent<MatchMapAuthoring>().Set(mapId, times, weathers);
+                SpawnAssets.BuildCityPoints(scene, terrain, spawn, SpawnHeight);
 
                 var settings = new GameObject("Gameplay Settings");
                 SceneManager.MoveGameObjectToScene(settings, scene);

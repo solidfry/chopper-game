@@ -54,7 +54,10 @@ namespace Chopper.Simulation.Session
         }
     }
 
-    /// <summary>Server: accept the request, spawn a chopper owned by that connection.</summary>
+    /// <summary>
+    /// Server: accept the request and ask for a chopper for that connection (a <see cref="RespawnTimer"/> of 0 s).
+    /// <see cref="ChopperRespawnSystem"/> picks the spawn point and spawns it, the same way as a respawn.
+    /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     public partial struct GoInGameServerSystem : ISystem
@@ -69,9 +72,6 @@ namespace Chopper.Simulation.Session
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var spawnerEntity = SystemAPI.GetSingletonEntity<ChopperSpawner>();
-            var spawner = SystemAPI.GetComponent<ChopperSpawner>(spawnerEntity);
-            var chassisPrefabs = SystemAPI.GetBuffer<ChassisPrefab>(spawnerEntity);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             foreach (var (request, goInGame, requestEntity) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<GoInGameRequest>>()
@@ -90,8 +90,8 @@ namespace Chopper.Simulation.Session
                 };
                 var skinId = goInGame.ValueRO.SkinId;
                 ecb.AddComponent(connection, new RequestedLoadout { Code = loadout, SkinId = skinId });
-                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, networkId, loadout, skinId);
-                UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper spawned.");
+                ecb.AddComponent(connection, new RespawnTimer { Remaining = 0f });
+                UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper asked for.");
 
                 ecb.DestroyEntity(requestEntity);
             }

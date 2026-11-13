@@ -41,7 +41,10 @@ namespace Chopper.Simulation.Session
         public UnityObjectRef<LoadoutCatalog> Catalog;
     }
 
-    /// <summary>Put in the gameplay subscene. Its transform is the first spawn point. Chopper → Setup fills it.</summary>
+    /// <summary>
+    /// Put in the gameplay subscene. Chopper → Setup fills it. Choppers spawn at the map's <see cref="SpawnPointAuthoring"/>
+    /// points (rules: <see cref="SpawnSettings"/>); this transform is only the fallback when none of them can be used.
+    /// </summary>
     public sealed class ChopperSpawnerAuthoring : MonoBehaviour
     {
         [SerializeField, Tooltip("Fallback chopper ghost when a chassis has no prefab.")] private GameObject chopperPrefab;
@@ -50,10 +53,13 @@ namespace Chopper.Simulation.Session
         [SerializeField, Tooltip("Chassis prefabs and module data for per-player loadouts.")] private LoadoutCatalog catalog;
         [SerializeField, Tooltip("Guided missile ghost prefab.")] private GameObject missilePrefab;
         [SerializeField, Tooltip("How bots fly on this map (BotHandling singleton).")] private Bots.BotProfile botProfile;
+        [SerializeField, Tooltip("How the server picks a spawn point (SpawnRules singleton). Empty = default values.")]
+        private SpawnSettings spawnSettings;
 
         /// <summary>Editor only: used by the setup tool.</summary>
-        public void Configure(LoadoutCatalog loadoutCatalog, GameObject missile, Bots.BotProfile bots)
+        public void Configure(LoadoutCatalog loadoutCatalog, GameObject missile, Bots.BotProfile bots, SpawnSettings spawn)
         {
+            if (spawn != null) spawnSettings = spawn;
             if (loadoutCatalog != null) catalog = loadoutCatalog;
             if (missile != null) missilePrefab = missile;
             if (bots != null) botProfile = bots;
@@ -62,6 +68,7 @@ namespace Chopper.Simulation.Session
         public LoadoutCatalog Catalog => catalog;
         public GameObject MissilePrefab => missilePrefab;
         public Bots.BotProfile BotProfile => botProfile;
+        public SpawnSettings SpawnSettings => spawnSettings;
 
         private sealed class Baker : Baker<ChopperSpawnerAuthoring>
         {
@@ -84,6 +91,9 @@ namespace Chopper.Simulation.Session
                     RespawnDelay = authoring.respawnDelay,
                     MissilePrefab = authoring.missilePrefab != null ? GetEntity(authoring.missilePrefab, TransformUsageFlags.Dynamic) : Entity.Null,
                 });
+
+                if (authoring.spawnSettings != null) DependsOn(authoring.spawnSettings);
+                AddComponent(entity, authoring.spawnSettings != null ? authoring.spawnSettings.ToRules() : SpawnRules.Default);
 
                 if (authoring.botProfile != null)
                 {

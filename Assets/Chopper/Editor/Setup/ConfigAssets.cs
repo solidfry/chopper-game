@@ -71,6 +71,8 @@ namespace Chopper.Editor.Setup
                     config.CockpitScreensLayout != null ? config.CockpitScreensLayout : CockpitScreenAssets.Layout,
                     config.CockpitScreensPanel != null ? config.CockpitScreensPanel : CockpitScreenAssets.EnsurePanel(config.PanelSettings));
 
+            if (config.Spawn == null) config.SetSpawn(SpawnAssets.EnsureSettings());
+
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             TransitionAssets.Ensure(config.PanelSettings, mixer);
