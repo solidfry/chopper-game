@@ -254,7 +254,9 @@ namespace Chopper.UI.Hangar
             }
 
             var isSelected = _model.ShownIndex == _model.SelectedIndex;
-            _state.text = card.Locked ? $"UNLOCKS AT LEVEL {card.UnlockLevel}" : isSelected ? "CURRENT PILOT" : "";
+            _state.text = card.Locked ? $"UNLOCKS AT LEVEL {card.UnlockLevel}"
+                : isSelected ? (card.MasteryLevel > 0 ? $"CURRENT PILOT // {card.MasteryText}" : "CURRENT PILOT")
+                : card.MasteryText;
             _lockIn.SetEnabled(!card.Locked);
             _lockIn.text = isSelected ? "[ KEEP ]" : "[ LOCK IN ]";
 

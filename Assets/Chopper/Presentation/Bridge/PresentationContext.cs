@@ -69,6 +69,13 @@ namespace Chopper.Presentation.Bridge
             ApplyPromptKeys();
         }
 
+        /// <summary>Locks off (the default while the game is in test): the hangar shows levels but lets you fit everything.</summary>
+        private Simulation.Loadout.IPlayerUnlocks HangarUnlocks()
+        {
+            if (Config.Progression != null && Config.Progression.LocksOn) return new ProfileUnlocks(Profile);
+            return new AllUnlocked();
+        }
+
         /// <summary>
         /// The chassis class and pilot the player chose in the hangar: the whole match's mastery XP goes to them.
         /// Local for now; the server will count the real flight time per chassis and pilot (plan section 6a-1).
@@ -125,7 +132,8 @@ namespace Chopper.Presentation.Bridge
         public LoadoutChoiceStore LoadoutChoices { get; } = new();
         /// <summary>Hangar view model; made on first use (null without a loadout catalog). Only the hangar scene uses it.</summary>
         public HangarModel Hangar => _hangar ??= Config != null && Config.LoadoutCatalog != null
-            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked(), Config.Maps)
+            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices,
+                HangarUnlocks(), Config.Maps, Profile)
             : null;
         /// <summary>Home screen view model; made on first use (null without a loadout catalog). Only the home scene uses it.</summary>
         public Menu.HomeModel Home => _home ??= Config != null && Config.LoadoutCatalog != null

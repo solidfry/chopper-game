@@ -194,6 +194,59 @@ namespace Chopper.Tests
             Assert.That(service.ChassisXp(ChassisClass.Gunship), Is.EqualTo(model.XpGained));
             Assert.That(service.PilotXp(4), Is.EqualTo(model.XpGained));
             Assert.That(service.TotalXp, Is.EqualTo(model.XpGained));
+
+            Assert.That(model.Mastery, Has.Count.EqualTo(2), "The chassis class, then the pilot.");
+            Assert.That(model.Mastery[0].Label, Is.EqualTo("GUNSHIP"));
+            Assert.That(model.Mastery[0].Gained, Is.EqualTo(model.XpGained));
+            Assert.That(model.Mastery[0].Before.TotalXp, Is.Zero);
+            Assert.That(model.Mastery[1].Gained, Is.EqualTo(model.XpGained));
+
+            model.SetMatch(MatchPhase.InProgress, 0);
+            Assert.That(model.Mastery, Is.Empty, "A new match clears the rows.");
+        }
+
+        [Test]
+        public void ResultsModel_HasNoMasteryRowsWithoutFlightData()
+        {
+            var hud = new Chopper.Presentation.Hud.MatchHudModel();
+            hud.SetLocalPlayer(1);
+            hud.ApplyScore(1, 1, 0);
+            var model = new MatchResultsModel(hud, new ProfileService(new PrefsProfileStore(new MemoryPrefs())));
+            model.SetMatch(MatchPhase.PostGame, 1);
+            model.ApplyStats(1, new PlayerMatchStats { Kills = 1 });
+            model.Tick(MatchResultsModel.SettleSeconds + 0.01f);
+            Assert.That(model.Mastery, Is.Empty);
+        }
+
+        [Test]
+        public void TrackProgress_ShowsLevelFillAndTheCap()
+        {
+            var half = TrackProgress.From("SCOUT", new LevelCurve(1000, 0, 3), 1500);
+            Assert.That(half.Level, Is.EqualTo(2));
+            Assert.That(half.Fill, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(half.IsMax, Is.False);
+            Assert.That(half.LevelText, Is.EqualTo("LVL 2"));
+
+            var top = TrackProgress.From("SCOUT", new LevelCurve(1000, 0, 3), 9000);
+            Assert.That(top.Level, Is.EqualTo(3));
+            Assert.That(top.IsMax, Is.True);
+            Assert.That(top.Fill, Is.EqualTo(1f));
+            Assert.That(top.NeedText, Is.EqualTo("MAX"));
+            Assert.That(top.TotalXp, Is.EqualTo(9000));
+        }
+
+        [Test]
+        public void Service_ListsEveryChassisClass()
+        {
+            var service = new ProfileService(new PrefsProfileStore(new MemoryPrefs()));
+            service.RecordMatch(Match(900, new FlightShare(ChassisClass.Lifter, 1, 1f)));
+            var tracks = service.ChassisTracks();
+            Assert.That(tracks, Has.Count.EqualTo(4));
+            Assert.That(tracks[0].Label, Is.EqualTo("SCOUT"));
+            Assert.That(tracks[0].Level, Is.EqualTo(1));
+            Assert.That(tracks[3].Label, Is.EqualTo("LIFTER"));
+            Assert.That(tracks[3].Level, Is.EqualTo(2));
+            Assert.That(service.Account.Label, Is.EqualTo("ACCOUNT"));
         }
     }
 }

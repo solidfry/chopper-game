@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Chopper.Presentation.Profile;
 using Chopper.Presentation.Results;
@@ -37,6 +38,8 @@ namespace Chopper.UI.Home
         private readonly Label _awardsTitle;
         private readonly VisualElement _achievements;
         private readonly Label _achievementsTitle;
+        /// <summary>Chassis and pilot mastery rows (null with an old layout).</summary>
+        private readonly VisualElement _mastery;
 
         public ProfilePage(VisualElement root)
         {
@@ -61,6 +64,7 @@ namespace Chopper.UI.Home
             _awardsTitle = root.Q<Label>("pf-awards-title");
             _achievements = root.Q("pf-achievements");
             _achievementsTitle = root.Q<Label>("pf-achievements-title");
+            _mastery = root.Q("pf-mastery");
             Back = root.Q<Button>("profile-back");
         }
 
@@ -73,7 +77,8 @@ namespace Chopper.UI.Home
         public CodecScan Scan { get; }
 
         /// <summary>Fills the page. True when the account has its own avatar (else the caller shows the pilot).</summary>
-        public bool Show(ProfileService service, IPlayerIdentity identity, string pilotCallSign, Color pilotAccent)
+        public bool Show(ProfileService service, IPlayerIdentity identity, string pilotCallSign, Color pilotAccent,
+            IReadOnlyList<TrackProgress> mastery = null)
         {
             var p = service != null ? service.Profile : new PlayerProfile();
             var hasAvatar = identity != null && identity.Avatar != null;
@@ -89,10 +94,21 @@ namespace Chopper.UI.Home
                 AvatarPicture.style.unityBackgroundImageTintColor = Color.white;
             }
 
-            var level = PilotLevels.Level(p.totalXp, out var into, out var needed);
-            _level.text = $"LVL {level:00}";
-            _xp.value = needed > 0 ? (float)into / needed : 0f;
-            _xpText.text = $"{into:N0} / {needed:N0} XP    TOTAL {p.totalXp:N0}";
+            if (service != null)
+            {
+                var account = service.Account;
+                _level.text = $"LVL {account.Level:00}";
+                _xp.value = account.Fill;
+                _xpText.text = $"{account.NeedText}    TOTAL {p.totalXp:N0}";
+            }
+            else
+            {
+                var level = PilotLevels.Level(p.totalXp, out var into, out var needed);
+                _level.text = $"LVL {level:00}";
+                _xp.value = needed > 0 ? (float)into / needed : 0f;
+                _xpText.text = $"{into:N0} / {needed:N0} XP    TOTAL {p.totalXp:N0}";
+            }
+            FillMastery(mastery);
 
             _kills.text = p.kills.ToString(CultureInfo.InvariantCulture);
             _deaths.text = p.deaths.ToString(CultureInfo.InvariantCulture);
@@ -181,6 +197,30 @@ namespace Chopper.UI.Home
                 _awards.Add(card);
             }
             _awardsTitle.text = $"// AWARD CASE   {won} / {total}";
+        }
+
+        /// <summary>One row per track (chassis classes, then pilots), in the achievement row style.</summary>
+        private void FillMastery(IReadOnlyList<TrackProgress> tracks)
+        {
+            if (_mastery == null) return;
+            _mastery.Clear();
+            if (tracks == null) return;
+            foreach (var track in tracks)
+            {
+                var row = Element("pf-ach");
+                row.EnableInClassList("pf-ach--done", track.IsMax);
+                var text = Element("pf-ach__text");
+                text.Add(Text(track.Label, "pf-ach__title", "chopper-title"));
+                text.Add(Text($"{track.LevelText}    TOTAL {track.TotalXp:N0} XP", "pf-ach__line", "chopper-body"));
+                row.Add(text);
+                var progress = Element("pf-ach__progress");
+                var bar = new SegmentBar { segments = 10, gap = 2f, value = track.Fill };
+                bar.AddToClassList("pf-ach__bar");
+                progress.Add(bar);
+                progress.Add(Text(track.NeedText, "pf-ach__amount", "chopper-title"));
+                row.Add(progress);
+                _mastery.Add(row);
+            }
         }
 
         private void FillAchievements(PlayerProfile p)

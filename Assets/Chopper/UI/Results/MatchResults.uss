@@ -366,6 +366,65 @@
   --bar-track: var(--chopper-green-faint);
 }
 
+/* Mastery (chassis class, pilot): small rows under the account bar; they come in after it fills */
+.results-mastery {
+  margin-top: 12px;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 0.3s;
+}
+
+.results-mastery--in {
+  opacity: 1;
+}
+
+.results-mastery__row {
+  margin-bottom: 8px;
+}
+
+.results-mastery__head {
+  flex-direction: row;
+  align-items: flex-end;
+  margin-bottom: 3px;
+}
+
+.results-mastery__label {
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  letter-spacing: 2px;
+  padding: 0;
+}
+
+.results-mastery__level {
+  font-size: 14px;
+  color: var(--chopper-green);
+  letter-spacing: 2px;
+  margin-left: 10px;
+  padding: 0;
+}
+
+.results-mastery__up {
+  font-size: 12px;
+  color: var(--chopper-pink);
+  letter-spacing: 3px;
+  margin-left: 10px;
+  padding: 0;
+}
+
+.results-mastery__gain {
+  flex-grow: 1;
+  font-size: 14px;
+  -unity-text-align: lower-right;
+  color: var(--chopper-green);
+  padding: 0;
+}
+
+.results-mastery__bar {
+  height: 8px;
+  --bar-fill: var(--chopper-green);
+  --bar-track: var(--chopper-green-faint);
+}
+
 /* Awards: one card per pilot, own card first */
 .results-awards {
   flex-grow: 1;

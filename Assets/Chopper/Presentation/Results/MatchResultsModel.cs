@@ -23,6 +23,23 @@ namespace Chopper.Presentation.Results
         public int Deaths => Stats.Deaths;
     }
 
+    /// <summary>What one mastery track (the chassis class, or the pilot) gained in the match.</summary>
+    public readonly struct MasteryGain
+    {
+        public readonly TrackProgress Before;
+        public readonly TrackProgress After;
+
+        public MasteryGain(TrackProgress before, TrackProgress after)
+        {
+            Before = before;
+            After = after;
+        }
+
+        public string Label => After.Label;
+        public int Gained => After.TotalXp - Before.TotalXp;
+        public bool LevelUp => After.Level > Before.Level;
+    }
+
     /// <summary>
     /// View model for the end-of-match screen. The server sends every player's stats when the match ends
     /// (<see cref="MatchStatsReceived"/>); after a short settle (they come as one message per player) this builds the
@@ -43,6 +60,7 @@ namespace Chopper.Presentation.Results
         private readonly List<ResultsPlayer> _players = new();
         private readonly List<XpLine> _xpLines = new();
         private readonly List<Award> _scratch = new();
+        private readonly List<MasteryGain> _mastery = new();
         private MatchPhase _phase;
         private int _winner;
         private float _settle = -1f;
@@ -64,6 +82,9 @@ namespace Chopper.Presentation.Results
 
         /// <summary>Achievement ids this match unlocked (empty until built).</summary>
         public IReadOnlyList<string> NewAchievements { get; private set; } = Array.Empty<string>();
+
+        /// <summary>Chassis class first, then the pilot. Empty without mastery XP (plan section 6a-1).</summary>
+        public IReadOnlyList<MasteryGain> Mastery => _mastery;
 
         /// <summary>The screen has data for this match (<see cref="Players"/>, <see cref="XpLines"/> and the rest).</summary>
         public bool Ready { get; private set; }
@@ -104,6 +125,7 @@ namespace Chopper.Presentation.Results
                 _stats.Clear();
                 _players.Clear();
                 NewAchievements = Array.Empty<string>();
+                _mastery.Clear();
                 Local = null;
                 Ready = false;
                 _settle = -1f;
@@ -187,8 +209,16 @@ namespace Chopper.Presentation.Results
                     if (_profile != null)
                     {
                         var flown = _localFlight != null ? new[] { _localFlight() } : null;
+                        var share = flown != null ? flown[0] : default;
+                        var chassisBefore = _profile.ChassisProgress(share.Class);
+                        var pilotBefore = _profile.PilotProgress(share.PilotId, _match.LocalPilotText);
                         NewAchievements = _profile.RecordMatch(new MatchOutcome(Local.Stats, Local.Awards, Won, Draw, Local.Place,
                             _players.Count, gained, Score, _match.LocalPilotText, flown));
+                        _mastery.Clear();
+                        if (share.Class != Simulation.Loadout.ChassisClass.None)
+                            _mastery.Add(new MasteryGain(chassisBefore, _profile.ChassisProgress(share.Class)));
+                        if (share.PilotId != 0)
+                            _mastery.Add(new MasteryGain(pilotBefore, _profile.PilotProgress(share.PilotId, _match.LocalPilotText)));
                     }
                 }
             }

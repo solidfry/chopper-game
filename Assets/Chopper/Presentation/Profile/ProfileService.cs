@@ -211,6 +211,40 @@ namespace Chopper.Presentation.Profile
         public event Action Changed { add { } remove { } }
     }
 
+    /// <summary>One progression track as a screen shows it: level, XP into it, XP it needs. Plain data for the UI.</summary>
+    public readonly struct TrackProgress
+    {
+        /// <summary>"ACCOUNT", "SCOUT", "VIPER".</summary>
+        public readonly string Label;
+        /// <summary>From 1.</summary>
+        public readonly int Level;
+        public readonly int Into;
+        /// <summary>0 at the highest level.</summary>
+        public readonly int Needed;
+        public readonly int TotalXp;
+
+        public TrackProgress(string label, int level, int into, int needed, int totalXp)
+        {
+            Label = label ?? "";
+            Level = level;
+            Into = into;
+            Needed = needed;
+            TotalXp = totalXp;
+        }
+
+        public bool IsMax => Needed <= 0;
+        /// <summary>0..1 into the level; 1 at the highest level.</summary>
+        public float Fill => Needed > 0 ? Mathf.Clamp01((float)Into / Needed) : 1f;
+        public string LevelText => $"LVL {Level}";
+        public string NeedText => IsMax ? "MAX" : $"{Into:N0} / {Needed:N0} XP";
+
+        public static TrackProgress From(string label, LevelCurve curve, int xp)
+        {
+            var level = curve.Level(xp, out var into, out var needed);
+            return new TrackProgress(label, level, into, needed, Math.Max(0, xp));
+        }
+    }
+
     /// <summary>
     /// The player's profile: loads it, records each match (<see cref="MatchResultsModel"/> calls
     /// <see cref="RecordMatch"/> once per match) and saves it. Online, the server will write the record and this only
@@ -245,6 +279,23 @@ namespace Chopper.Presentation.Profile
         public int ChassisLevel(ChassisClass chassisClass) => _chassis.Level(ChassisXp(chassisClass));
         /// <summary>Mastery level of a pilot (from 1).</summary>
         public int PilotLevel(ushort pilotId) => _pilot.Level(PilotXp(pilotId));
+
+        /// <summary>The account track at <paramref name="xp"/> (the results screen counts up through it).</summary>
+        public TrackProgress AccountProgress(int xp) => TrackProgress.From("ACCOUNT", _account, xp);
+        public TrackProgress Account => AccountProgress(TotalXp);
+        public TrackProgress ChassisProgress(ChassisClass chassisClass) =>
+            TrackProgress.From(chassisClass.ToString().ToUpperInvariant(), _chassis, ChassisXp(chassisClass));
+        public TrackProgress PilotProgress(ushort pilotId, string callSign) =>
+            TrackProgress.From(string.IsNullOrEmpty(callSign) ? "PILOT" : callSign, _pilot, PilotXp(pilotId));
+
+        /// <summary>Every chassis class, in enum order.</summary>
+        public List<TrackProgress> ChassisTracks()
+        {
+            var tracks = new List<TrackProgress>();
+            foreach (ChassisClass chassisClass in Enum.GetValues(typeof(ChassisClass)))
+                if (chassisClass != ChassisClass.None) tracks.Add(ChassisProgress(chassisClass));
+            return tracks;
+        }
 
         /// <summary>0..1 into the current level.</summary>
         public float LevelProgress

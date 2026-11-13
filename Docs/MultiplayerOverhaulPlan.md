@@ -694,7 +694,7 @@ bar; the module list becomes the chain view), pilot select (pilot level and next
 **Decisions (owner, 13 Nov):** mastery per chassis class; pilot rewards cosmetic only; weapons on the account track;
 bot kill XP factor 0.5 (not built: needs a bot kill count in the match stats, step 3); currency later.
 
-**Progress:** step 1 built 13 Nov (not compiled). Steps 2 to 4 open. Limits: see the handoff, section 4a.
+**Progress:** steps 1 and 2 built 13 Nov (not compiled). Steps 3 and 4 open. Lock switch: `locksOn` on the settings asset (off). Limits: see the handoff, section 4a.
 
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 

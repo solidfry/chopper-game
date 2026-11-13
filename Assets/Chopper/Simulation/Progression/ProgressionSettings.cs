@@ -18,6 +18,11 @@ namespace Chopper.Simulation.Progression
         [SerializeField, Tooltip("Mastery of one pilot: match XP by flight time with that pilot.")]
         private LevelCurve pilot = LevelCurve.Pilot;
 
+        [SerializeField, Tooltip("Off (while the game is in test): the hangar shows the levels but lets you fit everything. " +
+                                 "On: the hangar locks by account level and mastery. The server check is a later step.")]
+        private bool locksOn;
+
+        public bool LocksOn => locksOn;
         public XpRates Xp => xp;
         public LevelCurve Account => account;
         public LevelCurve Chassis => chassis;

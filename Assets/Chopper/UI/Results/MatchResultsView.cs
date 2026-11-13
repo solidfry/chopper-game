@@ -49,6 +49,8 @@ namespace Chopper.UI.Results
         private Label _levelUp;
         private Label _levelNeed;
         private SegmentBar _levelBar;
+        /// <summary>Chassis and pilot mastery rows (null with an old layout).</summary>
+        private VisualElement _mastery;
         private ScrollView _awards;
         private Button _playAgain;
         private Button _home;
@@ -114,6 +116,7 @@ namespace Chopper.UI.Results
             _levelUp = _root.Q<Label>("level-up");
             _levelNeed = _root.Q<Label>("level-need");
             _levelBar = _root.Q<SegmentBar>("level-bar");
+            _mastery = _root.Q("mastery");
             _awards = _root.Q<ScrollView>("awards");
             _scan = _root.Q<CodecScan>("scan");
             _playAgain = _root.Q<Button>("play-again");
@@ -196,6 +199,7 @@ namespace Chopper.UI.Results
                 _xpLines.Add(row);
                 _lineElements.Add(row);
             }
+            FillMastery();
 
             _awards.Clear();
             _playerElements.Clear();
@@ -286,15 +290,18 @@ namespace Chopper.UI.Results
             var barStart = XpAt + XpLineSeconds * (_lineElements.Count + 1);
             var fill = Ease(Mathf.Clamp01((t - barStart) / BarSeconds));
             var xp = Mathf.RoundToInt(Mathf.Lerp(_model.XpBefore, _model.XpAfter, fill));
-            var level = PilotLevels.Level(xp, out var into, out var needed);
-            var startLevel = PilotLevels.Level(_model.XpBefore, out _, out _);
+            var account = _context.Profile.AccountProgress(xp);
+            var level = account.Level;
+            var startLevel = _context.Profile.AccountProgress(_model.XpBefore).Level;
             _level.text = $"LVL {level}";
-            _levelNeed.text = $"{into} / {needed} XP";
+            _levelNeed.text = account.IsMax ? "MAX" : $"{account.Into} / {account.Needed} XP";
             // The bar climbs on from where the lines stopped, one note per step of the fill.
             var barStep = fill > 0f ? Mathf.Min(BarNotes, Mathf.FloorToInt(fill * BarNotes) + 1) : 0;
             if (barStep > _barStep) Ping(_lineElements.Count + barStep - 1);
             _barStep = barStep;
-            _levelBar.value = needed > 0 ? (float)into / needed : 0f;
+            _levelBar.value = account.Fill;
+            // The mastery rows come in after the account bar is full.
+            if (_mastery != null) _mastery.EnableInClassList("results-mastery--in", t >= barStart + BarSeconds);
             if (level != _shownLevel)
             {
                 if (_shownLevel != 0 && level > _shownLevel)
@@ -381,6 +388,30 @@ namespace Chopper.UI.Results
         private static float Ease(float t) => 1f - Mathf.Pow(1f - t, 3f);
 
         private static string Count(int value, float share) => Mathf.RoundToInt(value * share).ToString();
+
+        /// <summary>One row per mastery track that gained XP: name, level, bar, the XP gained.</summary>
+        private void FillMastery()
+        {
+            if (_mastery == null) return;
+            _mastery.Clear();
+            _mastery.RemoveFromClassList("results-mastery--in");
+            foreach (var gain in _model.Mastery)
+            {
+                var row = new VisualElement { pickingMode = PickingMode.Ignore };
+                row.AddToClassList("results-mastery__row");
+                var head = new VisualElement { pickingMode = PickingMode.Ignore };
+                head.AddToClassList("results-mastery__head");
+                head.Add(NewLabel($"{gain.Label} MASTERY", "results-mastery__label", "chopper-title"));
+                head.Add(NewLabel(gain.After.LevelText, "results-mastery__level", "chopper-title"));
+                if (gain.LevelUp) head.Add(NewLabel("LEVEL UP", "results-mastery__up", "chopper-title"));
+                head.Add(NewLabel($"+{gain.Gained}", "results-mastery__gain", "chopper-title"));
+                row.Add(head);
+                var bar = new SegmentBar { segments = 24, gap = 3f, value = gain.After.Fill, pickingMode = PickingMode.Ignore };
+                bar.AddToClassList("results-mastery__bar");
+                row.Add(bar);
+                _mastery.Add(row);
+            }
+        }
 
         private static string Ordinal(int place) => place switch
         {

@@ -55,9 +55,8 @@ namespace Chopper.Presentation.Results
     }
 
     /// <summary>
-    /// Account level from total XP with the default numbers and no cap (1000, then +250 per level). The results and
-    /// profile screens still use it; the profile service uses the settings curve
-    /// (<see cref="LevelCurve"/>). Keep the account curve at its default until the screens move over.
+    /// Account level from total XP with the default numbers and no cap (1000, then +250 per level). Only a fallback
+    /// now: the screens ask the profile service, which uses the settings curve (<see cref="LevelCurve"/>).
     /// </summary>
     public static class PilotLevels
     {

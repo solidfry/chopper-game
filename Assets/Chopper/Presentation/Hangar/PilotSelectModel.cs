@@ -36,9 +36,14 @@ namespace Chopper.Presentation.Hangar
         public readonly AudioClip AbilityLine;
         public readonly bool Locked;
         public readonly int UnlockLevel;
+        /// <summary>The player's mastery level with this pilot; 0 = not known (no profile).</summary>
+        public readonly int MasteryLevel;
+        /// <summary>"MASTERY LVL 3", or "" when not known.</summary>
+        public string MasteryText => MasteryLevel > 0 ? $"MASTERY LVL {MasteryLevel}" : "";
 
-        public PilotCard(PilotDefinition pilot, bool locked)
+        public PilotCard(PilotDefinition pilot, bool locked, int masteryLevel = 0)
         {
+            MasteryLevel = masteryLevel;
             Id = pilot.Id;
             CallSign = string.IsNullOrEmpty(pilot.CallSign) ? pilot.name.ToUpperInvariant() : pilot.CallSign;
             Role = pilot.Role ?? "";
@@ -74,13 +79,15 @@ namespace Chopper.Presentation.Hangar
         private readonly List<PilotCard> _cards = new();
         private readonly LoadoutChoiceStore _store;
 
-        public PilotSelectModel(IReadOnlyList<PilotDefinition> pilots, LoadoutChoiceStore store, IPlayerUnlocks unlocks)
+        /// <param name="profile">For the mastery level on each card. Null = not shown.</param>
+        public PilotSelectModel(IReadOnlyList<PilotDefinition> pilots, LoadoutChoiceStore store, IPlayerUnlocks unlocks,
+            Profile.ProfileService profile = null)
         {
             _store = store;
             var level = unlocks?.Level ?? int.MaxValue;
             if (pilots != null)
                 foreach (var pilot in pilots)
-                    if (pilot != null) _cards.Add(new PilotCard(pilot, pilot.UnlockLevel > level));
+                    if (pilot != null) _cards.Add(new PilotCard(pilot, pilot.UnlockLevel > level, profile != null ? profile.PilotLevel(pilot.Id) : 0));
 
             var saved = store?.Pilot ?? 0;
             SelectedIndex = _cards.FindIndex(card => card.Id == saved && !card.Locked);

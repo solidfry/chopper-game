@@ -102,6 +102,16 @@ namespace Chopper.Presentation.Menu
         public string OperatorName => _identity != null ? _identity.DisplayName : "OPERATOR";
         /// <summary>The player's lifetime record (null in tests without one).</summary>
         public ProfileService Profile => _profile;
+
+        /// <summary>Mastery for the profile page: every chassis class, then every pilot. Empty without a profile.</summary>
+        public List<TrackProgress> MasteryTracks()
+        {
+            var tracks = new List<TrackProgress>();
+            if (_profile == null) return tracks;
+            tracks.AddRange(_profile.ChassisTracks());
+            foreach (var pilot in _pilots) tracks.Add(_profile.PilotProgress(pilot.Id, pilot.CallSign));
+            return tracks;
+        }
         public IPlayerIdentity Identity => _identity;
         /// <summary>From the profile's XP; level 1 and an empty bar without one.</summary>
         public int Level => _profile != null ? _profile.Level : 1;

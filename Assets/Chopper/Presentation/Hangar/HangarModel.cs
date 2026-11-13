@@ -135,6 +135,7 @@ namespace Chopper.Presentation.Hangar
         private readonly SkinLibrary _skins;
         private readonly LoadoutChoiceStore _store;
         private readonly IPlayerUnlocks _unlocks;
+        private readonly Profile.ProfileService _profile;
         private readonly List<MapCatalog.MapEntry> _trainingMaps = new();
         private readonly List<string> _trainingMapNames = new();
         private readonly Dictionary<ushort, ModuleDefinition[]> _fitted = new();
@@ -157,9 +158,11 @@ namespace Chopper.Presentation.Hangar
         private float _minRefill = 1f;
         private int _hovered = -1;
 
+        /// <param name="profile">For the mastery level on the chassis and pilot cards. Null = not shown.</param>
         public HangarModel(LoadoutCatalog catalog, SkinLibrary skins, LoadoutChoiceStore store, IPlayerUnlocks unlocks,
-            MapCatalog maps = null)
+            MapCatalog maps = null, Profile.ProfileService profile = null)
         {
+            _profile = profile;
             _catalog = catalog;
             _skins = skins;
             _store = store;
@@ -183,7 +186,7 @@ namespace Chopper.Presentation.Hangar
             _maxHealth = MaxHealth();
             BarScales();
 
-            Pilots = new PilotSelectModel(_catalog.Pilots, _store, _unlocks);
+            Pilots = new PilotSelectModel(_catalog.Pilots, _store, _unlocks, _profile);
             ChassisIndex = 0;
             RestoreBuilds();
             if (_store != null && _store.TryLoad(out var saved, out var skinId)) Restore(saved, skinId);
@@ -478,7 +481,10 @@ namespace Chopper.Presentation.Hangar
         private HangarChassisCard Card(ChassisDefinition chassis)
         {
             if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec)) return new HangarChassisCard("?", "");
-            return new HangarChassisCard(chassis.DisplayName.ToUpperInvariant(), $"{chassis.Slots.Count} SLOTS / {spec.WeightBudget:0} KG");
+            var detail = $"{chassis.Slots.Count} SLOTS / {spec.WeightBudget:0} KG";
+            if (_profile != null && chassis.Class != ChassisClass.None)
+                detail += $" / MASTERY {_profile.ChassisLevel(chassis.Class)}";
+            return new HangarChassisCard(chassis.DisplayName.ToUpperInvariant(), detail);
         }
 
         private void Refresh()
@@ -554,16 +560,27 @@ namespace Chopper.Presentation.Hangar
                 if (module == null || module.Slot != type || !_catalog.TryGetModule(module.Id, out var spec) || !spec.FitsChassis(Chassis.Id)) continue;
                 candidates.Add((module, spec));
             }
+            // Account level first, then the part chain order (mastery level), then the name.
             candidates.Sort((a, b) => a.Spec.UnlockLevel != b.Spec.UnlockLevel
                 ? a.Spec.UnlockLevel.CompareTo(b.Spec.UnlockLevel)
-                : string.CompareOrdinal(a.Module.DisplayName, b.Module.DisplayName));
+                : a.Spec.MasteryLevel != b.Spec.MasteryLevel
+                    ? a.Spec.MasteryLevel.CompareTo(b.Spec.MasteryLevel)
+                    : string.CompareOrdinal(a.Module.DisplayName, b.Module.DisplayName));
 
             foreach (var (module, spec) in candidates)
             {
-                var locked = _unlocks.Level < spec.UnlockLevel || !_unlocks.Owns(module.Id);
-                var detail = locked ? $"LEVEL {spec.UnlockLevel}" : $"{spec.Stats.Weight:0} KG";
+                var levelLocked = _unlocks.Level < spec.UnlockLevel;
+                var masteryLocked = spec.MasteryLevel > 0 && _unlocks.ChassisLevel(Chassis.Class) < spec.MasteryLevel;
+                var locked = levelLocked || masteryLocked || !_unlocks.Owns(module.Id);
+                var detail = levelLocked ? $"LEVEL {spec.UnlockLevel}"
+                    : masteryLocked ? $"MASTERY {spec.MasteryLevel}"
+                    : locked ? "LOCKED"
+                    : $"{spec.Stats.Weight:0} KG";
+                var description = module.Description ?? "";
+                // A part chain tier names the tier before it.
+                if (module.Parent != null) description = $"UPGRADE OF {module.Parent.DisplayName.ToUpperInvariant()}. {description}";
                 _options.Add(module);
-                _optionRows.Add(new HangarOptionRow(module.DisplayName.ToUpperInvariant(), module.Description ?? "",
+                _optionRows.Add(new HangarOptionRow(module.DisplayName.ToUpperInvariant(), description,
                     $"{spec.Stats.Weight:0}", detail, locked, module == current, false));
             }
         }
