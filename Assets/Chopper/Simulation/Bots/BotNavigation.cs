@@ -45,9 +45,13 @@ namespace Chopper.Simulation.Bots
             MaxNodes = math.max(handling.PathMaxNodes, 100),
         };
 
-        /// <summary>Sets <see cref="PilotOrder.Destination"/> and <see cref="PilotOrder.RemainingDistance"/> on the way to <paramref name="goal"/>.</summary>
+        /// <summary>
+        /// Sets <see cref="PilotOrder.Destination"/> and <see cref="PilotOrder.RemainingDistance"/> on the way to <paramref name="goal"/>.
+        /// <paramref name="plansLeft"/>: path searches the caller still allows in this update (one is used per search).
+        /// </summary>
         public static void Follow(ref NavGridBlob grid, ref BotNavigator navigator, DynamicBuffer<BotWaypoint> waypoints,
-            float3 position, float3 goal, double now, in BotHandling handling, NavDomain domain, ref PilotOrder order)
+            float3 position, float3 goal, double now, in BotHandling handling, NavDomain domain, ref PilotOrder order,
+            ref int plansLeft)
         {
             var query = Query(handling, grid.CellSize, domain);
             var replan = !navigator.Planned || now >= navigator.ReplanAt ||
@@ -56,8 +60,11 @@ namespace Chopper.Simulation.Bots
                 !NavPathfinder.LineClear(ref grid, position, waypoints[navigator.Next].Position, domain, query.MinClearance))
                 replan = true;
 
-            if (replan && now >= navigator.EarliestReplan)
+            // No budget left in this update: follow the old path one more time (a first plan is never held back
+            // for long: the budget is per update).
+            if (replan && now >= navigator.EarliestReplan && plansLeft > 0)
             {
+                plansLeft--;
                 var path = new NativeList<float3>(16, Allocator.Temp);
                 navigator.Status = NavPathfinder.FindPath(ref grid, position, goal, query, ref path);
                 waypoints.Clear();

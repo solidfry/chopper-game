@@ -14,7 +14,8 @@ namespace Chopper.Simulation.Session
     /// <list type="bullet">
     /// <item>A chopper at zero health is destroyed (the ghost despawns on all clients). Its player gets a
     /// <see cref="RespawnTimer"/> of <see cref="ChopperSpawner.RespawnDelay"/>.</item>
-    /// <item>A new player gets a timer of 0 s (<see cref="GoInGameServerSystem"/>).</item>
+    /// <item>A new player gets a timer of 0 s (<see cref="GoInGameServerSystem"/>; a server bot:
+    /// <see cref="Bots.ServerBotFillSystem"/>). A player is any entity with a <see cref="PlayerId"/>.</item>
     /// <item>When a timer ends, the player's chopper spawns at the best <see cref="SpawnPoint"/> of that moment
     /// (<see cref="SpawnScoring"/>: away from enemies, walls and the ground; rules in <see cref="SpawnRules"/>). If no
     /// point can be used (or the map has none), it spawns at the spawner's own point.</item>
@@ -64,7 +65,7 @@ namespace Chopper.Simulation.Session
             var placement = default(SpawnPlacement);
             var prepared = false;
 
-            foreach (var (timer, networkId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<NetworkId>>().WithEntityAccess())
+            foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>().WithEntityAccess())
             {
                 timer.ValueRW.Remaining -= deltaTime;
                 if (timer.ValueRO.Remaining > 0f) continue;
@@ -75,8 +76,9 @@ namespace Chopper.Simulation.Session
                     prepared = true;
                 }
 
-                var id = networkId.ValueRO.Value;
-                var position = ChopperSpawning.FallbackPosition(spawner, id);
+                var id = playerId.ValueRO.Value;
+                // Bot ids start at 1001: fold them next to the players for the fallback row.
+                var position = ChopperSpawning.FallbackPosition(spawner, id > Bots.BotIds.First ? 9 + id - Bots.BotIds.First : id);
                 var rotation = spawner.Rotation;
                 var pick = placement.Choose(ref position, ref rotation);
                 if (pick == SpawnPick.None && placement.Points.Length > 0)
@@ -87,7 +89,8 @@ namespace Chopper.Simulation.Session
                 var requested = SystemAPI.HasComponent<RequestedLoadout>(connection)
                     ? SystemAPI.GetComponent<RequestedLoadout>(connection)
                     : default;
-                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, id, requested.Code, requested.SkinId, position, rotation);
+                ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, id, requested.Code, requested.SkinId, position, rotation,
+                    isConnection: SystemAPI.HasComponent<NetworkId>(connection));
                 ecb.RemoveComponent<RespawnTimer>(connection);
             }
 

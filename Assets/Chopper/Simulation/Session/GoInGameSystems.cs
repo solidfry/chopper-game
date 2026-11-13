@@ -90,6 +90,7 @@ namespace Chopper.Simulation.Session
                 };
                 var skinId = goInGame.ValueRO.SkinId;
                 ecb.AddComponent(connection, new RequestedLoadout { Code = loadout, SkinId = skinId });
+                ecb.AddComponent(connection, new PlayerId { Value = networkId });
                 ecb.AddComponent(connection, new RespawnTimer { Remaining = 0f });
                 UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper asked for.");
 

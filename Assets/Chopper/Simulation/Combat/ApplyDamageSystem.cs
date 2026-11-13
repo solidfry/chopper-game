@@ -36,6 +36,8 @@ namespace Chopper.Simulation.Combat
 
         private ComponentLookup<ConnectionOwner> _connectionLookup;
         private ComponentLookup<GhostOwner> _ownerLookup;
+        /// <summary>A player entity with this is a connection (RPCs can go to it); a server bot has none.</summary>
+        private ComponentLookup<NetworkId> _networkIdLookup;
         private ComponentLookup<LastAttacker> _lastAttackerLookup;
         private ComponentLookup<LocalTransform> _transformLookup;
         private ComponentLookup<GhostInstance> _ghostLookup;
@@ -51,6 +53,7 @@ namespace Chopper.Simulation.Combat
         {
             _connectionLookup = state.GetComponentLookup<ConnectionOwner>(isReadOnly: true);
             _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            _networkIdLookup = state.GetComponentLookup<NetworkId>(isReadOnly: true);
             _lastAttackerLookup = state.GetComponentLookup<LastAttacker>();
             _transformLookup = state.GetComponentLookup<LocalTransform>(isReadOnly: true);
             _ghostLookup = state.GetComponentLookup<GhostInstance>(isReadOnly: true);
@@ -71,6 +74,7 @@ namespace Chopper.Simulation.Combat
 
             _connectionLookup.Update(ref state);
             _ownerLookup.Update(ref state);
+            _networkIdLookup.Update(ref state);
             _lastAttackerLookup.Update(ref state);
             _transformLookup.Update(ref state);
             _ghostLookup.Update(ref state);
@@ -135,7 +139,7 @@ namespace Chopper.Simulation.Combat
                         if (hasLog) log.Add(LogEntry(MatchLogKind.Kill, now, killer, victim, hit, 0f, true));
                     }
 
-                    if (_connectionLookup.TryGetComponent(victim, out var victimConnection))
+                    if (_connectionLookup.TryGetComponent(victim, out var victimConnection) && _networkIdLookup.HasComponent(victimConnection.Value))
                     {
                         var hasSource = _transformLookup.TryGetComponent(hit.Source, out var sourcePose);
                         var taken = ecb.CreateEntity();
@@ -151,7 +155,7 @@ namespace Chopper.Simulation.Combat
                         ecb.AddComponent(taken, new SendRpcCommandRequest { TargetConnection = victimConnection.Value });
                     }
 
-                    if (!_connectionLookup.TryGetComponent(hit.Source, out var shooter)) continue;
+                    if (!_connectionLookup.TryGetComponent(hit.Source, out var shooter) || !_networkIdLookup.HasComponent(shooter.Value)) continue;
                     // Damage over time pulses: no hit marker each half second, only the kill.
                     if (overTime && !killed) continue;
                     var rpc = ecb.CreateEntity();

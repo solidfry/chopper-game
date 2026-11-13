@@ -37,14 +37,14 @@ namespace Chopper.Simulation.Match
         public int WinnerNetworkId;
     }
 
-    /// <summary>Server only, on a connection entity.</summary>
+    /// <summary>Server only, on a player entity (a connection or a server bot).</summary>
     public struct PlayerScore : IComponentData
     {
         public int Kills;
         public int Deaths;
     }
 
-    /// <summary>Server only. Stays after the connection is destroyed, so the server can tell clients who left.</summary>
+    /// <summary>Server only. Stays after the connection (or bot) is destroyed, so the server can tell clients who left.</summary>
     public struct PlayerScoreCleanup : ICleanupComponentData
     {
         public int NetworkId;
