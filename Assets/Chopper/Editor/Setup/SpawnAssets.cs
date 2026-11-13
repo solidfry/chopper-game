@@ -23,7 +23,7 @@ namespace Chopper.Editor.Setup
         public const string SettingsPath = Folder + "/SpawnSettings.asset";
         private const string RootName = "Spawn Points";
         /// <summary>Used by Validate when the settings asset does not exist yet.</summary>
-        private const int DefaultMinPoints = 8;
+        private const int DefaultMinPoints = 12;
         /// <summary>Step 4: the first set is a ring this far round the spawner (m).</summary>
         private const float DefaultRingRadius = 150f;
         /// <summary>Step 10: points that are not over a mesa are this high over the highest mesa point (m).</summary>

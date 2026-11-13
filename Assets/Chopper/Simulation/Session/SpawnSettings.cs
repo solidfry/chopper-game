@@ -14,7 +14,7 @@ namespace Chopper.Simulation.Session
     {
         [Header("Maps")]
         [SerializeField, Min(1), Tooltip("Validate lists a map with fewer spawn points than this.")]
-        private int minPoints = 8;
+        private int minPoints = 12;
         [SerializeField, Min(1), Tooltip("Spawn points Setup step 10 makes on each city map.")]
         private int cityPoints = 12;
 
