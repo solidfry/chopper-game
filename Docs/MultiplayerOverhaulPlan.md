@@ -712,6 +712,25 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
    wind on flight) is simulation data in `MapConditions`, not UniStorm.
 5. Test cost per HUD/quality preset: volumetric clouds and sun shafts off or low on the Performant preset.
 
+**UniStorm: to do in the Unity editor (owner, after the 13 Nov code)**
+1. Compile. UniStorm now has asmdefs (`UniStorm`, `UniStorm.Editor` + asmref in `Scripts/Effects/Editor`). If a
+   reference is missing (e.g. TextMeshPro, Cinemachine), add it to `UniStorm.asmdef`. Demo scenes show missing
+   scripts (PostProcessing v1 removed): ignore or delete the demo scenes.
+2. Window > UniStorm > Add URP Renderer Features, on every URP renderer asset used by the game (High, Performant).
+   Check the order next to our HUD look feature (UniStorm fog and clouds before it).
+3. `MapCatalog`: set Times and Weathers per map. Press Setup 10 (adds the Environment object with the UniStorm driver,
+   bakes the allowed sets). Check the driver's weather table (Ash uses "Hazy" as a stand-in).
+4. Play with the EnvironmentSettings preview override: each time of day and each weather. Tune on the UniStorm
+   prefab copy or the driver: hours per time, cloud quality, fog density, sun and moon intensity.
+5. Fog: UniStorm atmospheric fog and our height fog pass stack. Pick one owner of distance fog (UniStorm), keep the
+   height fog for low valley haze, and lower its density.
+6. City lights and wet ground: make the BuildingWear and TerrainBiome graphs read `_ChopperCityLights` (0 by day) and
+   `_ChopperWetness`; the street lamp and floodlight GameObjects should turn off by day.
+7. Lighting per time: Adaptive Probe Volumes with one lighting scenario per TimeOfDay; reflection probes per time.
+8. Server build: keep UniStorm out (strip the Environment object in `ServerSceneStrip`; the assembly may stay).
+9. Measure frame time per preset (volumetric clouds and sun shafts low or off on Performant).
+10. Audio: route UniStorm weather sounds to our Ambient mixer group, or replace them with our cues.
+
 **Plan: terrain**
 - Keep the CityForge mesh-chunk path (works with subscenes, Entities Graphics, Unity Physics, LODs). Unity Terrain does
   not bake into Entities: no rendering from a subscene, and Unity Physics has no TerrainCollider baker (Won't Fix);
