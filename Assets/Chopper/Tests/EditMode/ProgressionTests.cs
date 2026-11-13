@@ -218,6 +218,127 @@ namespace Chopper.Tests
             Assert.That(model.Mastery, Is.Empty);
         }
 
+        private sealed class GateCatalog : ILoadoutCatalog
+        {
+            public const ushort Scout = 1, Assault = 2, Gun = 101, AgileRotor = 152, RacingRotor = 153;
+            private static readonly SlotType[] Slots = { SlotType.Nose, SlotType.Rotor };
+            private static ModuleStats Light => new()
+                { Weight = 5f, LiftMultiplier = 1f, TurnRateMultiplier = 1f, BoostRechargeMultiplier = 1f, SpeedMultiplier = 1f, BoostPowerMultiplier = 1f };
+
+            public bool TryGetChassis(ushort id, out ChassisSpec chassis)
+            {
+                chassis = id == Scout ? new ChassisSpec(Scout, "Scout", 70f, 60f, Slots, 0, ChassisClass.Scout)
+                    : id == Assault ? new ChassisSpec(Assault, "Assault", 150f, 130f, Slots, 4, ChassisClass.Assault)
+                    : null;
+                return chassis != null;
+            }
+
+            public bool TryGetModule(ushort id, out ModuleSpec module)
+            {
+                module = id == Gun ? new ModuleSpec(Gun, "Gun", SlotType.Nose, Light)
+                    : id == AgileRotor ? new ModuleSpec(AgileRotor, "Agile", SlotType.Rotor, Light, unlockLevel: 4)
+                    : id == RacingRotor ? new ModuleSpec(RacingRotor, "Racing", SlotType.Rotor, Light, masteryLevel: 5, parentId: AgileRotor)
+                    : null;
+                return module != null;
+            }
+        }
+
+        private static LoadoutCode Code(ushort chassis, ushort nose, ushort rotor, ushort pilot = 0)
+        {
+            var code = new LoadoutCode { ChassisId = chassis, PilotId = pilot };
+            code.SetModule(0, nose);
+            code.SetModule(1, rotor);
+            return code;
+        }
+
+        [Test]
+        public void Gate_LeavesAnUnlockedLoadoutAlone()
+        {
+            var code = Code(GateCatalog.Assault, GateCatalog.Gun, GateCatalog.RacingRotor, pilot: 3);
+            ushort skin = 7;
+            var change = LoadoutGate.Apply(ref code, ref skin, new GateCatalog(), new ProgressUnlocks(10, 5, 1), pilotLevelNeeded: 10,
+                skinLevelNeeded: 10, Code(GateCatalog.Assault, GateCatalog.Gun, 0));
+            Assert.That(change, Is.EqualTo(GateChange.None));
+            Assert.That(code.GetModule(1), Is.EqualTo(GateCatalog.RacingRotor));
+            Assert.That(code.PilotId, Is.EqualTo(3));
+            Assert.That(skin, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Gate_GivesTheDefaultChopperForALockedChassis()
+        {
+            var code = Code(GateCatalog.Assault, GateCatalog.Gun, 0, pilot: 3);
+            ushort skin = 0;
+            var change = LoadoutGate.Apply(ref code, ref skin, new GateCatalog(), new ProgressUnlocks(3, 1, 1), 0, 0, default);
+            Assert.That(change, Is.EqualTo(GateChange.Chassis));
+            Assert.That(code.IsEmpty, Is.True);
+        }
+
+        [Test]
+        public void Gate_GivesTheChassisDefaultForALockedModule_AndKeepsThePilot()
+        {
+            var fallback = Code(GateCatalog.Scout, GateCatalog.Gun, 0);
+            foreach (var (rotor, unlocks) in new[]
+                     {
+                         (GateCatalog.AgileRotor, new ProgressUnlocks(3, 9, 1)),
+                         (GateCatalog.RacingRotor, new ProgressUnlocks(9, 4, 1)),
+                     })
+            {
+                var code = Code(GateCatalog.Scout, GateCatalog.Gun, rotor, pilot: 3);
+                ushort skin = 0;
+                var change = LoadoutGate.Apply(ref code, ref skin, new GateCatalog(), unlocks, 0, 0, fallback);
+                Assert.That(change, Is.EqualTo(GateChange.Modules), $"Rotor {rotor}");
+                Assert.That(code.GetModule(0), Is.EqualTo(GateCatalog.Gun));
+                Assert.That(code.GetModule(1), Is.Zero);
+                Assert.That(code.PilotId, Is.EqualTo(3));
+            }
+        }
+
+        [Test]
+        public void Gate_TakesALockedPilotAndSkinAway()
+        {
+            var code = Code(GateCatalog.Scout, GateCatalog.Gun, 0, pilot: 3);
+            ushort skin = 7;
+            var change = LoadoutGate.Apply(ref code, ref skin, new GateCatalog(), new ProgressUnlocks(2, 1, 1), pilotLevelNeeded: 5,
+                skinLevelNeeded: 3, default);
+            Assert.That(change, Is.EqualTo(GateChange.Pilot | GateChange.Skin));
+            Assert.That(code.PilotId, Is.Zero);
+            Assert.That(code.ChassisId, Is.EqualTo(GateCatalog.Scout), "The chassis and modules stay.");
+            Assert.That(skin, Is.Zero);
+
+            // No loadout chosen: only the skin can be checked.
+            var empty = default(LoadoutCode);
+            skin = 7;
+            Assert.That(LoadoutGate.Apply(ref empty, ref skin, new GateCatalog(), new ProgressUnlocks(9, 1, 1), 0, 3, default),
+                Is.EqualTo(GateChange.None));
+            Assert.That(skin, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void ProgressUnlocks_WorksOutLevelsFromTheRules()
+        {
+            var rules = new ProgressionRules { Account = LevelCurve.Account, Chassis = LevelCurve.Chassis, Pilot = LevelCurve.Pilot };
+            IPlayerUnlocks unlocks = new ProgressUnlocks(new PlayerProgress { AccountXp = 1000, ChassisXp = 1800, PilotXp = 0 }, rules);
+            Assert.That(unlocks.Level, Is.EqualTo(2));
+            Assert.That(unlocks.ChassisLevel(ChassisClass.Scout), Is.EqualTo(3));
+            Assert.That(unlocks.PilotLevel(3), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MatchXp_GivesLessForBotKills()
+        {
+            var lines = new List<XpLine>();
+            var rates = new XpRates { PerKill = 100, BotKillFactor = 0.5f };
+            var total = MatchXp.Lines(new PlayerMatchStats { Kills = 5, BotKills = 2 }, new List<Award>(), won: false, lines, rates);
+            Assert.That(total, Is.EqualTo(300 + 100));
+            Assert.That(lines, Has.Count.EqualTo(2));
+            Assert.That(lines[1].Label, Is.EqualTo("BOT KILLS x2"));
+
+            total = MatchXp.Lines(new PlayerMatchStats { Kills = 2, BotKills = 2 }, new List<Award>(), won: false, lines,
+                new XpRates { PerKill = 100, BotKillFactor = 0f });
+            Assert.That(total, Is.Zero, "A factor of 0: bot kills give nothing.");
+        }
+
         [Test]
         public void TrackProgress_ShowsLevelFillAndTheCap()
         {

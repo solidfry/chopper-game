@@ -694,7 +694,9 @@ bar; the module list becomes the chain view), pilot select (pilot level and next
 **Decisions (owner, 13 Nov):** mastery per chassis class; pilot rewards cosmetic only; weapons on the account track;
 bot kill XP factor 0.5 (not built: needs a bot kill count in the match stats, step 3); currency later.
 
-**Progress:** steps 1 and 2 built 13 Nov (not compiled). Steps 3 and 4 open. Lock switch: `locksOn` on the settings asset (off). Limits: see the handoff, section 4a.
+**Progress:** steps 1 to 3 built 13 Nov (not compiled). Step 3 checks against the client's own XP claim
+(`PlayerProgress.Trusted` false) until step 4 gives the server the Cloud Save numbers. Flight time per chassis is not
+counted: a connection has one loadout for a match. Step 4 open. Lock switch: `locksOn` on the settings asset (off). Limits: see the handoff, section 4a.
 
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 

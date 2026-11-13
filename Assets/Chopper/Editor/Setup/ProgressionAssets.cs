@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using Chopper.Presentation.Config;
 using Chopper.Simulation.Progression;
 using UnityEditor;
 using UnityEngine;
@@ -24,6 +26,17 @@ namespace Chopper.Editor.Setup
             AssetDatabase.CreateAsset(settings, SettingsPath);
             AssetDatabase.SaveAssets();
             return settings;
+        }
+
+        /// <summary>The account level of each paint skin that has one, for the spawner (the server's skin check).</summary>
+        public static SkinUnlockRow[] SkinLevels(GameConfig config)
+        {
+            var rows = new List<SkinUnlockRow>();
+            if (config != null && config.Skins != null)
+                foreach (var skin in config.Skins.Skins)
+                    if (skin != null && skin.Id != 0 && skin.UnlockLevel > 0)
+                        rows.Add(new SkinUnlockRow { SkinId = skin.Id, Level = skin.UnlockLevel });
+            return rows.ToArray();
         }
     }
 }

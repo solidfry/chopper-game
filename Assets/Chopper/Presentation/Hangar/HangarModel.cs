@@ -383,7 +383,7 @@ namespace Chopper.Presentation.Hangar
         public bool SaveChoice()
         {
             if (!CanLaunch) return false;
-            _store?.Save(Selection(FittedFor(Chassis)), SkinId);
+            _store?.Save(Selection(FittedFor(Chassis)), SkinId, Chassis.Class);
             return true;
         }
 

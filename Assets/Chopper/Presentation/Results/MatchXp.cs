@@ -41,7 +41,12 @@ namespace Chopper.Presentation.Results
             lines.Clear();
             if (rates.MatchComplete > 0) lines.Add(new XpLine("MATCH COMPLETE", rates.MatchComplete));
             if (won && rates.Victory > 0) lines.Add(new XpLine("VICTORY", rates.Victory));
-            if (stats.Kills > 0 && rates.PerKill > 0) lines.Add(new XpLine($"KILLS x{stats.Kills}", stats.Kills * rates.PerKill));
+            // A kill on a server bot gives a part of a kill on a player.
+            var botKills = Mathf.Clamp(stats.BotKills, 0, stats.Kills);
+            var playerKills = stats.Kills - botKills;
+            if (playerKills > 0 && rates.PerKill > 0) lines.Add(new XpLine($"KILLS x{playerKills}", playerKills * rates.PerKill));
+            var botXp = Mathf.RoundToInt(botKills * rates.PerKill * Mathf.Clamp01(rates.BotKillFactor));
+            if (botXp > 0) lines.Add(new XpLine($"BOT KILLS x{botKills}", botXp));
             var damage = Mathf.RoundToInt(stats.DamageDealt * rates.PerDamage);
             if (damage > 0) lines.Add(new XpLine($"DAMAGE {stats.DamageDealt:0}", damage));
             var awardXp = 0;

@@ -205,6 +205,8 @@ namespace Chopper.Editor.Setup
             if (spawner != null && (spawner.Catalog == null || spawner.MissilePrefab == null || spawner.BotProfile == null || spawner.SpawnSettings == null ||
                                     spawner.BotSettings == null))
                 problems.Add(new SetupProblem("Chopper spawner has no loadout catalog, missile prefab, bot profile, spawn settings or bot settings. Press '4. Set up gameplay subscene'.", spawner));
+            if (spawner != null && spawner.ProgressionSettings == null)
+                problems.Add(new SetupProblem("Chopper spawner has no progression settings (the server cannot check unlocks). Press '4. Set up gameplay subscene'.", spawner));
             SpawnAssets.CheckScene(scene, problems);
             if (FindInScene(scene, nameof(TrainingTargetAuthoring)) == null)
                 problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));

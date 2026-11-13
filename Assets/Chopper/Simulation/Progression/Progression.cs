@@ -83,8 +83,10 @@ namespace Chopper.Simulation.Progression
         public int PerKill;
         /// <summary>XP per point of damage dealt.</summary>
         public float PerDamage;
+        /// <summary>A kill on a server bot gives this part of <see cref="PerKill"/> (0..1).</summary>
+        public float BotKillFactor;
 
-        public static XpRates Default => new() { MatchComplete = 150, Victory = 300, PerKill = 100, PerDamage = 0.2f };
+        public static XpRates Default => new() { MatchComplete = 150, Victory = 300, PerKill = 100, PerDamage = 0.2f, BotKillFactor = 0.5f };
     }
 
     /// <summary>Time one player flew one chassis class with one pilot in a match.</summary>

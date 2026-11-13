@@ -59,6 +59,20 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Stats_CountKillsOnServerBots()
+        {
+            PlayerStats a = default, b = default;
+            var firstBlood = false;
+            var bot = Chopper.Simulation.Bots.BotIds.Id(0);
+            MatchStatsRules.Apply(Entry(MatchLogKind.Kill, 1, bot, DamageKind.Bullet), ref a, true, ref b, true, ref firstBlood);
+            MatchStatsRules.Apply(Entry(MatchLogKind.Kill, 1, 2, DamageKind.Bullet), ref a, true, ref b, true, ref firstBlood);
+
+            Assert.That(a.Value.Kills, Is.EqualTo(2));
+            Assert.That(a.Value.BotKills, Is.EqualTo(1));
+            Assert.That(MatchStatsRpc.From(1, a.Value).ToStats().BotKills, Is.EqualTo(1), "The count reaches the client.");
+        }
+
+        [Test]
         public void Stats_CrashDeathIsACrash_RamHitsInOneContactAreOneRam()
         {
             PlayerStats a = default, b = default;

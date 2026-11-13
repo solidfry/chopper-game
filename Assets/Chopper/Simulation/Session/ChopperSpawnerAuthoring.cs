@@ -57,6 +57,19 @@ namespace Chopper.Simulation.Session
         private SpawnSettings spawnSettings;
         [SerializeField, Tooltip("Server bots that fill empty slots (BotFillRules, roster). Empty = no server bots on this map.")]
         private Bots.BotSettings botSettings;
+        [SerializeField, Tooltip("Level curves and the lock switch for the server's unlock check. Empty = nothing is locked on this map.")]
+        private Progression.ProgressionSettings progressionSettings;
+        [SerializeField, Tooltip("Account level each paint skin needs. Setup step 4 copies it from the skin library.")]
+        private Progression.SkinUnlockRow[] skinUnlocks = System.Array.Empty<Progression.SkinUnlockRow>();
+
+        /// <summary>Editor only: used by the setup tool. Every call replaces the skin list (it is a copy of the library).</summary>
+        public void ConfigureProgression(Progression.ProgressionSettings settings, Progression.SkinUnlockRow[] skins)
+        {
+            if (settings != null) progressionSettings = settings;
+            skinUnlocks = skins ?? System.Array.Empty<Progression.SkinUnlockRow>();
+        }
+
+        public Progression.ProgressionSettings ProgressionSettings => progressionSettings;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Configure(LoadoutCatalog loadoutCatalog, GameObject missile, Bots.BotProfile bots, SpawnSettings spawn,
@@ -104,6 +117,16 @@ namespace Chopper.Simulation.Session
                 {
                     DependsOn(authoring.botProfile);
                     AddComponent(entity, authoring.botProfile.ToHandling());
+                }
+
+                // Progression: the server's unlock check (curves, lock switch, skin levels).
+                if (authoring.progressionSettings != null)
+                {
+                    DependsOn(authoring.progressionSettings);
+                    AddComponent(entity, authoring.progressionSettings.ToRules());
+                    var skinLevels = AddBuffer<Progression.SkinUnlock>(entity);
+                    foreach (var row in authoring.skinUnlocks)
+                        skinLevels.Add(new Progression.SkinUnlock { SkinId = row.SkinId, Level = row.Level });
                 }
 
                 // Server bots: the count rules and the roster (names, loadouts, skill).

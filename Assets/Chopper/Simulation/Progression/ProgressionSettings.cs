@@ -19,7 +19,8 @@ namespace Chopper.Simulation.Progression
         private LevelCurve pilot = LevelCurve.Pilot;
 
         [SerializeField, Tooltip("Off (while the game is in test): the hangar shows the levels but lets you fit everything. " +
-                                 "On: the hangar locks by account level and mastery. The server check is a later step.")]
+                                 "On: the hangar locks by account level and mastery, and the server takes locked items out of a loadout " +
+                                 "(press Setup 4 on each gameplay subscene so the spawner has these settings).")]
         private bool locksOn;
 
         public bool LocksOn => locksOn;
@@ -27,6 +28,9 @@ namespace Chopper.Simulation.Progression
         public LevelCurve Account => account;
         public LevelCurve Chassis => chassis;
         public LevelCurve Pilot => pilot;
+
+        /// <summary>For the spawner's baker: what the server needs.</summary>
+        public ProgressionRules ToRules() => new() { Account = account, Chassis = chassis, Pilot = pilot, LocksOn = locksOn };
 
         public LevelCurve Curve(ProgressTrack track) => track switch
         {
@@ -37,6 +41,7 @@ namespace Chopper.Simulation.Progression
 
         public void CollectProblems(List<string> problems)
         {
+            if (xp.BotKillFactor < 0f || xp.BotKillFactor > 1f) problems.Add($"{name}: the bot kill factor must be from 0 to 1.");
             if (xp.MatchComplete < 0 || xp.Victory < 0 || xp.PerKill < 0 || xp.PerDamage < 0f)
                 problems.Add($"{name}: XP rates must not be below 0.");
             account.CollectProblems(name, "account", problems);

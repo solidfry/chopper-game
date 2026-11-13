@@ -14,6 +14,10 @@ namespace Chopper.Simulation.Session
         public ulong Modules1;
         public ushort SkinId;
         public ushort PilotId;
+        /// <summary>The client's own progress claim (not trusted): see <see cref="Progression.PlayerProgress"/>.</summary>
+        public int AccountXp;
+        public int ChassisXp;
+        public int PilotXp;
     }
 
     /// <summary>Client: once connected, mark the connection in game and ask the server for a chopper.</summary>
@@ -46,6 +50,9 @@ namespace Chopper.Simulation.Session
                     Modules1 = choice.Modules1,
                     SkinId = skin,
                     PilotId = choice.PilotId,
+                    AccountXp = hasChoice ? chosen.AccountXp : 0,
+                    ChassisXp = hasChoice ? chosen.ChassisXp : 0,
+                    PilotXp = hasChoice ? chosen.PilotXp : 0,
                 });
                 ecb.AddComponent(request, new SendRpcCommandRequest { TargetConnection = connection });
                 UnityEngine.Debug.Log("[Client] Connected; asking the server for a chopper.");
@@ -91,6 +98,14 @@ namespace Chopper.Simulation.Session
                 var skinId = goInGame.ValueRO.SkinId;
                 ecb.AddComponent(connection, new RequestedLoadout { Code = loadout, SkinId = skinId });
                 ecb.AddComponent(connection, new PlayerId { Value = networkId });
+                // The client's claim: not trusted. LoadoutGateSystem checks the loadout against it before the spawn.
+                ecb.AddComponent(connection, new Progression.PlayerProgress
+                {
+                    AccountXp = Unity.Mathematics.math.max(0, goInGame.ValueRO.AccountXp),
+                    ChassisXp = Unity.Mathematics.math.max(0, goInGame.ValueRO.ChassisXp),
+                    PilotXp = Unity.Mathematics.math.max(0, goInGame.ValueRO.PilotXp),
+                    Trusted = false,
+                });
                 ecb.AddComponent(connection, new RespawnTimer { Remaining = 0f });
                 UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper asked for.");
 

@@ -14,6 +14,8 @@ namespace Chopper.Simulation.Match
     public struct PlayerMatchStats
     {
         public int Kills;
+        /// <summary>Those of <see cref="Kills"/> that were server bots (they give less XP).</summary>
+        public int BotKills;
         public int Deaths;
         /// <summary>Gun rounds, rockets and missiles fired.</summary>
         public int Shots;
@@ -103,6 +105,7 @@ namespace Chopper.Simulation.Match
                     }
                     if (!other || !hasActor) break;
                     actor.Value.Kills++;
+                    if (Bots.BotIds.IsBot(entry.Target)) actor.Value.BotKills++;
                     actor.Streak++;
                     actor.Value.BestStreak = math.max(actor.Value.BestStreak, actor.Streak);
                     if (entry.Distance > actor.Value.LongestKill) actor.Value.LongestKill = entry.Distance;
@@ -145,6 +148,7 @@ namespace Chopper.Simulation.Match
     {
         public int NetworkId;
         public int Kills;
+        public int BotKills;
         public int Deaths;
         public int Shots;
         public int Hits;
@@ -167,6 +171,7 @@ namespace Chopper.Simulation.Match
         {
             NetworkId = networkId,
             Kills = s.Kills,
+            BotKills = s.BotKills,
             Deaths = s.Deaths,
             Shots = s.Shots,
             Hits = s.Hits,
@@ -189,6 +194,7 @@ namespace Chopper.Simulation.Match
         public PlayerMatchStats ToStats() => new()
         {
             Kills = Kills,
+            BotKills = BotKills,
             Deaths = Deaths,
             Shots = Shots,
             Hits = Hits,

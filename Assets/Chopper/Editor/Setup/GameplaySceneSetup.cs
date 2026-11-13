@@ -179,8 +179,14 @@ namespace Chopper.Editor.Setup
             var bots = BotAssets.EnsureProfile();
             var spawn = SpawnAssets.EnsureSettings();
             var botFill = BotAssets.EnsureSettings(config != null ? config.LoadoutCatalog : null);
+            // Progression: always written again, so the skin levels follow the skin library.
+            var progression = ProgressionAssets.EnsureSettings();
+            var skinLevels = ProgressionAssets.SkinLevels(config);
             foreach (var spawner in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)))
             {
+                Undo.RecordObject(spawner, "Configure chopper spawner");
+                spawner.ConfigureProgression(progression, skinLevels);
+                EditorUtility.SetDirty(spawner);
                 if (spawner.Catalog != null && spawner.MissilePrefab != null && spawner.BotProfile != null && spawner.SpawnSettings != null &&
                     spawner.BotSettings != null) continue;
                 Undo.RecordObject(spawner, "Configure chopper spawner");
