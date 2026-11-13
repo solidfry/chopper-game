@@ -99,6 +99,13 @@ BIOMES = {
         band=10.0, cliff="#2c2a22", scree="#6a6448", cover="#a7a35a", cover_slope=0.35, cover_height=-50.0,
         cover_amount=0.3, wet=0.3, flow_wet=0.6, glow="#7cff3a", glow_strength=3.0, glow_flow=0.5,
         concrete="#6a6a5c", roughness=0.8),
+    # Mountains: tundra grass and scree low down, grey granite, snow above the snow line (cover_height) on gentle
+    # ground. (Added at the end: the table rows of the older biomes keep their index.)
+    "alpine": dict(
+        ground=("#6c7052", "#5a6045"), sediment="#776c5a", rock=("#6a6c6e", "#7d7f80", "#57595c", "#727470"),
+        band=16.0, cliff="#3d3f42", scree="#8a8780", cover="#eef3f6", cover_slope=0.48, cover_height=420.0,
+        cover_amount=1.0, wet=0.12, flow_wet=0.35, glow=None, glow_strength=0.0, glow_flow=1.0, concrete="#6f7174",
+        roughness=0.8),
 }
 NAMES = tuple(BIOMES)
 

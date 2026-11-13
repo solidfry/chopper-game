@@ -680,6 +680,45 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
 
+### 7a-1. Server bots that fill empty slots (design agreed 13 Nov — build in progress)
+
+State: design agreed with the owner. Code not written yet when this note was made. Check `Docs/Handoff.md` 4a for progress.
+
+**Decisions (owner, 13 Nov):** target 4 players, max 4 bots; names marked (`[BOT] RAZOR`); ground units: only a hook now.
+
+**Owner without a connection**
+- New `PlayerId { int Value }` on each player entity: a connection (id = its `NetworkId`, added by `GoInGameServerSystem`) or a server bot entity (id = 1001 + slot; `BotIds`).
+- Spawn (`ChopperRespawnSystem`), score (`MatchScoreSystem`), stats (`MatchStatsSystem`) and the match log query `PlayerId`, not `NetworkId`.
+- `ConnectionOwner` on a chopper points at the player entity (connection or bot). RPCs to one player (`ApplyDamageSystem` hit and damage RPCs) are skipped when the owner has no `NetworkId`. `ChopperSpawning` sets `CommandTarget` only for a connection.
+- `PlayerScoreCleanup` tells clients that a bot left (`PlayerLeftRpc`), the same as a player.
+
+**Spawn**
+- A bot entity has `PlayerId`, `ServerBot`, `RespawnTimer`, `RequestedLoadout`, `LinkedEntityGroup`. `ChopperRespawnSystem` treats it like a player. The chopper ghost gets `GhostOwner { NetworkId = bot id }`; clients see a normal interpolated ghost.
+
+**Shared code**
+- The per-bot step (situation, brain, navigator, pilot) moves out of `BotPilotSystem` into one shared struct (component lookups + `Step`). The client `BotPilotSystem` and the new server `ServerBotSystem` call it.
+- Server input: `ServerBotSystem` runs in `PredictedSimulationSystemGroup` after `CopyCommandBufferToInputSystemGroup` and writes `ChopperInput` directly (the copy system zeroes input with no commands). An `InputEvent` with `Set()` counts as pressed for that tick.
+- Each bot has its own `BotHandling` (from its roster row's profile); the `BotHandling` singleton stays for the client bot and the grid cell size.
+
+**Count**
+- Pure `BotFill`: bots wanted = target − humans in game, clamped to 0..max. No humans = no bots (an idle server still stops; `ServerLifecycle` counts connections only).
+- A player joins: remove one bot: a dead one first, else the one with the fewest kills. New bot: the lowest free slot.
+
+**Names and ids**
+- `BotSettings` asset on `GameConfig` (`Data/Bots/BotSettings.asset`): target players, max bots, name tag, roster rows (name, `BotProfile`, loadout). Baked on the spawner (`BotFillRules` + `BotRosterEntry` buffer).
+- Slot n = id 1001 + n = roster row n (wraps). Clients read the name from the same asset by id (`PilotNamesSystem` → `MatchHudModel`), so there is no new network data.
+
+**Other**
+- NavGrid: the server bake starts when `BotFillRules` is baked with max bots > 0 (not only when a `BotPilotState` exists).
+- Match end: in post-game bots hover and do not fire; the brain resets at the next match.
+- Setup: step 1 makes `BotSettings` and links it; step 4 gives it to the spawner; Validate: empty roster, duplicate names, bad loadouts, missing profiles.
+- Tuning: a profile per roster row (easy and hard bots in one match). Guided missiles: some roster rows get a seeker loadout (the brain already uses seekers; not tested in play). Ground units: a `Kind` field on the bot entity only.
+- Tests: `BotFill` (count, which bot goes), `BotIds`, names.
+
+**CPU (estimate, not measured):** a bot costs a player's chopper plus about 0.05–0.15 ms per tick of thinking; a path search can spike to 2–5 ms, so one search per tick for all bots. Read the `[Load]` line before the max goes up.
+
+**Risks:** written without the editor; the `PlayerId` change touches spawn, score, stats and log together; input write order in the prediction group; bot ids 1001+ in `GhostOwner` not tested with netcode; stale Burst cache after the refactor; the spawn code under it was not compiled at the time.
+
 ## 6c. Sky, weather, time of day and terrain (research, 13 Nov — not built)
 
 **Current state (checked in the repo):**
@@ -750,6 +789,18 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
   (Gaea free export 1024 px): use for tests; a commercial release needs Gaea Indie ($99).
 - Terrain shading stays ours (TerrainBiome graph, world-space masks). MicroSplat is only for Unity Terrain, and its URP
   module is paid.
+
+**Terrain progress (13 Nov, Python only, not yet in Unity):**
+- Done: steps 1 to 3. `terrain.shape` alpine and ravine (styles `alpine` = City05, `ravine` = City06), erosion
+  (`cityforge/erosion.py`, droplet + thermal, 6 → 3 → 1.5 m, about 60 s per map), budget mesh detail (`terrain.mesh`),
+  detail masks (`<kit>_TerrainDetail.png`: slope, sediment, snow, flow). City01 and City04 output is unchanged (checked).
+- Cost at the same 380k LOD0 budget: the same mix as today (6 m play area, 12 m outside). A 3 m mesh everywhere in the
+  play area would be about 1.2M LOD0 triangles; the 6 m mesh is within about 0.2 m of the 3 m field, so detail stays in
+  the 1.5 m normal map. Raise `mesh.budget` to buy 3 m chunks where the error is biggest.
+- Open: alpine peaks reach about 860 m in the flight area (40 m under the 900 m ceiling): raise the ceiling or cap the
+  peaks. No buildings or full previews for City05 / City06 yet (layout is only a size). The TerrainBiome shader does not
+  read the detail texture yet (snow uses the `alpine` biome's cover height). Steps 4 (TerrainCollider) and 5 (rock
+  meshes) not started.
 
 ## 7a2. City building generator (owner TODO, 29 Oct — first version built 3 Nov)
 
