@@ -680,6 +680,57 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
 
+## 6c. Sky, weather, time of day and terrain (research, 13 Nov — not built)
+
+**Current state (checked in the repo):**
+- Terrain: CityForge numpy height field, 3072 m square, 6 m grid, 64 chunks of 384 m with 3 LODs (edge chunks half
+  detail), about 378k triangles at LOD0 for the whole map (8.7k max per chunk), plus a 41k far backdrop and an 11k
+  skyline. Mesh collider per chunk from LOD0. Map-wide masks and a 1.5 m/texel normal map carry the small detail.
+  Verdict: cheap. Unity Terrain would not be faster. The limit is realism (6 m grid, no erosion), not performance.
+  Still to measure in a build: GPU frame time on the terrain pass, physics broadphase cost of 64 mesh colliders.
+- Sky: `MapConditions` (TimeOfDay, Weather enums) and `EnvironmentSettings` exist; only Night + Clear, baked into the
+  scenes; server pick + replication not built.
+- UniStorm is imported (UNISTORM_PRESENT). This version already has Render Graph passes for atmospheric fog, clouds,
+  cloud shadows and sun shafts (Unity 6.6 URP is Render Graph only; Compatibility Mode was removed in 6.4).
+  It owns `RenderSettings` (skybox, sun, fog, ambient) and uses a static `UniStormSystem.Instance`.
+  PostProcessing v1 came with it: built-in pipeline only, does nothing in URP; remove it.
+
+**Plan: sky, weather, time of day**
+1. Server picks conditions per match (map entry: allowed times and weathers, weights) into a replicated singleton
+   (`MapConditions` ghost component). Time is fixed per match (fair, and lighting can be pre-baked); optional slow drift
+   later from the server tick, so every client sees the same sky.
+2. Client: one `IEnvironmentDriver` behind `EnvironmentSettings`. First driver: UniStorm, in its own assembly
+   (`Chopper.Presentation.UniStorm`, define constraint UNISTORM_PRESENT) so the asset can be swapped or removed. It calls
+   `SetTime`, `ChangeWeatherInstantly`, `ChangeCameraSource` (the chase camera), and owns sky, sun, moon, clouds,
+   precipitation, lightning and ambient. Our side keeps: height fog pass (tinted from UniStorm's fog colour), city
+   emissives and street lights on by time of day, cockpit and HUD looks, audio (weather loops through our mixer, not
+   UniStorm's own sounds and music: turn those off).
+3. Lighting per time of day: Adaptive Probe Volumes with lighting scenarios (one per TimeOfDay) instead of the current
+   probe folders; reflection probes re-rendered per scenario.
+4. Server build: strip UniStorm (client presentation only). Weather that changes play (fog range, rain on sensors,
+   wind on flight) is simulation data in `MapConditions`, not UniStorm.
+5. Test cost per HUD/quality preset: volumetric clouds and sun shafts off or low on the Performant preset.
+
+**Plan: terrain**
+- Keep the CityForge mesh-chunk path (works with subscenes, Entities Graphics, Unity Physics, LODs). Unity Terrain does
+  not bake into Entities: no rendering from a subscene, and Unity Physics has no TerrainCollider baker (Won't Fix);
+  it would need a custom baker plus a GameObject terrain outside the subscene.
+- Add realism in the generator (free, scripted, same for every map):
+  1. New terrain styles: `alpine` (ridges, peaks, valleys, tree line, snow) and `ravine` (deep cut with side gullies,
+     overhang-free walls, a river floor). Domain-warped ridged noise for ranges.
+  2. Erosion pass on a fine grid (1–2 m) in numpy: hydraulic (droplet or grid flow with sediment) plus thermal
+     (talus angle). Output the eroded height for the meshes (resampled to 3–4 m in the play area, 6–12 m outside),
+     and flow, sediment and slope masks plus the 1 m normal map for the shader (the detail you see up close).
+  3. Finer grid near the play space only (chunk step by distance), so triangle count stays near today's.
+  4. Collider: optional `Unity.Physics.TerrainCollider.Create` from the RAW height map in a small custom baker, in place
+     of 64 mesh colliders (exact, less memory). Measure before switching.
+  5. Rock and cliff meshes (instanced) on steep faces for silhouettes; trees/props as instanced meshes, not Terrain trees.
+- Optional outside tools (heightmap in, our chunker out): Unity Terrain Tools (free package: erosion brushes, RAW
+  import/export) for hand-sculpted maps. Gaea Community and World Machine Basic are free for non-commercial use only
+  (Gaea free export 1024 px): use for tests; a commercial release needs Gaea Indie ($99).
+- Terrain shading stays ours (TerrainBiome graph, world-space masks). MicroSplat is only for Unity Terrain, and its URP
+  module is paid.
+
 ## 7a2. City building generator (owner TODO, 29 Oct — first version built 3 Nov)
 
 **Built (3 Nov, Blender side only, not yet in Unity):** `Tools/CityForge` (see its README). Uses PartForge's builder
