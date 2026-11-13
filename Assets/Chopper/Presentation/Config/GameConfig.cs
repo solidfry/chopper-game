@@ -59,6 +59,8 @@ namespace Chopper.Presentation.Config
         private GameModeCatalog modes;
         [SerializeField, Tooltip("How the server picks a spawn point. Setup step 1 links it; step 4 gives it to each map's spawner.")]
         private SpawnSettings spawn;
+        [SerializeField, Tooltip("Server bots that fill empty slots: count and roster (names, skill, loadouts). Setup step 1 links it; step 4 gives it to each map's spawner.")]
+        private Chopper.Simulation.Bots.BotSettings bots;
 
         public LoadoutCatalog LoadoutCatalog => loadoutCatalog;
         public SkinLibrary Skins => skins;
@@ -80,6 +82,7 @@ namespace Chopper.Presentation.Config
         public MapCatalog Maps => maps;
         public GameModeCatalog Modes => modes;
         public SpawnSettings Spawn => spawn;
+        public Chopper.Simulation.Bots.BotSettings Bots => bots;
 
         public void CollectProblems(List<string> problems)
         {
@@ -101,6 +104,7 @@ namespace Chopper.Presentation.Config
             Require(homeLayout, "home layout (press '11. Build home screen')", problems);
             Require(modes, "game mode catalog (press '11. Build home screen')", problems);
             Require(spawn, "spawn settings (press '1. Create / repair config')", problems);
+            Require(bots, "bot settings (press '1. Create / repair config')", problems);
 
             if (loadoutCatalog != null) loadoutCatalog.CollectProblems(problems);
             if (audio != null) audio.CollectProblems(problems);
@@ -114,6 +118,7 @@ namespace Chopper.Presentation.Config
             if (maps != null) maps.CollectProblems(problems);
             if (modes != null) modes.CollectProblems(problems);
             if (spawn != null) spawn.CollectProblems(problems);
+            if (bots != null) bots.CollectProblems(problems);
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -165,6 +170,9 @@ namespace Chopper.Presentation.Config
 
         /// <summary>Editor only: used by the config step.</summary>
         public void SetSpawn(SpawnSettings settings) => spawn = settings;
+
+        /// <summary>Editor only: used by the config step.</summary>
+        public void SetBots(Chopper.Simulation.Bots.BotSettings settings) => bots = settings;
 
         private void Require(Object value, string label, List<string> problems)
         {

@@ -4,13 +4,14 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.NetCode;
 using Unity.Physics;
 
 namespace Chopper.Simulation.Bots
 {
     /// <summary>
     /// Bakes the <see cref="NavGrid"/> from the level's static colliders once the map is loaded and a bot exists in this
-    /// world (no bots, no cost). The work runs in jobs over a copy of the collision world, so the game does not stall:
+    /// world, or the world is a server whose map allows bots (<see cref="BotFillRules"/>). No bots, no cost. The work runs in jobs over a copy of the collision world, so the game does not stall:
     /// <list type="number">
     /// <item>Column tops: a sphere cast down each column finds the highest static surface (cells above it are free);
     /// street level = the lowest top within two columns.</item>
@@ -91,7 +92,9 @@ namespace Chopper.Simulation.Bots
             }
 
             if (!hasBounds || !SystemAPI.HasSingleton<PhysicsWorldSingleton>()) return;
-            if (SystemAPI.QueryBuilder().WithAll<BotPilotState>().Build().IsEmpty) return;
+            // A bot exists, or this is a server that may add bots (the grid is then ready before the first one).
+            var mayFill = state.WorldUnmanaged.IsServer() && SystemAPI.TryGetSingleton<BotFillRules>(out var fill) && fill.MaxBots > 0;
+            if (!mayFill && SystemAPI.QueryBuilder().WithAll<BotPilotState>().Build().IsEmpty) return;
 
             var physics = SystemAPI.GetSingleton<PhysicsWorldSingleton>();
             var staticBodies = physics.CollisionWorld.NumStaticBodies;

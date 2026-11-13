@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
+using Chopper.Simulation.Bots;
 using Chopper.Simulation.Loadout;
 using Chopper.Simulation.Session;
 using Unity.Entities;
@@ -9,6 +10,7 @@ namespace Chopper.Presentation.Hud
 {
     /// <summary>
     /// Client only. Each player's pilot call sign and chassis name (from their chopper's ghost loadout and the catalog)
+    /// (a server bot: its roster name, <see cref="BotSettings.NameOf"/>)
     /// for the kill feed, the leader line, the scoreboard and the local player's own call sign
     /// (<see cref="MatchHudModel.SetCallSign"/>, <see cref="MatchHudModel.SetChassis"/>). Only changes are passed on.
     /// </summary>
@@ -44,6 +46,9 @@ namespace Chopper.Presentation.Hud
                 var now = (loadout.ValueRO.PilotId, loadout.ValueRO.ChassisId);
                 if (_shown.TryGetValue(networkId, out var shown) && shown == now) continue;
                 _shown[networkId] = now;
+                // A server bot: its name comes from the bot settings (the same asset the server baked), by id.
+                var bots = context.Config != null ? context.Config.Bots : null;
+                if (BotIds.IsBot(networkId) && bots != null) _model.SetPlayerName(networkId, bots.NameOf(networkId));
                 var pilot = catalog.FindPilot(now.PilotId);
                 _model.SetCallSign(networkId, pilot != null ? pilot.CallSign : "");
                 var chassis = catalog.TryGetChassis(now.ChassisId, out var spec) ? spec.Name ?? "" : "";

@@ -78,7 +78,7 @@ namespace Chopper.Simulation.Session
 
                 var id = playerId.ValueRO.Value;
                 // Bot ids start at 1001: fold them next to the players for the fallback row.
-                var position = ChopperSpawning.FallbackPosition(spawner, id > Bots.BotIds.First ? 9 + id - Bots.BotIds.First : id);
+                var position = ChopperSpawning.FallbackPosition(spawner, Bots.BotIds.IsBot(id) ? 9 + Bots.BotIds.Slot(id) : id);
                 var rotation = spawner.Rotation;
                 var pick = placement.Choose(ref position, ref rotation);
                 if (pick == SpawnPick.None && placement.Points.Length > 0)

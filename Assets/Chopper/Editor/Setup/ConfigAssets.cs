@@ -72,6 +72,7 @@ namespace Chopper.Editor.Setup
                     config.CockpitScreensPanel != null ? config.CockpitScreensPanel : CockpitScreenAssets.EnsurePanel(config.PanelSettings));
 
             if (config.Spawn == null) config.SetSpawn(SpawnAssets.EnsureSettings());
+            if (config.Bots == null) config.SetBots(BotAssets.EnsureSettings(config.LoadoutCatalog));
 
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();

@@ -680,9 +680,9 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
 
-### 7a-1. Server bots that fill empty slots (design agreed 13 Nov — build in progress)
+### 7a-1. Server bots that fill empty slots (design agreed 13 Nov — built 13 Nov, written without the editor)
 
-State: design agreed with the owner. Code not written yet when this note was made. Check `Docs/Handoff.md` 4a for progress.
+State: built as designed below; not compiled or played. Editor steps: `Docs/Handoff.md` 4a.
 
 **Decisions (owner, 13 Nov):** target 4 players, max 4 bots; names marked (`[BOT] RAZOR`); ground units: only a hook now.
 
