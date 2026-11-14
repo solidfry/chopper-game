@@ -143,11 +143,11 @@
 
 .hangar-chassis {
   width: 49%;
-  height: 54px;
+  height: 62px;
   margin: 0 0 6px 0;
-  padding: 6px 10px;
-  align-items: flex-start;
-  justify-content: center;
+  padding: 7px 10px;
+  align-items: stretch;
+  justify-content: space-between;
   background-color: rgba(0, 0, 0, 0.4);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-faint);
@@ -166,11 +166,48 @@
   padding: 0;
 }
 
-.hangar-chassis__detail {
-  font-size: 10px;
+/* Top row: name left, mastery badge right. */
+.hangar-chassis__head {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hangar-chassis__badge {
+  font-size: 9px;
   color: var(--chopper-green);
-  opacity: 0.8;
+  padding: 1px 5px;
+  margin: 0;
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Bottom row: stat cells, value large and caption small and dim. */
+.hangar-chassis__stats {
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+.hangar-chassis__stat {
+  flex-direction: row;
+  align-items: flex-end;
+  margin-right: 14px;
+}
+
+.hangar-chassis__stat-value {
+  font-size: 13px;
+  color: var(--chopper-text);
   padding: 0;
+  margin: 0 4px 0 0;
+}
+
+.hangar-chassis__stat-caption {
+  font-size: 9px;
+  color: var(--chopper-green);
+  opacity: 0.65;
+  padding: 0 0 1px 0;
+  margin: 0;
 }
 
 /* The chassis shown now: Cruise Pink (highlight in the style guide). */
@@ -181,6 +218,11 @@
 
 .hangar-chassis--active .hangar-chassis__name {
   color: var(--chopper-pink);
+}
+
+.hangar-chassis--active .hangar-chassis__badge {
+  color: var(--chopper-pink);
+  border-color: var(--chopper-pink);
 }
 
 /* ---- Saved builds ---- */

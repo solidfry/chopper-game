@@ -94,16 +94,23 @@ namespace Chopper.Presentation.Hangar
         }
     }
 
-    /// <summary>A chassis card: name and a short line (slots, weight budget).</summary>
+    /// <summary>A chassis card: name, slot count, weight budget and the class mastery level.</summary>
     public readonly struct HangarChassisCard
     {
         public readonly string Name;
-        public readonly string Detail;
+        /// <summary>"6"; "" when not known.</summary>
+        public readonly string Slots;
+        /// <summary>"60"; "" when not known.</summary>
+        public readonly string Weight;
+        /// <summary>Class mastery level; 0 = not shown (no profile or no class).</summary>
+        public readonly int Mastery;
 
-        public HangarChassisCard(string name, string detail)
+        public HangarChassisCard(string name, string slots, string weight, int mastery)
         {
             Name = name;
-            Detail = detail;
+            Slots = slots;
+            Weight = weight;
+            Mastery = mastery;
         }
     }
 
@@ -480,11 +487,10 @@ namespace Chopper.Presentation.Hangar
 
         private HangarChassisCard Card(ChassisDefinition chassis)
         {
-            if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec)) return new HangarChassisCard("?", "");
-            var detail = $"{chassis.Slots.Count} SLOTS / {spec.WeightBudget:0} KG";
-            if (_profile != null && chassis.Class != ChassisClass.None)
-                detail += $" / MASTERY {_profile.ChassisLevel(chassis.Class)}";
-            return new HangarChassisCard(chassis.DisplayName.ToUpperInvariant(), detail);
+            if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec)) return new HangarChassisCard("?", "", "", 0);
+            var mastery = _profile != null && chassis.Class != ChassisClass.None ? _profile.ChassisLevel(chassis.Class) : 0;
+            return new HangarChassisCard(chassis.DisplayName.ToUpperInvariant(),
+                chassis.Slots.Count.ToString(), spec.WeightBudget.ToString("0"), mastery);
         }
 
         private void Refresh()

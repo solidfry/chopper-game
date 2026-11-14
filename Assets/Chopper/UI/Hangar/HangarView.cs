@@ -363,8 +363,19 @@ namespace Chopper.UI.Hangar
                 var card = new Button(() => _model.SelectChassis(index));
                 card.AddToClassList("hangar-chassis");
                 card.EnableInClassList(ActiveCardClass, i == _model.ChassisIndex);
-                card.Add(Text(data.Name, "hangar-chassis__name", title: true));
-                card.Add(Text(data.Detail, "hangar-chassis__detail"));
+                // Top: name, and the class mastery as a small badge on the right.
+                var head = new VisualElement { pickingMode = PickingMode.Ignore };
+                head.AddToClassList("hangar-chassis__head");
+                head.Add(Text(data.Name, "hangar-chassis__name", title: true));
+                if (data.Mastery > 0) head.Add(Text($"MST {data.Mastery}", "hangar-chassis__badge"));
+                card.Add(head);
+
+                // Below: the stats as number + caption cells.
+                var stats = new VisualElement { pickingMode = PickingMode.Ignore };
+                stats.AddToClassList("hangar-chassis__stats");
+                stats.Add(Stat(data.Slots, "SLOTS"));
+                stats.Add(Stat(data.Weight, "KG MAX"));
+                card.Add(stats);
                 _chassisGrid.Add(card);
             }
         }
@@ -721,6 +732,16 @@ namespace Chopper.UI.Hangar
             delta.style.width = Length.Percent((high - low) * 100f);
             var better = (preview >= now) == higherIsBetter;
             delta.EnableInClassList(WorseClass, !better);
+        }
+
+        /// <summary>A chassis card stat: the value large, its caption small after it.</summary>
+        private static VisualElement Stat(string value, string caption)
+        {
+            var cell = new VisualElement { pickingMode = PickingMode.Ignore };
+            cell.AddToClassList("hangar-chassis__stat");
+            cell.Add(Text(value, "hangar-chassis__stat-value"));
+            cell.Add(Text(caption, "hangar-chassis__stat-caption"));
+            return cell;
         }
 
         private static Label Text(string text, string className, bool title = false)
