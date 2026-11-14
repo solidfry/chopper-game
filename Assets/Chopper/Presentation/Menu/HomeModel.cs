@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace Chopper.Presentation.Menu
 {
-    /// <summary>The home screen's pages: the main menu, the pilot codex, the player's profile, and mode select (PLAY).</summary>
-    public enum HomePage { Main, Pilots, Profile, Modes }
+    /// <summary>The home screen's pages: the main menu, the pilot codex, the player's profile, mode select (PLAY), unlocks.</summary>
+    public enum HomePage { Main, Pilots, Profile, Modes, Unlocks }
 
     /// <summary>
     /// View model of the home screen (the main menu, scene <see cref="SceneName"/>): which page shows, the profile card
@@ -37,6 +37,7 @@ namespace Chopper.Presentation.Menu
                     if (mode != null) _modes.Add(mode);
             _store = store;
             _profile = profile;
+            Unlocks = new UnlocksModel(catalog, profile != null ? new ProfileUnlocks(profile) : null, profile);
             _identity = identity;
             if (catalog != null)
                 foreach (var pilot in catalog.Pilots)
@@ -102,6 +103,9 @@ namespace Chopper.Presentation.Menu
         public string OperatorName => _identity != null ? _identity.DisplayName : "OPERATOR";
         /// <summary>The player's lifetime record (null in tests without one).</summary>
         public ProfileService Profile => _profile;
+
+        /// <summary>What progression unlocks (the UNLOCKS page).</summary>
+        public UnlocksModel Unlocks { get; }
 
         /// <summary>Mastery for the profile page: every chassis class, then every pilot. Empty without a profile.</summary>
         public List<TrackProgress> MasteryTracks()

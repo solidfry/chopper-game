@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05155de7d08a7b141acf40d27c994566, type: 3}
+  m_Name: Rotor_AgileRotorMkII
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Loadout.ModuleDefinition
+  id: 156
+  displayName: Agile Rotor Mk II
+  description: Scout only. Sharper turns, less health.
+  slot: 5
+  stats:
+    Weight: 10
+    HealthBonus: -5
+    LiftMultiplier: 0.95
+    TurnRateMultiplier: 1.2189999
+    BoostRechargeMultiplier: 1
+    SpeedMultiplier: 0.95
+    BoostPowerMultiplier: 1
+  unlockLevel: 4
+  masteryLevel: 5
+  parent: {fileID: 11400000, guid: 7c655f22dc20f6944941992e1c0b4591, type: 2}
+  allowedChassis:
+  - {fileID: 11400000, guid: 69a10cd30f70335409984c0ec36221bb, type: 2}
+  visual: {fileID: 919132149155446097, guid: 21d6a9321e9abbe479dfcbaa6c41ce3f, type: 3}
+  visualSpin: {x: 0, y: 1500, z: 0}
+  muzzle: {x: 0, y: 0, z: 0}
+  weapon: {fileID: 0}
+  ability: {fileID: 0}

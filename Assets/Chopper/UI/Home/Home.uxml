@@ -2,6 +2,7 @@
   <Style src="Home.uss" />
   <Style src="Profile.uss" />
   <Style src="Modes.uss" />
+  <Style src="Unlocks.uss" />
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
        Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
@@ -52,12 +53,16 @@
             <ui:Label text="04" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="PILOTS" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
-          <ui:Button name="nav-options" class="home-nav__item">
+          <ui:Button name="nav-unlocks" class="home-nav__item">
             <ui:Label text="05" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="UNLOCKS" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-options" class="home-nav__item">
+            <ui:Label text="06" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="OPTIONS" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
           <ui:Button name="nav-quit" class="home-nav__item home-nav__item--quit">
-            <ui:Label text="06" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="07" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="QUIT" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
         </ui:VisualElement>
@@ -149,6 +154,23 @@
         <!-- Roster grid (as the hangar's pilot select): tiles made by HomeView.BuildCodex -->
         <ui:ScrollView name="codex-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="codex__grid" />
       </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Unlocks (UnlocksPage): what progression unlocks. Tabs: account levels, chassis mastery chains, pilot mastery.
+         Lists are filled from code. -->
+    <ui:VisualElement name="page-unlocks" class="home__page home__page--unlocks home--hidden">
+      <ui:VisualElement class="codex__head" picking-mode="Ignore">
+        <ui:Button name="unlocks-back" text="&lt; BACK" class="home__button home__button--small chopper-title" />
+        <ui:Label text="UNLOCKS" class="codex__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="ul-level" class="codex__count chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:VisualElement class="ul-tabs" picking-mode="Ignore">
+        <ui:Button name="ul-tab-account" text="ACCOUNT" class="ul-tab chopper-title" />
+        <ui:Button name="ul-tab-chassis" text="CHASSIS MASTERY" class="ul-tab chopper-title" />
+        <ui:Button name="ul-tab-pilots" text="PILOTS" class="ul-tab chopper-title" />
+      </ui:VisualElement>
+      <ui:VisualElement name="ul-classes" class="ul-classes" picking-mode="Ignore" />
+      <ui:ScrollView name="ul-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="ul-list" />
     </ui:VisualElement>
 
     <!-- Player profile (ProfilePage): who you are, lifetime stats, the award case, achievements, recent matches.

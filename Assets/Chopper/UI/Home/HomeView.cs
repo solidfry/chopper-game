@@ -81,6 +81,8 @@ namespace Chopper.UI.Home
         private Button _profile;
         private VisualElement _pageProfile;
         private ProfilePage _profilePage;
+        private VisualElement _pageUnlocks;
+        private UnlocksPage _unlocksPage;
         private VisualElement _profilePortrait;
         private PilotPortrait _profileDrawn;
         private CodecScan _profileScan;
@@ -172,6 +174,9 @@ namespace Chopper.UI.Home
             _pagePilots = _root.Q("page-pilots");
             _pageProfile = _root.Q("page-profile");
             _pageModes = _root.Q("page-modes");
+            _pageUnlocks = _root.Q("page-unlocks");
+            _unlocksPage = _pageUnlocks != null ? new UnlocksPage(_pageUnlocks) : null;
+            if (_unlocksPage?.Back != null) _unlocksPage.Back.clicked += Back;
             _modesPage = _pageModes != null ? new ModesPage(_pageModes, _model) : null;
             if (_modesPage != null)
             {
@@ -196,6 +201,11 @@ namespace Chopper.UI.Home
                 _model.HasTrainingMap ? $"FLY SOLO // {_model.TrainingMapName}" : "NO TRAINING MAP SET UP");
             AddNav("nav-hangar", OpenHangar, () => "CHASSIS, MODULES, SKINS AND PILOT");
             AddNav("nav-pilots", () => _model.ShowPage(HomePage.Pilots), () => "PILOT CODEX: ROLES, PASSIVES, ABILITIES");
+            AddNav("nav-unlocks", () => _model.ShowPage(HomePage.Unlocks), () =>
+            {
+                var next = _model.Unlocks.NextUnlockText();
+                return next.Length > 0 ? $"WHAT YOUR LEVELS UNLOCK // {next}" : "WHAT YOUR LEVELS UNLOCK";
+            });
             AddNav("nav-options", OpenOptions, () => "CONTROLS, AUDIO, HUD LOOK");
             AddNav("nav-quit", Quit, () => "CLOSE THE TERMINAL");
 
@@ -432,6 +442,13 @@ namespace Chopper.UI.Home
             _pageMain?.EnableInClassList(HiddenClass, _model.Page != HomePage.Main);
             _pagePilots?.EnableInClassList(HiddenClass, !codex);
             _pageProfile?.EnableInClassList(HiddenClass, !profile);
+            var unlocks = _model.Page == HomePage.Unlocks;
+            _pageUnlocks?.EnableInClassList(HiddenClass, !unlocks);
+            if (unlocks && _refreshedPage != HomePage.Unlocks && _unlocksPage != null)
+            {
+                _unlocksPage.Show(_model.Unlocks);
+                _unlocksPage.Back?.Focus();
+            }
             var modes = _model.Page == HomePage.Modes;
             _pageModes?.EnableInClassList(HiddenClass, !modes);
             if (modes && _refreshedPage != HomePage.Modes && _modesPage != null)
@@ -717,7 +734,7 @@ namespace Chopper.UI.Home
             var from = _model.Page;
             if (!_model.Back()) return;
             if (from == HomePage.Profile) _profile?.Focus();
-            else FocusNav(from == HomePage.Modes ? "nav-play" : "nav-pilots");
+            else FocusNav(from == HomePage.Modes ? "nav-play" : from == HomePage.Unlocks ? "nav-unlocks" : "nav-pilots");
         }
 
         private void PreviousPilot()

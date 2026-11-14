@@ -167,7 +167,7 @@ namespace Chopper.Editor.Setup
                     r.SetFuse(radius: 10f, TargetClass.Air);
                 });
             // Part chain tier: the rocket pod with more rockets and a faster rate.
-            var podMk2 = RocketDef("Weapon_RocketPodMk2", interval: 0.5f, speed: 140f, life: 4f, direct: 30f, splash: 25f, radius: 8f,
+            var podMk2 = RocketDef("Weapon_RocketPodMk2", interval: 0.5f, speed: 210f, life: 2.7f, direct: 30f, splash: 25f, radius: 8f,
                 magazine: 19, reload: 6f);
 
             Pylon(catalog, LightRocketsId, "Light Rockets", "Fast, flat and weak. Many rounds.", "Pylon_LightRockets", 8f, 2, light);

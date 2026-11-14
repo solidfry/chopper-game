@@ -1,0 +1,253 @@
+/* UNLOCKS page (UnlocksPage.cs). Open = green, next = Cruise Pink (highlight), locked = dim. */
+
+.home__page--unlocks {
+  flex-direction: column;
+}
+
+/* ---- Tabs and the chassis class picker ---- */
+.ul-tabs,
+.ul-classes {
+  flex-direction: row;
+  margin-bottom: 12px;
+}
+
+.ul-tab,
+.ul-class {
+  margin: 0 8px 0 0;
+  padding: 6px 18px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--chopper-green);
+  background-color: rgba(0, 0, 0, 0.45);
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+  border-radius: 0;
+}
+
+.ul-class {
+  font-size: 12px;
+  padding: 4px 14px;
+}
+
+.ul-tab:hover,
+.ul-tab:focus,
+.ul-class:hover,
+.ul-class:focus {
+  border-color: var(--chopper-green);
+  background-color: var(--chopper-green-faint);
+}
+
+.ul-tab--active,
+.ul-class--active {
+  color: var(--chopper-pink);
+  border-color: var(--chopper-pink);
+  background-color: var(--chopper-pink-dark);
+}
+
+.ul-list {
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.ul-empty,
+.ul-note {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  margin: 4px 0 10px 0;
+  white-space: normal;
+}
+
+/* ---- Track bar (account level, mastery) ---- */
+.ul-track {
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: rgba(0, 0, 0, 0.45);
+  max-width: 900px;
+}
+
+.ul-track__head {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 6px;
+}
+
+.ul-track__title {
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.ul-track__level {
+  font-size: 18px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.ul-track__bar {
+  height: 10px;
+  --bar-fill: var(--chopper-green);
+  --bar-track: var(--chopper-green-faint);
+}
+
+.ul-track__need {
+  font-size: 11px;
+  color: var(--chopper-green-dim);
+  -unity-text-align: middle-right;
+  padding: 3px 0 0 0;
+}
+
+/* ---- Account ladder: a level badge, then the items it unlocks ---- */
+.ul-level {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-width: 1px;
+  border-left-width: 4px;
+  border-color: var(--chopper-green-faint);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.ul-level--open {
+  border-left-color: var(--chopper-green);
+}
+
+.ul-level--next {
+  border-color: var(--chopper-pink);
+  background-color: var(--chopper-pink-dark);
+}
+
+.ul-level--locked {
+  opacity: 0.6;
+}
+
+.ul-level__badge {
+  width: 64px;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.ul-level__caption {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.ul-level__number {
+  font-size: 26px;
+  color: var(--chopper-text);
+  padding: 0;
+}
+
+.ul-level--next .ul-level__number {
+  color: var(--chopper-pink);
+}
+
+.ul-level__items {
+  flex-direction: row;
+  flex-wrap: wrap;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.ul-level__next {
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--chopper-pink);
+  margin-left: 12px;
+}
+
+/* ---- Item chip: kind (small), name, lock reason ---- */
+/* One fixed width for every chip (account and chassis tabs); long names wrap. */
+.ul-chip {
+  width: 190px;
+  height: 84px;
+  flex-shrink: 0;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding: 4px 10px;
+  margin: 3px 6px 3px 0;
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.ul-chip__kind {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.ul-chip__name {
+  font-size: 12px;
+  color: var(--chopper-text);
+  padding: 0;
+  white-space: normal;
+}
+
+.ul-chip__reason {
+  font-size: 10px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+}
+
+.ul-chip--open {
+  border-color: var(--chopper-green-dim);
+}
+
+.ul-chip--open .ul-chip__name {
+  color: var(--chopper-green);
+}
+
+.ul-chip--next {
+  border-color: var(--chopper-pink);
+}
+
+.ul-chip--next .ul-chip__name,
+.ul-chip--next .ul-chip__reason {
+  color: var(--chopper-pink);
+}
+
+.ul-chip--locked .ul-chip__name {
+  color: var(--chopper-green-dim);
+}
+
+/* ---- Chassis part chains: slot name, then the tiers left to right ---- */
+.ul-chain {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-width: 1px;
+  border-color: var(--chopper-green-faint);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.ul-chain__kind {
+  width: 110px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--chopper-yellow);
+  padding: 0;
+}
+
+.ul-chain__tiers {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.ul-chain__arrow {
+  font-size: 14px;
+  color: var(--chopper-green-dim);
+  margin: 0 6px 0 0;
+  padding: 0;
+}
