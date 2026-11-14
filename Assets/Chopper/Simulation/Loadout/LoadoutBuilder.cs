@@ -216,7 +216,13 @@ namespace Chopper.Simulation.Loadout
             }
 
             // After the loop: the gun limits the zoom, whatever the slot order.
-            if (optics != null) built.Optics = new OpticsConfig { Steps = ZoomMath.Steps(optics.Levels(), gunMaxZoom) };
+            if (optics != null)
+                built.Optics = new OpticsConfig
+                {
+                    Steps = ZoomMath.Steps(optics.Levels(), gunMaxZoom),
+                    Vision = optics.Vision,
+                    VisionRange = optics.VisionRange,
+                };
         }
 
         /// <summary>Launch point: the module's barrel tip on the matching socket if the chassis has one, else the

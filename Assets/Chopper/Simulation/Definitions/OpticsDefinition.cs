@@ -5,8 +5,9 @@ using UnityEngine;
 namespace Chopper.Simulation.Definitions
 {
     /// <summary>
-    /// A zoom sight (utility module). The Zoom key steps through <see cref="ZoomLevels"/>; the nose gun limits how far
-    /// (<see cref="HitscanWeaponDefinition.MaxZoom"/>), so a strong scope pays off only on a long-range gun. Baked to
+    /// An optics module (utility slot): a zoom sight, a special view, or both. The Zoom key steps through
+    /// <see cref="ZoomLevels"/>; the nose gun limits how far (<see cref="HitscanWeaponDefinition.MaxZoom"/>), so a strong
+    /// scope pays off only on a long-range gun. The Vision key switches <see cref="Vision"/> on and off. Baked to
     /// <see cref="Combat.OpticsConfig"/>.
     /// </summary>
     [CreateAssetMenu(menuName = "Chopper/Modules/Optics", fileName = "Optics")]
@@ -14,6 +15,13 @@ namespace Chopper.Simulation.Definitions
     {
         [SerializeField, Tooltip("Magnifications the Zoom key steps through, low to high (2 = 2x). At most 4.")]
         private float[] zoomLevels = { 2f, 4f };
+        [SerializeField, Tooltip("Special view on the Vision key. None = a plain zoom sight.")]
+        private Combat.VisionMode vision = Combat.VisionMode.None;
+        [SerializeField, Min(0f), Tooltip("Thermal, Motion, Deep Scan: targets are marked to this distance, metres. 0 = no limit.")]
+        private float visionRange;
+
+        public Combat.VisionMode Vision => vision;
+        public float VisionRange => Mathf.Max(0f, visionRange);
 
         public IReadOnlyList<float> ZoomLevels => zoomLevels;
 
@@ -28,9 +36,11 @@ namespace Chopper.Simulation.Definitions
 
         public override void CollectProblems(List<string> problems)
         {
+            if (vision == Combat.VisionMode.DeepScan && visionRange <= 0f)
+                problems.Add($"{name}: Deep Scan needs a range (it shows targets through walls).");
             if (zoomLevels == null || zoomLevels.Length == 0)
             {
-                problems.Add($"{name}: no zoom levels.");
+                if (vision == Combat.VisionMode.None) problems.Add($"{name}: no zoom levels and no special view.");
                 return;
             }
             if (zoomLevels.Length > Combat.ZoomMath.MaxSteps)
@@ -46,5 +56,12 @@ namespace Chopper.Simulation.Definitions
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void Initialise(params float[] levels) => zoomLevels = levels;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetVision(Combat.VisionMode mode, float range)
+        {
+            vision = mode;
+            visionRange = range;
+        }
     }
 }

@@ -19,6 +19,7 @@ namespace Chopper.Editor.Setup
         private const string ResultsLayoutPath = "Assets/Chopper/UI/Results/MatchResults.uxml";
         private const string CameraSettingsPath = "Assets/Chopper/Data/Camera/CameraSettings.asset";
         private const string SpeedLineShaderPath = "Assets/Chopper/Presentation/Camera/SpeedLine.shader";
+        private const string VisionGlowShaderPath = "Assets/Chopper/Presentation/Camera/VisionGlow.shader";
 
         public static GameConfig Load() => AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigPath);
 
@@ -97,6 +98,13 @@ namespace Chopper.Editor.Setup
                 settings.SetSpeedLineShader(AssetDatabase.LoadAssetAtPath<Shader>(SpeedLineShaderPath));
                 EditorUtility.SetDirty(settings);
             }
+            if (settings.VisionGlowShader == null)
+            {
+                settings.SetVisionGlowShader(AssetDatabase.LoadAssetAtPath<Shader>(VisionGlowShaderPath));
+                EditorUtility.SetDirty(settings);
+            }
+            // The looks of the special views go into the asset once, so they can be tuned in the inspector.
+            if (settings.EnsureVisionLooks()) EditorUtility.SetDirty(settings);
             return settings;
         }
 

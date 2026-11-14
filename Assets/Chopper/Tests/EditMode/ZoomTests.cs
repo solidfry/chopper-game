@@ -90,6 +90,118 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Signal_Thermal_FollowsHeat()
+        {
+            // A chopper at rest (heat 1) is half bright; a hot one (boosting, a missile) is full.
+            Assert.That(VisionMath.Signal(VisionMode.Thermal, heat: 1f, speed: 0f, distance: 100f, range: 0f), Is.EqualTo(0.5f));
+            Assert.That(VisionMath.Signal(VisionMode.Thermal, VisionMath.MissileHeat, 0f, 100f, 0f), Is.EqualTo(1f));
+            // A cool engine (pilot trait) is dimmer.
+            Assert.That(VisionMath.Signal(VisionMode.Thermal, 0.4f, 0f, 100f, 0f), Is.EqualTo(0.2f).Within(1e-4f));
+        }
+
+        [Test]
+        public void Signal_Motion_DoesNotSeeAHover()
+        {
+            Assert.That(VisionMath.Signal(VisionMode.Motion, heat: 3f, speed: 0f, distance: 100f, range: 0f), Is.EqualTo(0f));
+            Assert.That(VisionMath.Signal(VisionMode.Motion, 3f, VisionMath.MotionMinSpeed, 100f, 0f), Is.EqualTo(0f));
+            Assert.That(VisionMath.Signal(VisionMode.Motion, 0f, 23f, 100f, 0f), Is.EqualTo(0.5f));
+            Assert.That(VisionMath.Signal(VisionMode.Motion, 0f, 80f, 100f, 0f), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void Signal_Range_CutsAndFadesAtTheEdge()
+        {
+            Assert.That(VisionMath.Signal(VisionMode.DeepScan, 0f, 0f, distance: 100f, range: 250f), Is.EqualTo(1f));
+            Assert.That(VisionMath.Signal(VisionMode.DeepScan, 0f, 0f, 250f, 250f), Is.EqualTo(0f));
+            Assert.That(VisionMath.Signal(VisionMode.DeepScan, 0f, 0f, 400f, 250f), Is.EqualTo(0f));
+            // In the last 15% of the range it fades.
+            var edge = VisionMath.Signal(VisionMode.DeepScan, 0f, 0f, 240f, 250f);
+            Assert.That(edge, Is.GreaterThan(0f).And.LessThan(1f));
+        }
+
+        [Test]
+        public void Signal_NightAndNone_MarkNothing()
+        {
+            Assert.That(VisionMath.Signal(VisionMode.Night, 3f, 80f, 10f, 0f), Is.EqualTo(0f));
+            Assert.That(VisionMath.Signal(VisionMode.None, 3f, 80f, 10f, 0f), Is.EqualTo(0f));
+            Assert.That(VisionMath.MarksTargets(VisionMode.Night), Is.False);
+            Assert.That(VisionMath.MarksTargets(VisionMode.Thermal), Is.True);
+        }
+
+        [Test]
+        public void ZoomState_TheVisionKeyTogglesTheViewAndTheTextShowsBoth()
+        {
+            var zoom = new ZoomState();
+            zoom.ToggleVision();
+            Assert.That(zoom.VisionOn, Is.False, "no special view: the key does nothing");
+
+            zoom.SetOptics(new OpticsConfig { Steps = Levels(2f, 4f), Vision = VisionMode.Thermal, VisionRange = 1200f });
+            Assert.That(zoom.VisionOn, Is.False);
+            zoom.ToggleVision();
+            Assert.That(zoom.VisionOn, Is.True);
+            Assert.That(zoom.Text, Is.EqualTo("THERMAL"));
+            Assert.That(zoom.VisionRange, Is.EqualTo(1200f));
+            zoom.Cycle();
+            Assert.That(zoom.Text, Is.EqualTo("THERMAL  ZOOM 2x"));
+
+            zoom.ToggleVision();
+            Assert.That(zoom.Text, Is.EqualTo("ZOOM 2x"));
+        }
+
+        [Test]
+        public void ZoomState_TheViewFadesInAndOut()
+        {
+            var zoom = new ZoomState();
+            zoom.SetOptics(new OpticsConfig { Vision = VisionMode.Night });
+            Assert.That(zoom.ShownVision, Is.EqualTo(VisionMode.None));
+
+            zoom.ToggleVision();
+            zoom.Tick(0.1f);
+            Assert.That(zoom.ShownVision, Is.EqualTo(VisionMode.Night));
+            Assert.That(zoom.VisionBlend, Is.GreaterThan(0f).And.LessThan(1f));
+            zoom.Tick(1f);
+            Assert.That(zoom.VisionBlend, Is.EqualTo(1f));
+
+            // Off: the mode stays on screen until the fade ends.
+            zoom.ToggleVision();
+            zoom.Tick(0.1f);
+            Assert.That(zoom.ShownVision, Is.EqualTo(VisionMode.Night));
+            zoom.Tick(1f);
+            Assert.That(zoom.ShownVision, Is.EqualTo(VisionMode.None));
+        }
+
+        [Test]
+        public void ZoomState_OtherOptics_SwitchTheViewOff()
+        {
+            var zoom = new ZoomState();
+            zoom.SetOptics(new OpticsConfig { Vision = VisionMode.Thermal });
+            zoom.ToggleVision();
+            // The same optics again (every frame): the view stays.
+            zoom.SetOptics(new OpticsConfig { Vision = VisionMode.Thermal });
+            Assert.That(zoom.VisionOn, Is.True);
+
+            zoom.SetOptics(new OpticsConfig { Vision = VisionMode.DeepScan, VisionRange = 250f });
+            Assert.That(zoom.VisionOn, Is.False);
+            Assert.That(zoom.Text, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void VisionLook_EveryModeHasABuiltInLook_AndOnlyMarkingModesGlow()
+        {
+            foreach (VisionMode mode in System.Enum.GetValues(typeof(VisionMode)))
+            {
+                if (mode == VisionMode.None) continue;
+                var look = VisionLook.Default(mode);
+                Assert.That(look.Mode, Is.EqualTo(mode));
+                Assert.That(look.GlowColor.maxColorComponent > 0f, Is.EqualTo(VisionMath.MarksTargets(mode)), mode.ToString());
+            }
+            Assert.That(VisionLook.Default(VisionMode.DeepScan).ThroughWalls, Is.True);
+            Assert.That(VisionLook.Default(VisionMode.Thermal).ThroughWalls, Is.False);
+            // A far target stays a visible dot.
+            Assert.That(VisionLook.Default(VisionMode.Thermal).GlowSizeAt(1000f), Is.EqualTo(12f).Within(1e-3f));
+        }
+
+        [Test]
         public void ZoomState_GlidesToTheStep()
         {
             var zoom = new ZoomState();

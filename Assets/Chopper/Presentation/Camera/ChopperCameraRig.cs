@@ -76,6 +76,7 @@ namespace Chopper.Presentation.Camera
         private UnityEngine.Camera _camera;
         private CameraSettings _fallback;
         private SpeedEffects _effects;
+        private VisionEffects _vision;
         private Vector3 _lastVelocity;
         private bool _hasLastVelocity;
         private Vector3 _acceleration;
@@ -154,6 +155,8 @@ namespace Chopper.Presentation.Camera
             // The effects read their shader from the settings: make them again for new settings.
             _effects?.Dispose();
             _effects = new SpeedEffects(transform, _camera, Settings);
+            _vision?.Dispose();
+            _vision = new VisionEffects(transform, Settings);
         }
 
         /// <summary>Switches view with a blend (saved).</summary>
@@ -224,6 +227,16 @@ namespace Chopper.Presentation.Camera
         }
 
         public void NextView() => SetView(_view + 1);
+
+        /// <summary>
+        /// The special view of the optics (night, thermal, ...), once per frame from <see cref="VisionSystem"/>.
+        /// </summary>
+        /// <param name="mode">None = the normal picture.</param>
+        /// <param name="blend">0..1: how much of the view is on (it fades).</param>
+        /// <param name="glows">Marked targets of this frame.</param>
+        public void ShowVision(Chopper.Simulation.Combat.VisionMode mode, float blend,
+            System.Collections.Generic.IReadOnlyList<VisionGlow> glows) =>
+            _vision?.Apply(Settings, Settings.VisionLookFor(mode), blend, glows);
 
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
         public void AddShake(float trauma) => _trauma = Mathf.Clamp01(_trauma + trauma);
@@ -464,6 +477,8 @@ namespace Chopper.Presentation.Camera
         {
             _effects?.Dispose();
             _effects = null;
+            _vision?.Dispose();
+            _vision = null;
             if (_fallback != null) Destroy(_fallback);
         }
 

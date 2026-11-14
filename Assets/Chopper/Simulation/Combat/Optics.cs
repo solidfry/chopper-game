@@ -4,15 +4,69 @@ using Unity.Mathematics;
 
 namespace Chopper.Simulation.Combat
 {
+    /// <summary>A special view of an optics module. Local picture only: the simulation does not change.</summary>
+    public enum VisionMode : byte
+    {
+        None = 0,
+        /// <summary>Amplified light: a bright green picture in the dark, with grain.</summary>
+        Night = 1,
+        /// <summary>Heat: a cold grey world, hot things glow (engines, missiles). A fast or boosting chopper is brighter.</summary>
+        Thermal = 2,
+        /// <summary>Kinetic tracker: only what moves glows. A hovering chopper is not seen.</summary>
+        Motion = 3,
+        /// <summary>Deep scan: targets glow through walls, at short range, on a dark and noisy picture.</summary>
+        DeepScan = 4,
+    }
+
     /// <summary>
-    /// The zoom steps of this chopper's optics module, already limited by its gun (<see cref="ZoomMath.Steps"/>).
-    /// Empty = no zoom (no optics module). Set from the loadout on client and server; only the owner's client uses it
+    /// The optics module of this chopper: zoom steps, already limited by its gun (<see cref="ZoomMath.Steps"/>), and
+    /// its special view. No steps and no vision = no optics module. Set from the loadout on client and server; only the owner's client uses it
     /// (camera and aim speed). Not a ghost field: every world builds it from the same loadout.
     /// </summary>
     public struct OpticsConfig : IComponentData
     {
         /// <summary>Magnifications, low to high (2 = "2x").</summary>
         public FixedList32Bytes<float> Steps;
+        public VisionMode Vision;
+        /// <summary>The special view marks targets to this distance, metres. 0 = no limit.</summary>
+        public float VisionRange;
+    }
+
+    /// <summary>What the special views show. Pure, shared by the presentation and tests.</summary>
+    public static class VisionMath
+    {
+        /// <summary>Heat (<see cref="Seeker.Heat"/>) that glows at full strength on thermal.</summary>
+        public const float FullHeat = 2f;
+        /// <summary>The kinetic tracker sees nothing slower than this, m/s.</summary>
+        public const float MotionMinSpeed = 6f;
+        /// <summary>Speed that glows at full strength on the kinetic tracker, m/s.</summary>
+        public const float MotionFullSpeed = 40f;
+        /// <summary>The glow fades over this last part of the range.</summary>
+        public const float RangeFade = 0.15f;
+        /// <summary>Heat of a missile in flight (its motor burns).</summary>
+        public const float MissileHeat = 2.5f;
+
+        public static bool MarksTargets(VisionMode mode) => mode is VisionMode.Thermal or VisionMode.Motion or VisionMode.DeepScan;
+
+        /// <summary>How bright a target glows in <paramref name="mode"/>, 0..1. 0 = not shown.</summary>
+        /// <param name="range">The module's range; 0 = no limit.</param>
+        public static float Signal(VisionMode mode, float heat, float speed, float distance, float range)
+        {
+            var edge = 1f;
+            if (range > 0f)
+            {
+                if (distance >= range) return 0f;
+                edge = math.saturate((range - distance) / (range * RangeFade));
+            }
+
+            switch (mode)
+            {
+                case VisionMode.Thermal: return math.saturate(heat / FullHeat) * edge;
+                case VisionMode.Motion: return math.saturate((speed - MotionMinSpeed) / (MotionFullSpeed - MotionMinSpeed)) * edge;
+                case VisionMode.DeepScan: return edge;
+                default: return 0f;
+            }
+        }
     }
 
     /// <summary>Zoom maths shared by the loadout builder, the camera, the input and tests. Pure, Burst friendly.</summary>

@@ -52,8 +52,8 @@ namespace Chopper.Presentation.Camera
                 _velocity.Update(localToWorld.ValueRO.Position, deltaTime);
                 // The optics of this chopper (none = no steps); a respawn with another loadout switches the zoom off.
                 flying = true;
-                context.Zoom.SetSteps(SystemAPI.HasComponent<OpticsConfig>(entity)
-                    ? SystemAPI.GetComponent<OpticsConfig>(entity).Steps
+                context.Zoom.SetOptics(SystemAPI.HasComponent<OpticsConfig>(entity)
+                    ? SystemAPI.GetComponent<OpticsConfig>(entity)
                     : default);
                 rig.Follow(new CameraTarget
                 {

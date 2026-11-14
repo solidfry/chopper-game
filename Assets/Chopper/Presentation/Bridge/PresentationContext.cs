@@ -38,7 +38,7 @@ namespace Chopper.Presentation.Bridge
         private float _cockpitMuffle;
         /// <summary>The server link closed (notice shown); <see cref="_leftAfterLinkLost"/> once the way out started.</summary>
         private bool _linkLost, _leftAfterLinkLost;
-        /// <summary>Only <c>Flight/Scoreboard</c> and <c>Flight/Zoom</c> are on here; the flight actions are read by the simulation.</summary>
+        /// <summary>Only <c>Flight/Scoreboard</c>, <c>Flight/Zoom</c> and <c>Flight/Vision</c> are on here; the flight actions are read by the simulation.</summary>
         private readonly Simulation.Input.PlayerControls _controls = new();
 
         public PresentationContext(GameConfig config, Transform root, ChopperCameraRig cameraRig)
@@ -65,6 +65,7 @@ namespace Chopper.Presentation.Bridge
             _owned.Add(Events.Subscribe<ConnectionLost>(OnConnectionLost));
             _controls.Flight.Scoreboard.Enable();
             _controls.Flight.Zoom.Enable();
+            _controls.Flight.Vision.Enable();
             Prompts = new InputPrompts(_controls);
             Prompts.Changed += ApplyPromptKeys;
             ApplyPromptKeys();
@@ -126,7 +127,7 @@ namespace Chopper.Presentation.Bridge
         public bool MenuOpen { get; set; }
         /// <summary>Saved control options (mouse steer, sensitivity, invert).</summary>
         public InputOptions InputOptions { get; } = new();
-        /// <summary>The local player's zoom (optics module). The camera system gives it the chopper's steps.</summary>
+        /// <summary>The local player's optics (zoom and special view). The camera system gives it the chopper's optics.</summary>
         public ZoomState Zoom { get; } = new();
 
         /// <summary>Player option: how solid each part of the HUD is. Saved.</summary>
@@ -327,6 +328,7 @@ namespace Chopper.Presentation.Bridge
             Prompts.Tick();
             Match.SetScoreboardHeld(!MenuOpen && _controls.Flight.Scoreboard.IsPressed());
             if (!MenuOpen && _controls.Flight.Zoom.WasPressedThisFrame()) Zoom.Cycle();
+            if (!MenuOpen && _controls.Flight.Vision.WasPressedThisFrame()) Zoom.ToggleVision();
             Zoom.Tick(unscaledDeltaTime);
             Hud.SetZoom(Zoom.Text);
             Match.Tick(deltaTime);
@@ -348,6 +350,7 @@ namespace Chopper.Presentation.Bridge
             _audio.Dispose();
             _controls.Flight.Scoreboard.Disable();
             _controls.Flight.Zoom.Disable();
+            _controls.Flight.Vision.Disable();
             _controls.Dispose();
         }
     }

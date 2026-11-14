@@ -243,6 +243,16 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Vision"",
+                    ""type"": ""Button"",
+                    ""id"": ""2b7f4c90-5e1a-5d36-8c42-9a0d3f6e1b75"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -795,6 +805,28 @@ namespace Chopper.Simulation.Input
                     ""action"": ""Zoom"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c93a1d58-0b62-5e4f-a7d1-6f2e8b4c0a39"",
+                    ""path"": ""<Keyboard>/v"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Vision"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e05d7b21-3f84-5a69-b1c7-28d9a6f3e4c0"",
+                    ""path"": ""<Gamepad>/dpad/left"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Vision"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -846,6 +878,7 @@ namespace Chopper.Simulation.Input
             m_Flight_CyclePylon = m_Flight.FindAction("CyclePylon", throwIfNotFound: true);
             m_Flight_Scoreboard = m_Flight.FindAction("Scoreboard", throwIfNotFound: true);
             m_Flight_Zoom = m_Flight.FindAction("Zoom", throwIfNotFound: true);
+            m_Flight_Vision = m_Flight.FindAction("Vision", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -941,6 +974,7 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_CyclePylon;
         private readonly InputAction m_Flight_Scoreboard;
         private readonly InputAction m_Flight_Zoom;
+        private readonly InputAction m_Flight_Vision;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
         /// </summary>
@@ -1013,6 +1047,10 @@ namespace Chopper.Simulation.Input
             /// </summary>
             public InputAction @Zoom => m_Wrapper.m_Flight_Zoom;
             /// <summary>
+            /// Provides access to the underlying input action "Flight/Vision".
+            /// </summary>
+            public InputAction @Vision => m_Wrapper.m_Flight_Vision;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Flight; }
@@ -1083,6 +1121,9 @@ namespace Chopper.Simulation.Input
                 @Zoom.started += instance.OnZoom;
                 @Zoom.performed += instance.OnZoom;
                 @Zoom.canceled += instance.OnZoom;
+                @Vision.started += instance.OnVision;
+                @Vision.performed += instance.OnVision;
+                @Vision.canceled += instance.OnVision;
             }
 
             /// <summary>
@@ -1139,6 +1180,9 @@ namespace Chopper.Simulation.Input
                 @Zoom.started -= instance.OnZoom;
                 @Zoom.performed -= instance.OnZoom;
                 @Zoom.canceled -= instance.OnZoom;
+                @Vision.started -= instance.OnVision;
+                @Vision.performed -= instance.OnVision;
+                @Vision.canceled -= instance.OnVision;
             }
 
             /// <summary>
@@ -1310,6 +1354,13 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnZoom(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Vision" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnVision(InputAction.CallbackContext context);
         }
     }
 }

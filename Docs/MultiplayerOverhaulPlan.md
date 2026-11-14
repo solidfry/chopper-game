@@ -486,6 +486,13 @@ nose gun limits them (`MaxZoom`: Minigun 2x ... Railgun 10x), so a strong scope 
 key cycles the steps. Local only: camera FOV and turn speed. Modules: 136 Targeting Optics (2x, 4x), 137 Long-Range
 Scope (3x, 6x, 10x). Open decision: an own Optics slot (needs a ninth loadout slot; `LoadoutCode` holds 8).
 
+**Special views (14 Nov, written without the editor):** an optics module can also have a view on its own key: Night
+Sight (amplified light), Thermal Imager (hot things glow: engines, boost, missiles; sees through fog), Kinetic Tracker
+(only what moves glows; a hover is not seen), Deep Scan (targets through walls at 250 m, dark picture). Local picture
+only: a post volume plus glow quads, looks as data on `CameraSettings`. Ideas not built: signal scope (shows who locks
+you and the lock line), wire view (edge lines of terrain for low flight in fog; needs a full-screen shader), decoy
+view (shows which flare or decoy is false), damage view (enemy hull state as colour).
+
 **Not in step 1:** aim-guided rockets and smart rockets with course correction (the path is then not known at launch, so
 they need a ghost like the missiles: build them on `GuidedMissile` with a new seeker type), the 3b candidates (EMP,
 chain lightning, hack darts), more utility abilities, and per-weapon visuals and sounds (all rocket types share one

@@ -29,6 +29,11 @@ namespace Chopper.Editor.Setup
         // Utility: optics (zoom).
         public const ushort TargetingOpticsId = 136;
         public const ushort LongRangeScopeId = 137;
+        // Utility: optics with a special view (141 is the Heavy Winch).
+        public const ushort NightSightId = 138;
+        public const ushort ThermalImagerId = 139;
+        public const ushort KineticTrackerId = 140;
+        public const ushort DeepScanId = 142;
 
         private const ushort MinigunId = 101;
         private const ushort RocketPodId = 111;
@@ -76,7 +81,27 @@ namespace Chopper.Editor.Setup
                 targeting);
             Optics(catalog, LongRangeScopeId, "Long-Range Scope", "Zoom 3x, 6x and 10x. Heavy. Best on a railgun.", "Utility_LongRangeScope",
                 9f, 14, scope);
+
+            // Special views (the Vision key). Each has little or no zoom: a view or a strong scope, not both.
+            var night = Vision("Ability_NightSight", VisionMode.Night, 0f, 2f);
+            var thermal = Vision("Ability_ThermalImager", VisionMode.Thermal, 1200f, 2f, 4f);
+            var kinetic = Vision("Ability_KineticTracker", VisionMode.Motion, 900f);
+            var deepScan = Vision("Ability_DeepScan", VisionMode.DeepScan, 250f);
+            Optics(catalog, NightSightId, "Night Sight", "Night vision and 2x zoom. Light.", "Utility_NightSight", 4f, 5, night);
+            Optics(catalog, ThermalImagerId, "Thermal Imager", "Hot things glow, to 1200 m: engines, boost, missiles. Zoom 2x and 4x.",
+                "Utility_ThermalImager", 8f, 10, thermal);
+            Optics(catalog, KineticTrackerId, "Kinetic Tracker", "Only what moves glows, to 900 m. A hovering chopper is not seen.",
+                "Utility_KineticTracker", 6f, 16, kinetic);
+            Optics(catalog, DeepScanId, "Deep Scan", "Targets glow through walls, to 250 m. Dark, noisy picture. Heavy.",
+                "Utility_DeepScan", 12f, 22, deepScan);
         }
+
+        private static OpticsDefinition Vision(string assetName, VisionMode mode, float range, params float[] zoomLevels) =>
+            GuidedWeaponAssets.Definition<OpticsDefinition>(assetName, d =>
+            {
+                d.Initialise(zoomLevels);
+                d.SetVision(mode, range);
+            });
 
         /// <summary>The zoom limit of a new gun asset (the field's default).</summary>
         private const float DefaultMaxZoom = 2f;
