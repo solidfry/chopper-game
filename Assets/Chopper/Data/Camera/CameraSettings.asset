@@ -61,6 +61,10 @@ MonoBehaviour:
   maxShakeDegrees: 4
   shakeRecovery: 1.5
   shakeFrequency: 18
+  fullTraumaDamage: 40
+  explosionShake: 1.3
+  fullTraumaImpactSpeed: 30
+  landingShake: 0.8
   accelerationLag: 0.06
   maxLag: 3
   lagSharpness: 4
@@ -80,6 +84,56 @@ MonoBehaviour:
   boostChromatic: 0.55
   boostVignette: 0.32
   boostFlash: 0.6
+  visionGlowShader: {fileID: 4800000, guid: 9e24743392cb46fc9856d356f9ba7b7b, type: 3}
+  visionLooks:
+  - mode: 1
+    exposure: 2.2
+    contrast: 10
+    redMix: {x: 0.1, y: 0.2, z: 0.05}
+    greenMix: {x: 0.4, y: 0.9, z: 0.2}
+    blueMix: {x: 0.1, y: 0.25, z: 0.05}
+    grain: 0.6
+    vignette: 0.45
+    glowColor: {r: 0, g: 0, b: 0, a: 0}
+    glowSize: 7
+    glowAngularSize: 0.012
+    throughWalls: 0
+  - mode: 2
+    exposure: -0.6
+    contrast: 35
+    redMix: {x: 0.28, y: 0.55, z: 0.1}
+    greenMix: {x: 0.3, y: 0.59, z: 0.11}
+    blueMix: {x: 0.33, y: 0.65, z: 0.13}
+    grain: 0.25
+    vignette: 0.3
+    glowColor: {r: 4, g: 3.6, b: 3, a: 1}
+    glowSize: 7
+    glowAngularSize: 0.012
+    throughWalls: 0
+  - mode: 3
+    exposure: -1.2
+    contrast: 20
+    redMix: {x: 0.25, y: 0.35, z: 0.1}
+    greenMix: {x: 0.05, y: 0.1, z: 0.02}
+    blueMix: {x: 0.3, y: 0.5, z: 0.15}
+    grain: 0.35
+    vignette: 0.4
+    glowColor: {r: 4, g: 0.6, b: 3.5, a: 1}
+    glowSize: 8
+    glowAngularSize: 0.012
+    throughWalls: 0
+  - mode: 4
+    exposure: -1.8
+    contrast: 40
+    redMix: {x: 0.05, y: 0.1, z: 0.02}
+    greenMix: {x: 0.2, y: 0.4, z: 0.08}
+    blueMix: {x: 0.3, y: 0.6, z: 0.12}
+    grain: 0.8
+    vignette: 0.55
+    glowColor: {r: 4, g: 2.4, b: 0.4, a: 1}
+    glowSize: 6
+    glowAngularSize: 0.012
+    throughWalls: 1
   speedLineShader: {fileID: 4800000, guid: a648b167aefa7c348b8cc02ca7e0462b, type: 3}
   speedLineStartSpeed: 35
   speedLineRate: 40

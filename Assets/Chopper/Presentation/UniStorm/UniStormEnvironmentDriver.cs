@@ -7,6 +7,8 @@ using UnityEngine;
 
 namespace Chopper.Presentation.Sky
 {
+    using Camera = UnityEngine.Camera;
+
     /// <summary>
     /// <see cref="EnvironmentDriver"/> for the UniStorm asset (sky, sun, moon, clouds, precipitation, lightning).
     /// On the first <see cref="Apply"/> it makes the UniStorm system from <see cref="systemPrefab"/>, set up before it

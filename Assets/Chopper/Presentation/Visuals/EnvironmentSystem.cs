@@ -6,6 +6,8 @@ using UnityEngine.Rendering;
 
 namespace Chopper.Presentation.Visuals
 {
+    using Camera = UnityEngine.Camera;
+
     /// <summary>
     /// Client: applies the match's <see cref="MatchConditions"/> (from the server's map announcement) in match scenes.
     /// Hands them to the scene's <see cref="EnvironmentDriver"/> (sky asset), or with none applies the plain
@@ -21,7 +23,7 @@ namespace Chopper.Presentation.Visuals
         private static readonly int WetnessId = Shader.PropertyToID("_ChopperWetness");
 
         private EnvironmentDriver _driver;
-        private int _sceneHandle = -1;
+        private UnityEngine.SceneManagement.Scene _scene;
         private bool _applied;
         private TimeOfDay _time;
         private Weather _weather;
@@ -47,10 +49,10 @@ namespace Chopper.Presentation.Visuals
             }
 
             // A new scene: find its driver and apply again.
-            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-            if (scene != _sceneHandle)
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (scene != _scene)
             {
-                _sceneHandle = scene;
+                _scene = scene;
                 _driver = Object.FindAnyObjectByType<EnvironmentDriver>();
                 _applied = false;
                 _camera = null;

@@ -23,31 +23,6 @@ namespace Chopper.Simulation.Visuals
         public SurfaceKind Kind;
     }
 
-    /// <summary>
-    /// Optional: put it on a GameObject with a collider to set what the collider is made of (for example a metal shed:
-    /// its boxes would count as concrete). Without it the surface comes from the collider (<see cref="Surfaces.Classify"/>).
-    /// </summary>
-    [DisallowMultipleComponent]
-    public sealed class SurfaceAuthoring : MonoBehaviour
-    {
-        [SerializeField] private SurfaceKind kind = SurfaceKind.Concrete;
-
-        public SurfaceKind Kind
-        {
-            get => kind;
-            set => kind = value;
-        }
-
-        private sealed class Baker : Baker<SurfaceAuthoring>
-        {
-            public override void Bake(SurfaceAuthoring authoring)
-            {
-                var entity = GetEntity(TransformUsageFlags.None);
-                AddComponent(entity, new PhysicsSurface { Kind = authoring.kind });
-            }
-        }
-    }
-
     /// <summary>The surface at a ray or overlap hit. Shared by every impact sound, so they all agree.</summary>
     public static class Surfaces
     {

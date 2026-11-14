@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 523717417fda46a498797c582e252d87, type: 3}
+  m_Name: BotProfile_Ace
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Bots.BotProfile
+  pilot:
+    CruiseSpeed: 38
+    BrakeAcceleration: 7
+    MaxTiltDegrees: 38
+    VelocityGain: 0.9
+    AltitudeGain: 0.5
+    MaxClimb: 16
+    MaxSink: 9
+    VerticalGain: 1.6
+    MinClearance: 22
+    AttitudeGain: 4.5
+    YawGain: 2.2
+    HandSpeed: 5
+    ProbeSeconds: 2.2
+    MinProbeDistance: 35
+    ProbeRadius: 6
+    AvoidPush: 26
+    AvoidClimb: 12
+    EmergencySeconds: 1.1
+    BoundsMargin: 120
+    BoostDistance: 260
+    BoostMinClearance: 45
+    NavCellSize: 12
+    PathMinClearance: 12
+    PathPreferredClearance: 40
+    PathClearancePenalty: 1.5
+    PathClimbCost: 0.4
+    PathCruiseHeight: 30
+    PathHeightCost: 1.5
+    PathMaxNodes: 40000
+    ReplanSeconds: 4
+    WanderClearance: {x: 15, y: 45}
+    WanderCityShare: 0.8
+    WanderCityRadius: 650
+    WanderSeconds: 40
+    ArriveRadius: 40
+  skill:
+    ReactionSeconds: 0.2
+    AimErrorDegrees: 2
+    AimSettleSeconds: 1
+    FlareTimingScale: 0.9
+    MistakeChance: 0.05
+    VisionRange: 900
+    HearingRange: 220
+    PreferredRange: 220
+    MinRange: 70
+    EngageSpeed: 24
+    StrafeRate: 0.3
+    AimConeDegrees: 30
+    GunHeatRelease: 0.8
+    RetreatHealth: 0.35
+    RepairDoneHealth: 0.9
+    RetreatDistance: 450

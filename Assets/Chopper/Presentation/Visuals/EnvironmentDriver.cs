@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace Chopper.Presentation.Visuals
 {
+    using Camera = UnityEngine.Camera;
+
     /// <summary>What the environment should show: the match's conditions, their looks, and the view camera.</summary>
     public readonly struct EnvironmentRequest
     {
