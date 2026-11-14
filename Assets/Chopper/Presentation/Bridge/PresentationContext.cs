@@ -129,6 +129,10 @@ namespace Chopper.Presentation.Bridge
         public InputOptions InputOptions { get; } = new();
         /// <summary>The local player's optics (zoom and special view). The camera system gives it the chopper's optics.</summary>
         public ZoomState Zoom { get; } = new();
+        /// <summary>Hot things the special views mark besides targets (rockets, blasts). Effect systems add, the vision system reads.</summary>
+        public HeatMarks HeatMarks { get; } = new();
+        private int _opticsHintKey = -1;
+        private string _opticsHint = "";
 
         /// <summary>Player option: how solid each part of the HUD is. Saved.</summary>
         public HudOpacity HudOpacity { get; } = new();
@@ -327,14 +331,44 @@ namespace Chopper.Presentation.Bridge
             Hud.Tick(deltaTime);
             Prompts.Tick();
             Match.SetScoreboardHeld(!MenuOpen && _controls.Flight.Scoreboard.IsPressed());
-            if (!MenuOpen && _controls.Flight.Zoom.WasPressedThisFrame()) Zoom.Cycle();
-            if (!MenuOpen && _controls.Flight.Vision.WasPressedThisFrame()) Zoom.ToggleVision();
-            Zoom.Tick(unscaledDeltaTime);
-            Hud.SetZoom(Zoom.Text);
+            UpdateOptics(unscaledDeltaTime);
             Match.Tick(deltaTime);
             Results.Tick(unscaledDeltaTime);
             HudLook.CockpitView = CameraRig != null && CameraRig.HidesOwnChopper;
             HudLook.Tick(unscaledDeltaTime);
+        }
+
+        /// <summary>The Zoom and Vision keys (a click when they do something), and the HUD line: the state while zoom or
+        /// a view is on, else a dim key hint while the chopper has optics.</summary>
+        private void UpdateOptics(float deltaTime)
+        {
+            if (!MenuOpen && Zoom.StepCount > 0 && _controls.Flight.Zoom.WasPressedThisFrame())
+            {
+                Zoom.Cycle();
+                PlayUi();
+            }
+            if (!MenuOpen && Zoom.Mode != Simulation.Combat.VisionMode.None && _controls.Flight.Vision.WasPressedThisFrame())
+            {
+                Zoom.ToggleVision();
+                PlayUi();
+            }
+            Zoom.Tick(deltaTime);
+
+            // The hint text is made again only when the optics or the device change.
+            var key = Zoom.StepCount * 100 + (int)Zoom.Mode * 10 + (int)Prompts.Device;
+            if (key != _opticsHintKey)
+            {
+                _opticsHintKey = key;
+                _opticsHint = ZoomState.Hint(Zoom.StepCount > 0, Zoom.Mode, Prompts.Key("Zoom"), Prompts.Key("Vision"));
+            }
+            var state = Zoom.Text;
+            Hud.SetZoom(state.Length > 0 ? state : _opticsHint, hint: state.Length == 0);
+        }
+
+        private void PlayUi()
+        {
+            var sounds = Sounds;
+            if (sounds != null) _audio.Play(sounds.UINavigate);
         }
 
         public void Dispose()

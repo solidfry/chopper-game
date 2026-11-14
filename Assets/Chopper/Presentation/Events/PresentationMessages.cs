@@ -96,9 +96,12 @@ namespace Chopper.Presentation.Events
         public readonly float Drag;
         public readonly float ProximityFuse;
         public readonly TargetClass FuseTargets;
+        /// <summary>Blast size, metres: the visual's size follows it. 0 = not given (standard size).</summary>
+        public readonly float SplashRadius;
         public RocketLaunched(Vector3 position, Vector3 velocity, float lifetime, int shooter, float gravity = 0f, float drag = 0f,
-            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None)
+            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None, float splashRadius = 0f)
         {
+            SplashRadius = splashRadius;
             Position = position;
             Velocity = velocity;
             Lifetime = lifetime;

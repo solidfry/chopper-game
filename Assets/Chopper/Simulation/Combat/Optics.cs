@@ -45,6 +45,13 @@ namespace Chopper.Simulation.Combat
         public const float RangeFade = 0.15f;
         /// <summary>Heat of a missile in flight (its motor burns).</summary>
         public const float MissileHeat = 2.5f;
+        /// <summary>Heat of a rocket in flight.</summary>
+        public const float RocketHeat = 2f;
+        /// <summary>Heat of a fresh explosion; it cools over <see cref="BlastSeconds"/>.</summary>
+        public const float BlastHeat = 3f;
+        public const float BlastSeconds = 1.5f;
+        /// <summary>Heat of a burning flare (hotter than any engine: that is how it fools a seeker).</summary>
+        public const float FlareHeat = 4f;
 
         public static bool MarksTargets(VisionMode mode) => mode is VisionMode.Thermal or VisionMode.Motion or VisionMode.DeepScan;
 

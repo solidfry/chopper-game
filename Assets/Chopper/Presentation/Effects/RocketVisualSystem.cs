@@ -78,7 +78,7 @@ namespace Chopper.Presentation.Effects
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
             CollectFuseTargets(owners);
-            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime);
+            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime, context.HeatMarks);
         }
 
         /// <summary>Subscribes to the context's launches; a new context (scene change) drops the old rockets.</summary>
@@ -97,9 +97,13 @@ namespace Chopper.Presentation.Effects
         {
             var rotation = Quaternion.LookRotation(launch.Velocity);
             effects.SpawnOneShot(effects.Settings.RocketMuzzleFlash, launch.Position, rotation);
+            var visual = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation);
+            // One rocket model for every type: its size follows the blast, so a bomb reads bigger than a light rocket.
+            // Set on every spawn: the object comes from a pool.
+            if (visual != null) visual.transform.localScale = Vector3.one * RocketScale(launch.SplashRadius);
             _rockets.Add(new RocketVisual
             {
-                GameObject = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation),
+                GameObject = visual,
                 Position = launch.Position,
                 Velocity = launch.Velocity,
                 Remaining = launch.Lifetime,
@@ -110,6 +114,12 @@ namespace Chopper.Presentation.Effects
                 FuseTargets = launch.FuseTargets,
             });
         }
+
+        /// <summary>Model scale for a blast radius: the standard rocket pod (8 m) = 1.</summary>
+        public static float RocketScale(float splashRadius) =>
+            splashRadius > 0f ? Mathf.Clamp(splashRadius / StandardSplashRadius, 0.6f, 2.2f) : 1f;
+
+        private const float StandardSplashRadius = 8f;
 
         /// <summary>Live targets for the proximity fuses in flight (none when no rocket has a fuse).</summary>
         private void CollectFuseTargets(ComponentLookup<GhostOwner> owners)
@@ -147,7 +157,8 @@ namespace Chopper.Presentation.Effects
             return false;
         }
 
-        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
+        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime,
+            Chopper.Presentation.Camera.HeatMarks heat)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
             {
@@ -159,6 +170,7 @@ namespace Chopper.Presentation.Effects
                 if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact) || TryFuse(rocket, end, out impact))
                 {
                     effects.SpawnOneShot(effects.Settings.RocketImpact, impact, back);
+                    heat.AddTimed(impact, VisionMath.BlastHeat, VisionMath.BlastSeconds);
                     Finish(effects, i, impact);
                     continue;
                 }
@@ -170,6 +182,7 @@ namespace Chopper.Presentation.Effects
                     Finish(effects, i, end);
                     continue;
                 }
+                heat.AddFrame(end, VisionMath.RocketHeat, math.length(rocket.Velocity));
                 if (rocket.GameObject != null)
                 {
                     rocket.GameObject.transform.position = end;

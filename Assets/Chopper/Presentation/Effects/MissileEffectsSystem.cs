@@ -68,7 +68,10 @@ namespace Chopper.Presentation.Effects
             }
 
             foreach (var position in _detonations)
+            {
                 effects.SpawnOneShot(settings.MissileImpact, position, Quaternion.identity);
+                context.HeatMarks.AddTimed(position, VisionMath.BlastHeat, VisionMath.BlastSeconds);
+            }
             _detonations.Clear();
         }
 

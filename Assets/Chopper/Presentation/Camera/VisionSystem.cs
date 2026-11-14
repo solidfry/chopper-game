@@ -5,7 +5,6 @@ using Chopper.Simulation.Flight;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
-using Unity.Physics;
 using Unity.Transforms;
 
 namespace Chopper.Presentation.Camera
@@ -25,8 +24,15 @@ namespace Chopper.Presentation.Camera
         private const int MaxGlows = 48;
         /// <summary>A missile moves at least this fast for the kinetic tracker (its velocity is not sent to every client).</summary>
         private const float MissileSpeed = 100f;
+        /// <summary>The flare mark sits this far under the chopper, metres.</summary>
+        private const float FlareDrop = 6f;
 
         private readonly List<VisionGlow> _glows = new();
+        private readonly List<HeatMark> _marks = new();
+        /// <summary>Speed from the drawn movement: a remote chopper's physics velocity is not on every client.</summary>
+        private readonly Dictionary<Entity, MeasuredVelocity> _speeds = new();
+        private readonly HashSet<Entity> _seen = new();
+        private readonly List<Entity> _gone = new();
 
         protected override void OnCreate()
         {
@@ -42,6 +48,11 @@ namespace Chopper.Presentation.Camera
             var mode = zoom.ShownVision;
 
             _glows.Clear();
+            // Always read, so marks do not pile up while no view is on.
+            _marks.Clear();
+            var deltaTime = UnityEngine.Time.deltaTime;
+            context.HeatMarks.Collect(_marks, deltaTime);
+            if (!VisionMath.MarksTargets(mode)) _speeds.Clear();
             if (VisionMath.MarksTargets(mode))
             {
                 float3 eye = rig.transform.position;
@@ -53,19 +64,47 @@ namespace Chopper.Presentation.Camera
                              .WithEntityAccess())
                 {
                     if (health.ValueRO.IsDead) continue;
-                    var speed = SystemAPI.HasComponent<PhysicsVelocity>(entity)
-                        ? math.length(SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear)
-                        : 0f;
+                    _seen.Add(entity);
+                    _speeds.TryGetValue(entity, out var measured);
+                    measured.Update(pose.ValueRO.Position, deltaTime);
+                    _speeds[entity] = measured;
+                    var speed = measured.Speed;
                     var boosting = SystemAPI.HasComponent<ChopperFlightState>(entity) &&
                                    SystemAPI.GetComponent<ChopperFlightState>(entity).Boosting;
                     Add(mode, pose.ValueRO.Position, Seeker.Heat(targetable.ValueRO, speed, boosting), speed, eye, range);
+
+                    // A burning flare: a second, hotter mark under the chopper (thermal sees the decoy too).
+                    if (mode == VisionMode.Thermal && SystemAPI.HasComponent<CountermeasureState>(entity) &&
+                        SystemAPI.GetComponent<CountermeasureState>(entity).DecoyRemaining > 0f)
+                        Add(mode, pose.ValueRO.Position - pose.ValueRO.Up * FlareDrop, VisionMath.FlareHeat, speed, eye, range);
                 }
+                ForgetGone();
 
                 foreach (var pose in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<GuidedMissile>())
                     Add(mode, pose.ValueRO.Position, VisionMath.MissileHeat, MissileSpeed, eye, range);
+
+                // Rockets in flight and fresh blasts, from the effect systems. Deep scan marks targets only.
+                if (mode != VisionMode.DeepScan)
+                    foreach (var mark in _marks)
+                        Add(mode, mark.Position, mark.Heat, mark.Speed, eye, range);
             }
 
             rig.ShowVision(mode, zoom.VisionBlend, _glows);
+        }
+
+        /// <summary>Drops the speed records of targets that are gone (dead, left).</summary>
+        private void ForgetGone()
+        {
+            if (_speeds.Count == _seen.Count)
+            {
+                _seen.Clear();
+                return;
+            }
+            _gone.Clear();
+            foreach (var entity in _speeds.Keys)
+                if (!_seen.Contains(entity)) _gone.Add(entity);
+            foreach (var entity in _gone) _speeds.Remove(entity);
+            _seen.Clear();
         }
 
         private void Add(VisionMode mode, float3 position, float heat, float speed, float3 eye, float range)

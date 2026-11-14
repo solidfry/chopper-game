@@ -202,6 +202,47 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Hint_NamesTheKeysOfTheFittedOptics()
+        {
+            Assert.That(ZoomState.Hint(true, VisionMode.Thermal, "Z", "V"), Is.EqualTo("Z ZOOM  V THERMAL"));
+            Assert.That(ZoomState.Hint(true, VisionMode.None, "Z", "V"), Is.EqualTo("Z ZOOM"));
+            Assert.That(ZoomState.Hint(false, VisionMode.DeepScan, "Z", "D-PAD LEFT"), Is.EqualTo("D-PAD LEFT DEEP SCAN"));
+            Assert.That(ZoomState.Hint(false, VisionMode.None, "Z", "V"), Is.EqualTo(""));
+        }
+
+        [Test]
+        public void HeatMarks_FrameMarksLastOneFrame_BlastsCoolAndGo()
+        {
+            var marks = new HeatMarks();
+            var read = new System.Collections.Generic.List<HeatMark>();
+            marks.AddFrame(new UnityEngine.Vector3(1f, 0f, 0f), VisionMath.RocketHeat, 140f);
+            marks.AddTimed(UnityEngine.Vector3.zero, VisionMath.BlastHeat, 1f);
+
+            marks.Collect(read, 0.5f);
+            Assert.That(read.Count, Is.EqualTo(2));
+            Assert.That(read[0].Speed, Is.EqualTo(140f));
+            Assert.That(read[1].Heat, Is.EqualTo(VisionMath.BlastHeat), "a fresh blast is at full heat");
+
+            read.Clear();
+            marks.Collect(read, 0.5f);
+            Assert.That(read.Count, Is.EqualTo(1), "the rocket mark was for one frame");
+            Assert.That(read[0].Heat, Is.EqualTo(VisionMath.BlastHeat * 0.5f).Within(1e-4f));
+
+            read.Clear();
+            marks.Collect(read, 0.5f);
+            Assert.That(read.Count, Is.EqualTo(0));
+            Assert.That(marks.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void HeatMarks_AreCapped()
+        {
+            var marks = new HeatMarks();
+            for (var i = 0; i < HeatMarks.Max + 50; i++) marks.AddFrame(UnityEngine.Vector3.zero, 1f, 0f);
+            Assert.That(marks.Count, Is.EqualTo(HeatMarks.Max));
+        }
+
+        [Test]
         public void ZoomState_GlidesToTheStep()
         {
             var zoom = new ZoomState();

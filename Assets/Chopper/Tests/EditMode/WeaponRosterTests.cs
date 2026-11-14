@@ -202,6 +202,48 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void RocketScale_FollowsTheBlast_InsideLimits()
+        {
+            Assert.That(Chopper.Presentation.Effects.RocketVisualSystem.RocketScale(8f), Is.EqualTo(1f));
+            Assert.That(Chopper.Presentation.Effects.RocketVisualSystem.RocketScale(4f), Is.EqualTo(0.6f));
+            Assert.That(Chopper.Presentation.Effects.RocketVisualSystem.RocketScale(14f), Is.EqualTo(1.75f));
+            Assert.That(Chopper.Presentation.Effects.RocketVisualSystem.RocketScale(40f), Is.EqualTo(2.2f));
+            // Not given (an old message): standard size.
+            Assert.That(Chopper.Presentation.Effects.RocketVisualSystem.RocketScale(0f), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ModuleSummary_ShowsTheNumbersOfAGunARocketAndOptics()
+        {
+            var gun = ScriptableObject.CreateInstance<HitscanWeaponDefinition>();
+            var rocket = ScriptableObject.CreateInstance<RocketWeaponDefinition>();
+            var optics = ScriptableObject.CreateInstance<OpticsDefinition>();
+            try
+            {
+                gun.Initialise(rpm: 600f, damage: 10f, maxRange: 500f);
+                gun.SetMaxZoom(4f);
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Gun(gun), Is.EqualTo("100 DPS  500 M  ZOOM TO 4x"));
+
+                rocket.Initialise(interval: 3f, rocketSpeed: 150f, life: 4f, direct: 14f, splash: 10f, radius: 5f, magazine: 3, reload: 12f);
+                rocket.SetSalvo(count: 6, interval: 0.07f, spreadDegrees: 3f);
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Rocket(rocket), Is.EqualTo("24 DMG  5 M BLAST  3 x 6  150 M/S"));
+                rocket.SetPath(gravityAcceleration: 25f, dragRate: 0f);
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Rocket(rocket), Does.Contain("FALLS"));
+
+                optics.Initialise(2f, 4f);
+                optics.SetVision(VisionMode.Thermal, 1200f);
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Optics(optics), Is.EqualTo("ZOOM 2x / 4x  THERMAL 1200 M"));
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Text(null), Is.EqualTo(""));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gun);
+                Object.DestroyImmediate(rocket);
+                Object.DestroyImmediate(optics);
+            }
+        }
+
+        [Test]
         public void GunDefinition_ReportsAFalloffStartPastTheRange()
         {
             var gun = ScriptableObject.CreateInstance<HitscanWeaponDefinition>();

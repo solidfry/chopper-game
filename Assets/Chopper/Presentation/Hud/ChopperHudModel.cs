@@ -87,6 +87,7 @@ namespace Chopper.Presentation.Hud
         private bool _locked;
         private string _pylonText = "";
         private string _zoomText = "";
+        private bool _zoomIsHint;
         private bool _pylonNeedsLock;
         private bool _flaresReady;
         private float _pylonReload = 1f;
@@ -266,7 +267,14 @@ namespace Chopper.Presentation.Hud
         /// <summary>"ZOOM 4x" while the optics zoom is on; empty without.</summary>
         [CreateProperty] public string ZoomText { get => _zoomText; private set => Set(ref _zoomText, value, nameof(ZoomText)); }
 
-        public void SetZoom(string text) => ZoomText = text ?? "";
+        /// <summary>The zoom line is a key hint (optics fitted, nothing on): shown dim.</summary>
+        [CreateProperty] public bool ZoomIsHint { get => _zoomIsHint; private set => Set(ref _zoomIsHint, value, nameof(ZoomIsHint)); }
+
+        public void SetZoom(string text, bool hint = false)
+        {
+            ZoomText = text ?? "";
+            ZoomIsHint = hint;
+        }
 
         /// <summary>The selected pylon weapon cannot fire without a lock.</summary>
         [CreateProperty] public bool PylonNeedsLock { get => _pylonNeedsLock; private set => Set(ref _pylonNeedsLock, value, nameof(PylonNeedsLock)); }

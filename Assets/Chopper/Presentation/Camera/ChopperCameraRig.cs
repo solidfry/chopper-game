@@ -283,7 +283,9 @@ namespace Chopper.Presentation.Camera
             _camera.nearClipPlane = pose.NearClip;
             transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt,
                 pose.Rotation * rumble * Shake(deltaTime, settingsAsset, feel.Shake));
-            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime, feel.Effects);
+            // Zoomed: the speed lines and boost effects step back by the magnification, so the sight stays clear.
+            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime,
+                feel.Effects / Mathf.Max(target.Magnification, 1f));
         }
 
         /// <summary>

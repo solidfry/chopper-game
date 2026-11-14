@@ -579,6 +579,9 @@ namespace Chopper.Presentation.Hangar
                 var description = module.Description ?? "";
                 // A part chain tier names the tier before it.
                 if (module.Parent != null) description = $"UPGRADE OF {module.Parent.DisplayName.ToUpperInvariant()}. {description}";
+                // Weapons and optics: their numbers after the text.
+                var summary = ModuleSummary.Text(module);
+                if (summary.Length > 0) description = description.Length > 0 ? $"{description}\n{summary}" : summary;
                 _options.Add(module);
                 _optionRows.Add(new HangarOptionRow(module.DisplayName.ToUpperInvariant(), description,
                     $"{spec.Stats.Weight:0}", detail, locked, module == current, false));

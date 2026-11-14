@@ -77,6 +77,14 @@ namespace Chopper.Presentation.Camera
             _ => "",
         };
 
+        /// <summary>The key hint for fitted optics that are off: "Z ZOOM  V THERMAL", one part, or "".</summary>
+        public static string Hint(bool hasZoom, VisionMode mode, string zoomKey, string visionKey)
+        {
+            var zoom = hasZoom ? $"{zoomKey} ZOOM" : "";
+            var vision = mode != VisionMode.None ? $"{visionKey} {VisionName(mode)}" : "";
+            return zoom.Length > 0 && vision.Length > 0 ? $"{zoom}  {vision}" : zoom + vision;
+        }
+
         /// <summary>The zoom steps alone (an optics module with no special view).</summary>
         public void SetSteps(in FixedList32Bytes<float> steps)
         {
