@@ -37,6 +37,8 @@ namespace Chopper.App
             builder.Register<OfflinePlatform>(Lifetime.Singleton).As<IPlatformIdentity>();
 #endif
             builder.Register<UnityAuthService>(Lifetime.Singleton).As<IAuthService>();
+            // The player's progression record on the server (written by match servers; the client only reads it).
+            builder.Register<UnityProfileCloud>(Lifetime.Singleton).As<IProfileCloud>();
             // Toast notices for the whole game; the scene flow draws them, scenes post through PresentationContext.Notify.
             builder.Register<NotificationFeed>(Lifetime.Singleton);
             // Unity Matchmaker; its queue's pool allocates Edgegap servers (Cloud Code module CloudCode/ChopperAllocator).

@@ -18,6 +18,8 @@ namespace Chopper.Simulation.Session
         public int AccountXp;
         public int ChassisXp;
         public int PilotXp;
+        /// <summary>The player's Unity account id ("" offline): see <see cref="Progression.PlayerAccount"/>.</summary>
+        public FixedString64Bytes AccountId;
     }
 
     /// <summary>Client: once connected, mark the connection in game and ask the server for a chopper.</summary>
@@ -38,6 +40,7 @@ namespace Chopper.Simulation.Session
             var hasChoice = SystemAPI.TryGetSingleton<LoadoutChoice>(out var chosen);
             var choice = hasChoice ? chosen.Code : default;
             var skin = hasChoice ? chosen.SkinId : (ushort)0;
+            var accountId = SystemAPI.TryGetSingleton<Progression.AccountClaim>(out var account) ? account.Id : default;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             foreach (var (_, connection) in SystemAPI.Query<RefRO<NetworkId>>().WithNone<NetworkStreamInGame>().WithEntityAccess())
             {
@@ -53,6 +56,7 @@ namespace Chopper.Simulation.Session
                     AccountXp = hasChoice ? chosen.AccountXp : 0,
                     ChassisXp = hasChoice ? chosen.ChassisXp : 0,
                     PilotXp = hasChoice ? chosen.PilotXp : 0,
+                    AccountId = accountId,
                 });
                 ecb.AddComponent(request, new SendRpcCommandRequest { TargetConnection = connection });
                 UnityEngine.Debug.Log("[Client] Connected; asking the server for a chopper.");
@@ -105,7 +109,11 @@ namespace Chopper.Simulation.Session
                     ChassisXp = Unity.Mathematics.math.max(0, goInGame.ValueRO.ChassisXp),
                     PilotXp = Unity.Mathematics.math.max(0, goInGame.ValueRO.PilotXp),
                     Trusted = false,
+                    JoinTime = SystemAPI.Time.ElapsedTime,
                 });
+                ecb.AddComponent(connection, new Progression.PlayerAccount { Id = goInGame.ValueRO.AccountId });
+                // No spawn until LoadoutGateSystem has checked the loadout.
+                ecb.AddComponent<Progression.LoadoutPending>(connection);
                 ecb.AddComponent(connection, new RespawnTimer { Remaining = 0f });
                 UnityEngine.Debug.Log($"[Server] Player {networkId} joined; chopper asked for.");
 

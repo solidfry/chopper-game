@@ -44,6 +44,13 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
     /// <summary>Ticket custom data key with the player's public IP (the game client fills it).</summary>
     private const string PlayerIpKey = "player_ip";
     private const string EdgegapApi = "https://api.edgegap.com";
+    /// <summary>
+    /// Unity secrets with the key id and secret key of the game server's service account. The match server gets them
+    /// as hidden environment variables and uses them to read and write player progress (<see cref="ProgressStore"/>).
+    /// Not set: the match runs without server-side progress.
+    /// </summary>
+    private const string ServerKeyIdSecret = "ugs_key_id";
+    private const string ServerSecretKeySecret = "ugs_secret_key";
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
 
@@ -65,16 +72,19 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
                 });
             }
 
+            var environment = new JArray
+            {
+                new JObject { ["key"] = "MATCH_ID", ["value"] = request.MatchId, ["is_hidden"] = false },
+            };
+            await AddServerAccount(context, environment);
+
             var body = new JObject
             {
                 ["application"] = Application,
                 ["version"] = Version,
                 ["require_cached_locations"] = false,
                 ["users"] = users,
-                ["environment_variables"] = new JArray
-                {
-                    new JObject { ["key"] = "MATCH_ID", ["value"] = request.MatchId, ["is_hidden"] = false },
-                },
+                ["environment_variables"] = environment,
                 ["tags"] = new JArray("ugs-matchmaker"),
             };
 
@@ -129,6 +139,25 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
         {
             logger.LogError(e, "Polling Edgegap failed");
             return new PollResponse(PollStatus.Error) { Message = e.Message };
+        }
+    }
+
+    /// <summary>The project, the environment and the service account for the match server (see ProgressStore).</summary>
+    private async Task AddServerAccount(IExecutionContext context, JArray environment)
+    {
+        try
+        {
+            var keyId = (await gameApi.SecretManager.GetSecret(context, ServerKeyIdSecret)).Value.Trim();
+            var secretKey = (await gameApi.SecretManager.GetSecret(context, ServerSecretKeySecret)).Value.Trim();
+            if (keyId.Length == 0 || secretKey.Length == 0) return;
+            environment.Add(new JObject { ["key"] = "UGS_PROJECT_ID", ["value"] = context.ProjectId, ["is_hidden"] = false });
+            environment.Add(new JObject { ["key"] = "UGS_ENVIRONMENT_ID", ["value"] = context.EnvironmentId, ["is_hidden"] = false });
+            environment.Add(new JObject { ["key"] = "UGS_KEY_ID", ["value"] = keyId, ["is_hidden"] = true });
+            environment.Add(new JObject { ["key"] = "UGS_SECRET_KEY", ["value"] = secretKey, ["is_hidden"] = true });
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning("No service account secrets ({Message}); the match server runs without player progress.", e.Message);
         }
     }
 

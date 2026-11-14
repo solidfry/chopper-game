@@ -20,10 +20,36 @@ namespace Chopper.Simulation.Progression
         public int ChassisXp;
         public int PilotXp;
         public bool Trusted;
+        /// <summary>Server time of the join request: how long the gate has waited for the Cloud Save numbers.</summary>
+        public double JoinTime;
     }
 
-    /// <summary>Server, on a connection: <see cref="LoadoutGateSystem"/> has checked its requested loadout.</summary>
-    public struct LoadoutGated : IComponentData
+    /// <summary>
+    /// Server, on a connection: its requested loadout is not checked yet, so it does not spawn
+    /// (<see cref="ChopperRespawnSystem"/> skips it). <see cref="LoadoutGateSystem"/> removes it.
+    /// </summary>
+    public struct LoadoutPending : IComponentData
+    {
+    }
+
+    /// <summary>Client world singleton: the player's Unity account id, sent with the join request ("" offline).</summary>
+    public struct AccountClaim : IComponentData
+    {
+        public FixedString64Bytes Id;
+    }
+
+    /// <summary>
+    /// Server, on a connection: the Unity account id the client gave. The server reads and writes that account's
+    /// record. Not verified: a cheat could give another player's id, and would then give their own match to that
+    /// player; they cannot change what a match is worth.
+    /// </summary>
+    public struct PlayerAccount : IComponentData
+    {
+        public FixedString64Bytes Id;
+    }
+
+    /// <summary>Server singleton: this server reads player progress from Cloud Save, so the gate waits for it.</summary>
+    public struct CloudProgressOn : IComponentData
     {
     }
 
@@ -34,6 +60,7 @@ namespace Chopper.Simulation.Progression
         public LevelCurve Chassis;
         public LevelCurve Pilot;
         public bool LocksOn;
+        public XpRates Xp;
     }
 
     /// <summary>Baked on the spawner: the account level a paint skin needs (the skin library is not in the server's assembly).</summary>
@@ -135,8 +162,9 @@ namespace Chopper.Simulation.Progression
 
     /// <summary>
     /// Server: checks each new connection's requested loadout against its progress, once, before the first spawn
-    /// (<see cref="ChopperRespawnSystem"/> spawns what is left). Does nothing but mark the connection when the map has
-    /// no <see cref="ProgressionRules"/> or the locks are off. Managed on purpose: it reuses the catalog and
+    /// (<see cref="ChopperRespawnSystem"/> does not spawn a connection with <see cref="LoadoutPending"/>). With
+    /// <see cref="CloudProgressOn"/> it waits up to <see cref="MaxCloudWait"/> seconds for the Cloud Save numbers, then
+    /// uses the client's own. Only removes the tag when the map has no <see cref="ProgressionRules"/> or the locks are off. Managed on purpose: it reuses the catalog and
     /// <see cref="LoadoutRules"/>. Written without the editor (13 Nov 2026).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -145,29 +173,42 @@ namespace Chopper.Simulation.Progression
     [UpdateBefore(typeof(ChopperRespawnSystem))]
     public partial class LoadoutGateSystem : SystemBase
     {
+        /// <summary>Longest wait for the Cloud Save numbers before the client's own are used (s).</summary>
+        public const double MaxCloudWait = 5.0;
+
         private EntityQuery _new;
 
         protected override void OnCreate()
         {
             _new = GetEntityQuery(ComponentType.ReadOnly<PlayerProgress>(), ComponentType.ReadWrite<RequestedLoadout>(),
-                ComponentType.Exclude<LoadoutGated>());
+                ComponentType.ReadOnly<LoadoutPending>());
+            // Only this: a connection must never wait for a spawn because some other singleton is missing.
             RequireForUpdate(_new);
-            RequireForUpdate<LoadoutCatalogRef>();
         }
 
         protected override void OnUpdate()
         {
-            var catalog = SystemAPI.GetSingleton<LoadoutCatalogRef>().Catalog.Value;
+            var catalog = SystemAPI.TryGetSingleton<LoadoutCatalogRef>(out var reference) ? reference.Catalog.Value : null;
             var locksOn = SystemAPI.TryGetSingleton<ProgressionRules>(out var rules) && rules.LocksOn && catalog != null;
             var skins = locksOn && SystemAPI.TryGetSingletonBuffer<SkinUnlock>(out var skinBuffer, true)
                 ? skinBuffer.ToNativeArray(Allocator.Temp)
                 : default;
+            var cloud = SystemAPI.HasSingleton<CloudProgressOn>();
+            var now = SystemAPI.Time.ElapsedTime;
 
             var connections = _new.ToEntityArray(Allocator.Temp);
             foreach (var connection in connections)
             {
+                var progress = EntityManager.GetComponentData<PlayerProgress>(connection);
+                var hasAccount = EntityManager.HasComponent<PlayerAccount>(connection) &&
+                                 !EntityManager.GetComponentData<PlayerAccount>(connection).Id.IsEmpty;
+                if (cloud && hasAccount && !progress.Trusted)
+                {
+                    if (now - progress.JoinTime < MaxCloudWait) continue;
+                    Debug.LogWarning("[Progress] No Cloud Save numbers in time for a player; the client's own are used.");
+                }
                 if (locksOn) Check(connection, catalog, rules, skins);
-                EntityManager.AddComponent<LoadoutGated>(connection);
+                EntityManager.RemoveComponent<LoadoutPending>(connection);
             }
             connections.Dispose();
             if (skins.IsCreated) skins.Dispose();

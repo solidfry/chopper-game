@@ -28,3 +28,31 @@ camelCase (the editor reader needs `"type": "CloudCode"` in lower case). The gam
 `HangarSettings` (`Default`) in the environment from `ServiceEnvironment` (`development` in the editor).
 
 Build locally: `dotnet build -c Release` in `CloudCode/ChopperAllocator`.
+
+## Player progress (in the same module)
+
+`Project/ProgressStore.cs` keeps each player's progression record in Cloud Save, **protected player data**, key
+`profile` (the game's `PlayerProfile` as JSON text). Plan section 6a-1, step 4. **Written without a compiler: build
+the module before the first deploy.**
+
+- `Progress_Read(playerId)` and `Progress_Write(playerId, matchId, profile)`: the game server only. A call from a
+  player has a player id and is refused; the game server calls with a service account, which has none.
+- `Progress_Mine()`: a signed-in player reads their own record (the game does this after sign-in).
+- The game server works out awards and XP with the game's own rules (`ServerProgressSystem` in the Unity project), so
+  the module holds no game rules.
+
+### Dashboard steps (once per environment)
+
+1. Administration > Service Accounts: make a service account for the game server. Give it the project roles it needs
+   to run Cloud Code modules and to read and write Cloud Save player data. Make a key: note the key id and secret key.
+2. Administration > Secrets: add `ugs_key_id` and `ugs_secret_key` with those two values. The allocator puts them (hidden),
+   with the project id and environment id, on each Edgegap deployment as `UGS_KEY_ID`, `UGS_SECRET_KEY`,
+   `UGS_PROJECT_ID`, `UGS_ENVIRONMENT_ID`. Without the secrets a match runs without server-side progress.
+3. Deploy the module again (it has the new functions and the allocator change).
+
+### Test on one PC (no Edgegap)
+
+Set the four `UGS_...` environment variables by hand, start a server build, then start a client with
+`-join 127.0.0.1:PORT -account <player id>` (the client log shows the id: "Signed in as ... (id)"). The server log
+shows `[Progress]` lines. The record is in the dashboard: Cloud Save > Player Data > the player > protected.
+

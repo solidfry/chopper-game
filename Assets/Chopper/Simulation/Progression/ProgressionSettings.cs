@@ -30,7 +30,7 @@ namespace Chopper.Simulation.Progression
         public LevelCurve Pilot => pilot;
 
         /// <summary>For the spawner's baker: what the server needs.</summary>
-        public ProgressionRules ToRules() => new() { Account = account, Chassis = chassis, Pilot = pilot, LocksOn = locksOn };
+        public ProgressionRules ToRules() => new() { Account = account, Chassis = chassis, Pilot = pilot, LocksOn = locksOn, Xp = xp };
 
         public LevelCurve Curve(ProgressTrack track) => track switch
         {

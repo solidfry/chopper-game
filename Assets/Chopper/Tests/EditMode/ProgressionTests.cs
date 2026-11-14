@@ -340,6 +340,56 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Grant_PlacesByKillsThenFewestDeaths()
+        {
+            var all = new Dictionary<int, PlayerMatchStats>
+            {
+                [1] = new() { Kills = 5, Deaths = 2 },
+                [2] = new() { Kills = 5, Deaths = 1 },
+                [3] = new() { Kills = 2, Deaths = 0 },
+                [4] = new() { Kills = 2, Deaths = 0 },
+            };
+            Assert.That(MatchGrant.Place(2, all), Is.EqualTo(1));
+            Assert.That(MatchGrant.Place(1, all), Is.EqualTo(2));
+            Assert.That(MatchGrant.Place(3, all), Is.EqualTo(3));
+            Assert.That(MatchGrant.Place(4, all), Is.EqualTo(3), "The same kills and deaths share a place.");
+            Assert.That(MatchGrant.Place(9, all), Is.EqualTo(4), "Not known: last.");
+        }
+
+        [Test]
+        public void Grant_GivesTheSameXpAsTheResultsScreen_AndRecordsMastery()
+        {
+            var all = new Dictionary<int, PlayerMatchStats>
+            {
+                [1] = new() { Kills = 3, BotKills = 1, DamageDealt = 500f },
+                [2] = new() { Kills = 1, Deaths = 3 },
+            };
+            var rates = XpRates.Default;
+            var outcome = MatchGrant.Outcome(1, all, winnerId: 1, rates, "VIPER", new FlightShare(ChassisClass.Scout, 3, 1f));
+
+            var awards = new List<Award>();
+            MatchAwards.For(1, all, awards);
+            var expected = MatchXp.Lines(all[1], awards, won: true, new List<XpLine>(), rates);
+            Assert.That(outcome.Xp, Is.EqualTo(expected));
+            Assert.That(outcome.Won, Is.True);
+            Assert.That(outcome.Draw, Is.False);
+            Assert.That(outcome.Place, Is.EqualTo(1));
+            Assert.That(outcome.Players, Is.EqualTo(2));
+
+            var profile = new PlayerProfile();
+            ProfileRules.Record(profile, outcome, 1);
+            Assert.That(profile.totalXp, Is.EqualTo(expected));
+            Assert.That(profile.ChassisXpOf((int)ChassisClass.Scout), Is.EqualTo(expected));
+            Assert.That(profile.PilotXpOf(3), Is.EqualTo(expected));
+            Assert.That(profile.recent[0].pilot, Is.EqualTo("VIPER"));
+
+            var loser = MatchGrant.Outcome(2, all, winnerId: 1, rates, "", default);
+            Assert.That(loser.Won, Is.False);
+            Assert.That(loser.Place, Is.EqualTo(2));
+            Assert.That(MatchGrant.Outcome(2, all, winnerId: 0, rates, "", default).Draw, Is.True);
+        }
+
+        [Test]
         public void TrackProgress_ShowsLevelFillAndTheCap()
         {
             var half = TrackProgress.From("SCOUT", new LevelCurve(1000, 0, 3), 1500);

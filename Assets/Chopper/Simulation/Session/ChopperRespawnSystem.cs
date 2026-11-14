@@ -65,7 +65,8 @@ namespace Chopper.Simulation.Session
             var placement = default(SpawnPlacement);
             var prepared = false;
 
-            foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>().WithEntityAccess())
+            foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>()
+                         .WithNone<Progression.LoadoutPending>().WithEntityAccess())
             {
                 timer.ValueRW.Remaining -= deltaTime;
                 if (timer.ValueRO.Remaining > 0f) continue;

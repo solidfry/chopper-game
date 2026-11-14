@@ -46,9 +46,12 @@ namespace Chopper.Services.Matchmaking
         public ushort Port { get; }
         /// <summary>Session id, kept for "Rejoin" after a crash or disconnect.</summary>
         public string SessionId { get; }
+        /// <summary>The signed-in player's Unity id (the match server keeps their progress under it); "" for a local match.</summary>
+        public string PlayerId { get; }
 
-        public MatchAssignment(string address, ushort port, string sessionId)
+        public MatchAssignment(string address, ushort port, string sessionId, string playerId = "")
         {
+            PlayerId = playerId ?? "";
             Address = address;
             Port = port;
             SessionId = sessionId;
