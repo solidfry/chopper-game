@@ -25,6 +25,8 @@ namespace Chopper.Presentation.Hud
         private const float HealthBarRange = 400f;
         /// <summary>Without a lock, the lead follows the target closest to the nose inside this cone.</summary>
         private static readonly float LeadConeCos = math.cos(math.radians(15f));
+        /// <summary>Ray pieces of a falling rocket's free-aim arc.</summary>
+        private const int ArcPieces = 32;
 
         private readonly List<(float DistanceSq, WorldMarker Marker)> _candidates = new();
 
@@ -115,6 +117,8 @@ namespace Chopper.Presentation.Hud
             if (selection.Selected >= weapons.Length) return;
             var weapon = weapons[selection.Selected];
             if (weapon.Behaviour != PylonBehaviour.Rocket || weapon.Speed <= 0f) return;
+            // An air mine stops and hangs: it has no aim point.
+            if (weapon.Drag > 0f) return;
 
             var muzzle = math.transform(pose.Value, weapon.MuzzleOffset);
             var range = weapon.Speed * weapon.Lifetime;
@@ -129,17 +133,31 @@ namespace Chopper.Presentation.Hud
                 var relativeVelocity = targetVelocity - velocity;
                 if (Guidance.InterceptTime(targetPosition - muzzle, relativeVelocity, weapon.Speed, out var time) && time <= weapon.Lifetime)
                 {
-                    model.SetLead(camera.WorldToViewportPoint(targetPosition + relativeVelocity * time), onTarget: true);
+                    // Gravity pulls the rocket down on the way: aim that much higher (close enough for the reticle).
+                    var drop = new float3(0f, 0.5f * weapon.Gravity * time * time, 0f);
+                    model.SetLead(camera.WorldToViewportPoint(targetPosition + relativeVelocity * time + drop), onTarget: true);
                     return;
                 }
             }
 
-            // Free aim: the rocket path (no gravity, launch velocity as in PylonFireSystem) to the first hit. Nothing in
-            // range (open sky): no reticle, so it never points at empty air.
-            var end = muzzle + (velocity + pose.Forward * weapon.Speed) * weapon.Lifetime;
-            if (SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics) &&
-                Explosions.TryRaycast(physics.CollisionWorld, self, muzzle, end, out var hit))
-                model.SetLead(camera.WorldToViewportPoint(hit.Position), onTarget: false);
+            // Free aim: the rocket path (launch velocity as in PylonFireSystem) to the first hit. Nothing in range (open
+            // sky): no reticle, so it never points at empty air.
+            if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
+            var launch = velocity + pose.Forward * weapon.Speed;
+            // Straight: one ray. With gravity (bombs, heavy rockets): the arc in short pieces, so it shows the impact point.
+            var pieces = weapon.Gravity > 0f ? ArcPieces : 1;
+            var from = muzzle;
+            for (var i = 1; i <= pieces; i++)
+            {
+                var time = weapon.Lifetime * i / pieces;
+                var to = muzzle + launch * time - new float3(0f, 0.5f * weapon.Gravity * time * time, 0f);
+                if (Explosions.TryRaycast(physics.CollisionWorld, self, from, to, out var hit))
+                {
+                    model.SetLead(camera.WorldToViewportPoint(hit.Position), onTarget: false);
+                    return;
+                }
+                from = to;
+            }
         }
 
         private Entity TargetNearestTheNose(Entity self, float3 muzzle, float3 forward, float range)

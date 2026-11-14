@@ -91,12 +91,22 @@ namespace Chopper.Presentation.Events
         public readonly Vector3 Velocity;
         public readonly float Lifetime;
         public readonly int ShooterNetworkId;
-        public RocketLaunched(Vector3 position, Vector3 velocity, float lifetime, int shooter)
+        /// <summary>Path and fuse, as on the server (<see cref="RocketFlight"/>). All 0 = a straight contact rocket.</summary>
+        public readonly float Gravity;
+        public readonly float Drag;
+        public readonly float ProximityFuse;
+        public readonly TargetClass FuseTargets;
+        public RocketLaunched(Vector3 position, Vector3 velocity, float lifetime, int shooter, float gravity = 0f, float drag = 0f,
+            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None)
         {
             Position = position;
             Velocity = velocity;
             Lifetime = lifetime;
             ShooterNetworkId = shooter;
+            Gravity = gravity;
+            Drag = drag;
+            ProximityFuse = proximityFuse;
+            FuseTargets = fuseTargets;
         }
     }
 

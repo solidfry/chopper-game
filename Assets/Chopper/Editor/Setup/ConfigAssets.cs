@@ -29,6 +29,7 @@ namespace Chopper.Editor.Setup
             var mixer = AudioAssets.LoadMixer();
             var catalog = LoadoutAssets.Ensure();
             GuidedWeaponAssets.Ensure(catalog);
+            WeaponRosterAssets.Ensure(catalog);
             PilotAssets.Ensure(catalog);
             SocketAssets.EnsureModuleVisuals(catalog);
             var library = AudioAssets.Ensure(mixer);

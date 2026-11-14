@@ -450,7 +450,7 @@ handling and their own ability, in the same role:
   4. Its own handling row and stats (e.g. faster and better turn, less lift than the tandem Lifter).
   5. Hangar: chassis cards grouped by class, then a variant picker.
 
-### Rockets and a rich weapon roster (owner TODO, 29 Oct — design not started)
+### Rockets and a rich weapon roster (owner TODO, 29 Oct — step 1 built 14 Nov, not compiled)
 - **Rocket lead reticle always on** while a rocket pylon is selected (now it shows only in some cases).
 - **Rocket systems** as pylon modules with clear trades: slow heavy rockets (big splash), fast light rockets (weak,
   long range), aim-guided rockets (follow the reticle while the button is held), smart rockets (proximity fuse, small
@@ -460,6 +460,31 @@ handling and their own ability, in the same role:
   range vs heat), more pylon weapons (section 3b list), more utility abilities (chaff, decoys, drones, EMP, shield,
   repair). Each one a definition asset; chassis-only lines and upgrade chains from "Parts, upgrade chains and chassis
   variants".
+
+**Step 1 as built (14 Nov, written without the editor):** no new behaviour system. The rocket behaviour got data:
+gravity, drag, a proximity fuse (with a target class) and salvos. So a bomb is a rocket with gravity and almost no push,
+an air mine is a rocket with drag and a fuse, flak is a rocket with a fuse. Rockets stay non-ghosts: the path still
+follows from the launch alone, and server, client visuals and lead reticle share `RocketFlight`. Guns got damage falloff.
+
+| Id | Module | Slot | Trade | Account level |
+|---|---|---|---|---|
+| 104 | GAU-19 Heavy MG | Nose | 450 rpm x 14, 650 m, slow to overheat | 2 |
+| 105 | Rotary Cannon | Nose | 1500 rpm x 4.5, 450 m, half damage at range, overheats in 3.5 s | 7 |
+| 106 | 30mm Chain Gun | Nose | 150 rpm x 42, 750 m | 12 |
+| 107 | Railgun | Nose | 30 rpm x 90, 1200 m, 3 shots to overheat | 30 |
+| 108 | M134 Minigun Mk II | Nose | chain tier of 101: longer burst (chassis mastery 4) | 0 |
+| 118 | Light Rockets | Pylon | 220 m/s, weak, 24 rounds | 2 |
+| 119 | Heavy Rockets | Pylon | 95 m/s, small drop, 14 m blast, 4 rounds | 6 |
+| 120 | Salvo Pod | Pylon | 6 rockets per pull in a 3 degree fan, 3 salvos | 9 |
+| 122 | Flak Rockets | Pylon | 6 m proximity fuse on aircraft, 8 rounds | 11 |
+| 124 | Rocket Pod Mk II | Pylon | chain tier of 111: 19 rounds, faster (chassis mastery 4) | 0 |
+| 113 | Bombs (had no weapon) | Pylon | gravity 25, 18 m blast, 4 rounds | 10 |
+| 114 | Air Mines (had no weapon) | Pylon | stops and waits 25 s, 10 m fuse, 5 rounds | 12 |
+
+**Not in step 1:** aim-guided rockets and smart rockets with course correction (the path is then not known at launch, so
+they need a ghost like the missiles: build them on `GuidedMissile` with a new seeker type), the 3b candidates (EMP,
+chain lightning, hack darts), more utility abilities, and per-weapon visuals and sounds (all rocket types share one
+effect set; next: an effect set id on the weapon definition, looked up in `CombatEffectsSettings`).
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.

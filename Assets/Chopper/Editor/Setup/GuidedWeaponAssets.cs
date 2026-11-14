@@ -111,7 +111,8 @@ namespace Chopper.Editor.Setup
             }
         }
 
-        private static T Definition<T>(string assetName, System.Action<T> initialise) where T : ScriptableObject
+        /// <summary>The asset, made and filled only when it is missing (tuned values are never overwritten).</summary>
+        internal static T Definition<T>(string assetName, System.Action<T> initialise) where T : ScriptableObject
         {
             var path = $"{Folder}/{assetName}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
@@ -123,7 +124,7 @@ namespace Chopper.Editor.Setup
             return asset;
         }
 
-        private static void Link(LoadoutCatalog catalog, ushort moduleId, System.Func<ModuleDefinition, bool> isEmpty,
+        internal static void Link(LoadoutCatalog catalog, ushort moduleId, System.Func<ModuleDefinition, bool> isEmpty,
             System.Action<ModuleDefinition> link)
         {
             var module = catalog.Modules.FirstOrDefault(m => m != null && m.Id == moduleId);
@@ -132,25 +133,24 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(module);
         }
 
-        /// <summary>A pylon module for a weapon that has no module in the original catalog.</summary>
-        private static void EnsureModule(LoadoutCatalog catalog, ushort id, string displayName, string description, string assetName,
-            float weight, int unlockLevel, GuidedMissileDefinition weapon)
+        /// <summary>A weapon module that is not in the original catalog (a pylon module if no slot is given). Returns
+        /// the module, new or old.</summary>
+        internal static ModuleDefinition EnsureModule(LoadoutCatalog catalog, ushort id, string displayName, string description,
+            string assetName, float weight, int unlockLevel, WeaponDefinition weapon, SlotType slot = SlotType.Pylon)
         {
-            if (catalog.Modules.Any(m => m != null && m.Id == id)) return;
+            var existing = catalog.Modules.FirstOrDefault(m => m != null && m.Id == id);
+            if (existing != null) return existing;
 
             var module = ScriptableObject.CreateInstance<ModuleDefinition>();
-            module.Initialise(id, displayName, description, SlotType.Pylon, new ModuleStats
-            {
-                Weight = weight,
-                LiftMultiplier = 1f,
-                TurnRateMultiplier = 1f,
-                BoostRechargeMultiplier = 1f,
-            }, unlockLevel);
+            var stats = ModuleStats.None;
+            stats.Weight = weight;
+            module.Initialise(id, displayName, description, slot, stats, unlockLevel);
             module.SetWeapon(weapon);
             AssetDatabase.CreateAsset(module, $"{Folder}/{assetName}.asset");
 
             catalog.Initialise(catalog.Chassis.ToArray(), catalog.Modules.Append(module).ToArray());
             EditorUtility.SetDirty(catalog);
+            return module;
         }
 
         private static void SetInt(SerializedObject target, string property, int value)

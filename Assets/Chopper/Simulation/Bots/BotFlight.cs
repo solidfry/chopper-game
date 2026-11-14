@@ -60,6 +60,9 @@ namespace Chopper.Simulation.Bots
     /// </summary>
     public struct BotFlight
     {
+        /// <summary>Rockets that fall faster than this (m/s2) are bombs: bots do not aim them.</summary>
+        private const float MaxBotRocketGravity = 10f;
+
         [ReadOnly] private ComponentLookup<LocalTransform> _transform;
         [ReadOnly] private ComponentLookup<PhysicsVelocity> _velocity;
         [ReadOnly] private ComponentLookup<ChopperFlightConfig> _flightConfig;
@@ -277,8 +280,10 @@ namespace Chopper.Simulation.Bots
                     var pylonState = pylonStates[i];
                     var empty = pylon.MagazineSize > 0 && pylonState.RoundsUsed >= pylon.MagazineSize;
                     if (empty) continue;
-                    if (pylon.Behaviour == PylonBehaviour.Rocket && s.RocketPylon < 0)
+                    if (pylon.Behaviour == PylonBehaviour.Rocket)
                     {
+                        // Bombs and mines need another way to aim: bots leave them alone.
+                        if (s.RocketPylon >= 0 || pylon.Drag > 0f || pylon.Gravity > MaxBotRocketGravity) continue;
                         s.RocketPylon = i;
                         s.RocketSpeed = pylon.Speed;
                     }

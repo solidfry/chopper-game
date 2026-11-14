@@ -175,6 +175,8 @@ namespace Chopper.Simulation.Loadout
                         FireInterval = gun.FireInterval,
                         Damage = gun.DamagePerShot,
                         Range = gun.Range,
+                        FalloffStart = gun.FalloffStart,
+                        FalloffFloor = gun.FalloffFloor,
                         MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, module.Muzzle, gun.MuzzleOffset, mirror: false),
                         HeatPerShot = gun.HeatPerShot,
                         CoolRate = gun.CoolRate,
@@ -234,6 +236,13 @@ namespace Chopper.Simulation.Loadout
             MuzzleOffset = muzzle,
             MagazineSize = rocket.MagazineSize,
             ReloadSeconds = rocket.ReloadSeconds,
+            Gravity = rocket.Gravity,
+            Drag = rocket.Drag,
+            ProximityFuse = rocket.ProximityFuse,
+            Targets = rocket.FuseTargets,
+            SalvoCount = rocket.SalvoCount,
+            SalvoInterval = rocket.SalvoInterval,
+            SalvoConeCos = rocket.SalvoConeCos,
         };
 
         private static PylonWeapon MissilePylon(ModuleDefinition module, GuidedMissileDefinition missile, float3 muzzle,
