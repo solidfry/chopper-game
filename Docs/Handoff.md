@@ -172,7 +172,7 @@ Then continue with this order (step 1 onward). Older note (29 Oct evening): firs
 **Open lines of work** (full notes per item: history file, old section 6):
 1. **Modular build (Phase 4):** server checks skin unlocks; part upgrade chains; chassis variants (quad Lifter: socket scale and `ChassisClass` done; next a second Lifter spec in PartForge `kits.py`, its handling row, hangar cards grouped by class).
 2. **Damage model** (plan 7d): compiled and played 6 Nov; owner tuning.
-3. **Weapons:** roster step 1 is built, not compiled (4 guns, 4 rocket types, bombs, air mines, 2 Mk II chain tiers; plan section 5, "Step 1 as built"). **Needs the editor test.** Still open: aim-guided and smart rockets (need a ghost), per-weapon effects and sounds, more abilities, weapon stats in the hangar, tuning.
+3. **Weapons:** roster step 1 is built, not compiled (4 guns, 4 rocket types, bombs, air mines, 2 Mk II chain tiers; plan section 5, "Step 1 as built"). **Needs the editor test.** Still open: aim-guided and smart rockets (need a ghost), per-weapon effects and sounds, more abilities, weapon stats in the hangar, tuning. **Next (owner agreed 14 Nov): real bullet travel for the nose gun + a gun lead reticle; design in `Docs/GunBulletTravelDesign.md`, not built.** Rocket Pod and Mk II now 210 m/s, 2.7 s (14 Nov).
 4. **Hangar:** first scene once old menus are ported; module icons; show it while matchmaking searches.
 5. **HUD:** tune the look in play; team colours and objective markers once TDM exists; more weapon markers.
 6. **Services (Phase 3):** production environment; backfill; server checks match id and loadouts; Relay friend matches.
