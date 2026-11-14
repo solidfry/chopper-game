@@ -107,7 +107,7 @@ namespace Chopper.Simulation.Combat
                 if (_damageLookup.TryGetBuffer(hit.Entity, out var damage))
                     damage.Add(new DamageEvent
                     {
-                        Amount = config.ValueRO.Damage,
+                        Amount = GunDamage.At(config.ValueRO, math.distance(muzzle, hit.Position)),
                         Source = shooter,
                         Point = hit.Position,
                         Normal = hit.SurfaceNormal,

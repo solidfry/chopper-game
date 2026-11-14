@@ -134,6 +134,9 @@ namespace Chopper.UI.Hud
             BindTree(root);
         }
 
+        /// <summary>Optics line (zoom, special view, or the key hint). Null in a layout without it.</summary>
+        private Label _zoom;
+
         private void BindTree(VisualElement root)
         {
             _chopper = root.Q("chopper");
@@ -163,6 +166,9 @@ namespace Chopper.UI.Hud
             _flareReload = _chopper.Q("flare-reload");
             _flareReloadFill = _chopper.Q("flare-reload-fill");
             Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
+            // Empty text = no zoom: the label takes no room then.
+            _zoom = _chopper.Q<Label>("zoom");
+            if (_zoom != null) Bind(_zoom, "text", nameof(ChopperHudModel.ZoomText));
             // Plain text: fixed-width digits squeeze the letters of RELOAD and FLARES at this size.
             Bind(_chopper.Q<Label>("pylon-ammo"), "text", nameof(ChopperHudModel.PylonAmmoText));
             Bind(_chopper.Q<Label>("flares"), "text", nameof(ChopperHudModel.FlaresText));
@@ -299,7 +305,9 @@ namespace Chopper.UI.Hud
             if (_chopper == null || _chopper.panel == null) return;
             // Respawned. This event fires only on a change, so a kill that arrives just before the chopper goes stays shown.
             if (args.propertyName == nameof(ChopperHudModel.HasChopper) && _model.HasChopper) _match.ClearDeathAlert();
-            if (args.propertyName == nameof(ChopperHudModel.AimViewport))
+            if (args.propertyName == nameof(ChopperHudModel.ZoomIsHint))
+                _zoom?.EnableInClassList("hud-zoom--hint", _model.ZoomIsHint);
+            else if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
                 RefreshSway();
@@ -346,6 +354,7 @@ namespace Chopper.UI.Hud
         private void RefreshClasses()
         {
             _chopper.EnableInClassList(HiddenClass, !_model.HasChopper);
+            _zoom?.EnableInClassList("hud-zoom--hint", _model.ZoomIsHint);
             _boundsWarning.EnableInClassList(WarningHiddenClass, !_model.OutOfBounds);
             _damageRing.EnableInClassList(DamageHiddenClass, !_model.DamageIndicatorVisible);
             _boost.EnableInClassList(BoostReadyClass, _model.BoostReady);

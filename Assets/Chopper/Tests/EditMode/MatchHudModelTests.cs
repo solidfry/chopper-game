@@ -102,6 +102,24 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void BotName_ReplacesCallSignAndId_InFeedAndScoreboard()
+        {
+            var model = new MatchHudModel();
+            model.SetLocalPlayer(1);
+            model.ApplyScore(1, kills: 0, deaths: 0);
+            model.ApplyScore(1001, kills: 0, deaths: 0);
+            model.SetCallSign(1001, "VIPER");
+            model.SetPlayerName(1001, "[BOT] RAZOR");
+
+            model.AddKill(1001, 1);
+            Assert.That(model.KillFeedText, Is.EqualTo("[BOT] RAZOR > YOU"));
+            Assert.That(model.DeathAlertText, Is.EqualTo("SHOT DOWN BY [BOT] RAZOR"));
+            var named = false;
+            foreach (var row in model.Scoreboard) named |= row.NetworkId == 1001 && row.Name == "[BOT] RAZOR";
+            Assert.That(named, Is.True);
+        }
+
+        [Test]
         public void Scoreboard_SortsByKillsThenDeaths_AndSharesTiedPlaces()
         {
             var model = new MatchHudModel();

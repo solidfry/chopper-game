@@ -15,6 +15,8 @@ namespace Chopper.Presentation.Camera
         /// <summary>The chassis has a cockpit: mounted views sit at <see cref="Eye"/> (chopper space).</summary>
         public bool HasEye;
         public Vector3 Eye;
+        /// <summary>Zoom of the optics module (<see cref="ZoomState.Current"/>). 0 or 1 = none.</summary>
+        public float Magnification;
     }
 
     /// <summary>
@@ -74,6 +76,7 @@ namespace Chopper.Presentation.Camera
         private UnityEngine.Camera _camera;
         private CameraSettings _fallback;
         private SpeedEffects _effects;
+        private VisionEffects _vision;
         private Vector3 _lastVelocity;
         private bool _hasLastVelocity;
         private Vector3 _acceleration;
@@ -152,6 +155,8 @@ namespace Chopper.Presentation.Camera
             // The effects read their shader from the settings: make them again for new settings.
             _effects?.Dispose();
             _effects = new SpeedEffects(transform, _camera, Settings);
+            _vision?.Dispose();
+            _vision = new VisionEffects(transform, Settings);
         }
 
         /// <summary>Switches view with a blend (saved).</summary>
@@ -223,6 +228,16 @@ namespace Chopper.Presentation.Camera
 
         public void NextView() => SetView(_view + 1);
 
+        /// <summary>
+        /// The special view of the optics (night, thermal, ...), once per frame from <see cref="VisionSystem"/>.
+        /// </summary>
+        /// <param name="mode">None = the normal picture.</param>
+        /// <param name="blend">0..1: how much of the view is on (it fades).</param>
+        /// <param name="glows">Marked targets of this frame.</param>
+        public void ShowVision(Chopper.Simulation.Combat.VisionMode mode, float blend,
+            System.Collections.Generic.IReadOnlyList<VisionGlow> glows) =>
+            _vision?.Apply(Settings, Settings.VisionLookFor(mode), blend, glows);
+
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
         public void AddShake(float trauma) => _trauma = Mathf.Clamp01(_trauma + trauma);
 
@@ -264,11 +279,13 @@ namespace Chopper.Presentation.Camera
             var blendT = _previousView >= 0 ? Mathf.SmoothStep(0f, 1f, _blend) : 1f;
             var feel = CameraView.Mix(ViewAt(_previousView), ViewAt(_view), blendT);
             var rumble = Rumble(settingsAsset, feel.Rumble, out var jolt);
-            _camera.fieldOfView = pose.FieldOfView;
+            _camera.fieldOfView = Chopper.Simulation.Combat.ZoomMath.FieldOfView(pose.FieldOfView, target.Magnification);
             _camera.nearClipPlane = pose.NearClip;
             transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt,
                 pose.Rotation * rumble * Shake(deltaTime, settingsAsset, feel.Shake));
-            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime, feel.Effects);
+            // Zoomed: the speed lines and boost effects step back by the magnification, so the sight stays clear.
+            _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime,
+                feel.Effects / Mathf.Max(target.Magnification, 1f));
         }
 
         /// <summary>
@@ -462,6 +479,8 @@ namespace Chopper.Presentation.Camera
         {
             _effects?.Dispose();
             _effects = null;
+            _vision?.Dispose();
+            _vision = null;
             if (_fallback != null) Destroy(_fallback);
         }
 

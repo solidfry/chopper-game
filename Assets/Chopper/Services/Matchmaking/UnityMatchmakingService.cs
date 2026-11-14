@@ -57,7 +57,8 @@ namespace Chopper.Services.Matchmaking
                                 throw new InvalidOperationException("The matchmaker found a match but gave no server address.");
                             done = true;
                             progress?.Report(MatchmakingStatus.Connecting);
-                            return new MatchAssignment(assignment.Ip, (ushort)assignment.Port.Value, assignment.MatchId);
+                            return new MatchAssignment(assignment.Ip, (ushort)assignment.Port.Value, assignment.MatchId,
+                                AuthenticationService.Instance.PlayerId);
                         case IpPortAssignment.StatusOptions.InProgress:
                             // A match id means players are matched and the server is starting.
                             progress?.Report(string.IsNullOrEmpty(assignment.MatchId) ? MatchmakingStatus.Searching : MatchmakingStatus.ServerStarting);

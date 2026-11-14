@@ -25,6 +25,10 @@ namespace Chopper.Simulation.Input
         /// <summary>Multiplies mouse turn speed. 1 = default.</summary>
         public float MouseSensitivity;
         public bool InvertPitch;
+        /// <summary>Zoom: multiplies the mouse turn speed (<see cref="Combat.ZoomMath.MouseScale"/>). 0 = 1 (not set).</summary>
+        public float ZoomMouseScale;
+        /// <summary>Zoom: multiplies the pitch, roll and yaw axes (<see cref="Combat.ZoomMath.AxisScale"/>). 0 = 1 (not set).</summary>
+        public float ZoomAxisScale;
 
         public static PlayerInputSettings Default => new() { MouseSteer = MouseSteer.Roll, MouseSensitivity = 1f };
     }

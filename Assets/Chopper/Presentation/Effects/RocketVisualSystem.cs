@@ -7,14 +7,17 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Physics;
+using Unity.Transforms;
+using Chopper.Simulation.Combat;
 using UnityEngine;
 
 namespace Chopper.Presentation.Effects
 {
     /// <summary>
     /// Client only. Draws rockets from <see cref="RocketLaunched"/> messages: muzzle flash, the rocket visual in flight,
-    /// and an impact where it hits. Visual only: the client ray-casts its own world to know where to stop; the server
-    /// decides damage. Prefabs come from the presentation context.
+    /// and an impact where it hits. Visual only: the client flies the same path (<see cref="RocketFlight"/>) and
+    /// ray-casts its own world to know where to stop (contact, or the proximity fuse); the server decides damage.
+    /// Prefabs come from the presentation context.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -28,7 +31,20 @@ namespace Chopper.Presentation.Effects
             public float Remaining;
             /// <summary>Hits on this player's chopper are ignored (the rocket starts next to it).</summary>
             public int ShooterNetworkId;
+            public float Gravity;
+            public float Drag;
+            public float ProximityFuse;
+            public TargetClass FuseTargets;
         }
+
+        private struct FuseTarget
+        {
+            public float3 Position;
+            public TargetClass Class;
+            public int OwnerNetworkId;
+        }
+
+        private readonly List<FuseTarget> _fuseTargets = new();
 
         private readonly List<RocketVisual> _rockets = new();
         private readonly List<RocketLaunched> _launches = new();
@@ -61,7 +77,8 @@ namespace Chopper.Presentation.Effects
 
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
-            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime);
+            CollectFuseTargets(owners);
+            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime, context.HeatMarks);
         }
 
         /// <summary>Subscribes to the context's launches; a new context (scene change) drops the old rockets.</summary>
@@ -80,26 +97,80 @@ namespace Chopper.Presentation.Effects
         {
             var rotation = Quaternion.LookRotation(launch.Velocity);
             effects.SpawnOneShot(effects.Settings.RocketMuzzleFlash, launch.Position, rotation);
+            var visual = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation);
+            // One rocket model for every type: its size follows the blast, so a bomb reads bigger than a light rocket.
+            // Set on every spawn: the object comes from a pool.
+            if (visual != null) visual.transform.localScale = Vector3.one * RocketScale(launch.SplashRadius);
             _rockets.Add(new RocketVisual
             {
-                GameObject = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation),
+                GameObject = visual,
                 Position = launch.Position,
                 Velocity = launch.Velocity,
                 Remaining = launch.Lifetime,
                 ShooterNetworkId = launch.ShooterNetworkId,
+                Gravity = launch.Gravity,
+                Drag = launch.Drag,
+                ProximityFuse = launch.ProximityFuse,
+                FuseTargets = launch.FuseTargets,
             });
         }
 
-        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime)
+        /// <summary>Model scale for a blast radius: the standard rocket pod (8 m) = 1.</summary>
+        public static float RocketScale(float splashRadius) =>
+            splashRadius > 0f ? Mathf.Clamp(splashRadius / StandardSplashRadius, 0.6f, 2.2f) : 1f;
+
+        private const float StandardSplashRadius = 8f;
+
+        /// <summary>Live targets for the proximity fuses in flight (none when no rocket has a fuse).</summary>
+        private void CollectFuseTargets(ComponentLookup<GhostOwner> owners)
+        {
+            _fuseTargets.Clear();
+            var needed = false;
+            foreach (var rocket in _rockets) needed |= rocket.ProximityFuse > 0f;
+            if (!needed) return;
+
+            foreach (var (targetable, health, pose, entity) in SystemAPI
+                         .Query<RefRO<Targetable>, RefRO<Health>, RefRO<LocalToWorld>>()
+                         .WithEntityAccess())
+            {
+                if (health.ValueRO.IsDead) continue;
+                _fuseTargets.Add(new FuseTarget
+                {
+                    Position = pose.ValueRO.Position,
+                    Class = targetable.ValueRO.Class,
+                    // 0 = no owner (a ground target): never the shooter.
+                    OwnerNetworkId = owners.TryGetComponent(entity, out var owner) ? owner.NetworkId : 0,
+                });
+            }
+        }
+
+        private bool TryFuse(RocketVisual rocket, float3 end, out float3 burst)
+        {
+            burst = end;
+            if (rocket.ProximityFuse <= 0f) return false;
+            foreach (var target in _fuseTargets)
+            {
+                if ((target.Class & rocket.FuseTargets) == 0) continue;
+                if (target.OwnerNetworkId != 0 && target.OwnerNetworkId == rocket.ShooterNetworkId) continue;
+                if (RocketFlight.FuseHit(rocket.Position, end, target.Position, rocket.ProximityFuse, out burst)) return true;
+            }
+            return false;
+        }
+
+        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime,
+            Chopper.Presentation.Camera.HeatMarks heat)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
             {
                 var rocket = _rockets[i];
-                var end = rocket.Position + rocket.Velocity * deltaTime;
+                var end = RocketFlight.Step(rocket.Position, ref rocket.Velocity, rocket.Gravity, rocket.Drag, deltaTime);
+                // A mine that has stopped has no heading: keep the effect upright.
+                var back = math.lengthsq(rocket.Velocity) > 1e-4f ? Quaternion.LookRotation(-rocket.Velocity) : Quaternion.identity;
 
-                if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact))
+                if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact) || TryFuse(rocket, end, out impact))
                 {
-                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, Quaternion.LookRotation(-rocket.Velocity));
+                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, back);
+                    heat.AddTimed(impact, VisionMath.BlastHeat, VisionMath.BlastSeconds);
                     Finish(effects, i, impact);
                     continue;
                 }
@@ -111,8 +182,14 @@ namespace Chopper.Presentation.Effects
                     Finish(effects, i, end);
                     continue;
                 }
+                heat.AddFrame(end, VisionMath.RocketHeat, math.length(rocket.Velocity));
                 if (rocket.GameObject != null)
+                {
                     rocket.GameObject.transform.position = end;
+                    // A bent path: the nose follows the velocity.
+                    if (RocketFlight.IsBallistic(rocket.Gravity, rocket.Drag) && math.lengthsq(rocket.Velocity) > 1f)
+                        rocket.GameObject.transform.rotation = Quaternion.LookRotation(rocket.Velocity);
+                }
             }
         }
 

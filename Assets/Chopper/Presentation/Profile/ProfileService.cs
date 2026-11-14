@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Hangar;
 using Chopper.Presentation.Results;
+using Chopper.Simulation.Loadout;
 using Chopper.Simulation.Match;
+using Chopper.Simulation.Progression;
 using UnityEngine;
 
 namespace Chopper.Presentation.Profile
@@ -19,10 +21,13 @@ namespace Chopper.Presentation.Profile
         public readonly int Xp;
         public readonly int Score;
         public readonly string Pilot;
+        /// <summary>Time flown per chassis class and pilot: the mastery XP is split by it. Null = no mastery XP.</summary>
+        public readonly IReadOnlyList<FlightShare> Flown;
 
         public MatchOutcome(PlayerMatchStats stats, IReadOnlyList<Award> awards, bool won, bool draw, int place, int players, int xp,
-            int score, string pilot)
+            int score, string pilot, IReadOnlyList<FlightShare> flown = null)
         {
+            Flown = flown;
             Stats = stats;
             Awards = awards;
             Won = won;
@@ -43,6 +48,7 @@ namespace Chopper.Presentation.Profile
         {
             var s = match.Stats;
             p.totalXp += Math.Max(0, match.Xp);
+            AddMastery(p, match);
             p.matches++;
             if (match.Won) p.wins++;
             if (match.Draw) p.draws++;
@@ -90,6 +96,40 @@ namespace Chopper.Presentation.Profile
             return Achievements.Unlock(p, unixTime);
         }
 
+        /// <summary>The match XP goes to each chassis class and each pilot by the time flown (plan section 6a-1).</summary>
+        private static void AddMastery(PlayerProfile p, in MatchOutcome match)
+        {
+            var xp = Math.Max(0, match.Xp);
+            if (xp == 0 || match.Flown == null || match.Flown.Count == 0) return;
+            var keys = new List<int>();
+            var seconds = new List<float>();
+            var shares = new List<int>();
+
+            MasterySplit.Collect(match.Flown, ProgressTrack.Chassis, keys, seconds);
+            MasterySplit.Split(xp, seconds, shares);
+            p.chassisXp ??= new List<TrackXp>();
+            for (var i = 0; i < keys.Count; i++) AddXp(p.chassisXp, keys[i], shares[i]);
+
+            MasterySplit.Collect(match.Flown, ProgressTrack.Pilot, keys, seconds);
+            MasterySplit.Split(xp, seconds, shares);
+            p.pilotXp ??= new List<TrackXp>();
+            for (var i = 0; i < keys.Count; i++) AddXp(p.pilotXp, keys[i], shares[i]);
+        }
+
+        private static void AddXp(List<TrackXp> list, int key, int xp)
+        {
+            if (xp <= 0) return;
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (list[i].key != key) continue;
+                var entry = list[i];
+                entry.xp += xp;
+                list[i] = entry;
+                return;
+            }
+            list.Add(new TrackXp { key = key, xp = xp });
+        }
+
         private static void AddAward(PlayerProfile p, string title)
         {
             for (var i = 0; i < p.awards.Count; i++)
@@ -130,7 +170,14 @@ namespace Chopper.Presentation.Profile
                 try { profile = JsonUtility.FromJson<PlayerProfile>(json); }
                 catch (ArgumentException e) { Debug.LogWarning($"Profile save could not be read ({e.Message}); starting a new one."); }
             }
-            if (profile != null) return profile;
+            if (profile != null)
+            {
+                // Version 1 had no mastery lists: they start empty. Nothing else changed.
+                profile.chassisXp ??= new List<TrackXp>();
+                profile.pilotXp ??= new List<TrackXp>();
+                profile.version = PlayerProfile.CurrentVersion;
+                return profile;
+            }
             return new PlayerProfile { totalXp = Math.Max(0, _prefs.GetInt(OldXpKey, 0)) };
         }
 
@@ -164,6 +211,40 @@ namespace Chopper.Presentation.Profile
         public event Action Changed { add { } remove { } }
     }
 
+    /// <summary>One progression track as a screen shows it: level, XP into it, XP it needs. Plain data for the UI.</summary>
+    public readonly struct TrackProgress
+    {
+        /// <summary>"ACCOUNT", "SCOUT", "VIPER".</summary>
+        public readonly string Label;
+        /// <summary>From 1.</summary>
+        public readonly int Level;
+        public readonly int Into;
+        /// <summary>0 at the highest level.</summary>
+        public readonly int Needed;
+        public readonly int TotalXp;
+
+        public TrackProgress(string label, int level, int into, int needed, int totalXp)
+        {
+            Label = label ?? "";
+            Level = level;
+            Into = into;
+            Needed = needed;
+            TotalXp = totalXp;
+        }
+
+        public bool IsMax => Needed <= 0;
+        /// <summary>0..1 into the level; 1 at the highest level.</summary>
+        public float Fill => Needed > 0 ? Mathf.Clamp01((float)Into / Needed) : 1f;
+        public string LevelText => $"LVL {Level}";
+        public string NeedText => IsMax ? "MAX" : $"{Into:N0} / {Needed:N0} XP";
+
+        public static TrackProgress From(string label, LevelCurve curve, int xp)
+        {
+            var level = curve.Level(xp, out var into, out var needed);
+            return new TrackProgress(label, level, into, needed, Math.Max(0, xp));
+        }
+    }
+
     /// <summary>
     /// The player's profile: loads it, records each match (<see cref="MatchResultsModel"/> calls
     /// <see cref="RecordMatch"/> once per match) and saves it. Online, the server will write the record and this only
@@ -172,20 +253,56 @@ namespace Chopper.Presentation.Profile
     public sealed class ProfileService
     {
         private readonly IProfileStore _store;
+        private readonly LevelCurve _account, _chassis, _pilot;
         private PlayerProfile _profile;
 
-        public ProfileService(IProfileStore store) => _store = store;
+        /// <param name="settings">Level curves. Null = the default curves (tests).</param>
+        public ProfileService(IProfileStore store, ProgressionSettings settings = null)
+        {
+            _store = store;
+            _account = settings != null ? settings.Account : LevelCurve.Account;
+            _chassis = settings != null ? settings.Chassis : LevelCurve.Chassis;
+            _pilot = settings != null ? settings.Pilot : LevelCurve.Pilot;
+        }
 
         public PlayerProfile Profile => _profile ??= _store.Load() ?? new PlayerProfile();
         public int TotalXp => Profile.totalXp;
-        public int Level => PilotLevels.Level(TotalXp, out _, out _);
+        /// <summary>Account level.</summary>
+        public int Level => _account.Level(TotalXp);
+
+        public LevelCurve Curve(ProgressTrack track) =>
+            track == ProgressTrack.Chassis ? _chassis : track == ProgressTrack.Pilot ? _pilot : _account;
+
+        public int ChassisXp(ChassisClass chassisClass) => Profile.ChassisXpOf((int)chassisClass);
+        public int PilotXp(ushort pilotId) => Profile.PilotXpOf(pilotId);
+        /// <summary>Mastery level of a chassis class (from 1).</summary>
+        public int ChassisLevel(ChassisClass chassisClass) => _chassis.Level(ChassisXp(chassisClass));
+        /// <summary>Mastery level of a pilot (from 1).</summary>
+        public int PilotLevel(ushort pilotId) => _pilot.Level(PilotXp(pilotId));
+
+        /// <summary>The account track at <paramref name="xp"/> (the results screen counts up through it).</summary>
+        public TrackProgress AccountProgress(int xp) => TrackProgress.From("ACCOUNT", _account, xp);
+        public TrackProgress Account => AccountProgress(TotalXp);
+        public TrackProgress ChassisProgress(ChassisClass chassisClass) =>
+            TrackProgress.From(chassisClass.ToString().ToUpperInvariant(), _chassis, ChassisXp(chassisClass));
+        public TrackProgress PilotProgress(ushort pilotId, string callSign) =>
+            TrackProgress.From(string.IsNullOrEmpty(callSign) ? "PILOT" : callSign, _pilot, PilotXp(pilotId));
+
+        /// <summary>Every chassis class, in enum order.</summary>
+        public List<TrackProgress> ChassisTracks()
+        {
+            var tracks = new List<TrackProgress>();
+            foreach (ChassisClass chassisClass in Enum.GetValues(typeof(ChassisClass)))
+                if (chassisClass != ChassisClass.None) tracks.Add(ChassisProgress(chassisClass));
+            return tracks;
+        }
 
         /// <summary>0..1 into the current level.</summary>
         public float LevelProgress
         {
             get
             {
-                PilotLevels.Level(TotalXp, out var into, out var needed);
+                _account.Level(TotalXp, out var into, out var needed);
                 return needed > 0 ? (float)into / needed : 0f;
             }
         }
@@ -200,5 +317,22 @@ namespace Chopper.Presentation.Profile
             Changed?.Invoke();
             return unlocked;
         }
+    }
+
+    /// <summary>
+    /// The profile as the unlock source: account level and the two masteries. Not yet given to the hangar (it still
+    /// uses <c>AllUnlocked</c>): that change comes with the progression screens. Local data: the server must not trust it.
+    /// </summary>
+    public sealed class ProfileUnlocks : IPlayerUnlocks
+    {
+        private readonly ProfileService _profile;
+
+        public ProfileUnlocks(ProfileService profile) => _profile = profile;
+
+        public int Level => _profile.Level;
+        /// <summary>No purchases yet: every module is owned.</summary>
+        public bool Owns(ushort moduleId) => true;
+        public int ChassisLevel(ChassisClass chassisClass) => _profile.ChassisLevel(chassisClass);
+        public int PilotLevel(ushort pilotId) => _profile.PilotLevel(pilotId);
     }
 }

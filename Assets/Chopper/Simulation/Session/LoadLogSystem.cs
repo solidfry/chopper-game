@@ -91,7 +91,8 @@ namespace Chopper.Simulation.Session
             var tickRate = SystemAPI.TryGetSingleton<ClientServerTickRate>(out var rates) && rates.SimulationTickRate > 0 ? rates.SimulationTickRate : 60;
             var budget = simMean * tickRate * 100.0;
             var players = SystemAPI.QueryBuilder().WithAll<NetworkId, NetworkStreamInGame>().Build().CalculateEntityCount();
-            var line = $"[Load] [{World.Name}] players {players}, ticks/s {_ticks / span:0.0}, frames/s {_frames / span:0.0}, " +
+            var bots = SystemAPI.QueryBuilder().WithAll<Bots.ServerBot>().Build().CalculateEntityCount();
+            var line = $"[Load] [{World.Name}] players {players}, bots {bots}, ticks/s {_ticks / span:0.0}, frames/s {_frames / span:0.0}, " +
                        $"worst frame {_worstFrame * 1000.0:0} ms, hitches (>{HitchSeconds * 1000.0:0} ms) {_hitches}, " +
                        $"sim {simMean * 1000.0:0.00} ms/tick (worst {_simWorst * 1000.0:0.0}, {budget:0}% of the tick budget), " +
                        $"CPU {cpu:0}% of a core, memory {Memory() / (1024 * 1024)} MB";
@@ -102,9 +103,9 @@ namespace Chopper.Simulation.Session
             var matchLog = World.GetExistingSystemManaged<MatchLogSystem>();
             if (matchLog != null && matchLog.Enabled)
                 matchLog.Write("load", string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                    "\"players\":{0},\"ticks\":{1:0.0},\"frames\":{2:0.0},\"worstMs\":{3:0},\"hitches\":{4},\"cpu\":{5:0},\"memMB\":{6},\"simMs\":{7:0.00},\"simWorstMs\":{8:0.0},\"budget\":{9:0}",
+                    "\"players\":{0},\"ticks\":{1:0.0},\"frames\":{2:0.0},\"worstMs\":{3:0},\"hitches\":{4},\"cpu\":{5:0},\"memMB\":{6},\"simMs\":{7:0.00},\"simWorstMs\":{8:0.0},\"budget\":{9:0},\"bots\":{10}",
                     players, _ticks / span, _frames / span, _worstFrame * 1000.0, _hitches, cpu, Memory() / (1024 * 1024),
-                    simMean * 1000.0, _simWorst * 1000.0, budget));
+                    simMean * 1000.0, _simWorst * 1000.0, budget, bots));
             StartWindow();
         }
 

@@ -40,6 +40,8 @@ namespace Chopper.Editor.Setup
             problems.AddRange(CityAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(CityLookSetup.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(MapSceneSetup.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
+            problems.AddRange(SpawnAssets.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
+            problems.AddRange(BotAssets.Problems(config).Select(p => new SetupProblem(p.Message, p.Context)));
             problems.AddRange(TextureBudget.Problems().Select(p => new SetupProblem(p.Message, p.Context)));
             CheckPrefab(problems);
             CheckScene(problems);
@@ -200,8 +202,12 @@ namespace Chopper.Editor.Setup
             if (FindInScene(scene, nameof(ArenaBoundsAuthoring)) == null)
                 problems.Add(new SetupProblem("No arena bounds in the gameplay subscene. Press '4. Set up gameplay subscene'."));
             var spawner = FindInScene(scene, nameof(Chopper.Simulation.Session.ChopperSpawnerAuthoring)) as Chopper.Simulation.Session.ChopperSpawnerAuthoring;
-            if (spawner != null && (spawner.Catalog == null || spawner.MissilePrefab == null || spawner.BotProfile == null))
-                problems.Add(new SetupProblem("Chopper spawner has no loadout catalog, missile prefab or bot profile. Press '4. Set up gameplay subscene'.", spawner));
+            if (spawner != null && (spawner.Catalog == null || spawner.MissilePrefab == null || spawner.BotProfile == null || spawner.SpawnSettings == null ||
+                                    spawner.BotSettings == null))
+                problems.Add(new SetupProblem("Chopper spawner has no loadout catalog, missile prefab, bot profile, spawn settings or bot settings. Press '4. Set up gameplay subscene'.", spawner));
+            if (spawner != null && spawner.ProgressionSettings == null)
+                problems.Add(new SetupProblem("Chopper spawner has no progression settings (the server cannot check unlocks). Press '4. Set up gameplay subscene'.", spawner));
+            SpawnAssets.CheckScene(scene, problems);
             if (FindInScene(scene, nameof(TrainingTargetAuthoring)) == null)
                 problems.Add(new SetupProblem("No training targets in the gameplay subscene (objects named Target… get them in step 4)."));
             // Netcode: a pre-spawned ghost must be the root instance of a ghost prefab, or the subscene does not bake.

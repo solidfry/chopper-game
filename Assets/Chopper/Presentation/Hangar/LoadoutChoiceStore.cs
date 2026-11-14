@@ -58,6 +58,7 @@ namespace Chopper.Presentation.Hangar
         private const string TrainingMapKey = "Chopper.Hangar.TrainingMap";
         private const string PilotKey = "Chopper.Hangar.Pilot";
         private const string ModeKey = "Chopper.Hangar.Mode";
+        private const string ChassisClassKey = "Chopper.Hangar.ChassisClass";
         /// <summary>Longest preset name kept.</summary>
         public const int MaxPresetName = 24;
 
@@ -71,12 +72,17 @@ namespace Chopper.Presentation.Hangar
             return TryDecode(_prefs.GetString(LoadoutKey, ""), out selection);
         }
 
-        public void Save(in LoadoutSelection selection, ushort skinId)
+        /// <param name="chassisClass">The chassis class of the selection (for the mastery XP sent at join).</param>
+        public void Save(in LoadoutSelection selection, ushort skinId, ChassisClass chassisClass = ChassisClass.None)
         {
             _prefs.SetString(LoadoutKey, Encode(selection));
             _prefs.SetInt(SkinKey, skinId);
+            _prefs.SetInt(ChassisClassKey, (int)chassisClass);
             SaveBuild(selection);
         }
+
+        /// <summary>The chassis class of the saved loadout (None with an old save).</summary>
+        public ChassisClass SavedChassisClass => (ChassisClass)Mathf.Clamp(_prefs.GetInt(ChassisClassKey, 0), 0, byte.MaxValue);
 
         /// <summary>The pilot for the next spawn (<see cref="PilotDefinition"/> id; 0 = none). Saved at once.</summary>
         public ushort Pilot
@@ -229,7 +235,16 @@ namespace Chopper.Presentation.Hangar
         {
             var store = new LoadoutChoiceStore();
             if (!store.TryLoad(out var selection, out var skinId)) return;
-            EntityManager.CreateSingleton(new LoadoutChoice { Code = LoadoutCode.From(selection, store.Pilot), SkinId = skinId }, "LoadoutChoice");
+            // The progress claim for this choice (the server does not trust it; Cloud Save replaces it later).
+            var profile = new Profile.PrefsProfileStore(new PlayerPrefsHangarPrefs()).Load();
+            EntityManager.CreateSingleton(new LoadoutChoice
+            {
+                Code = LoadoutCode.From(selection, store.Pilot),
+                SkinId = skinId,
+                AccountXp = profile.totalXp,
+                ChassisXp = profile.ChassisXpOf((int)store.SavedChassisClass),
+                PilotXp = profile.PilotXpOf(store.Pilot),
+            }, "LoadoutChoice");
         }
 
         protected override void OnUpdate() => Enabled = false;

@@ -57,12 +57,29 @@ namespace Chopper.Editor.Setup
         /// <summary>Placeholder art. Not the old Prefabs/Weapons prefabs: they carry the old NGO Weapon script (missing).</summary>
         private static readonly (ushort[] Modules, string Prefab)[] Visuals =
         {
-            (new ushort[] { 101, 102, 103 }, "SM_Veh_Heli_Attach_Minigun"),
+            (new ushort[]
+            {
+                101, 102, 103, WeaponRosterAssets.HeavyMgId, WeaponRosterAssets.RotaryId, WeaponRosterAssets.ChainGunId,
+                WeaponRosterAssets.RailgunId, WeaponRosterAssets.MinigunMk2Id,
+            }, "SM_Veh_Heli_Attach_Minigun"),
             // The swarm pod looks like a rocket pod: many small tubes.
-            (new ushort[] { 111, GuidedWeaponAssets.SwarmPodId }, "SM_Veh_Heli_Attach_Rocket_Pod_02"),
-            (new ushort[] { GuidedWeaponAssets.HomingMissilesId, GuidedWeaponAssets.GroundSeekerId, GuidedWeaponAssets.ClusterMissilesId },
-                "SM_Veh_Heli_Attach_Missle_01"),
-            (new ushort[] { 131 }, "SM_Veh_Attach_Flare_01"),
+            (new ushort[]
+            {
+                111, GuidedWeaponAssets.SwarmPodId, WeaponRosterAssets.LightRocketsId, WeaponRosterAssets.SalvoPodId,
+                WeaponRosterAssets.FlakRocketsId, WeaponRosterAssets.RocketPodMk2Id, 114,
+            }, "SM_Veh_Heli_Attach_Rocket_Pod_02"),
+            // Heavy rockets and bombs (113) hang like missiles until they have their own art.
+            (new ushort[]
+            {
+                GuidedWeaponAssets.HomingMissilesId, GuidedWeaponAssets.GroundSeekerId, GuidedWeaponAssets.ClusterMissilesId,
+                WeaponRosterAssets.HeavyRocketsId, 113,
+            }, "SM_Veh_Heli_Attach_Missle_01"),
+            // The optics modules use the flare box until they have their own art.
+            (new ushort[]
+            {
+                131, WeaponRosterAssets.TargetingOpticsId, WeaponRosterAssets.LongRangeScopeId, WeaponRosterAssets.NightSightId,
+                WeaponRosterAssets.ThermalImagerId, WeaponRosterAssets.KineticTrackerId, WeaponRosterAssets.DeepScanId,
+            }, "SM_Veh_Attach_Flare_01"),
             (new ushort[] { 141 }, "SM_Veh_Attach_Winch_01"),
         };
 

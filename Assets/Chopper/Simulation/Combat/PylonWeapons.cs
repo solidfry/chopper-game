@@ -8,7 +8,7 @@ namespace Chopper.Simulation.Combat
     /// <summary>How a pylon weapon behaves. One system per behaviour, not per weapon: new weapons are mostly data.</summary>
     public enum PylonBehaviour : byte
     {
-        /// <summary>Straight rockets, not ghosts (<see cref="RocketSystem"/>).</summary>
+        /// <summary>Rockets, bombs and mines, not ghosts (<see cref="RocketSystem"/>): the path follows from the launch.</summary>
         Rocket = 0,
         /// <summary>Guided missile ghosts (<see cref="GuidedMissileSystem"/>).</summary>
         Guided = 1,
@@ -36,9 +36,17 @@ namespace Chopper.Simulation.Combat
         /// <summary>Seconds after the last shot until the magazine is full again.</summary>
         public float ReloadSeconds;
 
+        // Rocket only.
+        /// <summary>Downward acceleration, m/s2 (bombs, heavy rockets). 0 = straight.</summary>
+        public float Gravity;
+        /// <summary>Speed lost per second as a rate (air mines stop and hang). 0 = none.</summary>
+        public float Drag;
+
+        // Guided: what the seeker locks. Rocket: what sets off the proximity fuse.
+        public TargetClass Targets;
+
         // Guided only.
         public SeekerType Seeker;
-        public TargetClass Targets;
         public float LockConeCos;
         public float LockRange;
         public float LockTime;
@@ -49,19 +57,20 @@ namespace Chopper.Simulation.Combat
         /// <summary>Radians per second.</summary>
         public float TurnRate;
         public float NavigationGain;
+        /// <summary>Guided and rocket: explodes this close to a target, metres. 0 = contact only.</summary>
         public float ProximityFuse;
         /// <summary>Seconds after launch before the missile steers (it clears the launcher first).</summary>
         public float ArmTime;
         public Entity MissilePrefab;
         /// <summary>Guided only: splits into submunitions (<see cref="ClusterConfig.Count"/> 0 = no).</summary>
         public ClusterConfig Cluster;
-        /// <summary>Guided only: missiles per trigger pull (swarm). 1 = one missile.</summary>
+        /// <summary>Guided and rocket: shots per trigger pull (swarm, salvo pod). 0 or 1 = one shot.</summary>
         public byte SalvoCount;
-        /// <summary>Seconds between missiles of one salvo (one per tick at most, so predicted spawns match).</summary>
+        /// <summary>Seconds between shots of one salvo (one per tick at most, so predicted spawns match).</summary>
         public float SalvoInterval;
         /// <summary>Cosine of the launch spread cone of a salvo.</summary>
         public float SalvoConeCos;
-        /// <summary>0..1: part of a salvo that flares do not fool (swarms saturate flares).</summary>
+        /// <summary>Guided only. 0..1: part of a salvo that flares do not fool (swarms saturate flares).</summary>
         public float FlareResistance;
     }
 

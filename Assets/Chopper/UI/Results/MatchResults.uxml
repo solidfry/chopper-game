@@ -52,6 +52,8 @@
             <ui:Label name="level-need" class="results-xp__need chopper-body" picking-mode="Ignore" />
           </ui:VisualElement>
           <cockpit:SegmentBar name="level-bar" segments="24" gap="3" class="results-xp__bar" picking-mode="Ignore" />
+          <!-- Chassis class and pilot mastery: rows are made in code (MatchResultsView.FillMastery). -->
+          <ui:VisualElement name="mastery" class="results-mastery" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:VisualElement class="results-awards" picking-mode="Ignore">

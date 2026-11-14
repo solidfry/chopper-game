@@ -12,12 +12,17 @@ namespace Chopper.Presentation.Profile
     [Serializable]
     public sealed class PlayerProfile
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         /// <summary>Recent matches kept, newest first.</summary>
         public const int RecentLimit = 10;
 
         public int version = CurrentVersion;
+        /// <summary>Account XP: all match XP.</summary>
         public int totalXp;
+        /// <summary>Version 2. Mastery XP per chassis class (key = <c>ChassisClass</c> value). Levels are worked out, not saved.</summary>
+        public List<TrackXp> chassisXp = new();
+        /// <summary>Version 2. Mastery XP per pilot (key = pilot id).</summary>
+        public List<TrackXp> pilotXp = new();
 
         public int matches;
         public int wins;
@@ -51,6 +56,17 @@ namespace Chopper.Presentation.Profile
         public float KillDeathRatio => deaths > 0 ? (float)kills / deaths : kills;
         public float WinRate => matches > 0 ? (float)wins / matches : 0f;
 
+        public int ChassisXpOf(int chassisClass) => XpOf(chassisXp, chassisClass);
+        public int PilotXpOf(int pilotId) => XpOf(pilotXp, pilotId);
+
+        private static int XpOf(List<TrackXp> list, int key)
+        {
+            if (list == null) return 0;
+            foreach (var entry in list)
+                if (entry.key == key) return entry.xp;
+            return 0;
+        }
+
         public int AwardCountOf(string title)
         {
             foreach (var award in awards)
@@ -64,6 +80,14 @@ namespace Chopper.Presentation.Profile
                 if (unlock.id == id) return true;
             return false;
         }
+    }
+
+    /// <summary>XP on one mastery track entry (one chassis class, or one pilot).</summary>
+    [Serializable]
+    public struct TrackXp
+    {
+        public int key;
+        public int xp;
     }
 
     [Serializable]

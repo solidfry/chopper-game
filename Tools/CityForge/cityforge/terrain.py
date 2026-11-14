@@ -14,8 +14,9 @@ import os
 
 import numpy as np
 
-STEP = 6.0               # LOD0 grid step (m); LOD1 and LOD2 use 2x and 4x
-CHUNK_CELLS = 64         # LOD0 cells per chunk side (384 m)
+STEP = 6.0               # default field grid step (m) = LOD0 step of the default chunks; LOD1 and LOD2 use 2x and 4x
+CHUNK_SIZE = 384.0       # chunk side (m)
+CHUNK_CELLS = 64         # field cells per chunk side at the default step
 LOD_FACTORS = (1, 2, 4)
 OUTER_FACTORS = (2, 4, 8)  # chunks on the map edge (mostly outside the flight bounds): half the detail
 SKIRT = 10.0             # skirt depth on chunk edges (m)
@@ -46,6 +47,31 @@ DEFAULTS = dict(
     # Surface textures for the shader (see surface): texels per side over the whole map, the gully octaves only in the
     # normal map, how strong the hollow mask reads curvature.
     surface=dict(resolution=2048, gullies=((24.0, 3.5), (12.0, 1.6), (6.0, 0.7), (3.0, 0.3)), hollow=6.0),
+    # Shape of the land round the city: "basin" (rim and mesas, above), "alpine" (mountain ranges, see `alpine`),
+    # "ravine" (a high plateau cut by a deep winding ravine with side gullies, see `ravine`).
+    shape="basin",
+    step=STEP,                    # field grid step (m); the finest LOD0 step a chunk can get
+    # Erosion (erosion.py): None = off, or a dict of erosion.DEFAULTS values. The last pass step is the fine field
+    # (surface normal map and masks); the mesh field is that, sampled at `step`.
+    erosion=None,
+    # Mesh detail: None = the fixed rule (inner chunks LOD_FACTORS, map-edge chunks OUTER_FACTORS). Or a budget:
+    # dict(budget=LOD0 triangles, inner=allowed base factors, outer=allowed base factors, play_weight=how much more an
+    # inner (play area) chunk's error counts than a map-edge chunk's); chunks start at the coarsest
+    # factor and the ones where the coarse mesh is most wrong get finer first, until the budget is spent.
+    mesh=None,
+    # alpine: ridged, domain-warped ranges rising from the valley round the city. height = (low, high) peak height,
+    # cell = range spacing (m), warp = domain warp (m), start = mountains start this far from the city flat (m), ramp =
+    # full height this far out, snow = (snow line m, blend m), valley = the canyon becomes a broad valley (floor rise).
+    alpine=dict(height=(380.0, 900.0), cell=1500.0, warp=420.0, start=160.0, ramp=820.0, sharp=1.7, snow=(380.0, 70.0),
+                foothills=60.0),
+    # ravine: the canyon path becomes a ravine across the map through `points` (x, z as a share of the half size),
+    # depth (at the city end, at the far end), floor = river floor width, wall = horizontal run of each wall (m), benches
+    # on the walls, branches = side gullies (count, length range m, depth share at the join), snow line (None = none).
+    ravine=dict(points=((-1.08, -0.62), (-0.55, -0.68), (-0.05, -0.62), (0.36, -0.32), (0.48, 0.02), (0.62, 0.4),
+                        (0.86, 0.66), (1.08, 0.74)),
+                depth=(150.0, 240.0), floor=(34.0, 60.0), wall=(85.0, 150.0), benches=3, wiggle=70.0,
+                branches=(10, (160.0, 420.0), 0.75)),
+    snow=None,                    # (snow line m, blend m): snow mask (also set by alpine)
 )
 
 
@@ -215,12 +241,71 @@ class Terrain:
         self.city, self.channel_z, self.plots = city, channel_z, list(plots)
         self.exterior = exterior
         size = values["size"]
-        self.count = int(round(size / STEP)) + 1
+        self.step = float(values["step"])
+        self.chunk_cells = int(round(CHUNK_SIZE / self.step))
+        self.count = int(round(size / self.step)) + 1
         axis = np.linspace(-size / 2, size / 2, self.count)
         self.x, self.z = np.meshgrid(axis, axis)          # [iz, ix]
         self.markers = []
+        self.fine = None
+        self.timings = {}
+        import time
+        start = time.perf_counter()
         self._paths()
         self.h = self._height(self.x, self.z)
+        self.timings["field"] = time.perf_counter() - start
+        self.h_before = self.h
+        if values.get("erosion") is not None:
+            start = time.perf_counter()
+            self._erode()
+            self.timings["erosion"] = time.perf_counter() - start
+
+    # -- erosion ---------------------------------------------------------------------------------------------------
+    def keep_mask(self, x, z):
+        """0 where the ground must not change (city floor, channel, roads, flat landing tops, lava), 1 from about 30 m
+        out."""
+        v = self.values
+        keep = smoothstep(CITY_FLAT, CITY_FLAT + 40.0, self._city_distance(x, z))
+        dch, _a, _t = polyline_distance(x, z, self.channel)
+        keep = keep * smoothstep(v["channel"]["top"] / 2, v["channel"]["top"] / 2 + 25.0, dch)
+        for road in getattr(self, "roads", []):
+            dr, _a, _t = polyline_distance(x, z, road["points"])
+            keep = keep * smoothstep(road["width"] / 2 + 2.0, road["width"] / 2 + 30.0, dr)
+        m = v["mesas"]
+        cone = m.get("shape") == "cone"
+        for mx, mz, radius, _height, _turn, stretch in self.mesas:
+            top = radius * (m.get("top", 0.38) if cone else 0.55)
+            keep = keep * smoothstep(top, top + 25.0, np.hypot(x - mx, z - mz) * stretch)
+        if getattr(self, "lava", None):
+            keep = keep * smoothstep(0.0, 12.0, self.lava_distance(x, z))
+        return keep
+
+    def _erode(self):
+        """Erode the field (erosion.py) coarse to fine. self.fine: the fine result (height, step, flow, sediment,
+        before); self.h: the fine height sampled at the field step; self.h_before: the field before erosion."""
+        from . import erosion
+
+        v = self.values
+        size = v["size"]
+        keep = self.keep_mask(self.x, self.z)
+        keep = np.where(keep < 0.01, 0.0, keep)
+        result = erosion.erode(self.h, self.step, size, keep, int(v["seed"]) + 500, v["erosion"])
+        fine_step = result["step"]
+        ratio = int(round(self.step / fine_step))
+        fine_count = result["height"].shape[0]
+        fine_axis = np.linspace(-size / 2, size / 2, fine_count)
+        fx, fz = np.meshgrid(fine_axis, fine_axis)
+        keep_fine = self.keep_mask(fx, fz)
+        keep_fine = np.where(keep_fine < 0.01, 0.0, keep_fine)
+        # Protected ground exactly as before (resampling can leave small changes at the edges).
+        result["height"] = result["before"] + (result["height"] - result["before"]) * keep_fine
+        result["keep"] = keep_fine
+        self.fine = result
+        if ratio * fine_step == self.step and (fine_count - 1) == (self.count - 1) * ratio:
+            self.h = result["height"][::ratio, ::ratio].copy()
+        else:
+            self.h = resample(result["height"], fine_step, size, self.x[0])
+        self.h = np.where(keep <= 0.0, self.h_before, self.h)
 
     # -- layout of the features ------------------------------------------------------------------------------------
     def _paths(self):
@@ -244,6 +329,8 @@ class Terrain:
             wiggle = v["canyon"]["wiggle"] * math.sin(phase + t * math.pi * 2.2) * min(1.0, t / 0.25)
             points.append((x, mouth[1] + wiggle - v["canyon"]["wiggle"] * math.sin(phase) * min(1.0, t / 0.25)))
         self.canyon = points
+        if v["shape"] == "ravine":
+            self._ravine_paths(rng, mouth)
         self._exterior_roads()
         self._lava_paths(rng)
         # Mesas on a ring, kept clear of the canyon, the roads and the channel's closed end.
@@ -277,6 +364,71 @@ class Terrain:
                 continue
             # (x, z, radius, height, turn, stretch): an ellipse, long axis radius / stretch.
             self.mesas.append((cx, cz, radius, height, rng.uniform(0, math.pi), stretch))
+
+    def _ravine_paths(self, rng, mouth):
+        """Ravine: a winding path across the map through the style's points (Catmull-Rom with a wiggle), the channel
+        joined to its nearest point, side gullies off both banks."""
+        v = self.values
+        r = v["ravine"]
+        half = v["size"] / 2
+        control = [(px * half, pz * half) for px, pz in r["points"]]
+        dense = []
+        for k in range(len(control) - 1):
+            p0 = control[max(k - 1, 0)]
+            p1, p2 = control[k], control[k + 1]
+            p3 = control[min(k + 2, len(control) - 1)]
+            for t in np.linspace(0.0, 1.0, 12, endpoint=False):
+                t2, t3 = t * t, t * t * t
+                dense.append(tuple(0.5 * ((2 * p1[i]) + (-p0[i] + p2[i]) * t + (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * t2
+                                          + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t3) for i in (0, 1)))
+        dense.append(control[-1])
+        # Wiggle sideways (two waves along the path), not at the ends.
+        out, run = [], 0.0
+        phase = rng.uniform(0, math.tau)
+        lengths = [0.0] + [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(dense, dense[1:])]
+        total = sum(lengths)
+        for k, (px, pz) in enumerate(dense):
+            run += lengths[k]
+            a, b = dense[max(k - 1, 0)], dense[min(k + 1, len(dense) - 1)]
+            tx, tz = b[0] - a[0], b[1] - a[1]
+            norm = math.hypot(tx, tz) or 1.0
+            side = r["wiggle"] * (math.sin(phase + run / 260.0) + 0.45 * math.sin(2.3 * phase + run / 97.0))
+            side *= math.sin(math.pi * min(1.0, run / total))
+            out.append((px - tz / norm * side, pz + tx / norm * side))
+        self.canyon = out
+        # Join the channel to the ravine: from its mouth to the nearest ravine point.
+        d = [math.hypot(px - mouth[0], pz - mouth[1]) for px, pz in out]
+        near = out[int(np.argmin(d))]
+        self.channel = self.channel + [near]
+        # Side gullies: from points along the ravine, out to one side, winding a little, shallower to their tips.
+        count, (low, high), _share = r["branches"]
+        self.branches = []
+        tries = 0
+        while len(self.branches) < count and tries < 200:
+            tries += 1
+            k = int(rng.integers(3, len(out) - 3))
+            (ax, az), (bx, bz) = out[k - 1], out[k + 1]
+            tx, tz = bx - ax, bz - az
+            norm = math.hypot(tx, tz) or 1.0
+            side = 1.0 if rng.random() < 0.5 else -1.0
+            # Out at 45..80 degrees from the ravine, pointing a little upstream (water runs down into the ravine).
+            angle = math.radians(rng.uniform(45.0, 80.0))
+            ux, uz = -tz / norm * side, tx / norm * side
+            dx_, dz_ = ux * math.sin(angle) - tx / norm * math.cos(angle), uz * math.sin(angle) - tz / norm * math.cos(angle)
+            length = rng.uniform(low, high)
+            bend = rng.uniform(-0.5, 0.5)
+            path = []
+            for f in np.linspace(0.0, 1.0, 9):
+                wob = bend * f * f * length * 0.4
+                path.append((out[k][0] + dx_ * length * f - dz_ * wob, out[k][1] + dz_ * length * f + dx_ * wob))
+            xs, zs = np.array([p[0] for p in path]), np.array([p[1] for p in path])
+            if self._city_distance(xs, zs).min() < CITY_FLAT + 140.0:
+                continue
+            if np.abs(xs).max() > half - 40.0 or np.abs(zs).max() > half - 40.0:
+                continue
+            if any(polyline_distance(xs, zs, other)[0].min() < 90.0 for other, _l in self.branches):
+                continue
+            self.branches.append((path, length))
 
     def _lava_paths(self, rng):
         """Lava (values["lava"]): a moat round the city (a wobbly ellipse that passes the canyon mouth) and streams from
@@ -340,9 +492,46 @@ class Terrain:
         dz = np.maximum(np.maximum(z0 - z, 0.0), z - z1)
         return np.hypot(dx, dz)
 
-    def _rim(self, x, z):
-        """The rim: a first cliff step, a higher wall further out, a ragged crest."""
+    def _mountains(self, x, z):
+        """Alpine ranges: ridged multifractal noise on domain-warped coordinates (each octave weighted by the one
+        before, so peaks get sharp and valleys stay smooth), rising from the valley round the city."""
         v = self.values
+        a = v["alpine"]
+        seed = v["seed"]
+        wx = x + a["warp"] * fbm(seed + 31, x, z, a["cell"] * 0.9, 3)
+        wz = z + a["warp"] * fbm(seed + 32, x + 400.0, z - 900.0, a["cell"] * 0.9, 3)
+        table = _lattice(seed + 33)
+        total = np.zeros_like(x)
+        weight = np.ones_like(x)
+        amp, cell, norm = 1.0, a["cell"], 0.0
+        for k in range(6):
+            # Each octave turned (value noise creases run along its lattice; turned, they do not line up).
+            angle = 0.61 + 1.13 * k
+            ca, sa = math.cos(angle), math.sin(angle)
+            ox, oz = wx * ca - wz * sa, wx * sa + wz * ca
+            n = _value(table, ox + 1700.0 * k, oz - 900.0 * k, cell) * 2.0 - 1.0
+            ridge = (1.0 - np.abs(n)) ** 2
+            ridge = ridge * weight
+            weight = np.clip(ridge * 1.6, 0.0, 1.0)
+            total += ridge * amp
+            norm += amp
+            amp *= 0.48
+            cell *= 0.5
+        ridged = total / norm
+        low, high = a["height"]
+        peak = low + (high - low) * (0.5 + 0.5 * fbm(seed + 34, x, z, 2600.0, 2))
+        d = self._city_distance(x, z) + 120.0 * fbm(seed + 35, x, z, 500.0, 2)
+        rise = smoothstep(CITY_FLAT + a["start"], CITY_FLAT + a["ramp"], d)
+        foot = a["foothills"] * (0.5 + 0.5 * fbm(seed + 36, x, z, 260.0, 3)) * smoothstep(CITY_FLAT + 20.0, CITY_FLAT + a["start"] + 200.0, d)
+        # A massif under the ridges, so the ranges are continuous (not single ridge lines in a plain).
+        massif = 0.45 + 0.55 * (0.5 + 0.5 * fbm(seed + 37, x, z, a["cell"] * 1.2, 3))
+        return peak * rise * (0.5 * massif + 0.8 * np.clip(ridged, 0.0, 1.0) ** a["sharp"]) + foot
+
+    def _rim(self, x, z):
+        """The rim: a first cliff step, a higher wall further out, a ragged crest. Alpine maps: the mountains."""
+        v = self.values
+        if v["shape"] == "alpine":
+            return self._mountains(x, z)
         seed = v["seed"]
         p = v["plateau"]
         cx, cz = (self.city[0] + self.city[1]) / 2, (self.city[2] + self.city[3]) / 2
@@ -454,6 +643,13 @@ class Terrain:
             else:
                 cliff = np.clip((radius - dm) / m["cliff"], 0.0, 1.0)
             talus = np.clip((radius + m["talus"] - dm) / m["talus"], 0.0, 1.0) ** 2 * 0.28
+            if v["shape"] == "alpine":
+                # Rock benches on the mountain sides: the top at least as high as the slope at its centre, and cut
+                # flat across (the slope above stands behind it as a wall).
+                height = max(height, float(self._mountains(np.array([mx]), np.array([mz]))[0]) + 4.0)
+                self.mesas[k] = (mx, mz, radius, height, turn, stretch)
+                rock = np.where(dm < radius * 0.7, height, np.maximum(rock, height * np.maximum(cliff, talus)))
+                continue
             rock = np.maximum(rock, height * np.maximum(cliff, talus))
         # Big gullies down the steep rock (the small ones are only in the surface normal map).
         if v.get("gullies"):
@@ -462,15 +658,16 @@ class Terrain:
             for mx, mz, radius, _height, _turn, _stretch in self.mesas:
                 top = radius * top_share if cone else radius * 0.65   # the noisy edge comes in to ~0.65 r
                 keep = keep * smoothstep(top + 4.0, top + 24.0, np.hypot(x - mx, z - mz))   # flat tops stay flat
-            rock = gullies(rock, STEP, v["gullies"], seed + 60, x, z, keep)
+            rock = gullies(rock, self.step, v["gullies"], seed + 60, x, z, keep)
         # Terraces on rock (strata), only where the rock stands above the ground.
-        s = v["strata"]
+        s = max(v["strata"], 1e-3)
         level = rock / s
         terraced = s * (np.floor(level) + smoothstep(0.62, 1.0, level - np.floor(level)))
         # Mesas: everywhere (flat tops). The rim: only on steep rock; on its gentle top the steps read as contour lines.
-        gz_, gx_ = np.gradient(rock, STEP)
+        gz_, gx_ = np.gradient(rock, self.step)
         steep = np.where(rock > rim + 0.01, 1.0, smoothstep(0.5, 1.2, np.hypot(gx_, gz_))) * (rock > 6.0)
-        rock = rock + (terraced - rock) * steep
+        if v["strata"] > 0:
+            rock = rock + (terraced - rock) * steep
         h = np.maximum(h, rock)
         self.rock = rock
         # City floor: exactly flat.
@@ -478,11 +675,14 @@ class Terrain:
         # Canyon: carve a winding trench to a floor that falls away from the basin.
         c = v["canyon"]
         dc, along, total = polyline_distance(x, z, self.canyon)
-        width = c["width"][0] + (c["width"][1] - c["width"][0]) * (0.5 + 0.5 * fbm(seed + 3, along, along * 0, 300.0, 2))
-        floor = c["floor"][0] + (c["floor"][1] - c["floor"][0]) * np.clip(along / total, 0.0, 1.0)
-        wall = smoothstep(0.0, 1.0, (dc - width / 2) / c["wall"])
-        carved = floor + (h - floor) * wall
-        h = np.where(h > floor, carved, h)
+        if v["shape"] == "ravine":
+            h, width = self._carve_ravine(x, z, h, dc, along, total)
+        else:
+            width = c["width"][0] + (c["width"][1] - c["width"][0]) * (0.5 + 0.5 * fbm(seed + 3, along, along * 0, 300.0, 2))
+            floor = c["floor"][0] + (c["floor"][1] - c["floor"][0]) * np.clip(along / total, 0.0, 1.0)
+            wall = smoothstep(0.0, 1.0, (dc - width / 2) / c["wall"])
+            carved = floor + (h - floor) * wall
+            h = np.where(h > floor, carved, h)
         self.canyon_distance, self.canyon_width = dc, width
         # Lava: a shallow trench (not in the city).
         lava = v.get("lava")
@@ -500,6 +700,54 @@ class Terrain:
         h = np.where(dch < half_t, np.minimum(h, profile), h)
         self.channel_distance = dch
         return h
+
+    @staticmethod
+    def _ravine_profile(u, benches):
+        """0 at the floor edge .. 1 at the top of the wall, for u = distance out from the floor edge / wall run. Steep
+        risers and narrow benches (rock layers), a ragged top edge."""
+        u = np.clip(u, 0.0, 1.0)
+        f = u ** 0.8
+        if benches > 0:
+            level = f * benches
+            f = (np.floor(level) + smoothstep(0.25, 0.85, level - np.floor(level))) / benches
+            f = np.minimum(f, 1.0)
+        return f
+
+    def _carve_ravine(self, x, z, h, dc, along, total):
+        """Ravine: river floor, stepped walls down to depth (deeper downstream), wall run and floor width varying
+        along the path; side gullies cut into the plateau and fall to the ravine. Returns (h, floor width)."""
+        v = self.values
+        r = v["ravine"]
+        seed = v["seed"]
+        t = np.clip(along / total, 0.0, 1.0)
+        vary = 0.5 + 0.5 * fbm(seed + 40, along, along * 0, 380.0, 2)
+        floor_w = r["floor"][0] + (r["floor"][1] - r["floor"][0]) * vary
+        run = r["wall"][0] + (r["wall"][1] - r["wall"][0]) * (0.5 + 0.5 * fbm(seed + 41, along, along * 0, 520.0, 2))
+        depth = r["depth"][0] + (r["depth"][1] - r["depth"][0]) * t
+        floor = -depth + 4.0 * fbm(seed + 42, x, z, 120.0, 2)
+        # Ragged edges: push the distance in and out with noise (bigger up the wall).
+        ragged = dc + 18.0 * fbm(seed + 43, x, z, 90.0, 3) + 8.0 * fbm(seed + 44, x, z, 30.0, 2)
+        u = (ragged - floor_w / 2) / run
+        wall = self._ravine_profile(u, r["benches"])
+        carved = floor + (h - floor) * wall
+        h = np.where(h > carved, carved, h)
+        # Side gullies: a V cut, depth from share x the ravine depth at the join to 0 at the tip, narrow at the tip.
+        _count, _lengths, share = r["branches"]
+        for k, (path, length) in enumerate(getattr(self, "branches", [])):
+            db, ab, tb = polyline_distance(x, z, path)
+            f = np.clip(ab / tb, 0.0, 1.0)
+            jx, jz = path[0]
+            _dj, aj, _tj = polyline_distance(np.array([jx]), np.array([jz]), self.canyon)
+            join_t = float(np.clip(aj[0] / total, 0.0, 1.0))
+            join_depth = (r["depth"][0] + (r["depth"][1] - r["depth"][0]) * join_t) * share
+            bottom = -join_depth * (1.0 - f) ** 1.3
+            half = 10.0 + 55.0 * (1.0 - f)
+            wob = db + 10.0 * fbm(seed + 50 + k, x, z, 60.0, 2)
+            side = smoothstep(0.0, 1.0, (wob - 4.0) / half)
+            cut = bottom + (h - bottom) * side ** 0.8
+            near = (db < half + 30.0) & (f < 0.999)
+            h = np.where(near & (cut < h), cut, h)
+        return h, floor_w
 
     # -- surface types ---------------------------------------------------------------------------------------------
     def masks(self):
@@ -538,9 +786,9 @@ class Terrain:
 
         smooth = blur(h, 2)
         laplace = (np.roll(smooth, 1, 0) + np.roll(smooth, -1, 0) + np.roll(smooth, 1, 1) + np.roll(smooth, -1, 1)
-                   - 4 * smooth) / (STEP * STEP)
+                   - 4 * smooth) / (self.step * self.step)
         hollow = np.clip(laplace * 18.0, 0.0, 1.0)
-        gz, gx = np.gradient(h, STEP)
+        gz, gx = np.gradient(h, self.step)
         slope = np.degrees(np.arctan(np.hypot(gx, gz)))
         cliff = (slope > 42.0).astype(float)
         scree = np.clip(blur(cliff, 4) * 2.2 - cliff, 0.0, 1.0) * (slope < 40.0)
@@ -550,6 +798,12 @@ class Terrain:
         for road in getattr(self, "roads", []):
             dr, _a, _t = polyline_distance(self.x, self.z, road["points"])
             made = np.maximum(made, smoothstep(road["width"] / 2 + 4.0, road["width"] / 2, dr))
+        if self.fine is not None:
+            # Erosion: the droplets' flow and the sediment they left (resampled from the fine grid).
+            axis = self.x[0]
+            flow = np.maximum(flow, np.clip(resample(self.fine["flow"], self.fine["step"], self.values["size"], axis), 0, 1))
+            sediment = np.clip(resample(self.fine["sediment"], self.fine["step"], self.values["size"], axis), 0, 1)
+            hollow = np.maximum(hollow, sediment)
         if getattr(self, "lava", None):
             flow = np.maximum(flow, 1.0 - smoothstep(-3.0, 1.0, self.lava_distance(self.x, self.z)))
         self._masks = np.stack([flow, hollow, made, scree], axis=-1)
@@ -559,8 +813,8 @@ class Terrain:
         """City swatch name index per LOD0 cell: channel, city concrete, cliff strata, talus rock, sand."""
         h = self.h
         hc = (h[:-1, :-1] + h[1:, :-1] + h[:-1, 1:] + h[1:, 1:]) / 4
-        sx = ((h[:-1, 1:] - h[:-1, :-1]) + (h[1:, 1:] - h[1:, :-1])) / (2 * STEP)
-        sz = ((h[1:, :-1] - h[:-1, :-1]) + (h[1:, 1:] - h[:-1, 1:])) / (2 * STEP)
+        sx = ((h[:-1, 1:] - h[:-1, :-1]) + (h[1:, 1:] - h[1:, :-1])) / (2 * self.step)
+        sz = ((h[1:, :-1] - h[:-1, :-1]) + (h[1:, 1:] - h[:-1, 1:])) / (2 * self.step)
         slope = np.degrees(np.arctan(np.hypot(sx, sz)))
         xc = (self.x[:-1, :-1] + self.x[1:, 1:]) / 2
         zc = (self.z[:-1, :-1] + self.z[1:, 1:]) / 2
@@ -572,6 +826,9 @@ class Terrain:
         # geometry reads as strata; height bands thinner than the grid would zig-zag.
         names[slope >= 16.0] = "rock"
         names[slope >= 58.0] = "rock_dark"
+        snow = self.values.get("snow") or (self.values["alpine"]["snow"] if self.values["shape"] == "alpine" else None)
+        if snow:
+            names[(hc > snow[0]) & (slope < 40.0)] = "trim"
         names[city] = "concrete"
         in_channel = dch < ch["top"] / 2
         names[in_channel] = "trim"
@@ -603,8 +860,8 @@ class Terrain:
     def sample(self, x, z):
         """Height at (x, z) by bilinear interpolation of the field."""
         size = self.values["size"]
-        fx = (np.asarray(x) + size / 2) / STEP
-        fz = (np.asarray(z) + size / 2) / STEP
+        fx = (np.asarray(x) + size / 2) / self.step
+        fz = (np.asarray(z) + size / 2) / self.step
         ix = np.clip(np.floor(fx).astype(int), 0, self.count - 2)
         iz = np.clip(np.floor(fz).astype(int), 0, self.count - 2)
         tx, tz = np.clip(fx - ix, 0, 1), np.clip(fz - iz, 0, 1)
@@ -681,15 +938,19 @@ class Terrain:
         step = size / res
         axis = (np.arange(res) + 0.5) * step - size / 2
         x, z = np.meshgrid(axis, axis)
-        h = resample(self.h, STEP, size, axis)
-        made = resample(self.masks()[..., 2], STEP, size, axis)
-        steep_rock = smoothstep(4.0, 20.0, resample(self.rock, STEP, size, axis)) * (made < 0.01)
-        h = gullies(h, step, sv["gullies"], v["seed"] + 90, x, z, steep_rock)
+        made = resample(self.masks()[..., 2], self.step, size, axis)
+        steep_rock = smoothstep(4.0, 20.0, resample(self.rock, self.step, size, axis)) * (made < 0.01)
+        if self.fine is not None:
+            # Eroded: the fine field already has the gullies (real ones).
+            h = resample(self.fine["height"], self.fine["step"], size, axis)
+        else:
+            h = resample(self.h, self.step, size, axis)
+            h = gullies(h, step, sv["gullies"], v["seed"] + 90, x, z, steep_rock)
         gz, gx = np.gradient(h, step)
         normal = np.stack([-gx, np.ones_like(h), -gz], axis=-1)
         normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
 
-        masks = np.stack([np.clip(resample(self.masks()[..., c], STEP, size, axis), 0.0, 1.0) for c in range(4)], -1)
+        masks = np.stack([np.clip(resample(self.masks()[..., c], self.step, size, axis), 0.0, 1.0) for c in range(4)], -1)
         # Hollow: curvature of the detailed surface (gully floors, cliff feet), a little blurred.
         lap = (np.roll(h, 1, 0) + np.roll(h, -1, 0) + np.roll(h, 1, 1) + np.roll(h, -1, 1) - 4 * h) / (step * step)
         lap = (np.roll(lap, 1, 0) + np.roll(lap, -1, 0) + np.roll(lap, 1, 1) + np.roll(lap, -1, 1) + 4 * lap) / 8
@@ -698,7 +959,7 @@ class Terrain:
         masks[..., 0] = np.maximum(masks[..., 0], np.clip(lap * sv["hollow"] * 0.5, 0.0, 0.4) * steep_rock)
         # Made ground and lava, sharp at texel size: distances (smooth fields) on the 6 m grid, resampled, then cut.
         def fine(distance):
-            return resample(np.minimum(distance, 500.0), STEP, size, axis)
+            return resample(np.minimum(distance, 500.0), self.step, size, axis)
 
         made = smoothstep(CITY_FLAT + step, CITY_FLAT - step, self._city_distance(x, z))
         made = np.maximum(made, smoothstep(step, -step, fine(self.channel_distance - v["channel"]["top"] / 2)))
@@ -725,6 +986,54 @@ class Terrain:
         encoded = np.concatenate([normal[..., :3] * 0.5 + 0.5, normal[..., 3:]], axis=-1)
         write_png(normal_path, np.clip(np.round(encoded[::-1] * 255.0), 0, 255).astype(np.uint8))
 
+    def snow_line(self):
+        """(height m, blend m) or None."""
+        v = self.values
+        return v.get("snow") or (v["alpine"]["snow"] if v["shape"] == "alpine" else None)
+
+    def detail_masks(self):
+        """Extra masks over the whole map (same texels as surface()), 0..1, first row = -Z:
+            R slope     0 flat .. 1 at 60 degrees or more
+            G sediment  where erosion left material (fans, valley floors); 0 with no erosion
+            B snow      above the snow line, not on steep rock or in strong flow; 0 with no snow line
+            A flow      eroded water flow (log scale); D8 flow with no erosion
+        Returns a float32 (res, res, 4) array."""
+        if getattr(self, "_detail", None) is not None:
+            return self._detail
+        v = self.values
+        size, res = v["size"], v["surface"]["resolution"]
+        step = size / res
+        axis = (np.arange(res) + 0.5) * step - size / 2
+        x, z = np.meshgrid(axis, axis)
+        if self.fine is not None:
+            h = resample(self.fine["height"], self.fine["step"], size, axis)
+            sediment = np.clip(resample(self.fine["sediment"], self.fine["step"], size, axis), 0.0, 1.0)
+            flow = np.clip(resample(self.fine["flow"], self.fine["step"], size, axis), 0.0, 1.0)
+        else:
+            h = resample(self.h, self.step, size, axis)
+            sediment = np.zeros_like(h)
+            flow = np.clip(resample(self.masks()[..., 0], self.step, size, axis), 0.0, 1.0)
+        gz, gx = np.gradient(h, step)
+        degrees = np.degrees(np.arctan(np.hypot(gx, gz)))
+        slope = np.clip(degrees / 60.0, 0.0, 1.0)
+        snow = np.zeros_like(h)
+        line = self.snow_line()
+        if line:
+            height, blend = line
+            ragged = height + blend * 0.8 * fbm(v["seed"] + 70, x, z, 140.0, 3)
+            snow = smoothstep(ragged - blend, ragged + blend, h)
+            snow *= 1.0 - smoothstep(34.0, 48.0, degrees)              # does not hold on steep rock
+            snow *= 1.0 - 0.6 * smoothstep(0.55, 0.9, flow)             # melt lines in the gullies
+            snow = np.clip(snow + 0.35 * sediment * smoothstep(ragged - blend, ragged, h), 0.0, 1.0)  # drifts in hollows
+        made = self.surface()[0][..., 2]
+        snow *= 1.0 - made
+        self._detail = np.stack([slope, sediment, snow, flow], axis=-1).astype(np.float32)
+        return self._detail
+
+    def write_detail(self, path):
+        """detail_masks() as an 8-bit PNG (linear data, first row = +Z)."""
+        write_png(path, np.clip(np.round(self.detail_masks()[::-1] * 255.0), 0, 255).astype(np.uint8))
+
     def write_raw(self, path):
         """16-bit little-endian RAW (Unity Terrain import: Mac/Windows byte order = Windows), rows from -Z to +Z."""
         low, high = float(self.h.min()), float(self.h.max())
@@ -733,9 +1042,83 @@ class Terrain:
         return low, high
 
 
-def chunk_ranges(count):
+def chunk_ranges(count, chunk_cells=CHUNK_CELLS):
     cells = count - 1
-    return [(k * CHUNK_CELLS, min(cells, (k + 1) * CHUNK_CELLS)) for k in range((cells + CHUNK_CELLS - 1) // CHUNK_CELLS)]
+    return [(k * chunk_cells, min(cells, (k + 1) * chunk_cells)) for k in range((cells + chunk_cells - 1) // chunk_cells)]
+
+
+def chunk_triangles(z0, z1, x0, x1, factor, skirts=True):
+    """Triangles in one chunk mesh at a step factor (grid quads x 2, plus 2 per skirt quad on the 4 edges)."""
+    rows, cols = len(_steps(z0, z1, factor)) - 1, len(_steps(x0, x1, factor)) - 1
+    return 2 * rows * cols + (4 * (rows + cols) if skirts else 0)
+
+
+def _coarse_error(h, z0, z1, x0, x1, factor):
+    """Mean absolute height error (m) of a chunk meshed at `factor` against the full field (bilinear between the
+    coarse samples)."""
+    if factor <= 1:
+        return 0.0
+    iz, ix = _steps(z0, z1, factor), _steps(x0, x1, factor)
+    coarse = h[np.ix_(iz, ix)]
+    fz = np.arange(z0, z1 + 1)
+    fx = np.arange(x0, x1 + 1)
+    rows = np.stack([np.interp(fx, ix, coarse[r]) for r in range(len(iz))])
+    full = np.stack([np.interp(fz, iz, rows[:, c]) for c in range(len(fx))], axis=1)
+    return float(np.abs(full - h[z0:z1 + 1, x0:x1 + 1]).mean())
+
+
+def chunk_plan(t):
+    """[(name, ci, cj, z0, z1, x0, x1, factors)] for every chunk. With no `mesh` budget: the fixed rule (inner chunks
+    LOD_FACTORS, map-edge chunks OUTER_FACTORS, in units of the field step). With a budget: every chunk starts at its
+    coarsest allowed base factor; then the step that removes the most height error per extra triangle is taken, again
+    and again, while the LOD0 total stays in the budget. LOD1 and LOD2 = 2x and 4x the chosen base factor."""
+    ranges = chunk_ranges(t.count, t.chunk_cells)
+    last = len(ranges) - 1
+    mesh = t.values.get("mesh")
+    plan = []
+    if not mesh:
+        scale = max(1, int(round(STEP / t.step)))      # the fixed rule is in 6 m units
+        for ci, (z0, z1) in enumerate(ranges):
+            for cj, (x0, x1) in enumerate(ranges):
+                edge = ci in (0, last) or cj in (0, last)
+                factors = tuple(f * scale for f in (OUTER_FACTORS if edge else LOD_FACTORS))
+                plan.append((f"Terrain_{ci:02d}_{cj:02d}", ci, cj, z0, z1, x0, x1, factors))
+        return plan
+    budget = mesh.get("budget", 380000)
+    inner, outer = tuple(sorted(mesh.get("inner", (1, 2, 4)))), tuple(sorted(mesh.get("outer", (2, 4, 8))))
+    chunks = []
+    for ci, (z0, z1) in enumerate(ranges):
+        for cj, (x0, x1) in enumerate(ranges):
+            edge = ci in (0, last) or cj in (0, last)
+            allowed = outer if edge else inner
+            errors = {f: _coarse_error(t.h, z0, z1, x0, x1, f) for f in allowed}
+            tris = {f: chunk_triangles(z0, z1, x0, x1, f) for f in allowed}
+            chunks.append(dict(ci=ci, cj=cj, z0=z0, z1=z1, x0=x0, x1=x1, allowed=allowed, errors=errors, tris=tris,
+                               level=len(allowed) - 1, weight=1.0 if edge else mesh.get("play_weight", 3.0)))
+    total = sum(c["tris"][c["allowed"][c["level"]]] for c in chunks)
+    while True:
+        best, best_gain = None, 0.0
+        for c in chunks:
+            if c["level"] == 0:
+                continue
+            now, finer = c["allowed"][c["level"]], c["allowed"][c["level"] - 1]
+            cost = c["tris"][finer] - c["tris"][now]
+            if total + cost > budget:
+                continue
+            area = (c["z1"] - c["z0"]) * (c["x1"] - c["x0"])
+            gain = (c["errors"][now] - c["errors"][finer]) * area * c["weight"] / max(cost, 1)
+            if gain > best_gain:
+                best, best_gain = c, gain
+        if best is None:
+            break
+        now, finer = best["allowed"][best["level"]], best["allowed"][best["level"] - 1]
+        total += best["tris"][finer] - best["tris"][now]
+        best["level"] -= 1
+    for c in chunks:
+        base = c["allowed"][c["level"]]
+        plan.append((f"Terrain_{c['ci']:02d}_{c['cj']:02d}", c["ci"], c["cj"], c["z0"], c["z1"], c["x0"], c["x1"],
+                     (base, base * 2, base * 4)))
+    return plan
 
 
 # -- meshes (Blender) -------------------------------------------------------------------------------------------------
@@ -749,15 +1132,10 @@ def make_chunks(t, collection, material):
     lookup = {name: sw(name) for name in set(names.ravel())}
     index = np.vectorize(lookup.get)(names).astype(np.int32)
     chunks = []
-    ranges = chunk_ranges(t.count)
-    last = len(ranges) - 1
-    for ci, (z0, z1) in enumerate(ranges):
-        for cj, (x0, x1) in enumerate(ranges):
-            name = f"Terrain_{ci:02d}_{cj:02d}"
-            factors = OUTER_FACTORS if ci in (0, last) or cj in (0, last) else LOD_FACTORS
-            objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material)
-                       for level, factor in enumerate(factors)]
-            chunks.append((name, objects, factors))
+    for name, _ci, _cj, z0, z1, x0, x1, factors in chunk_plan(t):
+        objects = [_chunk_mesh(t, index, z0, z1, x0, x1, factor, f"{name}_LOD{level}", collection, material)
+                   for level, factor in enumerate(factors)]
+        chunks.append((name, objects, factors))
     return chunks
 
 

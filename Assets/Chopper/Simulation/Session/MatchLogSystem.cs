@@ -202,7 +202,7 @@ namespace Chopper.Simulation.Session
                 Field("winner", match.WinnerNetworkId);
                 _line.Append(",\"scores\":[");
                 var first = true;
-                foreach (var (score, id) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<NetworkId>>())
+                foreach (var (score, id) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>())
                 {
                     if (!first) _line.Append(',');
                     first = false;
@@ -217,7 +217,7 @@ namespace Chopper.Simulation.Session
         private void WritePlayers(double now)
         {
             _seen.Clear();
-            foreach (var (id, connection) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<NetworkStreamInGame>().WithEntityAccess())
+            foreach (var (id, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithEntityAccess())
             {
                 var networkId = id.ValueRO.Value;
                 _seen.Add(networkId);

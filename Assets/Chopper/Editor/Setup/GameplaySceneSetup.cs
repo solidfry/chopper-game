@@ -104,9 +104,10 @@ namespace Chopper.Editor.Setup
             EnsureArenaBounds(scene, settings);
             var targets = EnsureTrainingTargets(scene);
             EnsureSpawner(scene);
+            var points = SpawnAssets.EnsurePoints(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log($"Setup: gameplay subscene '{scene.name}' ready ({targets} training target(s) added).");
+            Debug.Log($"Setup: gameplay subscene '{scene.name}' ready ({targets} training target(s) added, {points} spawn point(s) added).");
         }
 
         private static GameObject FindOrCreateSettingsObject(Scene scene)
@@ -168,19 +169,28 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>
-        /// The spawner needs the loadout catalog (per-player loadouts, chassis prefabs), the missile ghost and the bot
-        /// profile.
+        /// The spawner needs the loadout catalog (per-player loadouts, chassis prefabs), the missile ghost, the bot
+        /// profile, the spawn settings and the bot settings (server bots).
         /// </summary>
         private static void EnsureSpawner(Scene scene)
         {
             var config = ConfigAssets.Load();
             var missile = AssetDatabase.LoadAssetAtPath<GameObject>(GuidedWeaponAssets.MissilePrefabPath);
             var bots = BotAssets.EnsureProfile();
+            var spawn = SpawnAssets.EnsureSettings();
+            var botFill = BotAssets.EnsureSettings(config != null ? config.LoadoutCatalog : null);
+            // Progression: always written again, so the skin levels follow the skin library.
+            var progression = ProgressionAssets.EnsureSettings();
+            var skinLevels = ProgressionAssets.SkinLevels(config);
             foreach (var spawner in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ChopperSpawnerAuthoring>(true)))
             {
-                if (spawner.Catalog != null && spawner.MissilePrefab != null && spawner.BotProfile != null) continue;
                 Undo.RecordObject(spawner, "Configure chopper spawner");
-                spawner.Configure(config != null ? config.LoadoutCatalog : null, missile, bots);
+                spawner.ConfigureProgression(progression, skinLevels);
+                EditorUtility.SetDirty(spawner);
+                if (spawner.Catalog != null && spawner.MissilePrefab != null && spawner.BotProfile != null && spawner.SpawnSettings != null &&
+                    spawner.BotSettings != null) continue;
+                Undo.RecordObject(spawner, "Configure chopper spawner");
+                spawner.Configure(config != null ? config.LoadoutCatalog : null, missile, bots, spawn, botFill);
                 EditorUtility.SetDirty(spawner);
             }
         }

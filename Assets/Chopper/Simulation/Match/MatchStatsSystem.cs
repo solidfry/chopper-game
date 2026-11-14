@@ -57,7 +57,7 @@ namespace Chopper.Simulation.Match
         {
             if (buffer.Length == 0) return;
             var connections = new NativeHashMap<int, Entity>(16, Allocator.Temp);
-            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<PlayerStats>().WithEntityAccess())
+            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithAll<PlayerStats>().WithEntityAccess())
                 connections[networkId.ValueRO.Value] = connection;
 
             var statsLookup = SystemAPI.GetComponentLookup<PlayerStats>();
@@ -94,7 +94,7 @@ namespace Chopper.Simulation.Match
         private void SendAll(ref SystemState state)
         {
             var ecb = new EntityCommandBuffer(Allocator.Temp);
-            foreach (var (stats, networkId) in SystemAPI.Query<RefRO<PlayerStats>, RefRO<NetworkId>>())
+            foreach (var (stats, networkId) in SystemAPI.Query<RefRO<PlayerStats>, RefRO<PlayerId>>())
             {
                 var rpc = ecb.CreateEntity();
                 ecb.AddComponent(rpc, MatchStatsRpc.From(networkId.ValueRO.Value, stats.ValueRO.Value));

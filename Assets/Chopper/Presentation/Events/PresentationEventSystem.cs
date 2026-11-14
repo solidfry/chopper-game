@@ -113,12 +113,18 @@ namespace Chopper.Presentation.Events
             }
 
             foreach (var launch in SystemAPI.Query<RefRO<LocalRocketLaunch>>())
-                events.Publish(new RocketLaunched(launch.ValueRO.Position, launch.ValueRO.Velocity, launch.ValueRO.Lifetime, localId));
+            {
+                var own = launch.ValueRO;
+                events.Publish(new RocketLaunched(own.Position, own.Velocity, own.Lifetime, localId, own.Gravity, own.Drag,
+                    own.ProximityFuse, own.FuseTargets, own.SplashRadius));
+            }
             foreach (var rpc in SystemAPI.Query<RefRO<RocketLaunchRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
                 // Our own rockets were already published from prediction.
                 if (rpc.ValueRO.ShooterNetworkId == localId) continue;
-                events.Publish(new RocketLaunched(rpc.ValueRO.Position, rpc.ValueRO.Velocity, rpc.ValueRO.Lifetime, rpc.ValueRO.ShooterNetworkId));
+                var other = rpc.ValueRO;
+                events.Publish(new RocketLaunched(other.Position, other.Velocity, other.Lifetime, other.ShooterNetworkId, other.Gravity,
+                    other.Drag, other.ProximityFuse, (TargetClass)other.FuseTargets, other.SplashRadius));
             }
 
             // Cluster submunitions: rebuilt from the server's seed, drawn like rockets (also for the shooter: not predicted).
@@ -128,7 +134,8 @@ namespace Chopper.Presentation.Events
                 for (var i = 0; i < split.Count; i++)
                 {
                     var velocity = Cluster.Direction(split.Forward, split.ConeCos, split.Seed, i) * split.Speed;
-                    events.Publish(new RocketLaunched(split.Position, velocity, split.Lifetime, split.ShooterNetworkId));
+                    events.Publish(new RocketLaunched(split.Position, velocity, split.Lifetime, split.ShooterNetworkId,
+                        splashRadius: split.SplashRadius));
                 }
             }
         }

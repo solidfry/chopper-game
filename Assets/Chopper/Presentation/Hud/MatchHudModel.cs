@@ -48,6 +48,8 @@ namespace Chopper.Presentation.Hud
 
         private int _localNetworkId;
         private readonly Dictionary<int, string> _callSigns = new();
+        /// <summary>Full names that replace "CALLSIGN id" (server bots).</summary>
+        private readonly Dictionary<int, string> _names = new();
         private readonly Dictionary<int, string> _chassis = new();
         private readonly List<ScoreboardRow> _rows = new();
         private bool _scoreboardHeld;
@@ -254,8 +256,21 @@ namespace Chopper.Presentation.Hud
         /// Steam names come in here later (plan section 6, "NAME [VIPER]").
         /// </summary>
         private string PlayerName(int networkId) =>
-            _callSigns.TryGetValue(networkId, out var sign) && !string.IsNullOrEmpty(sign) ? $"{sign} {networkId}"
+            _names.TryGetValue(networkId, out var name) && !string.IsNullOrEmpty(name) ? name
+            : _callSigns.TryGetValue(networkId, out var sign) && !string.IsNullOrEmpty(sign) ? $"{sign} {networkId}"
             : $"PILOT {networkId}";
+
+        /// <summary>
+        /// A full name for a player, used in place of the call sign and id (a server bot: "[BOT] RAZOR";
+        /// <see cref="PilotNamesSystem"/>). Empty = back to the call sign.
+        /// </summary>
+        public void SetPlayerName(int networkId, string name)
+        {
+            name ??= "";
+            if (_names.TryGetValue(networkId, out var known) && known == name) return;
+            _names[networkId] = name;
+            RefreshScores();
+        }
 
         /// <summary>
         /// A player's pilot call sign (from their chopper's loadout; <see cref="PilotNamesSystem"/>). Empty = no pilot.

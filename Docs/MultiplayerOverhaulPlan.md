@@ -450,7 +450,7 @@ handling and their own ability, in the same role:
   4. Its own handling row and stats (e.g. faster and better turn, less lift than the tandem Lifter).
   5. Hangar: chassis cards grouped by class, then a variant picker.
 
-### Rockets and a rich weapon roster (owner TODO, 29 Oct — design not started)
+### Rockets and a rich weapon roster (owner TODO, 29 Oct — step 1 built 14 Nov, not compiled)
 - **Rocket lead reticle always on** while a rocket pylon is selected (now it shows only in some cases).
 - **Rocket systems** as pylon modules with clear trades: slow heavy rockets (big splash), fast light rockets (weak,
   long range), aim-guided rockets (follow the reticle while the button is held), smart rockets (proximity fuse, small
@@ -460,6 +460,43 @@ handling and their own ability, in the same role:
   range vs heat), more pylon weapons (section 3b list), more utility abilities (chaff, decoys, drones, EMP, shield,
   repair). Each one a definition asset; chassis-only lines and upgrade chains from "Parts, upgrade chains and chassis
   variants".
+
+**Step 1 as built (14 Nov, written without the editor):** no new behaviour system. The rocket behaviour got data:
+gravity, drag, a proximity fuse (with a target class) and salvos. So a bomb is a rocket with gravity and almost no push,
+an air mine is a rocket with drag and a fuse, flak is a rocket with a fuse. Rockets stay non-ghosts: the path still
+follows from the launch alone, and server, client visuals and lead reticle share `RocketFlight`. Guns got damage falloff.
+
+| Id | Module | Slot | Trade | Account level |
+|---|---|---|---|---|
+| 104 | GAU-19 Heavy MG | Nose | 450 rpm x 14, 650 m, slow to overheat | 2 |
+| 105 | Rotary Cannon | Nose | 1500 rpm x 4.5, 450 m, half damage at range, overheats in 3.5 s | 7 |
+| 106 | 30mm Chain Gun | Nose | 150 rpm x 42, 750 m | 12 |
+| 107 | Railgun | Nose | 30 rpm x 90, 1200 m, 3 shots to overheat | 30 |
+| 108 | M134 Minigun Mk II | Nose | chain tier of 101: longer burst (chassis mastery 4) | 0 |
+| 118 | Light Rockets | Pylon | 220 m/s, weak, 24 rounds | 2 |
+| 119 | Heavy Rockets | Pylon | 95 m/s, small drop, 14 m blast, 4 rounds | 6 |
+| 120 | Salvo Pod | Pylon | 6 rockets per pull in a 3 degree fan, 3 salvos | 9 |
+| 122 | Flak Rockets | Pylon | 6 m proximity fuse on aircraft, 8 rounds | 11 |
+| 124 | Rocket Pod Mk II | Pylon | chain tier of 111: 19 rounds, faster (chassis mastery 4) | 0 |
+| 113 | Bombs (had no weapon) | Pylon | gravity 25, 18 m blast, 4 rounds | 10 |
+| 114 | Air Mines (had no weapon) | Pylon | stops and waits 25 s, 10 m fuse, 5 rounds | 12 |
+
+**Zoom (14 Nov, written without the editor):** an optics module (Utility slot, own weight) gives zoom levels; the
+nose gun limits them (`MaxZoom`: Minigun 2x ... Railgun 10x), so a strong scope pays off only on a long-range gun. One
+key cycles the steps. Local only: camera FOV and turn speed. Modules: 136 Targeting Optics (2x, 4x), 137 Long-Range
+Scope (3x, 6x, 10x). Open decision: an own Optics slot (needs a ninth loadout slot; `LoadoutCode` holds 8).
+
+**Special views (14 Nov, written without the editor):** an optics module can also have a view on its own key: Night
+Sight (amplified light), Thermal Imager (hot things glow: engines, boost, missiles; sees through fog), Kinetic Tracker
+(only what moves glows; a hover is not seen), Deep Scan (targets through walls at 250 m, dark picture). Local picture
+only: a post volume plus glow quads, looks as data on `CameraSettings`. Ideas not built: signal scope (shows who locks
+you and the lock line), wire view (edge lines of terrain for low flight in fog; needs a full-screen shader), decoy
+view (shows which flare or decoy is false), damage view (enemy hull state as colour).
+
+**Not in step 1:** aim-guided rockets and smart rockets with course correction (the path is then not known at launch, so
+they need a ghost like the missiles: build them on `GuidedMissile` with a new seeker type), the 3b candidates (EMP,
+chain lightning, hack darts), more utility abilities, and per-weapon visuals and sounds (all rocket types share one
+effect set; next: an effect set id on the weapon definition, looked up in `CombatEffectsSettings`).
 
 ### Customisation UI (hangar scene)
 - **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
@@ -641,6 +678,67 @@ Target (server managed; the screens do not change, only the store and who writes
 5. **Moving over:** read the local `Chopper.Profile` once at first online sign-in and offer it as the start (or drop
    it: local stats are not trusted). Then `CloudProfileStore` replaces `PrefsProfileStore` in `PresentationContext`.
 
+### 6a-1. Three progression tracks (design agreed 13 Nov — step 1 built 13 Nov, written without the editor)
+
+**One XP source, three tracks.** A match gives one XP number (`MatchXp`, as now). The same XP goes to:
+- **Account** (all of it).
+- **Chassis class mastery**: the share of flight time on each `ChassisClass` in the match.
+- **Pilot mastery**: the share of flight time with each pilot in the match.
+
+The server counts the seconds flown per chassis class and per pilot (next to `MatchStatsSystem`).
+
+**What each track unlocks** (each track has its own job, so they do not compete):
+| Track | Unlocks | Power? |
+|---|---|---|
+| Account level (cap about 50) | Breadth: chassis, pilots, weapon families (rocket types, guns; lasers and the railgun late) | New options |
+| Chassis mastery (per class, cap about 20) | Depth: part chain tiers (`PartLine`: rotor, engine, armour) for that class, variants, chassis skins | Side-grades |
+| Pilot mastery (per pilot, cap about 15) | Identity: portrait styles, titles for the name plate, voice sets, pilot skins | None |
+
+- Rule: an unlock is a trade, not a plain upgrade. The weight budget keeps a new player competitive.
+- Part chain tier rule: the parent tier is unlocked AND chassis mastery is at level N. This replaces "part mastery"
+  from the parts section (one less track).
+
+**Data (one mechanism for all items):**
+- `ProgressionSettings` asset on `GameConfig`: XP rates (the `MatchXp` constants move here), one level curve per track,
+  the caps, the XP factor for bot kills.
+- As built (simpler than first proposed): no `UnlockRule` struct and no `PartLine` asset. An item keeps its
+  `unlockLevel` (account) and a module adds `masteryLevel` (mastery of the chassis class it is fitted on) and
+  `parent` (the tier before it). Both levels must be reached. Pilots and skins get a mastery field when they need one.
+- Pure code: `LevelCurve.Level(xp)`, `MasterySplit` (XP by flight time), `LoadoutRules.Validate` (`MasteryLocked`).
+- `IPlayerUnlocks` grows: `Level`, `ChassisLevel(class)`, `PilotLevel(id)`, `Owns(id)` (for later purchases).
+- `LoadoutRules.Validate` also checks the pilot and the skin: this is the server check for skin unlocks.
+
+**Storage:** `PlayerProfile` version 2 adds `chassisXp` (class, XP) and `pilotXp` (pilot id, XP).
+- Only XP is stored. Levels and unlocks are worked out from XP and the settings: no unlock list to migrate, and the
+  curve can change later.
+
+**Server authority (in steps):**
+1. Local (now): the client records, as today. The hangar shows the locks. Not safe for ranked play.
+2. The server holds a `PlayerProgress` component on the player entity (account level, chassis levels, pilot levels).
+   `ChopperRespawnSystem` validates the loadout against it. Bots (`BotIds.IsBot`) pass every check and get no grant.
+3. Cloud: at connect the server reads the player's protected Cloud Save data through Cloud Code; at match end it posts
+   the results and Cloud Code runs the same pure grant code. The client only reads.
+
+**Limits against farming:** XP only when the match completes; bot kills give a factor (0.5 proposed); no XP in local
+or private sessions.
+
+**Screens:** results (three bars: account, chassis, pilot), home profile (three tracks), hangar chassis card (mastery
+bar; the module list becomes the chain view), pilot select (pilot level and next reward).
+
+**Build order:** 1) pure rules, settings asset, profile v2, tests. 2) screens. 3) server component and spawn check.
+4) Cloud Code and Cloud Save.
+
+**Decisions (owner, 13 Nov):** mastery per chassis class; pilot rewards cosmetic only; weapons on the account track;
+bot kill XP factor 0.5 (not built: needs a bot kill count in the match stats, step 3); currency later.
+
+**Progress:** steps 1 to 4 built 13 and 14 Nov (not compiled, not run). Flight time per chassis is not counted: a
+connection has one loadout for a match.
+
+**Step 4 as built:** the game server (not Cloud Code) works out awards, XP and the new record with the game's own
+rules, so there is one copy of the rules; Cloud Code only stores the record (protected Cloud Save) and refuses a write
+from a player. The server reads the record at join (the unlock check then uses real numbers) and writes it after the
+match. The client reads its record after sign-in and keeps it as the local save. See `CloudCode/README.md`. Lock switch: `locksOn` on the settings asset (off). Limits: see the handoff, section 4a.
+
 ## 6b. Asset Store candidates: weather and effects (owner, 11 Nov — not imported)
 
 The owner owns these. ECS does not matter for them: weather and effects are client presentation only (GameObjects in
@@ -679,6 +777,128 @@ Bot AI with proper path finding and a needs-based decision system, for **air and
 - **Path finding:** air — 3D (A* over a coarse voxel grid or a sparse octree baked from the level colliders, plus local obstacle avoidance by ray casts); land — Unity AI Navigation NavMesh (or A* on a 2D grid). One path query service shared by both.
 - **Server only:** bots run on the server. Air bots drive the same `ChopperInput` as players (the `ScriptedPilot` seam built for the 4-player test), so flight, prediction and rules stay the same. Land units get their own input/movement component.
 - **Fits:** section 4 (bots fill empty slots), section 7 (modes: objectives become needs), Phase 6 (bots), Phase 7 load tests (bots and thin clients).
+
+### 7a-1. Server bots that fill empty slots (design agreed 13 Nov — built 13 Nov, written without the editor)
+
+State: built as designed below; not compiled or played. Editor steps: `Docs/Handoff.md` 4a.
+
+**Decisions (owner, 13 Nov):** target 4 players, max 4 bots; names marked (`[BOT] RAZOR`); ground units: only a hook now.
+
+**Owner without a connection**
+- New `PlayerId { int Value }` on each player entity: a connection (id = its `NetworkId`, added by `GoInGameServerSystem`) or a server bot entity (id = 1001 + slot; `BotIds`).
+- Spawn (`ChopperRespawnSystem`), score (`MatchScoreSystem`), stats (`MatchStatsSystem`) and the match log query `PlayerId`, not `NetworkId`.
+- `ConnectionOwner` on a chopper points at the player entity (connection or bot). RPCs to one player (`ApplyDamageSystem` hit and damage RPCs) are skipped when the owner has no `NetworkId`. `ChopperSpawning` sets `CommandTarget` only for a connection.
+- `PlayerScoreCleanup` tells clients that a bot left (`PlayerLeftRpc`), the same as a player.
+
+**Spawn**
+- A bot entity has `PlayerId`, `ServerBot`, `RespawnTimer`, `RequestedLoadout`, `LinkedEntityGroup`. `ChopperRespawnSystem` treats it like a player. The chopper ghost gets `GhostOwner { NetworkId = bot id }`; clients see a normal interpolated ghost.
+
+**Shared code**
+- The per-bot step (situation, brain, navigator, pilot) moves out of `BotPilotSystem` into one shared struct (component lookups + `Step`). The client `BotPilotSystem` and the new server `ServerBotSystem` call it.
+- Server input: `ServerBotSystem` runs in `PredictedSimulationSystemGroup` after `CopyCommandBufferToInputSystemGroup` and writes `ChopperInput` directly (the copy system zeroes input with no commands). An `InputEvent` with `Set()` counts as pressed for that tick.
+- Each bot has its own `BotHandling` (from its roster row's profile); the `BotHandling` singleton stays for the client bot and the grid cell size.
+
+**Count**
+- Pure `BotFill`: bots wanted = target − humans in game, clamped to 0..max. No humans = no bots (an idle server still stops; `ServerLifecycle` counts connections only).
+- A player joins: remove one bot: a dead one first, else the one with the fewest kills. New bot: the lowest free slot.
+
+**Names and ids**
+- `BotSettings` asset on `GameConfig` (`Data/Bots/BotSettings.asset`): target players, max bots, name tag, roster rows (name, `BotProfile`, loadout). Baked on the spawner (`BotFillRules` + `BotRosterEntry` buffer).
+- Slot n = id 1001 + n = roster row n (wraps). Clients read the name from the same asset by id (`PilotNamesSystem` → `MatchHudModel`), so there is no new network data.
+
+**Other**
+- NavGrid: the server bake starts when `BotFillRules` is baked with max bots > 0 (not only when a `BotPilotState` exists).
+- Match end: in post-game bots hover and do not fire; the brain resets at the next match.
+- Setup: step 1 makes `BotSettings` and links it; step 4 gives it to the spawner; Validate: empty roster, duplicate names, bad loadouts, missing profiles.
+- Tuning: a profile per roster row (easy and hard bots in one match). Guided missiles: some roster rows get a seeker loadout (the brain already uses seekers; not tested in play). Ground units: a `Kind` field on the bot entity only.
+- Tests: `BotFill` (count, which bot goes), `BotIds`, names.
+
+**CPU (estimate, not measured):** a bot costs a player's chopper plus about 0.05–0.15 ms per tick of thinking; a path search can spike to 2–5 ms, so one search per tick for all bots. Read the `[Load]` line before the max goes up.
+
+**Risks:** written without the editor; the `PlayerId` change touches spawn, score, stats and log together; input write order in the prediction group; bot ids 1001+ in `GhostOwner` not tested with netcode; stale Burst cache after the refactor; the spawn code under it was not compiled at the time.
+
+## 6c. Sky, weather, time of day and terrain (research, 13 Nov — not built)
+
+**Current state (checked in the repo):**
+- Terrain: CityForge numpy height field, 3072 m square, 6 m grid, 64 chunks of 384 m with 3 LODs (edge chunks half
+  detail), about 378k triangles at LOD0 for the whole map (8.7k max per chunk), plus a 41k far backdrop and an 11k
+  skyline. Mesh collider per chunk from LOD0. Map-wide masks and a 1.5 m/texel normal map carry the small detail.
+  Verdict: cheap. Unity Terrain would not be faster. The limit is realism (6 m grid, no erosion), not performance.
+  Still to measure in a build: GPU frame time on the terrain pass, physics broadphase cost of 64 mesh colliders.
+- Sky: `MapConditions` (TimeOfDay, Weather enums) and `EnvironmentSettings` exist; only Night + Clear, baked into the
+  scenes; server pick + replication not built.
+- UniStorm is imported (UNISTORM_PRESENT). This version already has Render Graph passes for atmospheric fog, clouds,
+  cloud shadows and sun shafts (Unity 6.6 URP is Render Graph only; Compatibility Mode was removed in 6.4).
+  It owns `RenderSettings` (skybox, sun, fog, ambient) and uses a static `UniStormSystem.Instance`.
+  PostProcessing v1 came with it: built-in pipeline only, does nothing in URP; remove it.
+
+**Plan: sky, weather, time of day**
+- 13 Nov: steps 1 and 2 written (server pick + announcement, EnvironmentSystem, UniStorm driver). Not done: shaders reading `_ChopperCityLights` / `_ChopperWetness`, height fog tint from UniStorm, APV lighting scenarios, server-build stripping of UniStorm, quality per preset.
+1. Server picks conditions per match (map entry: allowed times and weathers, weights) into a replicated singleton
+   (`MapConditions` ghost component). Time is fixed per match (fair, and lighting can be pre-baked); optional slow drift
+   later from the server tick, so every client sees the same sky.
+2. Client: one `IEnvironmentDriver` behind `EnvironmentSettings`. First driver: UniStorm, in its own assembly
+   (`Chopper.Presentation.UniStorm`, define constraint UNISTORM_PRESENT) so the asset can be swapped or removed. It calls
+   `SetTime`, `ChangeWeatherInstantly`, `ChangeCameraSource` (the chase camera), and owns sky, sun, moon, clouds,
+   precipitation, lightning and ambient. Our side keeps: height fog pass (tinted from UniStorm's fog colour), city
+   emissives and street lights on by time of day, cockpit and HUD looks, audio (weather loops through our mixer, not
+   UniStorm's own sounds and music: turn those off).
+3. Lighting per time of day: Adaptive Probe Volumes with lighting scenarios (one per TimeOfDay) instead of the current
+   probe folders; reflection probes re-rendered per scenario.
+4. Server build: strip UniStorm (client presentation only). Weather that changes play (fog range, rain on sensors,
+   wind on flight) is simulation data in `MapConditions`, not UniStorm.
+5. Test cost per HUD/quality preset: volumetric clouds and sun shafts off or low on the Performant preset.
+
+**UniStorm: to do in the Unity editor (owner, after the 13 Nov code)**
+1. Compile. UniStorm now has asmdefs (`UniStorm`, `UniStorm.Editor` + asmref in `Scripts/Effects/Editor`). If a
+   reference is missing (e.g. TextMeshPro, Cinemachine), add it to `UniStorm.asmdef`. Demo scenes show missing
+   scripts (PostProcessing v1 removed): ignore or delete the demo scenes.
+2. Window > UniStorm > Add URP Renderer Features, on every URP renderer asset used by the game (High, Performant).
+   Check the order next to our HUD look feature (UniStorm fog and clouds before it).
+3. `MapCatalog`: set Times and Weathers per map. Press Setup 10 (adds the Environment object with the UniStorm driver,
+   bakes the allowed sets). Check the driver's weather table (Ash uses "Hazy" as a stand-in).
+4. Play with the EnvironmentSettings preview override: each time of day and each weather. Tune on the UniStorm
+   prefab copy or the driver: hours per time, cloud quality, fog density, sun and moon intensity.
+5. Fog: UniStorm atmospheric fog and our height fog pass stack. Pick one owner of distance fog (UniStorm), keep the
+   height fog for low valley haze, and lower its density.
+6. City lights and wet ground: make the BuildingWear and TerrainBiome graphs read `_ChopperCityLights` (0 by day) and
+   `_ChopperWetness`; the street lamp and floodlight GameObjects should turn off by day.
+7. Lighting per time: Adaptive Probe Volumes with one lighting scenario per TimeOfDay; reflection probes per time.
+8. Server build: keep UniStorm out (strip the Environment object in `ServerSceneStrip`; the assembly may stay).
+9. Measure frame time per preset (volumetric clouds and sun shafts low or off on Performant).
+10. Audio: route UniStorm weather sounds to our Ambient mixer group, or replace them with our cues.
+
+**Plan: terrain**
+- Keep the CityForge mesh-chunk path (works with subscenes, Entities Graphics, Unity Physics, LODs). Unity Terrain does
+  not bake into Entities: no rendering from a subscene, and Unity Physics has no TerrainCollider baker (Won't Fix);
+  it would need a custom baker plus a GameObject terrain outside the subscene.
+- Add realism in the generator (free, scripted, same for every map):
+  1. New terrain styles: `alpine` (ridges, peaks, valleys, tree line, snow) and `ravine` (deep cut with side gullies,
+     overhang-free walls, a river floor). Domain-warped ridged noise for ranges.
+  2. Erosion pass on a fine grid (1–2 m) in numpy: hydraulic (droplet or grid flow with sediment) plus thermal
+     (talus angle). Output the eroded height for the meshes (resampled to 3–4 m in the play area, 6–12 m outside),
+     and flow, sediment and slope masks plus the 1 m normal map for the shader (the detail you see up close).
+  3. Finer grid near the play space only (chunk step by distance), so triangle count stays near today's.
+  4. Collider: optional `Unity.Physics.TerrainCollider.Create` from the RAW height map in a small custom baker, in place
+     of 64 mesh colliders (exact, less memory). Measure before switching.
+  5. Rock and cliff meshes (instanced) on steep faces for silhouettes; trees/props as instanced meshes, not Terrain trees.
+- Optional outside tools (heightmap in, our chunker out): Unity Terrain Tools (free package: erosion brushes, RAW
+  import/export) for hand-sculpted maps. Gaea Community and World Machine Basic are free for non-commercial use only
+  (Gaea free export 1024 px): use for tests; a commercial release needs Gaea Indie ($99).
+- Terrain shading stays ours (TerrainBiome graph, world-space masks). MicroSplat is only for Unity Terrain, and its URP
+  module is paid.
+
+**Terrain progress (13 Nov, Python only, not yet in Unity):**
+- Done: steps 1 to 3. `terrain.shape` alpine and ravine (styles `alpine` = City05, `ravine` = City06), erosion
+  (`cityforge/erosion.py`, droplet + thermal, 6 → 3 → 1.5 m, about 60 s per map), budget mesh detail (`terrain.mesh`),
+  detail masks (`<kit>_TerrainDetail.png`: slope, sediment, snow, flow). City01 and City04 output is unchanged (checked).
+- Cost at the same 380k LOD0 budget: the same mix as today (6 m play area, 12 m outside). A 3 m mesh everywhere in the
+  play area would be about 1.2M LOD0 triangles; the 6 m mesh is within about 0.2 m of the 3 m field, so detail stays in
+  the 1.5 m normal map. Raise `mesh.budget` to buy 3 m chunks where the error is biggest.
+- Open: alpine peaks reach about 860 m in the flight area (40 m under the 900 m ceiling): raise the ceiling or cap the
+  peaks. No buildings or full previews for City05 / City06 yet (layout is only a size). The TerrainBiome shader does not
+  read the detail texture yet (snow uses the `alpine` biome's cover height). Steps 4 (TerrainCollider) and 5 (rock
+  meshes) not started.
 
 ## 7a2. City building generator (owner TODO, 29 Oct — first version built 3 Nov)
 

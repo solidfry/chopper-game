@@ -41,6 +41,8 @@ One style in `cityforge/styles.py` = one map: kit name, biome, palette, building
 |---|---|---|---|
 | `dystopia` | City01 | desert | Desert basin: mesas, a canyon out through the rim, a storm drain, 7 megatowers and landmarks. |
 | `crater` | City04 | volcanic | Dense refinery town (about 270 buildings) on a crater floor: cinder cones (flat tops), a breach in the crater wall, a lava moat round the city and lava streams down the wall; 3 corporate towers in the core, refinery and fillers (sheds, pump yards, container stacks) round it, a worker slum belt. |
+| `alpine` | City05 | alpine | (13 Nov, terrain only so far) Mining town in a high valley: eroded ridged ranges up to about 860 m, snow above about 420 m, a broad valley out to the east, rock benches with flat tops on the mountain sides. |
+| `ravine` | City06 | rain desert | (13 Nov, terrain only so far) Outpost on a plateau beside a 150 to 240 m deep ravine that winds across the map: stepped walls, a river floor, side gullies, the storm drain falls into it; dendritic drainage on the plateau. |
 
 What a style can set:
 - `layout`: `unique` (megatowers and landmarks it places), `variants` (count per type), `zones` (zone limit, lot
@@ -55,6 +57,23 @@ What a style can set:
   concrete slabs, oil stains, cracks and edge dirt in the terrain shader and the preview.
 - Tried and removed (4 Nov): droplet erosion on the 6 m mesh, boulders and cooled-lava lumps in the mesh. At this
   mesh size they looked broken, so detail now goes into the surface textures and the shader instead.
+- `terrain.shape` (13 Nov): `basin` (default: rim, mesas, canyon), `alpine` (`terrain.alpine`: domain-warped ridged
+  ranges on a massif, rock benches cut flat into the slopes, snow line), `ravine` (`terrain.ravine`: path points across
+  the map, depth, floor width, wall run, benches, side gullies).
+- `terrain.step` (field grid, default 6 m; the new styles use 3 m) and `terrain.erosion` (13 Nov, `cityforge/erosion.py`,
+  numpy only): droplet erosion (vectorised, many droplets at once) plus thermal erosion, coarse to fine on 6, 3 and
+  1.5 m grids; the city floor, roads, channel, landing tops and lava are protected. The mesh is the eroded field at
+  `step`; the normal map and masks come from the 1.5 m pass (this is why it works now and the 4 Nov try did not). About
+  60 s per map. Tuned: median change about 2 m, deepest gullies about 20 m.
+- `terrain.mesh` (13 Nov): a LOD0 triangle budget. Each chunk starts at its coarsest step; the step that removes the
+  most height error per extra triangle is taken until the budget is spent (play-area chunks count 3x). Result at 380k:
+  about the same mix as the fixed rule (6 m in the play area, 12 m outside), 3 m only where it pays. Finding: the 6 m
+  mesh is within about 0.2 m (mean) of the 3 m field; the close-up detail is in the 1.5 m normal map.
+- New output `<kit>_TerrainDetail.png` (RGBA: slope, sediment, snow, eroded flow; same layout as the masks) and
+  terrain.json keys `shape`, `erosion`, `snowLine`, `detailPlan`, `surface.detail`. Eroded flow and sediment also go
+  into the existing masks (R flow, G hollow), so the current shader uses them now.
+- Preview without Blender: `Tools/CityForge/.venv/bin/python Tools/CityForge/terrain_preview.py alpine` (relief before
+  and after erosion, 3/4 views, masks, one chunk at its LODs) into `previews/terrain`.
 - Buildings with `only=(style, ...)` in `specs.py` belong to those styles (the refinery set: `Ind_Refinery`,
   `Ind_Cooling`, `Ind_Spheres`; industrial parts: distillation columns, cooling towers, gas spheres, flare stacks,
   pipe racks).

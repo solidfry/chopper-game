@@ -215,6 +215,9 @@
 
         <!-- Right: award case and achievements -->
         <ui:ScrollView name="pf-right" mode="Vertical" horizontal-scroller-visibility="Hidden" class="pf__right">
+          <!-- Chassis class and pilot mastery: rows are made in code (ProfilePage.FillMastery). -->
+          <ui:Label text="// MASTERY" class="home__section chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement name="pf-mastery" class="pf-achievements" picking-mode="Ignore" />
           <ui:Label name="pf-awards-title" text="// AWARD CASE" class="home__section chopper-title" picking-mode="Ignore" />
           <ui:VisualElement name="pf-awards" class="pf-awards" picking-mode="Ignore" />
           <ui:Label name="pf-achievements-title" text="// ACHIEVEMENTS" class="home__section chopper-title" picking-mode="Ignore" />

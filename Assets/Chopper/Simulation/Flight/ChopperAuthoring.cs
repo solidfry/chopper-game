@@ -92,6 +92,7 @@ namespace Chopper.Simulation.Flight
                 AddComponent<HitscanWeaponState>(entity);
                 AddComponent(entity, built.Countermeasure);
                 AddComponent<CountermeasureState>(entity);
+                AddComponent(entity, built.Optics);
 
                 var pylons = AddBuffer<PylonWeapon>(entity);
                 foreach (var pylon in built.Pylons) pylons.Add(pylon);

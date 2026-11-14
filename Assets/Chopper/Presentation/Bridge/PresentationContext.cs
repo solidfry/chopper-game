@@ -38,7 +38,7 @@ namespace Chopper.Presentation.Bridge
         private float _cockpitMuffle;
         /// <summary>The server link closed (notice shown); <see cref="_leftAfterLinkLost"/> once the way out started.</summary>
         private bool _linkLost, _leftAfterLinkLost;
-        /// <summary>Only <c>Flight/Scoreboard</c> is on here; the flight actions are read by the simulation.</summary>
+        /// <summary>Only <c>Flight/Scoreboard</c>, <c>Flight/Zoom</c> and <c>Flight/Vision</c> are on here; the flight actions are read by the simulation.</summary>
         private readonly Simulation.Input.PlayerControls _controls = new();
 
         public PresentationContext(GameConfig config, Transform root, ChopperCameraRig cameraRig)
@@ -54,8 +54,9 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals = new EffectPool(moduleRoot);
             HudLook = new HudLook(config != null ? config.HudLook : null, Hud, Events);
             PilotPortrait = new Pilots.PilotPortraitRig(config != null && config.HudLook != null ? config.HudLook.PilotPortrait : null);
-            Profile = new ProfileService(new PrefsProfileStore(new PlayerPrefsHangarPrefs()));
-            Results = new MatchResultsModel(Match, Profile);
+            var progression = config != null ? config.Progression : null;
+            Profile = new ProfileService(new PrefsProfileStore(new PlayerPrefsHangarPrefs()), progression);
+            Results = new MatchResultsModel(Match, Profile, progression, LocalFlight);
             if (cameraRig != null && config != null) cameraRig.UseSettings(config.Camera);
 
             _owned.Add(new CombatFeedback(this));
@@ -63,9 +64,31 @@ namespace Chopper.Presentation.Bridge
             _owned.Add(new TargetingFeedback(this));
             _owned.Add(Events.Subscribe<ConnectionLost>(OnConnectionLost));
             _controls.Flight.Scoreboard.Enable();
+            _controls.Flight.Zoom.Enable();
+            _controls.Flight.Vision.Enable();
             Prompts = new InputPrompts(_controls);
             Prompts.Changed += ApplyPromptKeys;
             ApplyPromptKeys();
+        }
+
+        /// <summary>Locks off (the default while the game is in test): the hangar shows levels but lets you fit everything.</summary>
+        private Simulation.Loadout.IPlayerUnlocks HangarUnlocks()
+        {
+            if (Config.Progression != null && Config.Progression.LocksOn) return new ProfileUnlocks(Profile);
+            return new AllUnlocked();
+        }
+
+        /// <summary>
+        /// The chassis class and pilot the player chose in the hangar: the whole match's mastery XP goes to them.
+        /// Local for now; the server will count the real flight time per chassis and pilot (plan section 6a-1).
+        /// </summary>
+        private Simulation.Progression.FlightShare LocalFlight()
+        {
+            var chassisClass = Simulation.Loadout.ChassisClass.None;
+            if (Config != null && Config.LoadoutCatalog != null && LoadoutChoices.TryLoad(out var selection, out _) &&
+                Config.LoadoutCatalog.TryGetChassis(selection.ChassisId, out var chassis))
+                chassisClass = chassis.Class;
+            return new Simulation.Progression.FlightShare(chassisClass, LoadoutChoices.Pilot, 1f);
         }
 
         /// <summary>Key names for on-screen prompts, for the input device in use.</summary>
@@ -104,6 +127,12 @@ namespace Chopper.Presentation.Bridge
         public bool MenuOpen { get; set; }
         /// <summary>Saved control options (mouse steer, sensitivity, invert).</summary>
         public InputOptions InputOptions { get; } = new();
+        /// <summary>The local player's optics (zoom and special view). The camera system gives it the chopper's optics.</summary>
+        public ZoomState Zoom { get; } = new();
+        /// <summary>Hot things the special views mark besides targets (rockets, blasts). Effect systems add, the vision system reads.</summary>
+        public HeatMarks HeatMarks { get; } = new();
+        private int _opticsHintKey = -1;
+        private string _opticsHint = "";
 
         /// <summary>Player option: how solid each part of the HUD is. Saved.</summary>
         public HudOpacity HudOpacity { get; } = new();
@@ -111,7 +140,8 @@ namespace Chopper.Presentation.Bridge
         public LoadoutChoiceStore LoadoutChoices { get; } = new();
         /// <summary>Hangar view model; made on first use (null without a loadout catalog). Only the hangar scene uses it.</summary>
         public HangarModel Hangar => _hangar ??= Config != null && Config.LoadoutCatalog != null
-            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices, new AllUnlocked(), Config.Maps)
+            ? new HangarModel(Config.LoadoutCatalog, Config.Skins, LoadoutChoices,
+                HangarUnlocks(), Config.Maps, Profile)
             : null;
         /// <summary>Home screen view model; made on first use (null without a loadout catalog). Only the home scene uses it.</summary>
         public Menu.HomeModel Home => _home ??= Config != null && Config.LoadoutCatalog != null
@@ -301,10 +331,44 @@ namespace Chopper.Presentation.Bridge
             Hud.Tick(deltaTime);
             Prompts.Tick();
             Match.SetScoreboardHeld(!MenuOpen && _controls.Flight.Scoreboard.IsPressed());
+            UpdateOptics(unscaledDeltaTime);
             Match.Tick(deltaTime);
             Results.Tick(unscaledDeltaTime);
             HudLook.CockpitView = CameraRig != null && CameraRig.HidesOwnChopper;
             HudLook.Tick(unscaledDeltaTime);
+        }
+
+        /// <summary>The Zoom and Vision keys (a click when they do something), and the HUD line: the state while zoom or
+        /// a view is on, else a dim key hint while the chopper has optics.</summary>
+        private void UpdateOptics(float deltaTime)
+        {
+            if (!MenuOpen && Zoom.StepCount > 0 && _controls.Flight.Zoom.WasPressedThisFrame())
+            {
+                Zoom.Cycle();
+                PlayUi();
+            }
+            if (!MenuOpen && Zoom.Mode != Simulation.Combat.VisionMode.None && _controls.Flight.Vision.WasPressedThisFrame())
+            {
+                Zoom.ToggleVision();
+                PlayUi();
+            }
+            Zoom.Tick(deltaTime);
+
+            // The hint text is made again only when the optics or the device change.
+            var key = Zoom.StepCount * 100 + (int)Zoom.Mode * 10 + (int)Prompts.Device;
+            if (key != _opticsHintKey)
+            {
+                _opticsHintKey = key;
+                _opticsHint = ZoomState.Hint(Zoom.StepCount > 0, Zoom.Mode, Prompts.Key("Zoom"), Prompts.Key("Vision"));
+            }
+            var state = Zoom.Text;
+            Hud.SetZoom(state.Length > 0 ? state : _opticsHint, hint: state.Length == 0);
+        }
+
+        private void PlayUi()
+        {
+            var sounds = Sounds;
+            if (sounds != null) _audio.Play(sounds.UINavigate);
         }
 
         public void Dispose()
@@ -319,6 +383,8 @@ namespace Chopper.Presentation.Bridge
             ModuleVisuals.Dispose();
             _audio.Dispose();
             _controls.Flight.Scoreboard.Disable();
+            _controls.Flight.Zoom.Disable();
+            _controls.Flight.Vision.Disable();
             _controls.Dispose();
         }
     }

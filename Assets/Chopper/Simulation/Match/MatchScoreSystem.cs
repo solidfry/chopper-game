@@ -1,6 +1,7 @@
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Chopper.Simulation.Session;
 using Unity.NetCode;
 
 namespace Chopper.Simulation.Match
@@ -8,6 +9,7 @@ namespace Chopper.Simulation.Match
     /// <summary>
     /// Server only. Free For All: keeps each player's kills and deaths, runs the match timer, ends the match at the
     /// score or time limit, then starts the next one. Tells clients through RPCs (score, kill feed, match state).
+    /// A player is any entity with a <see cref="PlayerId"/>: a connection or a server bot.
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
@@ -38,7 +40,7 @@ namespace Chopper.Simulation.Match
 
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             var connections = new NativeHashMap<int, Entity>(16, Allocator.Temp);
-            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<NetworkId>>().WithAll<PlayerScore>().WithEntityAccess())
+            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithAll<PlayerScore>().WithEntityAccess())
                 connections[networkId.ValueRO.Value] = connection;
 
             foreach (var (kill, killEntity) in SystemAPI.Query<RefRO<KillEvent>>().WithEntityAccess())
@@ -71,7 +73,7 @@ namespace Chopper.Simulation.Match
                 else
                 {
                     match = new MatchState { Phase = MatchPhase.InProgress, TimeRemaining = rules.TimeLimit };
-                    foreach (var (score, networkId) in SystemAPI.Query<RefRW<PlayerScore>, RefRO<NetworkId>>())
+                    foreach (var (score, networkId) in SystemAPI.Query<RefRW<PlayerScore>, RefRO<PlayerId>>())
                     {
                         score.ValueRW = default;
                         Broadcast(ecb, new ScoreRpc { NetworkId = networkId.ValueRO.Value });
@@ -90,15 +92,16 @@ namespace Chopper.Simulation.Match
         private void AddJoinedPlayers(ref SystemState state, in MatchState match)
         {
             var ecb = new EntityCommandBuffer(Allocator.Temp);
-            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<NetworkId>>()
-                         .WithAll<NetworkStreamInGame>().WithNone<PlayerScore>().WithEntityAccess())
+            foreach (var (networkId, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithNone<PlayerScore>().WithEntityAccess())
             {
                 var id = networkId.ValueRO.Value;
                 ecb.AddComponent<PlayerScore>(connection);
                 ecb.AddComponent(connection, new PlayerScoreCleanup { NetworkId = id });
                 Broadcast(ecb, new ScoreRpc { NetworkId = id });
+                // A server bot has no connection to send the scoreboard to.
+                if (!SystemAPI.HasComponent<NetworkId>(connection)) continue;
 
-                foreach (var (otherScore, otherId) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<NetworkId>>())
+                foreach (var (otherScore, otherId) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>())
                 {
                     Send(ecb, connection, new ScoreRpc
                     {
@@ -115,7 +118,7 @@ namespace Chopper.Simulation.Match
         private void RemoveLeftPlayers(ref SystemState state)
         {
             var ecb = new EntityCommandBuffer(Allocator.Temp);
-            foreach (var (cleanup, entity) in SystemAPI.Query<RefRO<PlayerScoreCleanup>>().WithNone<NetworkId>().WithEntityAccess())
+            foreach (var (cleanup, entity) in SystemAPI.Query<RefRO<PlayerScoreCleanup>>().WithNone<PlayerId>().WithEntityAccess())
             {
                 Broadcast(ecb, new PlayerLeftRpc { NetworkId = cleanup.ValueRO.NetworkId });
                 ecb.RemoveComponent<PlayerScoreCleanup>(entity);
@@ -139,7 +142,7 @@ namespace Chopper.Simulation.Match
             var best = 0;
             var bestKills = 0;
             var tie = false;
-            foreach (var (score, networkId) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<NetworkId>>())
+            foreach (var (score, networkId) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>())
             {
                 var kills = score.ValueRO.Kills;
                 if (kills > bestKills)

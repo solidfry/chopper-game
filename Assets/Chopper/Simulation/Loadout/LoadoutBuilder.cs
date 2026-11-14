@@ -30,6 +30,8 @@ namespace Chopper.Simulation.Loadout
         public readonly List<PylonWeapon> Pylons = new();
         /// <summary>Cooldown 0 = no flares.</summary>
         public CountermeasureConfig Countermeasure;
+        /// <summary>No steps = no optics module.</summary>
+        public OpticsConfig Optics;
     }
 
     /// <summary>
@@ -161,6 +163,8 @@ namespace Chopper.Simulation.Loadout
             var pylonIndex = 0;
             var gunFound = false;
             var flaresFound = false;
+            OpticsDefinition optics = null;
+            var gunMaxZoom = ZoomMath.NoGunMaxZoom;
             for (var slot = 0; slot < modules.Count; slot++)
             {
                 var module = modules[slot];
@@ -170,11 +174,14 @@ namespace Chopper.Simulation.Loadout
                 if (!gunFound && module.Weapon is HitscanWeaponDefinition gun)
                 {
                     gunFound = true;
+                    gunMaxZoom = gun.MaxZoom;
                     built.Gun = new HitscanWeaponConfig
                     {
                         FireInterval = gun.FireInterval,
                         Damage = gun.DamagePerShot,
                         Range = gun.Range,
+                        FalloffStart = gun.FalloffStart,
+                        FalloffFloor = gun.FalloffFloor,
                         MuzzleOffset = Muzzle(sockets, SlotType.Nose, 0, module.Muzzle, gun.MuzzleOffset, mirror: false),
                         HeatPerShot = gun.HeatPerShot,
                         CoolRate = gun.CoolRate,
@@ -195,6 +202,8 @@ namespace Chopper.Simulation.Loadout
                     };
                 }
 
+                if (optics == null && module.Ability is OpticsDefinition sight) optics = sight;
+
                 if (slotType != SlotType.Pylon) continue;
                 // Without a socket, odd pylons mirror the definition's launch point to the other side.
                 var mirror = pylonIndex % 2 == 1;
@@ -205,6 +214,15 @@ namespace Chopper.Simulation.Loadout
                         resolveMissilePrefab));
                 pylonIndex++;
             }
+
+            // After the loop: the gun limits the zoom, whatever the slot order.
+            if (optics != null)
+                built.Optics = new OpticsConfig
+                {
+                    Steps = ZoomMath.Steps(optics.Levels(), gunMaxZoom),
+                    Vision = optics.Vision,
+                    VisionRange = optics.VisionRange,
+                };
         }
 
         /// <summary>Launch point: the module's barrel tip on the matching socket if the chassis has one, else the
@@ -234,6 +252,13 @@ namespace Chopper.Simulation.Loadout
             MuzzleOffset = muzzle,
             MagazineSize = rocket.MagazineSize,
             ReloadSeconds = rocket.ReloadSeconds,
+            Gravity = rocket.Gravity,
+            Drag = rocket.Drag,
+            ProximityFuse = rocket.ProximityFuse,
+            Targets = rocket.FuseTargets,
+            SalvoCount = rocket.SalvoCount,
+            SalvoInterval = rocket.SalvoInterval,
+            SalvoConeCos = rocket.SalvoConeCos,
         };
 
         private static PylonWeapon MissilePylon(ModuleDefinition module, GuidedMissileDefinition missile, float3 muzzle,

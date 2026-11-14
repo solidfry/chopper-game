@@ -1092,7 +1092,7 @@ namespace Chopper.Presentation.Hangar
                 var assignment = await _matchmaking.FindMatchAsync(request, progress, token);
                 // The hangar stays usable while searching: spawn with the loadout as it is now (if still valid).
                 _model.SaveChoice();
-                await JoinAsync(assignment.Address, assignment.Port, token);
+                await JoinAsync(assignment.Address, assignment.Port, token, assignment.PlayerId);
             }
             catch (OperationCanceledException)
             {
@@ -1109,9 +1109,11 @@ namespace Chopper.Presentation.Hangar
         }
 
         /// <summary>Client-only worlds connect to the server, then the map it announces loads.</summary>
-        private async UniTask JoinAsync(string address, ushort port, CancellationToken token)
+        private async UniTask JoinAsync(string address, ushort port, CancellationToken token, string accountId = null)
         {
-            if (!LocalSession.Join(address, port))
+            // Test: "-account ID" gives the account id for a direct join ("-join"), which has no matchmaker to give it.
+            accountId ??= ServerArgs.String("-account");
+            if (!LocalSession.Join(address, port, accountId))
             {
                 _model.SetMatchStatus($"CANNOT CONNECT TO {address}:{port}", false);
                 return;

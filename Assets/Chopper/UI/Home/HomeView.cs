@@ -606,6 +606,11 @@ namespace Chopper.UI.Home
 
             var active = card.Id == _model.SelectedPilotId;
             if (_codexState != null) _codexState.text = card.Locked ? $"UNLOCKS AT LEVEL {card.UnlockLevel}" : active ? "CURRENT PILOT" : "";
+            if (_codexState != null && !card.Locked && _model.Profile != null)
+            {
+                var mastery = _model.Profile.PilotProgress(card.Id, card.CallSign);
+                _codexState.text = active ? $"CURRENT PILOT // MASTERY {mastery.LevelText}" : $"MASTERY {mastery.LevelText}";
+            }
             if (_codexSelect != null)
             {
                 _codexSelect.SetEnabled(!card.Locked && !active);
@@ -683,7 +688,8 @@ namespace Chopper.UI.Home
         {
             if (_profilePage == null) return;
             var pilot = _model.SelectedPilot;
-            var hasAvatar = _profilePage.Show(_model.Profile, _model.Identity, pilot?.CallSign, pilot?.Accent ?? Color.white);
+            var hasAvatar = _profilePage.Show(_model.Profile, _model.Identity, pilot?.CallSign, pilot?.Accent ?? Color.white,
+                _model.MasteryTracks());
             if (!hasAvatar && pilot != null) ShowFace(_profilePage.AvatarPicture, null, pilot.Value);
             if (_profilePage.Scan != null) _profilePage.Scan.tint = pilot?.Accent ?? new Color(0f, 1f, 0.58f);
             _profilePage.Back?.Focus();

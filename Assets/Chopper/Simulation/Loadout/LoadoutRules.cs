@@ -66,6 +66,8 @@ namespace Chopper.Simulation.Loadout
                     return new LoadoutResult(LoadoutError.WrongChassis, slot);
                 if (unlocks.Level < module.UnlockLevel)
                     return new LoadoutResult(LoadoutError.ModuleLocked, slot);
+                if (module.MasteryLevel > 0 && unlocks.ChassisLevel(chassis.Class) < module.MasteryLevel)
+                    return new LoadoutResult(LoadoutError.MasteryLocked, slot);
                 if (!unlocks.Owns(moduleId))
                     return new LoadoutResult(LoadoutError.NotOwned, slot);
 

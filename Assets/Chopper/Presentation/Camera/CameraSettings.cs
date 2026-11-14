@@ -170,6 +170,13 @@ namespace Chopper.Presentation.Camera
         [SerializeField, Range(0f, 1f), Tooltip("Vignette while boosting.")] private float boostVignette = 0.32f;
         [SerializeField, Tooltip("Exposure flash when a boost starts (EV).")] private float boostFlash = 0.6f;
 
+        [Header("Optics: special views")]
+        [SerializeField, Tooltip("Glow on marked targets (Hidden/Chopper/VisionGlow). Set by Chopper → Setup.")] private Shader visionGlowShader;
+        [SerializeField, Tooltip("Look per special view (night, thermal, ...). A mode with no entry uses the built-in look.")]
+        private List<VisionLook> visionLooks = new();
+        /// <summary>Built-in looks made on demand (not saved).</summary>
+        [System.NonSerialized] private Dictionary<Chopper.Simulation.Combat.VisionMode, VisionLook> _defaultLooks;
+
         [Header("Speed lines (colours: Dream Cyan / Cruise Pink from the style guide, HDR for bloom)")]
         [SerializeField, Tooltip("Hidden/Chopper/SpeedLine. Empty = no speed lines.")] private Shader speedLineShader;
         [SerializeField, Tooltip("Speed (m/s) where the lines start.")] private float speedLineStartSpeed = 35f;
@@ -225,6 +232,36 @@ namespace Chopper.Presentation.Camera
         public float BoostVignette => boostVignette;
         public float BoostFlash => boostFlash;
         public Shader SpeedLineShader => speedLineShader;
+        public Shader VisionGlowShader => visionGlowShader;
+
+        /// <summary>The look of a special view: the entry of <see cref="visionLooks"/> for the mode, else the built-in one.</summary>
+        public VisionLook VisionLookFor(Chopper.Simulation.Combat.VisionMode mode)
+        {
+            if (mode == Chopper.Simulation.Combat.VisionMode.None) return null;
+            if (visionLooks != null)
+                foreach (var look in visionLooks)
+                    if (look != null && look.Mode == mode) return look;
+            _defaultLooks ??= new Dictionary<Chopper.Simulation.Combat.VisionMode, VisionLook>();
+            if (!_defaultLooks.TryGetValue(mode, out var builtIn)) _defaultLooks[mode] = builtIn = VisionLook.Default(mode);
+            return builtIn;
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetVisionGlowShader(Shader shader) => visionGlowShader = shader;
+
+        /// <summary>Editor only: used by the setup tool. Copies the built-in looks into the asset so they can be tuned.</summary>
+        public bool EnsureVisionLooks()
+        {
+            visionLooks ??= new List<VisionLook>();
+            var added = false;
+            foreach (Chopper.Simulation.Combat.VisionMode mode in System.Enum.GetValues(typeof(Chopper.Simulation.Combat.VisionMode)))
+            {
+                if (mode == Chopper.Simulation.Combat.VisionMode.None || visionLooks.Exists(l => l != null && l.Mode == mode)) continue;
+                visionLooks.Add(VisionLook.Default(mode));
+                added = true;
+            }
+            return added;
+        }
         public float SpeedLineStartSpeed => speedLineStartSpeed;
         public float SpeedLineRate => speedLineRate;
         public float SpeedLineBoostRate => speedLineBoostRate;
@@ -246,6 +283,7 @@ namespace Chopper.Presentation.Camera
                 }
             if (fullEffectSpeed <= 0f) problems.Add($"{name}: full effect speed must be above 0.");
             if (speedLineShader == null) problems.Add($"{name}: no speed line shader (no speed lines). Run Chopper → Setup.");
+            if (visionGlowShader == null) problems.Add($"{name}: no vision glow shader (thermal and scan optics mark no targets). Run Chopper → Setup.");
         }
     }
 }

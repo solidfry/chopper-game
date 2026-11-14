@@ -18,8 +18,8 @@ namespace Chopper.Simulation.Combat
     /// <item>Rocket: the server creates the real <see cref="Rocket"/> and tells everyone; the owner draws its own at once.</item>
     /// <item>Guided: the server spawns the missile ghost; the owner spawns a predicted copy that the server ghost then
     /// takes over. Weapons with <see cref="PylonWeapon.RequiresLock"/> do not fire without a lock.</item>
-    /// <item>Salvo (swarm): one trigger pull fires <see cref="PylonWeapon.SalvoCount"/> missiles, one per
-    /// <see cref="PylonWeapon.SalvoInterval"/>, fanned out in a cone; the salvo finishes even if the trigger is let go.</item>
+    /// <item>Salvo (swarm, salvo pod): one trigger pull fires <see cref="PylonWeapon.SalvoCount"/> missiles or rockets,
+    /// one per <see cref="PylonWeapon.SalvoInterval"/>, fanned out in a cone; the salvo finishes even if the trigger is let go.</item>
     /// </list>
     /// </summary>
     [BurstCompile]
@@ -90,7 +90,10 @@ namespace Chopper.Simulation.Combat
                             cooldown.SalvoTimer += salvoWeapon.SalvoInterval;
                             var shot = salvoWeapon.SalvoCount - cooldown.SalvoRemaining;
                             cooldown.SalvoRemaining--;
-                            if (isServer || (firstPrediction && ClaimLaunch(i, networkTime.ServerTick)))
+                            var claimed = firstPrediction && ClaimLaunch(i, networkTime.ServerTick);
+                            if (salvoWeapon.Behaviour == PylonBehaviour.Rocket)
+                                LaunchRocket(ecb, salvoWeapon, shooter, shooterId, pose, velocity.ValueRO.Linear, shot, isServer, claimed);
+                            else if (isServer || claimed)
                                 LaunchMissile(ecb, salvoWeapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot);
                             if (hasLog) LogShot(log, now, shooterId, salvoWeapon.Name, pose.Position);
                         }
@@ -110,7 +113,7 @@ namespace Chopper.Simulation.Combat
                 var fired = cooldowns[selected];
                 if (!Magazine.HasRound(fired.RoundsUsed, weapon.MagazineSize)) continue;
 
-                var salvo = weapon.Behaviour == PylonBehaviour.Guided && weapon.SalvoCount > 1;
+                var salvo = weapon.SalvoCount > 1;
                 fired.CooldownRemaining = weapon.FireInterval;
                 fired.SalvoRemaining = salvo ? (byte)(weapon.SalvoCount - 1) : (byte)0;
                 fired.SalvoTimer = salvo ? weapon.SalvoInterval : 0f;
@@ -119,9 +122,7 @@ namespace Chopper.Simulation.Combat
 
                 if (weapon.Behaviour == PylonBehaviour.Rocket)
                 {
-                    var position = pose.Position + math.mul(pose.Rotation, weapon.MuzzleOffset);
-                    var launchVelocity = velocity.ValueRO.Linear + math.mul(pose.Rotation, math.forward()) * weapon.Speed;
-                    LaunchRocket(ecb, weapon, shooter, shooterId, position, launchVelocity, isServer,
+                    LaunchRocket(ecb, weapon, shooter, shooterId, pose, velocity.ValueRO.Linear, shot: 0, isServer,
                         firstPrediction && ClaimLaunch(selected, networkTime.ServerTick));
                 }
                 else if (isServer || (firstPrediction && ClaimLaunch(selected, networkTime.ServerTick)))
@@ -155,9 +156,14 @@ namespace Chopper.Simulation.Combat
             return true;
         }
 
+        /// <param name="shot">Index in the salvo (0 for a single rocket): sets the spread direction.</param>
         private static void LaunchRocket(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId,
-            float3 position, float3 velocity, bool isServer, bool firstPrediction)
+            in LocalTransform pose, float3 chopperVelocity, int shot, bool isServer, bool firstPrediction)
         {
+            var position = pose.Position + math.mul(pose.Rotation, weapon.MuzzleOffset);
+            var forward = RocketFlight.SalvoDirection(math.mul(pose.Rotation, math.forward()), weapon.SalvoCount, weapon.SalvoConeCos,
+                shooterId, shot);
+            var velocity = chopperVelocity + forward * weapon.Speed;
             if (isServer)
             {
                 var rocket = ecb.CreateEntity();
@@ -170,6 +176,10 @@ namespace Chopper.Simulation.Combat
                     DirectDamage = weapon.DirectDamage,
                     SplashDamage = weapon.SplashDamage,
                     SplashRadius = weapon.SplashRadius,
+                    Gravity = weapon.Gravity,
+                    Drag = weapon.Drag,
+                    ProximityFuse = weapon.ProximityFuse,
+                    FuseTargets = weapon.Targets,
                     Weapon = weapon.Name,
                 });
 
@@ -180,6 +190,10 @@ namespace Chopper.Simulation.Combat
                     Velocity = velocity,
                     Lifetime = weapon.Lifetime,
                     SplashRadius = weapon.SplashRadius,
+                    Gravity = weapon.Gravity,
+                    Drag = weapon.Drag,
+                    ProximityFuse = weapon.ProximityFuse,
+                    FuseTargets = (byte)weapon.Targets,
                     ShooterNetworkId = shooterId,
                 });
                 ecb.AddComponent<SendRpcCommandRequest>(rpc); // No target = every connection.
@@ -193,6 +207,10 @@ namespace Chopper.Simulation.Combat
                     Velocity = velocity,
                     Lifetime = weapon.Lifetime,
                     SplashRadius = weapon.SplashRadius,
+                    Gravity = weapon.Gravity,
+                    Drag = weapon.Drag,
+                    ProximityFuse = weapon.ProximityFuse,
+                    FuseTargets = weapon.Targets,
                 });
             }
         }

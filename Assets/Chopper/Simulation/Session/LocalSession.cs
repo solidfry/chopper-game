@@ -45,7 +45,8 @@ namespace Chopper.Simulation.Session
         /// and removes the menu's local world. Load the gameplay scene after this. False if netcode worlds already run or
         /// the address is not valid (nothing is changed then).
         /// </summary>
-        public static bool Join(string address, ushort port)
+        /// <param name="accountId">The player's Unity account id, for server-side progress ("" or null = none).</param>
+        public static bool Join(string address, ushort port, string accountId = null)
         {
             foreach (var world in World.All)
                 if (world.IsServer() || world.IsClient()) return false;
@@ -61,6 +62,9 @@ namespace Chopper.Simulation.Session
 
             var connect = client.EntityManager.CreateEntity(typeof(NetworkStreamRequestConnect));
             client.EntityManager.SetComponentData(connect, new NetworkStreamRequestConnect { Endpoint = endpoint });
+            // Account ids are 28 characters; anything longer is not one.
+            if (!string.IsNullOrEmpty(accountId) && accountId.Length <= 60)
+                client.EntityManager.CreateSingleton(new Progression.AccountClaim { Id = accountId }, "AccountClaim");
             World.DefaultGameObjectInjectionWorld = client;
             return true;
         }
