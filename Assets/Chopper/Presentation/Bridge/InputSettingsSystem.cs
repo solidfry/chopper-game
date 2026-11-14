@@ -65,6 +65,8 @@ namespace Chopper.Presentation.Bridge
             {
                 settings.Blocked = false;
                 settings.HeadLook = false;
+                settings.ZoomMouseScale = 1f;
+                settings.ZoomAxisScale = 1f;
                 return;
             }
 
@@ -74,6 +76,9 @@ namespace Chopper.Presentation.Bridge
             settings.MouseSteer = options.MouseSteer;
             settings.MouseSensitivity = options.MouseSensitivity;
             settings.InvertPitch = options.InvertPitch;
+            var zoom = context.Zoom.Current;
+            settings.ZoomMouseScale = Chopper.Simulation.Combat.ZoomMath.MouseScale(zoom);
+            settings.ZoomAxisScale = Chopper.Simulation.Combat.ZoomMath.AxisScale(zoom);
         }
     }
 }

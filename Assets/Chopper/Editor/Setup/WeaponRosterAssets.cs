@@ -26,6 +26,9 @@ namespace Chopper.Editor.Setup
         public const ushort SalvoPodId = 120;
         public const ushort FlakRocketsId = 122;
         public const ushort RocketPodMk2Id = 124;
+        // Utility: optics (zoom).
+        public const ushort TargetingOpticsId = 136;
+        public const ushort LongRangeScopeId = 137;
 
         private const ushort MinigunId = 101;
         private const ushort RocketPodId = 111;
@@ -42,7 +45,50 @@ namespace Chopper.Editor.Setup
             if (catalog == null) return;
             EnsureGuns(catalog);
             EnsureRockets(catalog);
+            EnsureOptics(catalog);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Highest zoom per gun: short-range guns get little from a scope, the railgun gets all of it.</summary>
+        private static readonly (string Asset, float MaxZoom)[] GunZoom =
+        {
+            ("Weapon_Minigun", 2f), ("Weapon_MinigunMk2", 2f), ("Weapon_RotaryCannon", 2f), ("Weapon_HeavyMG", 3f),
+            ("Weapon_Autocannon", 4f), ("Weapon_PulseLaser", 4f), ("Weapon_ChainGun", 6f), ("Weapon_Railgun", 10f),
+        };
+
+        /// <summary>
+        /// Zoom sights (utility slot) and each gun's zoom limit. A gun asset that still has the default limit (2) gets
+        /// its value from the table; a value set by hand is kept.
+        /// </summary>
+        private static void EnsureOptics(LoadoutCatalog catalog)
+        {
+            foreach (var (asset, maxZoom) in GunZoom)
+            {
+                var gun = AssetDatabase.LoadAssetAtPath<HitscanWeaponDefinition>($"{LoadoutAssets.Folder}/{asset}.asset");
+                if (gun == null || !Mathf.Approximately(gun.MaxZoom, DefaultMaxZoom) || Mathf.Approximately(maxZoom, DefaultMaxZoom)) continue;
+                gun.SetMaxZoom(maxZoom);
+                EditorUtility.SetDirty(gun);
+            }
+
+            var targeting = GuidedWeaponAssets.Definition<OpticsDefinition>("Ability_TargetingOptics", d => d.Initialise(2f, 4f));
+            var scope = GuidedWeaponAssets.Definition<OpticsDefinition>("Ability_LongRangeScope", d => d.Initialise(3f, 6f, 10f));
+            Optics(catalog, TargetingOpticsId, "Targeting Optics", "Zoom 2x and 4x. The gun limits how far.", "Utility_TargetingOptics", 5f, 3,
+                targeting);
+            Optics(catalog, LongRangeScopeId, "Long-Range Scope", "Zoom 3x, 6x and 10x. Heavy. Best on a railgun.", "Utility_LongRangeScope",
+                9f, 14, scope);
+        }
+
+        /// <summary>The zoom limit of a new gun asset (the field's default).</summary>
+        private const float DefaultMaxZoom = 2f;
+
+        private static void Optics(LoadoutCatalog catalog, ushort id, string displayName, string description, string assetName,
+            float weight, int unlockLevel, OpticsDefinition optics)
+        {
+            var module = GuidedWeaponAssets.EnsureModule(catalog, id, displayName, description, assetName, weight, unlockLevel, null,
+                SlotType.Utility);
+            if (module == null || module.Ability != null || module.Weapon != null) return;
+            module.SetAbility(optics);
+            EditorUtility.SetDirty(module);
         }
 
         /// <summary>

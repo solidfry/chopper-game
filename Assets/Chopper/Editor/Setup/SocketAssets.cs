@@ -74,7 +74,8 @@ namespace Chopper.Editor.Setup
                 GuidedWeaponAssets.HomingMissilesId, GuidedWeaponAssets.GroundSeekerId, GuidedWeaponAssets.ClusterMissilesId,
                 WeaponRosterAssets.HeavyRocketsId, 113,
             }, "SM_Veh_Heli_Attach_Missle_01"),
-            (new ushort[] { 131 }, "SM_Veh_Attach_Flare_01"),
+            // The optics modules use the flare box until they have their own art.
+            (new ushort[] { 131, WeaponRosterAssets.TargetingOpticsId, WeaponRosterAssets.LongRangeScopeId }, "SM_Veh_Attach_Flare_01"),
             (new ushort[] { 141 }, "SM_Veh_Attach_Winch_01"),
         };
 

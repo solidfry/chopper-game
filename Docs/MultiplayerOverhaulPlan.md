@@ -481,6 +481,11 @@ follows from the launch alone, and server, client visuals and lead reticle share
 | 113 | Bombs (had no weapon) | Pylon | gravity 25, 18 m blast, 4 rounds | 10 |
 | 114 | Air Mines (had no weapon) | Pylon | stops and waits 25 s, 10 m fuse, 5 rounds | 12 |
 
+**Zoom (14 Nov, written without the editor):** an optics module (Utility slot, own weight) gives zoom levels; the
+nose gun limits them (`MaxZoom`: Minigun 2x ... Railgun 10x), so a strong scope pays off only on a long-range gun. One
+key cycles the steps. Local only: camera FOV and turn speed. Modules: 136 Targeting Optics (2x, 4x), 137 Long-Range
+Scope (3x, 6x, 10x). Open decision: an own Optics slot (needs a ninth loadout slot; `LoadoutCode` holds 8).
+
 **Not in step 1:** aim-guided rockets and smart rockets with course correction (the path is then not known at launch, so
 they need a ghost like the missiles: build them on `GuidedMissile` with a new seeker type), the 3b candidates (EMP,
 chain lightning, hack darts), more utility abilities, and per-weapon visuals and sounds (all rocket types share one

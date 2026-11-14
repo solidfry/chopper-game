@@ -163,6 +163,8 @@ namespace Chopper.UI.Hud
             _flareReload = _chopper.Q("flare-reload");
             _flareReloadFill = _chopper.Q("flare-reload-fill");
             Bind(_chopper.Q<Label>("pylon"), "text", nameof(ChopperHudModel.PylonText));
+            // Empty text = no zoom: the label takes no room then.
+            if (_chopper.Q<Label>("zoom") is { } zoom) Bind(zoom, "text", nameof(ChopperHudModel.ZoomText));
             // Plain text: fixed-width digits squeeze the letters of RELOAD and FLARES at this size.
             Bind(_chopper.Q<Label>("pylon-ammo"), "text", nameof(ChopperHudModel.PylonAmmoText));
             Bind(_chopper.Q<Label>("flares"), "text", nameof(ChopperHudModel.FlaresText));

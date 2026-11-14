@@ -233,6 +233,16 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Zoom"",
+                    ""type"": ""Button"",
+                    ""id"": ""6c1d2e7a-4b0f-5a93-9d31-7e5a0c2b8f14"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -752,6 +762,39 @@ namespace Chopper.Simulation.Input
                     ""action"": ""Scoreboard"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a17c53e0-2f64-5d08-8b7e-31c9d4a6e5f2"",
+                    ""path"": ""<Keyboard>/z"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Zoom"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d42b9f16-7a35-5c81-a0e4-58f6b1c3d7a9"",
+                    ""path"": ""<Mouse>/middleButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Zoom"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f8e60a2d-9c41-5b37-b6d2-04a7e9f1c3b5"",
+                    ""path"": ""<Gamepad>/dpad/down"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Zoom"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -802,6 +845,7 @@ namespace Chopper.Simulation.Input
             m_Flight_Ability = m_Flight.FindAction("Ability", throwIfNotFound: true);
             m_Flight_CyclePylon = m_Flight.FindAction("CyclePylon", throwIfNotFound: true);
             m_Flight_Scoreboard = m_Flight.FindAction("Scoreboard", throwIfNotFound: true);
+            m_Flight_Zoom = m_Flight.FindAction("Zoom", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -896,6 +940,7 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_Ability;
         private readonly InputAction m_Flight_CyclePylon;
         private readonly InputAction m_Flight_Scoreboard;
+        private readonly InputAction m_Flight_Zoom;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
         /// </summary>
@@ -964,6 +1009,10 @@ namespace Chopper.Simulation.Input
             /// </summary>
             public InputAction @Scoreboard => m_Wrapper.m_Flight_Scoreboard;
             /// <summary>
+            /// Provides access to the underlying input action "Flight/Zoom".
+            /// </summary>
+            public InputAction @Zoom => m_Wrapper.m_Flight_Zoom;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Flight; }
@@ -1031,6 +1080,9 @@ namespace Chopper.Simulation.Input
                 @Scoreboard.started += instance.OnScoreboard;
                 @Scoreboard.performed += instance.OnScoreboard;
                 @Scoreboard.canceled += instance.OnScoreboard;
+                @Zoom.started += instance.OnZoom;
+                @Zoom.performed += instance.OnZoom;
+                @Zoom.canceled += instance.OnZoom;
             }
 
             /// <summary>
@@ -1084,6 +1136,9 @@ namespace Chopper.Simulation.Input
                 @Scoreboard.started -= instance.OnScoreboard;
                 @Scoreboard.performed -= instance.OnScoreboard;
                 @Scoreboard.canceled -= instance.OnScoreboard;
+                @Zoom.started -= instance.OnZoom;
+                @Zoom.performed -= instance.OnZoom;
+                @Zoom.canceled -= instance.OnZoom;
             }
 
             /// <summary>
@@ -1248,6 +1303,13 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnScoreboard(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Zoom" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnZoom(InputAction.CallbackContext context);
         }
     }
 }

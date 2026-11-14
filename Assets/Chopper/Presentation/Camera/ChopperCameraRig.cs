@@ -15,6 +15,8 @@ namespace Chopper.Presentation.Camera
         /// <summary>The chassis has a cockpit: mounted views sit at <see cref="Eye"/> (chopper space).</summary>
         public bool HasEye;
         public Vector3 Eye;
+        /// <summary>Zoom of the optics module (<see cref="ZoomState.Current"/>). 0 or 1 = none.</summary>
+        public float Magnification;
     }
 
     /// <summary>
@@ -264,7 +266,7 @@ namespace Chopper.Presentation.Camera
             var blendT = _previousView >= 0 ? Mathf.SmoothStep(0f, 1f, _blend) : 1f;
             var feel = CameraView.Mix(ViewAt(_previousView), ViewAt(_view), blendT);
             var rumble = Rumble(settingsAsset, feel.Rumble, out var jolt);
-            _camera.fieldOfView = pose.FieldOfView;
+            _camera.fieldOfView = Chopper.Simulation.Combat.ZoomMath.FieldOfView(pose.FieldOfView, target.Magnification);
             _camera.nearClipPlane = pose.NearClip;
             transform.SetPositionAndRotation(pose.Position + pose.Rotation * jolt,
                 pose.Rotation * rumble * Shake(deltaTime, settingsAsset, feel.Shake));

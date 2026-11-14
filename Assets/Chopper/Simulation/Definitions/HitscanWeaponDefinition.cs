@@ -14,6 +14,10 @@ namespace Chopper.Simulation.Definitions
         private float falloffStart;
         [SerializeField, Range(0f, 1f), Tooltip("Part of the damage left at full range.")] private float falloffFloor = 0.5f;
 
+        [Header("Optics")]
+        [SerializeField, Min(1f), Tooltip("Highest magnification an optics module gives with this gun. 1 = this gun cannot zoom.")]
+        private float maxZoom = 2f;
+
         [Header("Heat")]
         [SerializeField, Tooltip("Seconds of steady fire until it overheats. 0 = no heat limit.")] private float heatSeconds = 6f;
         [SerializeField, Tooltip("Seconds to cool from full heat to cold. An overheated gun fires again at 40% heat.")]
@@ -22,6 +26,7 @@ namespace Chopper.Simulation.Definitions
         public float FireInterval => 60f / Mathf.Max(1f, roundsPerMinute);
         public float DamagePerShot => damagePerShot;
         public float Range => range;
+        public float MaxZoom => Mathf.Max(1f, maxZoom);
         public float FalloffStart => falloffStart;
         public float FalloffFloor => falloffFloor;
         /// <summary>Damage per second of steady fire, at close range.</summary>
@@ -46,6 +51,9 @@ namespace Chopper.Simulation.Definitions
             damagePerShot = damage;
             range = maxRange;
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetMaxZoom(float magnification) => maxZoom = magnification;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetFalloff(float start, float floor)

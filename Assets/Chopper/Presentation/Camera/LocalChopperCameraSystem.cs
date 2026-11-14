@@ -1,5 +1,6 @@
 using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Visuals;
+using Chopper.Simulation.Combat;
 using Chopper.Simulation.Flight;
 using Chopper.Simulation.Loadout;
 using Unity.Entities;
@@ -36,6 +37,7 @@ namespace Chopper.Presentation.Camera
 
             // LocalToWorld here is the rendered pose: after transform update and physics graphical interpolation.
             var deltaTime = UnityEngine.Time.deltaTime;
+            var flying = false;
             foreach (var (localToWorld, state, entity) in SystemAPI
                          .Query<RefRO<LocalToWorld>, RefRO<ChopperFlightState>>()
                          .WithAll<GhostOwnerIsLocal, ChopperFlightConfig>()
@@ -48,6 +50,11 @@ namespace Chopper.Presentation.Camera
 
                 // Real movement, not the physics velocity: blocked (boosting into the ground), the view must not speed up.
                 _velocity.Update(localToWorld.ValueRO.Position, deltaTime);
+                // The optics of this chopper (none = no steps); a respawn with another loadout switches the zoom off.
+                flying = true;
+                context.Zoom.SetSteps(SystemAPI.HasComponent<OpticsConfig>(entity)
+                    ? SystemAPI.GetComponent<OpticsConfig>(entity).Steps
+                    : default);
                 rig.Follow(new CameraTarget
                 {
                     Position = localToWorld.ValueRO.Position,
@@ -56,12 +63,14 @@ namespace Chopper.Presentation.Camera
                     Boosting = state.ValueRO.Boosting,
                     HasEye = hasEye,
                     Eye = hasEye ? chassis.CockpitEye : default,
+                    Magnification = context.Zoom.Current,
                 }, deltaTime);
 
                 var glitch = rig.ActiveSettings.BoostHudGlitch;
                 if (rig.BoostKicked && glitch > 0f) context.HudLook.Disrupt(glitch, BoostGlitchSeconds);
                 break;
             }
+            if (!flying) context.Zoom.Clear();
         }
     }
 }

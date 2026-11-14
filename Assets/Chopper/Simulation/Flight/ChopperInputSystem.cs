@@ -58,11 +58,14 @@ namespace Chopper.Simulation.Flight
 
             var flight = _controls.Flight;
             var thrust = math.clamp(flight.Thrust.ReadValue<float>(), -1f, 1f);
-            var yaw = math.clamp(flight.Yaw.ReadValue<float>(), -1f, 1f);
+            // Zoomed: slower turns for fine aim (0 = not set = 1).
+            var axisScale = settings.ZoomAxisScale > 0f ? settings.ZoomAxisScale : 1f;
+            var mouseScale = settings.ZoomMouseScale > 0f ? settings.ZoomMouseScale : 1f;
+            var yaw = math.clamp(flight.Yaw.ReadValue<float>(), -1f, 1f) * axisScale;
             // Head look (Alt / R3) uses the mouse and the right stick for the camera: those axes are neutral meanwhile.
             var headLook = settings.HeadLook;
-            var pitch = headLook ? 0f : math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f);
-            var roll = headLook ? 0f : math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f);
+            var pitch = headLook ? 0f : math.clamp(flight.Pitch.ReadValue<float>(), -1f, 1f) * axisScale;
+            var roll = headLook ? 0f : math.clamp(flight.Roll.ReadValue<float>(), -1f, 1f) * axisScale;
             var boost = flight.Dash.IsPressed();
             var dive = flight.Dive.IsPressed();
             var fire = flight.Fire1.IsPressed();
@@ -75,7 +78,7 @@ namespace Chopper.Simulation.Flight
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
             var mouseDelta = headLook ? float2.zero : (float2)flight.MouseLook.ReadValue<Vector2>();
-            var targetRate = mouseDelta * (MouseDegreesPerPixel * math.max(settings.MouseSensitivity, 0.05f)) / dt;
+            var targetRate = mouseDelta * (MouseDegreesPerPixel * math.max(settings.MouseSensitivity, 0.05f) * mouseScale) / dt;
             _mouseRate = math.lerp(_mouseRate, targetRate, 1f - math.exp(-MouseSmoothing * dt));
 
             foreach (var (input, config) in SystemAPI.Query<RefRW<ChopperInput>, RefRO<ChopperFlightConfig>>().WithAll<GhostOwnerIsLocal>())
