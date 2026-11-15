@@ -5,6 +5,24 @@ Read a section here only when the handoff points to it.
 
 ## Work logs (4a to 4h)
 
+## 4i. Cyberpunk audio tool (15 Nov, compiled and run in the editor)
+
+An editor window that batch-processes audio clips into a gritty near-future sound. Full reference: `Docs/AudioProcessorTool.md`. Code: `Assets/Chopper/Editor/AudioEffects/` (assembly `Chopper.Editor`). Window: **Tools > Audio > Cyberpunk Audio Processor**.
+
+**What it does.** Loads the clips under a source folder, applies a 13-stage chain, and exports WAVs. The chain: RBJ biquad EQ (low shelf, peaking, high shelf), distortion, saturation, bitcrush, compression, chorus, flanger, wah-wah, ping-pong delay, Schroeder reverb, pitch shift, then peak normalisation to 0.89 and a soft-knee limiter. Processing is true stereo per channel at the source sample rate. Pitch shift pads or trims back to the original length, so `SetData` never discards samples.
+
+**Presets.** `2070` (first), Gritty, Dark, Industrial, Metallic, Submerged, Radio. The 2070 chain is the one worth keeping: it aims at "gritty but believable as real hardware" rather than sci-fi. Grit is controlled saturation plus a modest distortion blend, not full bitcrush; the future reads from a lifted ~5 kHz band, a tight servo-like envelope (4 ms attack, 70 ms release) and a short ping-pong slap with a close damped metal room. No wah (dates it to the 1970s), no pitch shift (breaks believability at an octave). Measured: +1.9% high-band energy versus the source, and the highest crest factor of all presets, so it keeps the most transient punch.
+
+**Tuning was measured, not guessed.** The first 2070 attempt actually reduced high-band energy by 18%. Isolating each stage showed distortion costs −4.0% and saturation −3.8% top end, while chorus and flanger add it. Retuned to net positive. If it ever sounds brittle, lower `eqHighGain` before touching the distortion.
+
+**The trap worth remembering.** A clip made with `AudioClip.Create` reports `IsPlaying() == true` on Unity's editor preview graph, and the position advances, but **no audio reaches the audio device**. Imported assets do not have this problem. So processed playback writes `Assets/Chopper/TempPreview/CyberpunkPreview.wav`, imports it, and plays the imported asset; bypass ("Compare original") plays the real asset directly. This cost several rounds of debugging because every measurable property looked correct. Do not "simplify" the preview back to playing the in-memory clip.
+
+Related: `AudioUtil` is internal, so `EditorAudioPreview` resolves it by reflection and degrades to a warning if a future Unity renames the methods. Transport icons use Unity's builtin set (`PlayButton`, `PauseButton`, `StepButton`, `animation.*key`, `Loop`) with a vector fallback; `d_Loop` does not exist, so only known-good names are requested.
+
+**Repo hygiene done at the same time.** Four large audio bundles are now git-ignored: `Ultimate SFX Bundle - HD Remaster` (1.0 GB), `Colossal Game Music Collection` (653 MB), `Total Music Collection` (710 MB) and `Gun & Explosion Sounds` (230 MB, 540 clips, the tool's default source). `Total Music Collection` was untracked from the index (165 entries, 36 `.wav`); the files stay on disk and history is unchanged. Verified that no prefab, asset, scene or material referenced any of the `Gun & Explosion Sounds` GUIDs, so nothing breaks. **A fresh clone therefore has no audio**, and the tool opens with an empty file list until the folders are restored.
+
+**Known limits.** Volume is fixed at 1.0 by design (output is peak-normalised); there is no per-clip undo beyond re-running the chain; the waveform is peak-based, not an RMS envelope; the tool processes one file at a time on the main thread, so a 540-clip export takes a while (progress bar shown). Unity's `AudioUtil` has no volume control, which is why the toolbar has none.
+
 ## 4a. Newest work (6 Nov): weapon limits
 
 Commits `a10070b3` (limits, chassis turn weight) and `a29da0cc` (reload bars). Compiled, 126 of 126 edit-mode tests pass. Maths: `Simulation/Combat/WeaponLimits.cs` (`GunHeat`, `Magazine`). Values: the weapon definitions in `Data/Loadout`.
