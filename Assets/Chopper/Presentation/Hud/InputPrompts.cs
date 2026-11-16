@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Chopper.Simulation.Input;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -113,6 +114,120 @@ namespace Chopper.Presentation.Hud
             }
             return "";
         }
+
+        /// <summary>One line of the controls page: what it does, and its keys on each device ("-" = none).</summary>
+        public readonly struct ControlRow
+        {
+            public readonly string Group;
+            public readonly string Label;
+            public readonly string Keyboard;
+            public readonly string Pad;
+
+            public ControlRow(string group, string label, string keyboard, string pad)
+            {
+                Group = group;
+                Label = label;
+                Keyboard = string.IsNullOrEmpty(keyboard) ? "-" : keyboard;
+                Pad = string.IsNullOrEmpty(pad) ? "-" : pad;
+            }
+        }
+
+        /// <summary>
+        /// Every control, grouped (FLIGHT, WEAPONS, SYSTEMS, VIEW, MENUS), with the keys of both devices. Flight keys come
+        /// from the input actions (so rebinding shows here); camera, head look and menu keys are fixed in code.
+        /// </summary>
+        public void ControlRows(List<ControlRow> into)
+        {
+            into.Clear();
+            var f = _controls.Flight;
+            void Row(string group, string label, InputAction action) =>
+                into.Add(new ControlRow(group, label, Binding(action, PromptDevice.KeyboardMouse), Binding(action, PromptDevice.Gamepad)));
+
+            Row("FLIGHT", "THRUST UP / DOWN", f.Thrust);
+            Row("FLIGHT", "TURN (YAW)", f.Yaw);
+            Row("FLIGHT", "PITCH", f.Pitch);
+            Row("FLIGHT", "ROLL", f.Roll);
+            into.Add(new ControlRow("FLIGHT", "AIM (TURN AND PITCH)", Binding(f.MouseLook, PromptDevice.KeyboardMouse), ""));
+            Row("FLIGHT", "BOOST", f.Dash);
+            Row("FLIGHT", "DIVE", f.Dive);
+            Row("WEAPONS", "PRIMARY WEAPON", f.Fire1);
+            Row("WEAPONS", "SECONDARY WEAPON", f.Fire2);
+            Row("WEAPONS", "FLARES", f.Fire3);
+            Row("WEAPONS", "NEXT PYLON", f.CyclePylon);
+            Row("WEAPONS", "ZOOM", f.Zoom);
+            Row("SYSTEMS", "REPAIR (HOLD)", f.Repair);
+            Row("SYSTEMS", "PILOT ABILITY", f.Ability);
+            Row("SYSTEMS", "VISION MODE", f.Vision);
+            Row("SYSTEMS", "SCOREBOARD (HOLD)", f.Scoreboard);
+            into.Add(new ControlRow("VIEW", "CAMERA VIEW", "C", PadKey("<Gamepad>/buttonNorth")));
+            into.Add(new ControlRow("VIEW", "HEAD LOOK (HOLD)", "ALT + MOUSE", PadKey("<Gamepad>/rightStickPress") + " + RIGHT STICK"));
+            into.Add(new ControlRow("MENUS", "MENU", "ESC", PadKey("<Gamepad>/start")));
+            into.Add(new ControlRow("MENUS", "SELECT", "ENTER", PadKey("<Gamepad>/buttonSouth")));
+            into.Add(new ControlRow("MENUS", "BACK", "ESC", PadKey("<Gamepad>/buttonEast")));
+            into.Add(new ControlRow("MENUS", "PREVIOUS / NEXT", "Q / E", PadKey("<Gamepad>/leftShoulder") + " / " + PadKey("<Gamepad>/rightShoulder")));
+        }
+
+        /// <summary>All of an action's keys on one device, e.g. "LMB / Q" or "LEFT STICK UP/DOWN"; "" with none.</summary>
+        public string Binding(InputAction action, PromptDevice device)
+        {
+            if (action == null) return "";
+            var mask = InputBinding.MaskByGroup(device == PromptDevice.Gamepad ? GamepadGroup : KeyboardGroup);
+            var parts = new List<string>();
+            var bindings = action.bindings;
+            for (var i = 0; i < bindings.Count; i++)
+            {
+                var binding = bindings[i];
+                if (binding.isComposite)
+                {
+                    var names = new List<string>();
+                    var directions = new List<string>();
+                    string stick = null;
+                    var oneStick = true;
+                    for (var j = i + 1; j < bindings.Count && bindings[j].isPartOfComposite; j++)
+                    {
+                        var part = bindings[j];
+                        if (!mask.Matches(part)) continue;
+                        names.Add(KeyName(part, device));
+                        var path = part.effectivePath ?? "";
+                        var slash = path.LastIndexOf('/');
+                        var parent = slash > 0 ? path.Substring(0, slash) : path;
+                        if (parent.EndsWith("Stick", StringComparison.OrdinalIgnoreCase))
+                        {
+                            directions.Add(path.Substring(slash + 1).ToUpperInvariant());
+                            if (stick == null) stick = parent;
+                            else if (stick != parent) oneStick = false;
+                        }
+                        else oneStick = false;
+                    }
+                    if (names.Count == 0) continue;
+                    parts.Add(stick != null && oneStick
+                        ? (stick.EndsWith("leftStick", StringComparison.OrdinalIgnoreCase) ? "LEFT STICK " : "RIGHT STICK ") + string.Join("/", directions)
+                        : string.Join(" / ", names));
+                    continue;
+                }
+                if (binding.isPartOfComposite || !mask.Matches(binding)) continue;
+                var name = KeyName(binding, device);
+                if (name.Length > 0 && !parts.Contains(name)) parts.Add(name);
+            }
+            return string.Join("  ·  ", parts);
+        }
+
+        private string KeyName(InputBinding binding, PromptDevice device)
+        {
+            var path = binding.effectivePath ?? "";
+            if (device == PromptDevice.Gamepad) return PadKey(path);
+            switch (path)
+            {
+                case "<Mouse>/leftButton": return "LMB";
+                case "<Mouse>/rightButton": return "RMB";
+                case "<Mouse>/middleButton": return "MMB";
+                case "<Mouse>/scroll/up": return "WHEEL UP";
+                case "<Mouse>/scroll/down": return "WHEEL DOWN";
+                case "<Mouse>/delta": return "MOUSE";
+            }
+            return binding.ToDisplayString(InputBinding.DisplayStringOptions.DontIncludeInteractions).ToUpperInvariant();
+        }
+
 
         private string MenuKey(string keyboard, string padPath) => Device == PromptDevice.Gamepad ? PadKey(padPath) : keyboard;
 

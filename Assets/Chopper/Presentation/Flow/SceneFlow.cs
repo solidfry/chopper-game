@@ -22,6 +22,33 @@ namespace Chopper.Presentation.Flow
         /// <summary>What happens now, e.g. "LOADING", "SYNCING".</summary>
         public string Status { get; internal set; } = "";
         public bool Visible => Cover > 0.0001f;
+        /// <summary>Match briefing for this transition, or null (menu scenes).</summary>
+        public MatchBriefing Briefing { get; internal set; }
+    }
+
+    /// <summary>
+    /// What the load screen tells you about the match you are going into (<see cref="SceneFlow.Load"/>). Made by
+    /// <c>PresentationContext.LoadMatch</c> from the map and mode catalogs; the conditions line comes later, when the
+    /// server's map announcement arrives. <see cref="Version"/> goes up on each change (the view redraws then).
+    /// </summary>
+    public sealed class MatchBriefing
+    {
+        /// <summary>e.g. "CITY04 // CRATER".</summary>
+        public string Map = "";
+        /// <summary>e.g. "FREE FOR ALL" or "TRAINING".</summary>
+        public string Mode = "";
+        /// <summary>One line under the mode.</summary>
+        public string Tagline = "";
+        /// <summary>Rule lines, one per line.</summary>
+        public string Rules = "";
+        /// <summary>e.g. "2-8 PILOTS"; empty in training.</summary>
+        public string Players = "";
+        /// <summary>Time of day and weather, e.g. "NIGHT // RAIN"; empty until the server says.</summary>
+        public string Conditions = "";
+        /// <summary>A tip in sentence case.</summary>
+        public string Tip = "";
+        public bool Training;
+        public int Version { get; internal set; }
     }
 
     /// <summary>
@@ -113,7 +140,7 @@ namespace Chopper.Presentation.Flow
         /// once it is ready. False (nothing happens) while another transition runs or the scene is not in the build.
         /// </summary>
         /// <param name="label">Shown on the overlay; empty = the scene name.</param>
-        public bool Load(string scene, Action whenCovered = null, string label = null)
+        public bool Load(string scene, Action whenCovered = null, string label = null, MatchBriefing briefing = null)
         {
             if (Busy || IsDisposed) return false;
             if (string.IsNullOrEmpty(scene) || !Application.CanStreamedLevelBeLoaded(scene))
@@ -127,9 +154,31 @@ namespace Chopper.Presentation.Flow
             Model.Label = string.IsNullOrEmpty(label) ? Pretty(scene) : label.ToUpperInvariant();
             Model.Seed = ++_seed;
             Model.Time = 0f;
+            Model.Briefing = briefing;
+            if (briefing != null)
+            {
+                if (string.IsNullOrEmpty(briefing.Tip)) briefing.Tip = PickTip(_seed);
+                briefing.Version++;
+            }
             Enter(Phase.Covering);
             Play(_settings != null ? _settings.CoverSound : null);
             return true;
+        }
+
+        /// <summary>The match's time and weather (client, from the server's announcement). Ignored with no briefing.</summary>
+        public void SetBriefingConditions(string conditions)
+        {
+            var briefing = Model.Briefing;
+            if (briefing == null || briefing.Conditions == conditions) return;
+            briefing.Conditions = conditions ?? "";
+            briefing.Version++;
+        }
+
+        private string PickTip(int seed)
+        {
+            var tips = _settings != null ? _settings.Tips : null;
+            if (tips == null || tips.Count == 0) return "";
+            return tips[(int)((uint)(seed * 2654435761u) % (uint)tips.Count)] ?? "";
         }
 
         /// <summary>
@@ -144,6 +193,14 @@ namespace Chopper.Presentation.Flow
             Model.Label = "PREVIEW";
             Model.Seed = ++_seed;
             Model.Time = 0f;
+            // A sample briefing, so the layout can be tuned too.
+            Model.Briefing = new MatchBriefing
+            {
+                Map = "CITY04 // CRATER", Mode = "FREE FOR ALL", Tagline = "EVERY PILOT FOR THEMSELVES",
+                Rules = "FIRST TO 15 KILLS\n10 MINUTES", Players = "2-8 PILOTS", Conditions = "NIGHT // RAIN",
+                Tip = PickTip(_seed),
+            };
+            Model.Briefing.Version++;
             Enter(Phase.Covering);
             Play(_settings != null ? _settings.CoverSound : null);
             return true;
@@ -193,9 +250,12 @@ namespace Chopper.Presentation.Flow
                     Model.Cover = 1f;
                     Model.Status = _phaseTime > 1f ? "SYNCING" : "LINKING";
                     var minHold = _settings != null ? _settings.MinHoldSeconds : 0.25f;
+                    // A briefing stays up long enough to read (counted from fully covered, so the load time counts).
+                    var briefingWait = Model.Briefing != null && _settings != null &&
+                                       Model.Time < CoverSeconds + _settings.BriefingSeconds;
                     var maxHold = _settings != null ? _settings.MaxHoldSeconds : 12f;
                     var noBridge = !_attached && _phaseTime >= NoBridgeSeconds;
-                    if ((_ready || noBridge) && _phaseTime >= minHold || _phaseTime >= maxHold)
+                    if ((_ready || noBridge) && _phaseTime >= minHold && !briefingWait || _phaseTime >= maxHold)
                     {
                         if (!_ready && !noBridge) Debug.LogWarning($"Scene flow: '{_target}' did not say it was ready in {maxHold} s; showing it anyway.");
                         Enter(Phase.Revealing);
@@ -265,7 +325,11 @@ namespace Chopper.Presentation.Flow
             _phase = phase;
             _phaseTime = 0f;
             if (phase == Phase.Waiting) _ready = false;
-            if (phase == Phase.Idle) _target = null;
+            if (phase == Phase.Idle)
+            {
+                _target = null;
+                Model.Briefing = null;
+            }
         }
 
         private void Play(SoundCue cue)

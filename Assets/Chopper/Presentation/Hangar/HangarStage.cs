@@ -1052,7 +1052,7 @@ namespace Chopper.Presentation.Hangar
             var label = training && _model.TrainingMapIndex < names.Count ? $"TRAINING // {names[_model.TrainingMapIndex]}" : null;
             // The local session starts once the screen is covered (false when worlds already run: a match scene opened
             // the hangar), then the scene loads behind the transition.
-            _launching = _context.LoadScene(scene, () => LocalSession.Start(), label);
+            _launching = _context.LoadMatch(scene, training, () => LocalSession.Start(), label);
         }
 
         private void OnMatchRequested() => FindMatchAsync().Forget();
@@ -1129,7 +1129,7 @@ namespace Chopper.Presentation.Hangar
                 if (this != null) _model.SetMatchStatus("CONNECTION FAILED", false);
                 return;
             }
-            _context.LoadScene(scene, label: "MATCH // " + SceneFlow.Pretty(scene));
+            _context.LoadMatch(scene, false, label: "MATCH // " + SceneFlow.Pretty(scene));
         }
 
         /// <summary>Seconds to wait for the server's map before loading <see cref="matchScene"/> (an older server build).</summary>

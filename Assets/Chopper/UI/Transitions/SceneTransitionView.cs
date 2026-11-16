@@ -22,6 +22,11 @@ namespace Chopper.UI.Transitions
         private Label _status;
         private Label _label;
         private Label _code;
+        private VisualElement _briefing;
+        private Label _briefMode, _briefTagline, _briefRules, _briefMap, _briefConditions, _briefPlayers, _briefTip;
+        private MatchBriefing _shownBriefing;
+        private int _briefVersion = -1;
+        private int _typed = -1;
         private bool _shown;
         private float _infoOpacity = -1f;
         private int _codeStep = -1;
@@ -54,6 +59,17 @@ namespace Chopper.UI.Transitions
             _status = _root.Q<Label>("status");
             _label = _root.Q<Label>("label");
             _code = _root.Q<Label>("code");
+            _briefing = _root.Q("briefing");
+            _briefMode = _root.Q<Label>("briefing-mode");
+            _briefTagline = _root.Q<Label>("briefing-tagline");
+            _briefRules = _root.Q<Label>("briefing-rules");
+            _briefMap = _root.Q<Label>("briefing-map");
+            _briefConditions = _root.Q<Label>("briefing-conditions");
+            _briefPlayers = _root.Q<Label>("briefing-players");
+            _briefTip = _root.Q<Label>("briefing-tip");
+            _shownBriefing = null;
+            _briefVersion = -1;
+            _typed = -1;
             _shown = false;
             _infoOpacity = -1f;
             _root.EnableInClassList("transition--hidden", true);
@@ -100,10 +116,59 @@ namespace Chopper.UI.Transitions
                 _infoOpacity = opacity;
                 if (_info != null) _info.style.opacity = opacity;
                 if (_code != null) _code.style.opacity = opacity;
+                if (_briefing != null) _briefing.style.opacity = opacity;
             }
             if (_status != null && _status.text != _model.Status) _status.text = _model.Status;
             if (_label != null && _label.text != _model.Label) _label.text = _model.Label;
             UpdateCode();
+            UpdateBriefing();
+        }
+
+        /// <summary>The briefing: shown with the destination; its lines type in once the screen is covered.</summary>
+        private void UpdateBriefing()
+        {
+            if (_briefing == null) return;
+            var briefing = _model.Briefing;
+            if (briefing != _shownBriefing)
+            {
+                _shownBriefing = briefing;
+                _briefVersion = -1;
+                _typed = -1;
+                _briefing.EnableInClassList("briefing--hidden", briefing == null);
+                _info?.EnableInClassList("transition__info--briefing", briefing != null);
+            }
+            if (briefing == null) return;
+
+            // Characters shown so far: about 90 a second from fully covered (all at once when revealing).
+            var since = _model.Time - (_settings != null ? _settings.CoverSeconds : 0.55f);
+            var typed = _model.Revealing ? int.MaxValue : Mathf.Max(0, (int)(since * 90f));
+            if (typed == _typed && briefing.Version == _briefVersion) return;
+            _typed = typed;
+            _briefVersion = briefing.Version;
+
+            // Typed in order: mode, tagline, rules, map, conditions, players, tip.
+            var left = typed;
+            Type(_briefMode, briefing.Mode, ref left);
+            Type(_briefTagline, briefing.Tagline, ref left);
+            Type(_briefRules, briefing.Rules, ref left);
+            Type(_briefMap, briefing.Map, ref left);
+            Type(_briefConditions, string.IsNullOrEmpty(briefing.Conditions) ? "CONDITIONS // AWAITING SERVER" : briefing.Conditions, ref left);
+            Type(_briefPlayers, briefing.Players, ref left);
+            Type(_briefTip, briefing.Tip, ref left);
+        }
+
+        /// <summary>Shows up to <paramref name="left"/> characters of <paramref name="text"/> (an underscore cursor while typing).</summary>
+        private static void Type(Label label, string text, ref int left)
+        {
+            if (label == null) return;
+            text ??= "";
+            string shown;
+            if (left >= text.Length) shown = text;
+            else if (left <= 0) shown = "";
+            else shown = text.Substring(0, left) + "_";
+            left -= text.Length;
+            if (label.text != shown) label.text = shown;
+            label.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         /// <summary>Corner read-out: a fake link address that ticks about 10 times a second.</summary>

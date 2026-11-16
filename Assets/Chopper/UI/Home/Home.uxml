@@ -3,6 +3,7 @@
   <Style src="Profile.uss" />
   <Style src="Modes.uss" />
   <Style src="Unlocks.uss" />
+  <Style src="Controls.uss" />
   <!-- Home screen (HomeView): the main menu over an animated city grid, the profile card, and the pilot codex.
        Lists are filled from code. The ready class (HomeView.ReadyClass, added after the boot log) brings the menu in. -->
   <ui:VisualElement name="home" class="home">
@@ -57,12 +58,16 @@
             <ui:Label text="05" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="UNLOCKS" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
-          <ui:Button name="nav-options" class="home-nav__item">
+          <ui:Button name="nav-controls" class="home-nav__item">
             <ui:Label text="06" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="CONTROLS" class="home-nav__label chopper-title" picking-mode="Ignore" />
+          </ui:Button>
+          <ui:Button name="nav-options" class="home-nav__item">
+            <ui:Label text="07" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="OPTIONS" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
           <ui:Button name="nav-quit" class="home-nav__item home-nav__item--quit">
-            <ui:Label text="07" class="home-nav__index" picking-mode="Ignore" />
+            <ui:Label text="08" class="home-nav__index" picking-mode="Ignore" />
             <ui:Label text="QUIT" class="home-nav__label chopper-title" picking-mode="Ignore" />
           </ui:Button>
         </ui:VisualElement>
@@ -171,6 +176,26 @@
       </ui:VisualElement>
       <ui:VisualElement name="ul-classes" class="ul-classes" picking-mode="Ignore" />
       <ui:ScrollView name="ul-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="ul-list" />
+    </ui:VisualElement>
+
+    <!-- Controls (ControlsPage): every control with its keys on keyboard and mouse and on a gamepad; the column of the
+         device in use is lit. Rows are made in code (InputPrompts.ControlRows). -->
+    <ui:VisualElement name="page-controls" class="home__page home__page--controls home--hidden">
+      <ui:VisualElement class="codex__head" picking-mode="Ignore">
+        <ui:Button name="controls-back" text="&lt; BACK" class="home__button home__button--small chopper-title" />
+        <ui:Label text="CONTROLS" class="codex__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="ctl-device" class="codex__count chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:VisualElement class="ctl-header" picking-mode="Ignore">
+        <ui:Label text="ACTION" class="ctl-cell ctl-cell--action ctl-head chopper-title" picking-mode="Ignore" />
+        <ui:Label name="ctl-head-keyboard" text="KEYBOARD + MOUSE" class="ctl-cell ctl-head chopper-title" picking-mode="Ignore" />
+        <ui:Label name="ctl-head-pad" text="GAMEPAD" class="ctl-cell ctl-head chopper-title" picking-mode="Ignore" />
+      </ui:VisualElement>
+      <ui:ScrollView name="ctl-list" mode="Vertical" horizontal-scroller-visibility="Hidden" class="ctl-list" />
+      <ui:Label text="Sensitivity, invert and dead zones are in OPTIONS. Key rebinding comes later." class="ctl-note chopper-body" picking-mode="Ignore" />
+      <ui:VisualElement class="home__footer" picking-mode="Ignore">
+        <ui:Label text="{Back} = BACK" class="home__footer-text input-prompt" picking-mode="Ignore" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
     <!-- Player profile (ProfilePage): who you are, lifetime stats, the award case, achievements, recent matches.
