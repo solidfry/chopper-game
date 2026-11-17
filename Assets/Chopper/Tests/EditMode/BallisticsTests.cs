@@ -119,6 +119,24 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void TravelledAt_WithAMovingShooter_CountsInTheShootersFrame()
+        {
+            // Shooter flies forward at 150: the round moves 750 m/s in the world, but only 600 m/s from the shooter.
+            // A hit at world z = 15 is 0.02 s into the flight, so 600 × 0.02 = 12 m for falloff, not 15.
+            var ahead = Fire(float3.zero, new float3(0f, 0f, 150f), math.forward(), 600f, 600f);
+            Ballistics.Step(ref ahead, Tick, out _);
+            Ballistics.Step(ref ahead, Tick, out _);
+            Assert.That(ahead.Travelled, Is.EqualTo(20f).Within(1e-3f));
+            Assert.That(Ballistics.TravelledAt(ahead, new float3(0f, 0f, 15f)), Is.EqualTo(12f).Within(1e-3f));
+
+            // Shooter drifts sideways at 100: the hit 1.5 ticks (0.025 s) in is 600 × 0.025 = 15 m in the shooter's frame.
+            var side = Fire(float3.zero, new float3(100f, 0f, 0f), math.forward(), 600f, 600f);
+            Ballistics.Step(ref side, Tick, out _);
+            Ballistics.Step(ref side, Tick, out _);
+            Assert.That(Ballistics.TravelledAt(side, side.Velocity * 0.025f), Is.EqualTo(15f).Within(1e-3f));
+        }
+
+        [Test]
         public void SpeedZero_StaysInstant()
         {
             Assert.That(Ballistics.IsInstant(0f), Is.True);

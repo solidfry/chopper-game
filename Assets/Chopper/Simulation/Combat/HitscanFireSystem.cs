@@ -39,6 +39,8 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<GhostOwner> _ownerLookup;
         private ComponentLookup<Session.ConnectionOwner> _connectionLookup;
         private ComponentLookup<PilotTraits> _traitsLookup;
+        private ComponentLookup<AbilityConfig> _abilityConfigLookup;
+        private ComponentLookup<AbilityState> _abilityLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -51,6 +53,8 @@ namespace Chopper.Simulation.Combat
             _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
             _connectionLookup = state.GetComponentLookup<Session.ConnectionOwner>(isReadOnly: true);
             _traitsLookup = state.GetComponentLookup<PilotTraits>(isReadOnly: true);
+            _abilityConfigLookup = state.GetComponentLookup<AbilityConfig>(isReadOnly: true);
+            _abilityLookup = state.GetComponentLookup<AbilityState>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -76,6 +80,8 @@ namespace Chopper.Simulation.Combat
             _ownerLookup.Update(ref state);
             _connectionLookup.Update(ref state);
             _traitsLookup.Update(ref state);
+            _abilityConfigLookup.Update(ref state);
+            _abilityLookup.Update(ref state);
 
             foreach (var (input, config, weapon, transform, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<HitscanWeaponConfig>, RefRW<HitscanWeaponState>, RefRO<LocalTransform>>()
@@ -125,7 +131,7 @@ namespace Chopper.Simulation.Combat
                         Shooter = shooter,
                         RewindTicks = delay,
                         Gun = config.ValueRO,
-                        Attacker = AttackerSnapshot.Of(shooter, _ownerLookup, _connectionLookup, _traitsLookup),
+                        Attacker = AttackerSnapshot.Of(shooter, _ownerLookup, _connectionLookup, _traitsLookup, _abilityConfigLookup, _abilityLookup),
                     });
                     continue;
                 }

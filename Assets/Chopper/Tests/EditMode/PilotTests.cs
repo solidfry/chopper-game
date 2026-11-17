@@ -153,19 +153,28 @@ namespace Chopper.Tests
             var traits = PilotTraits.None;
             traits.JamOnHit = true;
             em.AddComponentData(shooter, traits);
+            // Venom Belt on at fire time: the burn from a round that lands later keeps the boost.
+            em.AddComponentData(shooter, new AbilityConfig { Kind = AbilityKind.VenomBelt, Strength = 1.5f });
+            em.AddComponentData(shooter, new AbilityState { ActiveLeft = 3f });
 
             var probe = world.GetOrCreateSystemManaged<LookupProbe>();
             var owners = probe.GetComponentLookup<Unity.NetCode.GhostOwner>(true);
             var connections = probe.GetComponentLookup<Chopper.Simulation.Session.ConnectionOwner>(true);
             var pilots = probe.GetComponentLookup<PilotTraits>(true);
-            var snapshot = AttackerSnapshot.Of(shooter, owners, connections, pilots);
-            Assert.That(AttackerSnapshot.Of(Entity.Null, owners, connections, pilots).Valid, Is.False);
+            var configs = probe.GetComponentLookup<AbilityConfig>(true);
+            var abilities = probe.GetComponentLookup<AbilityState>(true);
+            var snapshot = AttackerSnapshot.Of(shooter, owners, connections, pilots, configs, abilities);
+            var none = AttackerSnapshot.Of(Entity.Null, owners, connections, pilots, configs, abilities);
+            Assert.That(none.Valid, Is.False);
+            Assert.That(none.DotScale(DamageKind.Bullet), Is.EqualTo(1f));
             em.DestroyEntity(shooter);
 
             Assert.That(snapshot.Valid, Is.True);
             Assert.That(snapshot.NetworkId, Is.EqualTo(7));
             Assert.That(snapshot.Connection, Is.EqualTo(connection));
             Assert.That(snapshot.Traits.JamOnHit, Is.True);
+            Assert.That(snapshot.DotScale(DamageKind.Bullet), Is.EqualTo(1.5f));
+            Assert.That(snapshot.DotScale(DamageKind.Explosion), Is.EqualTo(1f));
         }
 
         /// <summary>Only a source of component lookups for the tests.</summary>

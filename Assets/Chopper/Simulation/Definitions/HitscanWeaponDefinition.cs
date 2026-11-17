@@ -15,6 +15,8 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Range(0f, 1f), Tooltip("Part of the damage left at full range.")] private float falloffFloor = 0.5f;
         [SerializeField, Min(0f), Tooltip("Round speed, m/s, on top of the chopper's speed. Players must lead by the flight time. 0 = instant (hitscan).")]
         private float bulletSpeed;
+        [SerializeField, HideInInspector, Tooltip("Setup gave this gun its first round speed. After that, Setup keeps the value, also a hand-set 0.")]
+        private bool bulletSpeedSeeded;
 
         [Header("Optics")]
         [SerializeField, Min(1f), Tooltip("Highest magnification an optics module gives with this gun. 1 = this gun cannot zoom.")]
@@ -69,6 +71,12 @@ namespace Chopper.Simulation.Definitions
 
         /// <summary>Editor only: used by the setup tool. 0 = instant.</summary>
         public void SetBulletSpeed(float metresPerSecond) => bulletSpeed = Mathf.Max(0f, metresPerSecond);
+
+        /// <summary>Editor only: true once the setup tool gave this gun its first round speed. Setup does not change it again.</summary>
+        public bool BulletSpeedSeeded => bulletSpeedSeeded;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void MarkBulletSpeedSeeded() => bulletSpeedSeeded = true;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetHeat(float secondsToOverheat, float secondsToCool)

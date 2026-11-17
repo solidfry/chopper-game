@@ -65,14 +65,18 @@ namespace Chopper.Editor.Setup
             ("Weapon_RotaryCannon", 800f), ("Weapon_Autocannon", 750f), ("Weapon_ChainGun", 800f), ("Weapon_PulseLaser", 0f),
         };
 
-        /// <summary>A gun asset that is still instant (the field's default, 0) gets its speed from the table; a value set by hand is kept.</summary>
+        /// <summary>
+        /// Seeds each gun's round speed from the table once. A gun that Setup already seeded keeps its value, also a
+        /// hand-set 0 (instant). A gun that already has a speed (set before the seed flag) is marked seeded as it is.
+        /// </summary>
         private static void EnsureBulletSpeeds()
         {
             foreach (var (asset, speed) in GunBulletSpeed)
             {
                 var gun = AssetDatabase.LoadAssetAtPath<HitscanWeaponDefinition>($"{LoadoutAssets.Folder}/{asset}.asset");
-                if (gun == null || gun.BulletSpeed > 0f || speed <= 0f) continue;
-                gun.SetBulletSpeed(speed);
+                if (gun == null || gun.BulletSpeedSeeded) continue;
+                if (gun.BulletSpeed <= 0f) gun.SetBulletSpeed(speed);
+                gun.MarkBulletSpeedSeeded();
                 EditorUtility.SetDirty(gun);
             }
         }

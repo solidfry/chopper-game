@@ -54,16 +54,36 @@ namespace Chopper.Simulation.Combat
         public int NetworkId;
         public Entity Connection;
         public PilotTraits Traits;
+        /// <summary>The shooter's ability boost to burns from bullet hits (Venom Belt) at fire time. 1 = none.</summary>
+        public float BulletDotScale;
+        /// <summary>The shooter's ability boost to burns from explosion hits (Napalm Salvo) at fire time. 1 = none.</summary>
+        public float ExplosionDotScale;
         public bool Valid;
 
         public static AttackerSnapshot Of(Entity shooter, in ComponentLookup<GhostOwner> owners,
-            in ComponentLookup<Session.ConnectionOwner> connections, in ComponentLookup<PilotTraits> traits) => new()
+            in ComponentLookup<Session.ConnectionOwner> connections, in ComponentLookup<PilotTraits> traits,
+            in ComponentLookup<AbilityConfig> abilityConfigs, in ComponentLookup<AbilityState> abilities)
         {
-            NetworkId = owners.TryGetComponent(shooter, out var owner) ? owner.NetworkId : 0,
-            Connection = connections.TryGetComponent(shooter, out var connection) ? connection.Value : Entity.Null,
-            Traits = traits.TryGetComponent(shooter, out var pilot) ? pilot : PilotTraits.None,
-            Valid = shooter != Entity.Null,
-        };
+            var snapshot = new AttackerSnapshot
+            {
+                NetworkId = owners.TryGetComponent(shooter, out var owner) ? owner.NetworkId : 0,
+                Connection = connections.TryGetComponent(shooter, out var connection) ? connection.Value : Entity.Null,
+                Traits = traits.TryGetComponent(shooter, out var pilot) ? pilot : PilotTraits.None,
+                BulletDotScale = 1f,
+                ExplosionDotScale = 1f,
+                Valid = shooter != Entity.Null,
+            };
+            if (abilityConfigs.TryGetComponent(shooter, out var config) && abilities.TryGetComponent(shooter, out var ability))
+            {
+                snapshot.BulletDotScale = Abilities.DotScale(config, ability, DamageKind.Bullet);
+                snapshot.ExplosionDotScale = Abilities.DotScale(config, ability, DamageKind.Explosion);
+            }
+            return snapshot;
+        }
+
+        /// <summary>The saved ability boost for a burn made by a hit of this kind. 1 = none.</summary>
+        public readonly float DotScale(DamageKind hitKind) =>
+            hitKind == DamageKind.Bullet ? BulletDotScale : hitKind == DamageKind.Explosion ? ExplosionDotScale : 1f;
     }
 
     /// <summary>Damage waiting to be applied this tick. Server only; any source (guns, crashes, nuke) appends to it.</summary>

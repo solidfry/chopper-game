@@ -121,10 +121,14 @@ namespace Chopper.Simulation.Combat
                     {
                         dot.Source = hit.Source;
                         dot.Weapon = hit.Weapon;
-                        dot.Attacker = gone ? hit.Attacker : AttackerSnapshot.Of(hit.Source, _ownerLookup, _connectionLookup, _traitsLookup);
-                        // Venom Belt, Napalm Salvo: the attacker's ability makes it stronger.
-                        if (_abilityConfigLookup.TryGetComponent(hit.Source, out var sourceAbility) &&
-                            _abilityLookup.TryGetComponent(hit.Source, out var sourceAbilityState))
+                        dot.Attacker = gone ? hit.Attacker
+                            : AttackerSnapshot.Of(hit.Source, _ownerLookup, _connectionLookup, _traitsLookup, _abilityConfigLookup, _abilityLookup);
+                        // Venom Belt, Napalm Salvo: the attacker's ability makes it stronger (as it was at fire time when
+                        // the shooter is gone).
+                        if (gone)
+                            dot.Remaining *= hit.Attacker.DotScale(hit.Kind);
+                        else if (_abilityConfigLookup.TryGetComponent(hit.Source, out var sourceAbility) &&
+                                 _abilityLookup.TryGetComponent(hit.Source, out var sourceAbilityState))
                             dot.Remaining *= Abilities.DotScale(sourceAbility, sourceAbilityState, hit.Kind);
                         DamageOverTimeRules.Add(_dotLookup[victim], dot);
                     }
@@ -150,11 +154,19 @@ namespace Chopper.Simulation.Combat
                     if (_connectionLookup.TryGetComponent(victim, out var victimConnection) && _networkIdLookup.HasComponent(victimConnection.Value))
                     {
                         var hasSource = _transformLookup.TryGetComponent(hit.Source, out var sourcePose);
+                        var sourcePosition = sourcePose.Position;
+                        // The shooter is gone: point the damage arrow out of the hull at the hit (the side the round or
+                        // blast came from). The HUD uses only the direction.
+                        if (!hasSource && gone && !goneSelf && hit.Kind is DamageKind.Bullet or DamageKind.Explosion)
+                        {
+                            hasSource = true;
+                            sourcePosition = hit.Point + hit.Normal * 50f;
+                        }
                         var taken = ecb.CreateEntity();
                         ecb.AddComponent(taken, new DamageTakenRpc
                         {
                             Amount = hit.Amount,
-                            SourcePosition = sourcePose.Position,
+                            SourcePosition = sourcePosition,
                             HasSource = hasSource,
                             Kind = (byte)hit.Kind,
                             ImpactSpeed = hit.ImpactSpeed,
