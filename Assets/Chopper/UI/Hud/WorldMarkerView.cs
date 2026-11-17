@@ -6,7 +6,8 @@ namespace Chopper.UI.Hud
 {
     /// <summary>
     /// Draws the <see cref="WorldMarkerModel"/>: a fixed pool of marker elements (made once, never per frame) and the
-    /// lead indicator. Layout and colours are in <c>ChopperHud.uss</c> (<c>hud-marker*</c>, <c>hud-lead*</c>).
+    /// rocket and gun lead indicators. Layout and colours are in <c>ChopperHud.uss</c> (<c>hud-marker*</c>, <c>hud-lead*</c>,
+    /// <c>hud-gun-lead*</c>).
     /// Made and disposed by <see cref="ChopperHudView"/>.
     /// </summary>
     public sealed class WorldMarkerView : IDisposable
@@ -20,11 +21,13 @@ namespace Chopper.UI.Hud
         private const string NoHealthClass = "hud-marker--no-health";
         private const string LeadHiddenClass = "hud-lead--hidden";
         private const string LeadFreeClass = "hud-lead--free";
+        private const string GunLeadHiddenClass = "hud-gun-lead--hidden";
 
         private readonly WorldMarkerModel _model;
         private readonly HudLook _look;
         private readonly VisualElement _layer;
         private readonly VisualElement _lead;
+        private readonly VisualElement _gunLead;
         private readonly Slot[] _slots = new Slot[WorldMarkerModel.Capacity];
 
         private sealed class Slot
@@ -36,12 +39,14 @@ namespace Chopper.UI.Hud
             public int ShownDistance = -1;
         }
 
-        public WorldMarkerView(WorldMarkerModel model, HudLook look, VisualElement layer, VisualElement lead)
+        /// <param name="gunLead">The gun lead ring; null = not in this layout (no gun lead drawn).</param>
+        public WorldMarkerView(WorldMarkerModel model, HudLook look, VisualElement layer, VisualElement lead, VisualElement gunLead = null)
         {
             _model = model;
             _look = look;
             _layer = layer;
             _lead = lead;
+            _gunLead = gunLead;
             for (var i = 0; i < _slots.Length; i++)
                 _slots[i] = CreateSlot(layer);
 
@@ -88,12 +93,23 @@ namespace Chopper.UI.Hud
                 if (visible) Show(slot, markers[i]);
             }
 
+            if (_gunLead != null)
+            {
+                _gunLead.EnableInClassList(GunLeadHiddenClass, !_model.GunLeadVisible);
+                if (_model.GunLeadVisible) Place(_gunLead, _model.GunLeadViewport);
+            }
+
             _lead.EnableInClassList(LeadHiddenClass, !_model.LeadVisible);
             if (!_model.LeadVisible) return;
             _lead.EnableInClassList(LeadFreeClass, !_model.LeadOnTarget);
-            var lead = _look.ToHud(_model.LeadViewport);
-            _lead.style.left = Length.Percent(lead.x * 100f);
-            _lead.style.top = Length.Percent((1f - lead.y) * 100f);
+            Place(_lead, _model.LeadViewport);
+        }
+
+        private void Place(VisualElement element, UnityEngine.Vector2 viewport)
+        {
+            var point = _look.ToHud(viewport);
+            element.style.left = Length.Percent(point.x * 100f);
+            element.style.top = Length.Percent((1f - point.y) * 100f);
         }
 
         /// <summary>Viewport y goes up, panel top goes down.</summary>

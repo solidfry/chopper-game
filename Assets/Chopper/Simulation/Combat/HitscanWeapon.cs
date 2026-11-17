@@ -24,8 +24,37 @@ namespace Chopper.Simulation.Combat
         public float HeatPerShot;
         /// <summary>Heat lost per second when cooling.</summary>
         public float CoolRate;
+        /// <summary>
+        /// Round speed, m/s, on top of the chopper's velocity. 0 = instant (one ray, hitscan). Above 0 the server flies
+        /// each round (<see cref="ActiveBullet"/>, <see cref="BulletStepSystem"/>) and players must lead the target.
+        /// </summary>
+        public float BulletSpeed;
         /// <summary>The gun module's short name, for the match log (server only).</summary>
         public Unity.Collections.FixedString32Bytes Name;
+    }
+
+    /// <summary>
+    /// Server only: one nose-gun round in flight, in the one buffer that <see cref="BulletStepSystem"/> makes. Not a ghost:
+    /// clients draw tracers from <see cref="HitscanWeaponState.ShotCount"/>, so a fast gun costs no extra bandwidth.
+    /// </summary>
+    [InternalBufferCapacity(0)]
+    public struct ActiveBullet : IBufferElementData
+    {
+        public float3 Position;
+        /// <summary>World velocity: the chopper's velocity at fire time plus nose × <see cref="HitscanWeaponConfig.BulletSpeed"/>.</summary>
+        public float3 Velocity;
+        /// <summary>Seconds of flight left (range / bullet speed at fire time).</summary>
+        public float TimeLeft;
+        /// <summary>Metres flown so far (damage falloff and the match log).</summary>
+        public float Travelled;
+        public Entity Shooter;
+        /// <summary>
+        /// Lag compensation: ticks to rewind the collision world, the shooter's interpolation delay at fire time (capped).
+        /// Each step rewinds by this much from the current tick, so the lead the shooter saw stays right.
+        /// </summary>
+        public uint RewindTicks;
+        /// <summary>The gun at fire time: damage, falloff and name.</summary>
+        public HitscanWeaponConfig Gun;
     }
 
     /// <summary>

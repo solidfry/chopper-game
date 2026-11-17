@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Chopper.Simulation.Definitions
 {
-    /// <summary>Tuning for a fast nose gun (hitscan with lag compensation). Baked to <see cref="Combat.HitscanWeaponConfig"/>.</summary>
+    /// <summary>Tuning for a fast nose gun (rounds with travel time, or instant hitscan; both with lag compensation). Baked to <see cref="Combat.HitscanWeaponConfig"/>.</summary>
     [CreateAssetMenu(menuName = "Chopper/Weapons/Hitscan Weapon", fileName = "HitscanWeapon")]
     public sealed class HitscanWeaponDefinition : WeaponDefinition
     {
@@ -13,6 +13,8 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Damage starts to fall at this distance, metres. 0 = full damage to the range.")]
         private float falloffStart;
         [SerializeField, Range(0f, 1f), Tooltip("Part of the damage left at full range.")] private float falloffFloor = 0.5f;
+        [SerializeField, Min(0f), Tooltip("Round speed, m/s, on top of the chopper's speed. Players must lead by the flight time. 0 = instant (hitscan).")]
+        private float bulletSpeed;
 
         [Header("Optics")]
         [SerializeField, Min(1f), Tooltip("Highest magnification an optics module gives with this gun. 1 = this gun cannot zoom.")]
@@ -29,6 +31,8 @@ namespace Chopper.Simulation.Definitions
         public float MaxZoom => Mathf.Max(1f, maxZoom);
         public float FalloffStart => falloffStart;
         public float FalloffFloor => falloffFloor;
+        /// <summary>Round speed, m/s. 0 = instant (hitscan).</summary>
+        public float BulletSpeed => bulletSpeed;
         /// <summary>Damage per second of steady fire, at close range.</summary>
         public float DamagePerSecond => damagePerShot / FireInterval;
         public float HeatPerShot => heatSeconds > 0f ? FireInterval / heatSeconds : 0f;
@@ -41,6 +45,7 @@ namespace Chopper.Simulation.Definitions
             if (range <= 0f) problems.Add($"{name}: range must be above 0.");
             if (falloffStart < 0f || (falloffStart > 0f && falloffStart >= range))
                 problems.Add($"{name}: falloff start must be 0 (off) or below the range.");
+            if (bulletSpeed < 0f) problems.Add($"{name}: bullet speed must be 0 (instant) or above.");
             if (heatSeconds > 0f && coolSeconds <= 0f) problems.Add($"{name}: a gun with a heat limit must have a cool time above 0.");
         }
 
@@ -61,6 +66,9 @@ namespace Chopper.Simulation.Definitions
             falloffStart = start;
             falloffFloor = floor;
         }
+
+        /// <summary>Editor only: used by the setup tool. 0 = instant.</summary>
+        public void SetBulletSpeed(float metresPerSecond) => bulletSpeed = Mathf.Max(0f, metresPerSecond);
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetHeat(float secondsToOverheat, float secondsToCool)

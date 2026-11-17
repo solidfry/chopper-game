@@ -948,6 +948,21 @@
   background-color: var(--chopper-green);
 }
 
+/* Gun lead: a small ring in the gun colour, no dot, so it reads apart from the rocket lead. Put the gun reticle on it. */
+.hud-gun-lead {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  translate: -50% -50%;
+  border-width: 2px;
+  border-color: var(--chopper-green);
+  border-radius: 6px;
+}
+
+.hud-gun-lead--hidden {
+  display: none;
+}
+
 /* Pilot ability line (under flares): dim while cooling down, bright when ready, pink while on */
 .hud-ability {
   font-size: 13px;

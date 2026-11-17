@@ -222,7 +222,9 @@ namespace Chopper.Tests
             {
                 gun.Initialise(rpm: 600f, damage: 10f, maxRange: 500f);
                 gun.SetMaxZoom(4f);
-                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Gun(gun), Is.EqualTo("100 DPS  500 M  ZOOM TO 4x"));
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Gun(gun), Is.EqualTo("100 DPS  500 M  INSTANT  ZOOM TO 4x"));
+                gun.SetBulletSpeed(900f);
+                Assert.That(Chopper.Presentation.Hangar.ModuleSummary.Gun(gun), Is.EqualTo("100 DPS  500 M  900 M/S  ZOOM TO 4x"));
 
                 rocket.Initialise(interval: 3f, rocketSpeed: 150f, life: 4f, direct: 14f, splash: 10f, radius: 5f, magazine: 3, reload: 12f);
                 rocket.SetSalvo(count: 6, interval: 0.07f, spreadDegrees: 3f);

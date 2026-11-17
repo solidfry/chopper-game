@@ -13,8 +13,10 @@ namespace Chopper.Simulation.Combat
     /// Hitscan with lag compensation ("favour the shooter, within limits"):
     /// <list type="bullet">
     /// <item>Client and server both run the fire rate (predicted), so shots line up with the server.</item>
-    /// <item>The server ray-casts against the physics world as the shooter saw it: current tick minus the
-    /// client's interpolation delay, capped at <see cref="MaxRewindSeconds"/>.</item>
+    /// <item>Instant gun (<see cref="HitscanWeaponConfig.BulletSpeed"/> 0): the server ray-casts against the physics world
+    /// as the shooter saw it: current tick minus the client's interpolation delay, capped at <see cref="MaxRewindSeconds"/>.</item>
+    /// <item>Gun with round speed: the server adds an <see cref="ActiveBullet"/> with that same rewind delay;
+    /// <see cref="BulletStepSystem"/> flies it and ray-casts each tick's segment. The name "Hitscan" stays for now.</item>
     /// <item>Hits become <see cref="DamageEvent"/>s; <see cref="ApplyDamageSystem"/> applies them.</item>
     /// </list>
     /// Lag compensation needs a <c>NetCodePhysicsConfig</c> with Lag Compensation on in the gameplay subscene.
@@ -33,6 +35,7 @@ namespace Chopper.Simulation.Combat
 
         private ComponentLookup<CommandDataInterpolationDelay> _interpolationDelayLookup;
         private BufferLookup<DamageEvent> _damageLookup;
+        private ComponentLookup<PhysicsVelocity> _velocityLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -41,6 +44,7 @@ namespace Chopper.Simulation.Combat
             state.RequireForUpdate<PhysicsWorldSingleton>();
             _interpolationDelayLookup = state.GetComponentLookup<CommandDataInterpolationDelay>(isReadOnly: true);
             _damageLookup = state.GetBufferLookup<DamageEvent>();
+            _velocityLookup = state.GetComponentLookup<PhysicsVelocity>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -60,6 +64,9 @@ namespace Chopper.Simulation.Combat
             _damageLookup.Update(ref state);
             var now = SystemAPI.Time.ElapsedTime;
             var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log) && isServer;
+            // Server: the round buffer (made by BulletStepSystem, which exists only on the server).
+            var hasBullets = SystemAPI.TryGetSingletonBuffer<ActiveBullet>(out var bullets) && isServer;
+            _velocityLookup.Update(ref state);
 
             foreach (var (input, config, weapon, transform, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<HitscanWeaponConfig>, RefRW<HitscanWeaponState>, RefRO<LocalTransform>>()
@@ -89,30 +96,48 @@ namespace Chopper.Simulation.Combat
                         Distance = -1f,
                     });
 
-                var collisionWorld = physicsWorld.CollisionWorld;
-                if (hasHistory)
-                {
-                    var delay = _interpolationDelayLookup.TryGetComponent(shooter, out var interpolation)
-                        ? math.min(interpolation.Delay, maxRewindTicks)
-                        : 0u;
-                    history.GetCollisionWorldFromTick(serverTick, delay, ref physicsWorld, out collisionWorld);
-                }
-
+                var delay = _interpolationDelayLookup.TryGetComponent(shooter, out var interpolation)
+                    ? math.min(interpolation.Delay, maxRewindTicks)
+                    : 0u;
                 var pose = transform.ValueRO;
                 var muzzle = pose.Position + math.mul(pose.Rotation, config.ValueRO.MuzzleOffset);
                 var forward = math.mul(pose.Rotation, math.forward());
+
+                // A gun with round speed: the round flies (BulletStepSystem steps it, with this rewind, from this tick on).
+                if (!Ballistics.IsInstant(config.ValueRO.BulletSpeed))
+                {
+                    if (!hasBullets) continue;
+                    var chopperVelocity = _velocityLookup.TryGetComponent(shooter, out var velocity) ? velocity.Linear : float3.zero;
+                    bullets.Add(new ActiveBullet
+                    {
+                        Position = muzzle,
+                        Velocity = Ballistics.LaunchVelocity(chopperVelocity, forward, config.ValueRO.BulletSpeed),
+                        TimeLeft = Ballistics.FlightTime(config.ValueRO.Range, config.ValueRO.BulletSpeed),
+                        Shooter = shooter,
+                        RewindTicks = delay,
+                        Gun = config.ValueRO,
+                    });
+                    continue;
+                }
+
+                // Instant gun (pulse laser): one ray now.
+                var collisionWorld = physicsWorld.CollisionWorld;
+                if (hasHistory)
+                    history.GetCollisionWorldFromTick(serverTick, delay, ref physicsWorld, out collisionWorld);
                 if (!Explosions.TryRaycast(collisionWorld, shooter, muzzle, muzzle + forward * config.ValueRO.Range, out var hit))
                     continue;
 
+                var distance = math.distance(muzzle, hit.Position);
                 if (_damageLookup.TryGetBuffer(hit.Entity, out var damage))
                     damage.Add(new DamageEvent
                     {
-                        Amount = GunDamage.At(config.ValueRO, math.distance(muzzle, hit.Position)),
+                        Amount = GunDamage.At(config.ValueRO, distance),
                         Source = shooter,
                         Point = hit.Position,
                         Normal = hit.SurfaceNormal,
                         Kind = DamageKind.Bullet,
                         Weapon = config.ValueRO.Name,
+                        FlightDistance = distance,
                     });
             }
         }

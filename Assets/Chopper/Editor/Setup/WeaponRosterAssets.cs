@@ -51,7 +51,30 @@ namespace Chopper.Editor.Setup
             EnsureGuns(catalog);
             EnsureRockets(catalog);
             EnsureOptics(catalog);
+            EnsureBulletSpeeds();
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Round speed per gun, m/s (Docs/GunBulletTravelDesign.md): slow heavy rounds need a big lead, the railgun almost
+        /// none. The pulse laser stays instant (0): its trade is short range and low damage for no lead.
+        /// </summary>
+        private static readonly (string Asset, float BulletSpeed)[] GunBulletSpeed =
+        {
+            ("Weapon_Railgun", 3000f), ("Weapon_Minigun", 900f), ("Weapon_MinigunMk2", 900f), ("Weapon_HeavyMG", 850f),
+            ("Weapon_RotaryCannon", 800f), ("Weapon_Autocannon", 750f), ("Weapon_ChainGun", 800f), ("Weapon_PulseLaser", 0f),
+        };
+
+        /// <summary>A gun asset that is still instant (the field's default, 0) gets its speed from the table; a value set by hand is kept.</summary>
+        private static void EnsureBulletSpeeds()
+        {
+            foreach (var (asset, speed) in GunBulletSpeed)
+            {
+                var gun = AssetDatabase.LoadAssetAtPath<HitscanWeaponDefinition>($"{LoadoutAssets.Folder}/{asset}.asset");
+                if (gun == null || gun.BulletSpeed > 0f || speed <= 0f) continue;
+                gun.SetBulletSpeed(speed);
+                EditorUtility.SetDirty(gun);
+            }
         }
 
         /// <summary>Highest zoom per gun: short-range guns get little from a scope, the railgun gets all of it.</summary>

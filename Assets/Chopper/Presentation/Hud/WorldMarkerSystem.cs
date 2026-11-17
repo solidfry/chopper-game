@@ -13,7 +13,9 @@ namespace Chopper.Presentation.Hud
     /// Client only. Fills the <see cref="WorldMarkerModel"/>: a marker on every other chopper and ground target in range
     /// (closest first, edge arrows when off screen, health bar when close), and the lead indicator for the selected
     /// rocket pylon (where to put the nose so the rockets meet the target). With rockets selected the lead is always on:
-    /// with no target near the nose it shows where the rockets hit (free aim; hidden when nothing is in range). No HUD code reads ECS; this is the one place.
+    /// with no target near the nose it shows where the rockets hit (free aim; hidden when nothing is in range). A gun whose
+    /// rounds take time to fly also gets its own lead (a small ring), on the same target with the same intercept step.
+    /// No HUD code reads ECS; this is the one place.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -58,6 +60,7 @@ namespace Chopper.Presentation.Hud
                            Abilities.ShowsAllEnemies(SystemAPI.GetComponent<AbilityConfig>(self), SystemAPI.GetComponent<AbilityState>(self));
                 AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
+                UpdateGunLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO);
                 model.End();
                 return;
             }
@@ -122,22 +125,11 @@ namespace Chopper.Presentation.Hud
 
             var muzzle = math.transform(pose.Value, weapon.MuzzleOffset);
             var range = weapon.Speed * weapon.Lifetime;
-            var target = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target)
-                ? targetLock.Target
-                : TargetNearestTheNose(self, muzzle, pose.Forward, range);
-            if (target != Entity.Null)
+            // Gravity pulls the rocket down on the way: the lead aims that much higher (close enough for the reticle).
+            if (TryLead(self, targetLock, muzzle, pose.Forward, velocity, weapon.Speed, weapon.Gravity, weapon.Lifetime, range, out var point))
             {
-                // Rockets keep the chopper's velocity, so work relative to the chopper.
-                var targetPosition = SystemAPI.GetComponent<LocalToWorld>(target).Position;
-                var targetVelocity = SystemAPI.HasComponent<PhysicsVelocity>(target) ? SystemAPI.GetComponent<PhysicsVelocity>(target).Linear : float3.zero;
-                var relativeVelocity = targetVelocity - velocity;
-                if (Guidance.InterceptTime(targetPosition - muzzle, relativeVelocity, weapon.Speed, out var time) && time <= weapon.Lifetime)
-                {
-                    // Gravity pulls the rocket down on the way: aim that much higher (close enough for the reticle).
-                    var drop = new float3(0f, 0.5f * weapon.Gravity * time * time, 0f);
-                    model.SetLead(camera.WorldToViewportPoint(targetPosition + relativeVelocity * time + drop), onTarget: true);
-                    return;
-                }
+                model.SetLead(camera.WorldToViewportPoint(point), onTarget: true);
+                return;
             }
 
             // Free aim: the rocket path (launch velocity as in PylonFireSystem) to the first hit. Nothing in range (open
@@ -158,6 +150,40 @@ namespace Chopper.Presentation.Hud
                 }
                 from = to;
             }
+        }
+
+        /// <summary>
+        /// Gun lead: where to put the gun reticle so the rounds meet the locked target, else the one closest to the nose.
+        /// Shown whenever there is such a target in range, with or without rockets selected. Instant guns get none.
+        /// </summary>
+        private void UpdateGunLead(WorldMarkerModel model, UnityEngine.Camera camera, Entity self, in LocalToWorld pose, float3 velocity,
+            in TargetLock targetLock)
+        {
+            if (!SystemAPI.HasComponent<HitscanWeaponConfig>(self)) return;
+            var gun = SystemAPI.GetComponent<HitscanWeaponConfig>(self);
+            if (gun.FireInterval <= 0f || Ballistics.IsInstant(gun.BulletSpeed)) return;
+            var muzzle = math.transform(pose.Value, gun.MuzzleOffset);
+            if (TryLead(self, targetLock, muzzle, pose.Forward, velocity, gun.BulletSpeed, 0f, Ballistics.FlightTime(gun.Range, gun.BulletSpeed),
+                    gun.Range, out var point))
+                model.SetGunLead(camera.WorldToViewportPoint(point));
+        }
+
+        /// <summary>
+        /// The one intercept step of both leads: the locked target, else the target closest to the nose (within
+        /// <paramref name="range"/>), then the shared lead solution (<see cref="Ballistics"/>, with the drop for rockets).
+        /// Rockets and rounds keep the chopper's velocity, so it works relative to the chopper.
+        /// </summary>
+        private bool TryLead(Entity self, in TargetLock targetLock, float3 muzzle, float3 forward, float3 velocity, float speed, float gravity,
+            float maxTime, float range, out float3 point)
+        {
+            point = default;
+            var target = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target)
+                ? targetLock.Target
+                : TargetNearestTheNose(self, muzzle, forward, range);
+            if (target == Entity.Null) return false;
+            var targetPosition = SystemAPI.GetComponent<LocalToWorld>(target).Position;
+            var targetVelocity = SystemAPI.HasComponent<PhysicsVelocity>(target) ? SystemAPI.GetComponent<PhysicsVelocity>(target).Linear : float3.zero;
+            return Ballistics.LeadPoint(muzzle, velocity, targetPosition, targetVelocity, speed, gravity, maxTime, out point, out _);
         }
 
         private Entity TargetNearestTheNose(Entity self, float3 muzzle, float3 forward, float range)
