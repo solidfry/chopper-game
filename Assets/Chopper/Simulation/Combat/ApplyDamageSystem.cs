@@ -107,14 +107,18 @@ namespace Chopper.Simulation.Combat
                     var hit = raw;
                     hit.Amount = victimTraits.Taken(raw.Amount, raw.Kind);
                     hit.Amount = VictimAbility(victim, hit.Amount, hit.Kind);
-                    var sourceTraits = hit.Source != victim && _traitsLookup.TryGetComponent(hit.Source, out var theirs)
-                        ? theirs
+                    // The shooter's chopper is gone (it died while its round or burn was on the way): use what was
+                    // saved at fire time, so the kill, the hit marker and the pilot's traits still count.
+                    var gone = hit.Attacker.Valid && !_ownerLookup.HasComponent(hit.Source);
+                    var sourceTraits = gone ? hit.Attacker.Traits
+                        : hit.Source != victim && _traitsLookup.TryGetComponent(hit.Source, out var theirs) ? theirs
                         : PilotTraits.None;
                     var overTime = hit.Kind is DamageKind.Corrosion or DamageKind.Burn;
                     if (sourceTraits.DotFor(hit.Kind, hit.Amount, out var dot) && _dotLookup.HasBuffer(victim))
                     {
                         dot.Source = hit.Source;
                         dot.Weapon = hit.Weapon;
+                        dot.Attacker = gone ? hit.Attacker : AttackerSnapshot.Of(hit.Source, _ownerLookup, _connectionLookup, _traitsLookup);
                         // Venom Belt, Napalm Salvo: the attacker's ability makes it stronger.
                         if (_abilityConfigLookup.TryGetComponent(hit.Source, out var sourceAbility) &&
                             _abilityLookup.TryGetComponent(hit.Source, out var sourceAbilityState))
@@ -125,8 +129,8 @@ namespace Chopper.Simulation.Combat
                     if (hit.HasPoint && hit.Amount > strongest.Amount) strongest = hit;
                     if (hit.Amount > 0f) InterruptRepair(victim);
                     var killed = health.ValueRW.TakeDamage(hit.Amount);
-                    var attacker = RememberAttacker(victim, hit.Source, now);
-                    if (killed && sourceTraits.KillHeal > 0f && hit.Source != Entity.Null)
+                    var attacker = gone ? RememberAttacker(victim, hit.Attacker.NetworkId, now) : RememberAttacker(victim, hit.Source, now);
+                    if (killed && sourceTraits.KillHeal > 0f && hit.Source != Entity.Null && !gone)
                         killHeals.Add(new KillHeal { Healer = hit.Source, Share = sourceTraits.KillHeal });
 
                     if (hasLog && hit.Amount > 0f)
@@ -156,12 +160,15 @@ namespace Chopper.Simulation.Combat
                         ecb.AddComponent(taken, new SendRpcCommandRequest { TargetConnection = victimConnection.Value });
                     }
 
-                    if (!_connectionLookup.TryGetComponent(hit.Source, out var shooter) || !_networkIdLookup.HasComponent(shooter.Value)) continue;
+                    var shooterConnection = gone ? hit.Attacker.Connection
+                        : _connectionLookup.TryGetComponent(hit.Source, out var shooter) ? shooter.Value
+                        : Entity.Null;
+                    if (shooterConnection == Entity.Null || !_networkIdLookup.HasComponent(shooterConnection)) continue;
                     // Damage over time pulses: no hit marker each half second, only the kill.
                     if (overTime && !killed) continue;
                     var rpc = ecb.CreateEntity();
                     ecb.AddComponent(rpc, new HitConfirmRpc { Damage = hit.Amount, Killed = killed });
-                    ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = shooter.Value });
+                    ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = shooterConnection });
                 }
                 damage.Clear();
                 if (strongest.HasPoint) BroadcastHit(ecb, victim, strongest);
@@ -256,6 +263,15 @@ namespace Chopper.Simulation.Combat
             if (_lastAttackerLookup.HasComponent(victim))
                 _lastAttackerLookup[victim] = new LastAttacker { NetworkId = owner.NetworkId, Time = now };
             return owner.NetworkId;
+        }
+
+        /// <summary>The same, for an attacker whose chopper is gone: its saved network id (0 = none).</summary>
+        private int RememberAttacker(Entity victim, int attackerNetworkId, double now)
+        {
+            if (attackerNetworkId == 0 || (_ownerLookup.TryGetComponent(victim, out var self) && self.NetworkId == attackerNetworkId)) return 0;
+            if (_lastAttackerLookup.HasComponent(victim))
+                _lastAttackerLookup[victim] = new LastAttacker { NetworkId = attackerNetworkId, Time = now };
+            return attackerNetworkId;
         }
 
         private int RecentAttacker(Entity victim, double now, float creditSeconds)

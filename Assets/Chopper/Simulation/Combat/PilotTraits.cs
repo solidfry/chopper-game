@@ -81,6 +81,8 @@ namespace Chopper.Simulation.Combat
         public DamageKind Kind;
         /// <summary>The weapon of the hit that started it, so a kill by the damage over time names that weapon.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
+        /// <summary>The attacker at the hit that started it, for kill credit if its chopper is gone before the last pulse.</summary>
+        public AttackerSnapshot Attacker;
     }
 
     /// <summary>
@@ -120,6 +122,7 @@ namespace Chopper.Simulation.Combat
                 effect.Remaining += dot.Remaining;
                 effect.SecondsLeft = math.max(effect.SecondsLeft, dot.SecondsLeft);
                 effect.Weapon = dot.Weapon;
+                effect.Attacker = dot.Attacker;
                 effects[i] = effect;
                 return;
             }

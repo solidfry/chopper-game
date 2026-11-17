@@ -55,6 +55,8 @@ namespace Chopper.Simulation.Combat
         public uint RewindTicks;
         /// <summary>The gun at fire time: damage, falloff and name.</summary>
         public HitscanWeaponConfig Gun;
+        /// <summary>The shooter at fire time, for kill credit if its chopper is gone when the round lands.</summary>
+        public AttackerSnapshot Attacker;
     }
 
     /// <summary>

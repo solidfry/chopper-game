@@ -44,6 +44,28 @@ namespace Chopper.Simulation.Combat
         Burn = 7,
     }
 
+    /// <summary>
+    /// Server only. What damage needs from its attacker after the attacker's chopper may be gone: the player
+    /// (<see cref="NetworkId"/>, from <see cref="GhostOwner"/>; server bots have one too), the connection for the hit marker
+    /// (<see cref="Entity.Null"/> for bots) and the pilot traits at fire time. Build it with <see cref="AttackerSnapshot.Of"/>.
+    /// </summary>
+    public struct AttackerSnapshot
+    {
+        public int NetworkId;
+        public Entity Connection;
+        public PilotTraits Traits;
+        public bool Valid;
+
+        public static AttackerSnapshot Of(Entity shooter, in ComponentLookup<GhostOwner> owners,
+            in ComponentLookup<Session.ConnectionOwner> connections, in ComponentLookup<PilotTraits> traits) => new()
+        {
+            NetworkId = owners.TryGetComponent(shooter, out var owner) ? owner.NetworkId : 0,
+            Connection = connections.TryGetComponent(shooter, out var connection) ? connection.Value : Entity.Null,
+            Traits = traits.TryGetComponent(shooter, out var pilot) ? pilot : PilotTraits.None,
+            Valid = shooter != Entity.Null,
+        };
+    }
+
     /// <summary>Damage waiting to be applied this tick. Server only; any source (guns, crashes, nuke) appends to it.</summary>
     [GhostComponent(PrefabType = GhostPrefabType.Server)]
     [InternalBufferCapacity(4)]
@@ -64,6 +86,12 @@ namespace Chopper.Simulation.Combat
         public float FlightDistance;
         /// <summary>The weapon's short name, for the match log; empty for crashes, bounds and damage over time.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
+        /// <summary>
+        /// Who fired it, saved when the shot left the muzzle. Used only when <see cref="Source"/> no longer exists (the
+        /// shooter's chopper died while a round or a burn was still on its way), so kill credit, the hit marker and the
+        /// pilot's traits still count. Default (not <see cref="AttackerSnapshot.Valid"/>) for damage made on the spot.
+        /// </summary>
+        public AttackerSnapshot Attacker;
 
         public bool HasPoint => Kind is DamageKind.Bullet or DamageKind.Explosion or DamageKind.Impact or DamageKind.Landing;
     }

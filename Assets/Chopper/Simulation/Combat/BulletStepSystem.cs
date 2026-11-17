@@ -75,6 +75,7 @@ namespace Chopper.Simulation.Combat
                             Kind = DamageKind.Bullet,
                             Weapon = bullet.Gun.Name,
                             FlightDistance = flown,
+                            Attacker = bullet.Attacker,
                         });
                     bullets.RemoveAt(i);
                     continue;

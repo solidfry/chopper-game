@@ -142,6 +142,40 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void AttackerSnapshot_KeepsTheShooter_ForRoundsThatLandAfterItDies()
+        {
+            using var world = new World("PilotTests");
+            var em = world.EntityManager;
+            var connection = em.CreateEntity();
+            var shooter = em.CreateEntity();
+            em.AddComponentData(shooter, new Unity.NetCode.GhostOwner { NetworkId = 7 });
+            em.AddComponentData(shooter, new Chopper.Simulation.Session.ConnectionOwner { Value = connection });
+            var traits = PilotTraits.None;
+            traits.JamOnHit = true;
+            em.AddComponentData(shooter, traits);
+
+            var probe = world.GetOrCreateSystemManaged<LookupProbe>();
+            var owners = probe.GetComponentLookup<Unity.NetCode.GhostOwner>(true);
+            var connections = probe.GetComponentLookup<Chopper.Simulation.Session.ConnectionOwner>(true);
+            var pilots = probe.GetComponentLookup<PilotTraits>(true);
+            var snapshot = AttackerSnapshot.Of(shooter, owners, connections, pilots);
+            Assert.That(AttackerSnapshot.Of(Entity.Null, owners, connections, pilots).Valid, Is.False);
+            em.DestroyEntity(shooter);
+
+            Assert.That(snapshot.Valid, Is.True);
+            Assert.That(snapshot.NetworkId, Is.EqualTo(7));
+            Assert.That(snapshot.Connection, Is.EqualTo(connection));
+            Assert.That(snapshot.Traits.JamOnHit, Is.True);
+        }
+
+        /// <summary>Only a source of component lookups for the tests.</summary>
+        [DisableAutoCreation]
+        private sealed partial class LookupProbe : SystemBase
+        {
+            protected override void OnUpdate() { }
+        }
+
+        [Test]
         public void LoadoutCode_CarriesThePilot()
         {
             var a = LoadoutCode.From(new LoadoutSelection(1, new ushort[] { 101 }), pilotId: 4);

@@ -36,6 +36,9 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<CommandDataInterpolationDelay> _interpolationDelayLookup;
         private BufferLookup<DamageEvent> _damageLookup;
         private ComponentLookup<PhysicsVelocity> _velocityLookup;
+        private ComponentLookup<GhostOwner> _ownerLookup;
+        private ComponentLookup<Session.ConnectionOwner> _connectionLookup;
+        private ComponentLookup<PilotTraits> _traitsLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -45,6 +48,9 @@ namespace Chopper.Simulation.Combat
             _interpolationDelayLookup = state.GetComponentLookup<CommandDataInterpolationDelay>(isReadOnly: true);
             _damageLookup = state.GetBufferLookup<DamageEvent>();
             _velocityLookup = state.GetComponentLookup<PhysicsVelocity>(isReadOnly: true);
+            _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            _connectionLookup = state.GetComponentLookup<Session.ConnectionOwner>(isReadOnly: true);
+            _traitsLookup = state.GetComponentLookup<PilotTraits>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -67,6 +73,9 @@ namespace Chopper.Simulation.Combat
             // Server: the round buffer (made by BulletStepSystem, which exists only on the server).
             var hasBullets = SystemAPI.TryGetSingletonBuffer<ActiveBullet>(out var bullets) && isServer;
             _velocityLookup.Update(ref state);
+            _ownerLookup.Update(ref state);
+            _connectionLookup.Update(ref state);
+            _traitsLookup.Update(ref state);
 
             foreach (var (input, config, weapon, transform, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, RefRO<HitscanWeaponConfig>, RefRW<HitscanWeaponState>, RefRO<LocalTransform>>()
@@ -116,6 +125,7 @@ namespace Chopper.Simulation.Combat
                         Shooter = shooter,
                         RewindTicks = delay,
                         Gun = config.ValueRO,
+                        Attacker = AttackerSnapshot.Of(shooter, _ownerLookup, _connectionLookup, _traitsLookup),
                     });
                     continue;
                 }
