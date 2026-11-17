@@ -32,8 +32,8 @@ Build locally: `dotnet build -c Release` in `CloudCode/ChopperAllocator`.
 ## Player progress (in the same module)
 
 `Project/ProgressStore.cs` keeps each player's progression record in Cloud Save, **protected player data**, key
-`profile` (the game's `PlayerProfile` as JSON text). Plan section 6a-1, step 4. **Built and deployed to `development` 17 Nov 2026** (the 404 on sign-in is gone); build
-the module before the first deploy.**
+`profile` (the game's `PlayerProfile` as JSON text). Plan section 6a-1, step 4. **Built and deployed to `development` 17 Nov 2026** (the 404 on sign-in is gone).
+Build the module before each deploy (`dotnet build -c Release`).
 
 - `Progress_Read(playerId)` and `Progress_Write(playerId, matchId, profile)`: the game server only. A call from a
   player has a player id and is refused; the game server calls with a service account, which has none.
