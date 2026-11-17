@@ -20,4 +20,6 @@ These folders are excluded from version control and must be obtained separately.
 | `Assets/Colossal Game Music Collection` | 653 MB | Available music library |
 | `Assets/Total Music Collection` | 710 MB | Available music library (untracked from the index, still on disk) |
 
+Music used by the game lives in `Assets/Chopper/Audio/Music` and is stored with **Git LFS** (run `git lfs install` before cloning). Processed SFX are in `Assets/Chopper/Audio/SFX` (plain git).
+
 `Assets/Chopper/TempPreview/` is also ignored — it is scratch output from the audio tool, rewritten on each preview.

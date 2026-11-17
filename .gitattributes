@@ -1,6 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-
 # Unity writes its YAML files with LF. Keep them LF on checkout so git stops warning on every save.
 *.unity          text eol=lf
 *.prefab         text eol=lf
@@ -29,7 +28,6 @@
 *.uss            text eol=lf
 *.tss            text eol=lf
 *.json           text eol=lf
-
 # Binary assets: never diff or convert line endings.
 *.blend    binary
 *.obj      binary
@@ -51,10 +49,11 @@
 *.bundle   binary
 *.unitypackage binary
 *.pdf      binary
-
 # Generated models (Tools/PartForge) and previews.
 *.fbx            binary
 *.jpg            binary
-
 # Docker files run on Linux: keep LF.
 Tools/Edgegap/* text eol=lf
+Assets/Chopper/Audio/Music/**/*.wav filter=lfs diff=lfs merge=lfs -text
+Assets/Chopper/Audio/Music/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
+Assets/Chopper/Audio/Music/**/*.ogg filter=lfs diff=lfs merge=lfs -text
