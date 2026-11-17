@@ -163,7 +163,48 @@ namespace Chopper.Presentation.Bridge
 
         /// <summary>Starts a local training match on <paramref name="scene"/> (worlds start once the screen is covered).</summary>
         public bool StartTraining(string scene, string label = null) =>
-            !string.IsNullOrEmpty(scene) && LoadScene(scene, () => Simulation.Session.LocalSession.Start(), label);
+            !string.IsNullOrEmpty(scene) && LoadMatch(scene, true, () => Simulation.Session.LocalSession.Start(), label);
+
+        /// <summary>
+        /// Loads a match scene with a briefing on the load screen (map, mode, rules, a tip; the time and weather follow
+        /// when the server announces them, see <c>BriefingConditionsSystem</c>). Training: the local training rules;
+        /// otherwise the mode saved in <see cref="LoadoutChoices"/>.
+        /// </summary>
+        public bool LoadMatch(string scene, bool training, Action whenCovered = null, string label = null)
+        {
+            if (_flow == null || _flow.IsDisposed) return LoadScene(scene, whenCovered, label);
+            if (_flow.Busy) return false;
+            if (_flow.Load(scene, whenCovered, label, MakeBriefing(scene, training))) return true;
+            whenCovered?.Invoke();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
+            return true;
+        }
+
+        /// <summary>The match's time and weather on the load screen's briefing (client, once the server says).</summary>
+        public void SetBriefingConditions(string conditions)
+        {
+            if (_flow != null && !_flow.IsDisposed) _flow.SetBriefingConditions(conditions);
+        }
+
+        private MatchBriefing MakeBriefing(string scene, bool training)
+        {
+            var map = Config != null && Config.Maps != null ? Config.Maps.FindScene(scene) : null;
+            var mapName = map != null && !string.IsNullOrEmpty(map.DisplayName) ? map.DisplayName.ToUpperInvariant() : SceneFlow.Pretty(scene);
+            var briefing = new MatchBriefing { Map = mapName, Training = training };
+            if (training)
+            {
+                briefing.Mode = "TRAINING";
+                briefing.Tagline = "LOCAL FLIGHT // NO SCORE";
+                briefing.Rules = "TARGETS AND BOTS ON THE RANGE\nOPEN THE MENU TO LEAVE";
+                return briefing;
+            }
+            var mode = Config != null && Config.Modes != null ? Config.Modes.Resolve(LoadoutChoices.MatchMode) : null;
+            briefing.Mode = mode != null && !string.IsNullOrEmpty(mode.DisplayName) ? mode.DisplayName.ToUpperInvariant() : "MATCH";
+            briefing.Tagline = mode?.Tagline?.ToUpperInvariant() ?? "";
+            briefing.Rules = mode?.Rules?.ToUpperInvariant() ?? "";
+            briefing.Players = mode?.Players?.ToUpperInvariant() ?? "";
+            return briefing;
+        }
 
         /// <summary>The hangar scene is in the build, so a match can go back to it.</summary>
         public bool CanOpenHangar => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != HangarStage.SceneName &&

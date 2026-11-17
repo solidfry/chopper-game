@@ -51,6 +51,24 @@ namespace Chopper.Presentation.Flow
         [SerializeField, Tooltip("Some front blocks flash this colour.")] private Color accent = new(0f, 0.94f, 1f, 1f);
         [SerializeField, Tooltip("Glitch bars.")] private Color glitch = new(1f, 0.26f, 0.54f, 1f);
 
+        [Header("Match briefing (shown while a match scene loads)")]
+        [SerializeField, Min(0f), Tooltip("Shortest time the briefing shows (from fully covered), so it can be read.")]
+        private float briefingSeconds = 3.5f;
+        [SerializeField, Tooltip("One tip is picked per briefing. Sentence case.")]
+        private string[] tips =
+        {
+            "A lock stays for a moment when the target jinks out of the cone. Hold your aim near it and it comes back.",
+            "Flares break a missile lock. Drop them when the warning starts, not when the missile is close.",
+            "Repair stops when you take damage. Break line of sight first, then repair.",
+            "Flat mesa tops and rock ledges are cover from lock-ons. Land, repair, then go again.",
+            "Guns heat up and rockets run dry. Short bursts keep the heat down.",
+            "The dim rocket reticle shows where rockets will hit. It is bright when it is on a target.",
+            "Each pilot has one ability. Watch its charge on the HUD.",
+            "Hold the scoreboard button to see the score and who is on your tail.",
+            "Low and fast through the streets is hard to lock. High and slow is easy prey.",
+            "Heavier chassis turn slowly. Fight where your turn rate wins.",
+        };
+
         [Header("Sound (2D, on the scene flow; plays across the scene change)")]
         [SerializeField] private SoundCue coverSound;
         [SerializeField] private SoundCue revealSound;
@@ -77,6 +95,8 @@ namespace Chopper.Presentation.Flow
         public Color Edge => edge;
         public Color Accent => accent;
         public Color Glitch => glitch;
+        public float BriefingSeconds => briefingSeconds;
+        public IReadOnlyList<string> Tips => tips;
         public SoundCue CoverSound => coverSound;
         public SoundCue RevealSound => revealSound;
         public SoundCue NoticeSound => noticeSound;

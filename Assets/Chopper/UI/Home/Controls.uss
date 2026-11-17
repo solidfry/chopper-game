@@ -1,0 +1,72 @@
+/* CONTROLS page (ControlsPage.cs): a table of every control; the column of the device in use is lit (pink). */
+
+.home__page--controls {
+  flex-direction: column;
+}
+
+.ctl-header {
+  flex-direction: row;
+  padding: 6px 12px;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.ctl-list {
+  flex-grow: 1;
+  min-height: 0;
+  max-width: 1100px;
+}
+
+.ctl-group {
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.75);
+  margin: 16px 0 4px 12px;
+  padding: 0;
+}
+
+.ctl-row {
+  flex-direction: row;
+  padding: 5px 12px;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.ctl-row--odd {
+  background-color: rgba(0, 255, 148, 0.04);
+}
+
+.ctl-cell {
+  flex-basis: 0;
+  flex-grow: 1;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+  margin: 0;
+  white-space: normal;
+}
+
+.ctl-cell--action {
+  flex-grow: 1.2;
+  color: var(--chopper-green);
+}
+
+.ctl-cell--active {
+  color: var(--chopper-pink);
+}
+
+.ctl-cell--none {
+  opacity: 0.35;
+}
+
+.ctl-head {
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+
+.ctl-note {
+  font-size: 13px;
+  color: var(--chopper-green-dim);
+  margin: 10px 0 0 12px;
+  white-space: normal;
+}

@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Chopper.Presentation.Menu
 {
     /// <summary>The home screen's pages: the main menu, the pilot codex, the player's profile, mode select (PLAY), unlocks.</summary>
-    public enum HomePage { Main, Pilots, Profile, Modes, Unlocks }
+    public enum HomePage { Main, Pilots, Profile, Modes, Unlocks, Controls }
 
     /// <summary>
     /// View model of the home screen (the main menu, scene <see cref="SceneName"/>): which page shows, the profile card

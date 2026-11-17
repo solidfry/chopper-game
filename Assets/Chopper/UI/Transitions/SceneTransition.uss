@@ -58,3 +58,107 @@
   color: rgba(0, 240, 255, 0.45);
   padding: 0;
 }
+
+/* With a briefing the destination moves up to make room. */
+.transition__info--briefing {
+  top: 18%;
+}
+
+/* Match briefing (SceneTransitionView): two columns, a tip under them. */
+.briefing {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 34%;
+  align-items: center;
+}
+
+.briefing--hidden {
+  display: none;
+}
+
+.briefing__columns {
+  flex-direction: row;
+  width: 900px;
+  max-width: 90%;
+}
+
+.briefing__column {
+  flex-grow: 1;
+  flex-basis: 0;
+  padding: 0 24px;
+}
+
+.briefing__divider {
+  width: 1px;
+  background-color: var(--chopper-green-dim);
+  opacity: 0.6;
+}
+
+.briefing__head {
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: rgba(0, 240, 255, 0.7);
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.briefing__big {
+  font-size: 30px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  padding: 0;
+  white-space: normal;
+  text-shadow: 0 0 10px rgba(0, 255, 148, 0.4);
+}
+
+.briefing__line {
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: var(--chopper-green-dim);
+  padding: 0;
+  margin-top: 4px;
+  white-space: normal;
+}
+
+.briefing__line--accent {
+  color: rgb(255, 210, 90);
+}
+
+.briefing__rules {
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--chopper-green);
+  padding: 0;
+  margin-top: 14px;
+  white-space: normal;
+}
+
+.briefing__tip-row {
+  flex-direction: row;
+  width: 900px;
+  max-width: 90%;
+  margin-top: 36px;
+  padding: 12px 24px;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+  border-color: rgba(0, 255, 148, 0.25);
+  background-color: rgba(0, 255, 148, 0.05);
+}
+
+.briefing__tip-head {
+  font-size: 15px;
+  letter-spacing: 3px;
+  color: rgb(255, 210, 90);
+  padding: 0;
+  margin-right: 12px;
+}
+
+.briefing__tip {
+  flex-shrink: 1;
+  flex-grow: 1;
+  font-size: 17px;
+  color: rgba(220, 255, 236, 0.9);
+  padding: 0;
+  white-space: normal;
+}
