@@ -94,6 +94,16 @@ namespace Chopper.Presentation.Effects
         private float repairSparkRate = 26f;
         [SerializeField, Tooltip("Repair spark colour (multiplies the spark material; HDR for bloom).")]
         private Color repairSparkColour = new(0.55f, 0.95f, 1f, 1f);
+        [SerializeField, Tooltip("Field repair: green motes per second that rise off the hull while a chopper repairs (0 = none).")]
+        private float healMoteRate = 18f;
+        [SerializeField, Tooltip("Heal mote colour (multiplies the spark material; HDR for bloom). Softer than corrosion green.")]
+        private Color healMoteColour = new(0.35f, 1.6f, 0.75f, 1f);
+        [SerializeField, Tooltip("How fast heal motes rise (m/s).")]
+        private float healMoteRise = 2.2f;
+        [SerializeField, Range(0f, 1f), Tooltip("Strength of the green sheen that pulses over the hull while it repairs (0 = off).")]
+        private float healSheen = 1f;
+        [SerializeField, Tooltip("Seconds for the heal sheen to fade in and out.")]
+        private float healSheenFade = 0.35f;
         [SerializeField, Tooltip("Damage over time (pilots VIPER, PYRE): particles per second while a chopper corrodes or burns.")]
         private float statusRate = 20f;
         [SerializeField, Tooltip("Corrosion sparks (multiplies the spark material; HDR for bloom).")]
@@ -150,6 +160,11 @@ namespace Chopper.Presentation.Effects
         public int ImpactDust => impactDust;
         public float RepairSparkRate => repairSparkRate;
         public Color RepairSparkColour => repairSparkColour;
+        public float HealMoteRate => healMoteRate;
+        public Color HealMoteColour => healMoteColour;
+        public float HealMoteRise => healMoteRise;
+        public float HealSheen => healSheen;
+        public float HealSheenFade => healSheenFade;
         public float StatusRate => statusRate;
         public Color CorrosionColour => corrosionColour;
         public float AbilityRate => abilityRate;

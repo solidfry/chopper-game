@@ -17,6 +17,10 @@ SamplerState chopper_skin_point_clamp_sampler;
 static const float3 SKIN_BARE = float3(0.2747, 0.2664, 0.2384);  // #8f8d86, linear
 static const float3 SKIN_DIRT = float3(0.0242, 0.0194, 0.0137);  // #2b261f, linear
 static const float3 SKIN_SOOT = float3(0.0048, 0.0044, 0.0040);  // #0f0e0d, linear
+// Heal sheen (runtime only, not in PartForge's runtime.py): SkinIndex = row + heal * SKIN_HEAL_SHARE
+// (SkinLibrary.PackIndex, same constant). A green band pulses up the hull while the chopper repairs.
+static const float SKIN_HEAL_SHARE = 0.4;
+static const float3 SKIN_HEAL_GREEN = float3(0.18, 1.0, 0.42);
 
 float SkinHash(int3 c, int seed)
 {
@@ -322,6 +326,15 @@ void ChopperSkin_float(float3 PositionOS, float3 NormalOS, float2 UV,
         glowOut *= 1.0 - hazardZone;
     }
     Emission = glowOut * EmissionStrength;
+
+    float heal = saturate((SkinIndex - row) / SKIN_HEAL_SHARE);
+    [branch] if (heal > 0.001)
+    {
+        float wave = frac(height * 1.5 - _Time.y * 0.9);
+        float band = smoothstep(0.0, 0.12, wave) * (1.0 - smoothstep(0.12, 0.24, wave));
+        float pulse = 0.55 + 0.45 * sin(_Time.y * 5.0);
+        Emission += SKIN_HEAL_GREEN * heal * (0.035 * pulse + 0.35 * band) * ao;
+    }
 }
 
 // Half-precision graphs call this one; the work is done in float.

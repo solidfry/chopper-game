@@ -24,6 +24,23 @@ namespace Chopper.Presentation.Visuals
         /// <summary>Skin shader property: the skin table row (float, per renderer or per entity).</summary>
         public const string SkinIndexProperty = "_SkinIndex";
 
+        /// <summary>Most of the fraction of <see cref="SkinIndexProperty"/> that carries the heal sheen (below 0.5 so the row still rounds back).</summary>
+        public const float HealShare = 0.4f;
+
+        /// <summary>
+        /// The skin index value with the heal sheen (0..1) packed into its fraction: <c>row + heal * 0.4</c>. The shader
+        /// rounds to the row and reads the rest back (<c>ChopperSkin.hlsl</c>, same constant). One value, so the skin
+        /// Shader Graph needs no new property. Pure (edit-mode tests: SkinTests).
+        /// </summary>
+        public static float PackIndex(int row, float heal) => row + Mathf.Clamp01(heal) * HealShare;
+
+        /// <summary>The row and heal sheen of a packed value (the shader's maths).</summary>
+        public static (int Row, float Heal) UnpackIndex(float value)
+        {
+            var row = Mathf.FloorToInt(value + 0.5f);
+            return (row, Mathf.Clamp01((value - row) / HealShare));
+        }
+
         [Serializable]
         public struct SetMaterial
         {

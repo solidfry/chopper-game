@@ -51,6 +51,7 @@ namespace Chopper.Presentation.Effects
         private readonly HashSet<Entity> _seen = new();
         private readonly List<Entity> _gone = new();
         private readonly Dictionary<Entity, float> _repairCarry = new();
+        private readonly Dictionary<Entity, float> _healCarry = new();
         private readonly Dictionary<Entity, float> _statusCarry = new();
         /// <summary>Per chopper: ability particle carry and the last use count seen (a new use plays the start burst).</summary>
         private readonly Dictionary<Entity, (float Carry, uint Uses)> _abilityLooks = new();
@@ -93,7 +94,12 @@ namespace Chopper.Presentation.Effects
                 _seen.Add(entity);
                 if (!health.ValueRO.IsDead && SystemAPI.HasComponent<ChopperRepair>(entity) &&
                     SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing)
+                {
                     EmitRepair(settings, entity, pose.ValueRO, deltaTime, cockpit, eye);
+                    var ownChopper = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&
+                              SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+                    EmitHealMotes(settings, entity, (Matrix4x4)pose.ValueRO.Value, deltaTime, ownChopper, eye);
+                }
                 if (!health.ValueRO.IsDead && SystemAPI.HasComponent<AbilityState>(entity) && SystemAPI.HasComponent<AbilityConfig>(entity))
                     EmitAbility(settings, entity, pose.ValueRO, SystemAPI.GetComponent<AbilityConfig>(entity),
                         SystemAPI.GetComponent<AbilityState>(entity), deltaTime, cockpit, eye);
@@ -149,12 +155,15 @@ namespace Chopper.Presentation.Effects
                 if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _statusCarry.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
+            foreach (var entity in _healCarry.Keys)
+                if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _abilityLooks.Keys)
                 if (!_seen.Contains(entity)) _gone.Add(entity);
             foreach (var entity in _gone)
             {
                 _damaged.Remove(entity);
                 _repairCarry.Remove(entity);
+                _healCarry.Remove(entity);
                 _statusCarry.Remove(entity);
                 _abilityLooks.Remove(entity);
             }
@@ -250,6 +259,32 @@ namespace Chopper.Presentation.Effects
                 emit.velocity = (normal + Random.insideUnitSphere * 1.2f).normalized * (settings.SparkSpeed * Random.Range(0.1f, 0.35f));
                 emit.startLifetime = Random.Range(0.12f, 0.3f);
                 emit.startSize = Random.Range(0.03f, 0.07f);
+                _sparks.Emit(emit, 1);
+            }
+        }
+
+        /// <summary>
+        /// Field repair: slow green motes that rise off the hull (the "healing" read, next to the welding sparks and the
+        /// hull sheen of <see cref="Visuals.SkinApplySystem"/>). Softer and slower than the corrosion fizz.
+        /// </summary>
+        private void EmitHealMotes(CombatEffectsSettings settings, Entity entity, Matrix4x4 matrix, float deltaTime, bool own,
+            Vector3 eye)
+        {
+            if (_sparks == null || settings.HealMoteRate <= 0f) return;
+            _healCarry.TryGetValue(entity, out var carry);
+            carry += settings.HealMoteRate * deltaTime;
+            var count = (int)carry;
+            _healCarry[entity] = carry - count;
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = settings.HealMoteColour };
+            for (var i = 0; i < count; i++)
+            {
+                var around = Random.onUnitSphere;
+                var point = matrix.MultiplyPoint3x4(new Vector3(around.x * 1.3f, 0.3f + around.y * 0.7f, around.z * 2.2f));
+                if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
+                emit.position = point;
+                emit.velocity = Vector3.up * (settings.HealMoteRise * Random.Range(0.6f, 1.2f)) + Random.insideUnitSphere * 0.3f;
+                emit.startLifetime = Random.Range(0.6f, 1.1f);
+                emit.startSize = Random.Range(0.06f, 0.12f);
                 _sparks.Emit(emit, 1);
             }
         }

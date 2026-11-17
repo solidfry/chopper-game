@@ -48,5 +48,19 @@ namespace Chopper.Tests
             Assert.Greater(SkinTable.CoverThreshold(0.1f), SkinTable.CoverThreshold(0.5f));
             Assert.AreEqual(0.5005f, SkinTable.CoverThreshold(0.5f), 1e-4f);
         }
+
+        [Test]
+        public void HealSheen_PacksIntoTheSkinIndex_AndTheRowStaysTheSame()
+        {
+            Assert.AreEqual(7f, SkinLibrary.PackIndex(7, 0f));
+            foreach (var row in new[] { 0, 1, 12, 63 })
+            foreach (var heal in new[] { 0f, 0.3f, 1f })
+            {
+                var (back, healBack) = SkinLibrary.UnpackIndex(SkinLibrary.PackIndex(row, heal));
+                Assert.AreEqual(row, back);
+                Assert.AreEqual(heal, healBack, 1e-4f);
+            }
+            Assert.AreEqual(1f, SkinLibrary.UnpackIndex(SkinLibrary.PackIndex(3, 5f)).Heal, 1e-4f);
+        }
     }
 }
