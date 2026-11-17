@@ -39,7 +39,8 @@ namespace Chopper.Tests
             }
             finally
             {
-                controls.Dispose();
+                // Dispose() calls Object.Destroy, which logs an error in edit mode.
+                UnityEngine.Object.DestroyImmediate(controls.asset);
             }
         }
     }

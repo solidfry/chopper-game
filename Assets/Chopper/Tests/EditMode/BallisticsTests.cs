@@ -20,6 +20,7 @@ namespace Chopper.Tests
             Position = muzzle,
             Velocity = Ballistics.LaunchVelocity(shooterVelocity, forward, speed),
             TimeLeft = Ballistics.FlightTime(range, speed),
+            Gun = new HitscanWeaponConfig { BulletSpeed = speed, Range = range },
         };
 
         /// <summary>Closest distance in one tick between a round going a→b and a target going c→d (both straight in the tick).</summary>
@@ -58,7 +59,8 @@ namespace Chopper.Tests
 
             Assert.That(from, Is.EqualTo(float3.zero));
             Assert.That(bullet.Position.z, Is.EqualTo(900f * Tick).Within(1e-4f));
-            Assert.That(bullet.Travelled, Is.EqualTo(900f * Tick).Within(1e-4f));
+            // Counted in the shooter's frame: the 50 m/s the round inherited does not add to its falloff distance.
+            Assert.That(bullet.Travelled, Is.EqualTo(850f * Tick).Within(1e-4f));
             Assert.That(bullet.TimeLeft, Is.EqualTo(650f / 850f - Tick).Within(1e-5f));
         }
 

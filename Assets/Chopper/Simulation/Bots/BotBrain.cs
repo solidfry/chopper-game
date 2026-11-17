@@ -393,11 +393,16 @@ namespace Chopper.Simulation.Bots
                 order.FacePoint = aim;
             }
 
-            // Fire when lined up (the true lead point, not the aim point: the error makes it miss sometimes).
-            var onTarget = math.dot(s.Forward, math.normalizesafe(lead - s.Position)) > math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
+            // Fire when lined up (the true lead point, not the aim point: the error makes it miss sometimes). Each weapon
+            // checks its own lead: with rockets selected the nose follows the rocket lead, and the gun only fires when
+            // that also lines up with the gun lead.
+            var fireCone = math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
+            var onTarget = math.dot(s.Forward, math.normalizesafe(lead - s.Position)) > fireCone;
+            var gunLead = rockets ? AimPoint(s, target, TargetVelocity, false) : lead;
+            var gunOnTarget = math.dot(s.Forward, math.normalizesafe(gunLead - s.Position)) > fireCone;
             if (s.GunOverheated || s.GunHeat >= h.GunHeatRelease) GunCooling = true;
             else if (s.GunHeat < h.GunHeatRelease * 0.4f) GunCooling = false;
-            order.Fire = Aiming && onTarget && s.HasGun && distance < s.GunRange && !GunCooling;
+            order.Fire = Aiming && gunOnTarget && s.HasGun && distance < s.GunRange && !GunCooling;
             order.FireSecondary = (rockets && Aiming && onTarget) || (seeker && s.Locked && s.LockTarget == Target);
         }
 

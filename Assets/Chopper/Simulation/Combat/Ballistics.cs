@@ -34,7 +34,9 @@ namespace Chopper.Simulation.Combat
             }
 
             bullet.Position += bullet.Velocity * time;
-            bullet.Travelled += math.length(bullet.Velocity) * time;
+            // Metres flown as the shooter sees them (bullet speed only, not the chopper's velocity it inherited), so
+            // damage falloff and the log match the hangar numbers whatever the shooter's own speed.
+            bullet.Travelled += ShooterFrameSpeed(bullet) * time;
             bullet.TimeLeft -= time;
             return true;
         }
@@ -43,8 +45,16 @@ namespace Chopper.Simulation.Combat
         public static bool Expired(in ActiveBullet bullet) => bullet.TimeLeft <= 0f;
 
         /// <summary>Metres flown at a hit at <paramref name="hitPoint"/> on the step that ended at the round's position.</summary>
-        public static float TravelledAt(in ActiveBullet bullet, float3 hitPoint) =>
-            math.max(0f, bullet.Travelled - math.distance(hitPoint, bullet.Position));
+        public static float TravelledAt(in ActiveBullet bullet, float3 hitPoint)
+        {
+            var worldSpeed = math.length(bullet.Velocity);
+            var back = worldSpeed > 1e-3f ? math.distance(hitPoint, bullet.Position) * ShooterFrameSpeed(bullet) / worldSpeed : 0f;
+            return math.max(0f, bullet.Travelled - back);
+        }
+
+        /// <summary>The round's speed relative to the shooter (its muzzle speed); world speed when no gun speed is set.</summary>
+        private static float ShooterFrameSpeed(in ActiveBullet bullet) =>
+            bullet.Gun.BulletSpeed > 0f ? bullet.Gun.BulletSpeed : math.length(bullet.Velocity);
 
         /// <summary>
         /// Lead point: where to aim so a straight projectile at <paramref name="projectileSpeed"/> (on top of the shooter's
