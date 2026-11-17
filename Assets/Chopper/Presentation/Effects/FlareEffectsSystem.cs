@@ -64,9 +64,8 @@ namespace Chopper.Presentation.Effects
                 _seen[entity] = count;
                 if (!_lastCount.TryGetValue(entity, out var last) || count <= last) continue;
 
-                var velocity = SystemAPI.HasComponent<PhysicsVelocity>(entity)
-                    ? (Vector3)SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear
-                    : Vector3.zero;
+                Vector3 velocity = ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true),
+                    SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
                 Drop(settings, pose.ValueRO, velocity);
                 if (context.Sounds != null) context.Audio.Play(context.Sounds.Flares, pose.ValueRO.Position);
             }

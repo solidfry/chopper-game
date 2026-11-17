@@ -157,6 +157,21 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void ObservedVelocity_MeasuresAnInterpolatedTarget_FromItsPosition()
+        {
+            // A remote chopper reads 0 physics velocity on the client; the lead needs the speed seen on screen.
+            var seen = new Chopper.Presentation.Effects.ObservedVelocity();
+            var position = float3.zero;
+            var velocity = new float3(60f, 0f, -20f);
+            for (var i = 0; i < 60; i++)
+            {
+                Chopper.Presentation.Effects.ObservedVelocity.Step(ref seen, position, Tick);
+                position += velocity * Tick;
+            }
+            Assert.That(math.distance(seen.Linear, velocity), Is.LessThan(0.5f));
+        }
+
+        [Test]
         public void SpeedZero_StaysInstant()
         {
             Assert.That(Ballistics.IsInstant(0f), Is.True);

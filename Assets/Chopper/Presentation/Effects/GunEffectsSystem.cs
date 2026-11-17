@@ -126,7 +126,7 @@ namespace Chopper.Presentation.Effects
                 {
                     // Round with travel time: flies as the server's round does (chopper velocity + nose × speed, for the
                     // gun's flight time) and stops on whatever is in its path when it gets there.
-                    var chopperVelocity = SystemAPI.HasComponent<PhysicsVelocity>(entity) ? SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear : float3.zero;
+                    var chopperVelocity = ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
                     var launch = Ballistics.LaunchVelocity(chopperVelocity, forward, bulletSpeed);
                     var speed = math.length(launch);
                     var direction = math.normalizesafe(launch, forward);

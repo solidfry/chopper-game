@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
+using Chopper.Presentation.Effects;
 using Chopper.Simulation.Combat;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -182,7 +183,8 @@ namespace Chopper.Presentation.Hud
                 : TargetNearestTheNose(self, muzzle, forward, range);
             if (target == Entity.Null) return false;
             var targetPosition = SystemAPI.GetComponent<LocalToWorld>(target).Position;
-            var targetVelocity = SystemAPI.HasComponent<PhysicsVelocity>(target) ? SystemAPI.GetComponent<PhysicsVelocity>(target).Linear : float3.zero;
+            // Interpolated ghosts read 0 physics velocity on the client: use the velocity seen on screen.
+            var targetVelocity = ObservedVelocity.Of(target, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
             return Ballistics.LeadPoint(muzzle, velocity, targetPosition, targetVelocity, speed, gravity, maxTime, out point, out _);
         }
 
