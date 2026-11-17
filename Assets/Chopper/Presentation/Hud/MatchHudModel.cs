@@ -172,6 +172,102 @@ namespace Chopper.Presentation.Hud
         /// <summary>You have a chopper again.</summary>
         public void ClearDeathAlert() => DeathAlertVisible = false;
 
+        // ---- XP popup (Battlefield style): a title, the victim, a stack of "+XP" lines and a total that counts up. ----
+
+        /// <summary>Seconds a popup stays after its last award; a new award in that time adds to it (a combo).</summary>
+        public const float XpPopupSeconds = 3.2f;
+        /// <summary>Lines kept in one popup, newest at the bottom.</summary>
+        public const int MaxXpLines = 5;
+        /// <summary>How fast the shown total counts up to the real one (its share per second, so big jumps roll fast).</summary>
+        private const float XpCountRate = 9f;
+        private const char Newline = '\n';
+
+        private readonly List<string> _xpLines = new();
+        private float _xpRemaining;
+        private int _xpTarget;
+        private float _xpShown;
+        private int _xpTitleRank = -1;
+        private string _xpTitle = "";
+        private string _xpName = "";
+        private string _xpLinesText = "";
+        private string _xpTotalText = "";
+        private bool _xpVisible;
+        private int _xpPulse;
+        private bool _xpBig;
+
+        [CreateProperty] public string XpTitle { get => _xpTitle; private set => Set(ref _xpTitle, value, nameof(XpTitle)); }
+        /// <summary>The victim's name (kills and assists), else "".</summary>
+        [CreateProperty] public string XpName { get => _xpName; private set => Set(ref _xpName, value, nameof(XpName)); }
+        /// <summary>"KILL  +100" lines, one per award part.</summary>
+        [CreateProperty] public string XpLinesText { get => _xpLinesText; private set => Set(ref _xpLinesText, value, nameof(XpLinesText)); }
+        /// <summary>"+124", counting up.</summary>
+        [CreateProperty] public string XpTotalText { get => _xpTotalText; private set => Set(ref _xpTotalText, value, nameof(XpTotalText)); }
+        [CreateProperty] public bool XpVisible { get => _xpVisible; private set => Set(ref _xpVisible, value, nameof(XpVisible)); }
+        /// <summary>Goes up at each award: the view plays the punch animation again.</summary>
+        [CreateProperty] public int XpPulse { get => _xpPulse; private set => Set(ref _xpPulse, value, nameof(XpPulse)); }
+        /// <summary>The popup holds a kill: the big, hot style.</summary>
+        [CreateProperty] public bool XpBig { get => _xpBig; private set => Set(ref _xpBig, value, nameof(XpBig)); }
+
+        /// <summary>Adds an award to the popup (or starts one). <paramref name="otherNetworkId"/>: the victim, 0 = none.</summary>
+        public void AddXp(XpReason reason, int amount, int otherNetworkId, int damageXp)
+        {
+            if (amount <= 0 && damageXp <= 0) return;
+            if (!_xpVisible) ClearXp();
+
+            var (title, line, rank) = reason switch
+            {
+                XpReason.Kill => ("ENEMY DOWN", "KILL", 4),
+                XpReason.BotKill => ("BOT DOWN", "BOT KILL", 3),
+                XpReason.Assist => ("ASSIST", "ASSIST", 2),
+                XpReason.MissileEvaded => ("MISSILE EVADED", "EVADED", 1),
+                _ => ("REPAIRED", "REPAIR", 0),
+            };
+            // The best event of the combo keeps the title (a kill outranks the repair after it).
+            if (rank >= _xpTitleRank)
+            {
+                _xpTitleRank = rank;
+                XpTitle = title;
+                XpName = otherNetworkId != 0 && reason is XpReason.Kill or XpReason.BotKill or XpReason.Assist ? PlayerName(otherNetworkId) : "";
+            }
+            if (amount > 0) AddXpLine($"{line}  +{amount}");
+            if (damageXp > 0) AddXpLine($"DAMAGE  +{damageXp}");
+            _xpTarget += amount + damageXp;
+            _xpRemaining = XpPopupSeconds;
+            XpBig = _xpTitleRank >= 3;
+            XpVisible = true;
+            XpPulse = _xpPulse + 1;
+        }
+
+        private void AddXpLine(string text)
+        {
+            _xpLines.Add(text);
+            if (_xpLines.Count > MaxXpLines) _xpLines.RemoveAt(0);
+            XpLinesText = string.Join(Newline, _xpLines);
+        }
+
+        private void ClearXp()
+        {
+            _xpLines.Clear();
+            _xpTarget = 0;
+            _xpShown = 0f;
+            _xpTitleRank = -1;
+            XpLinesText = "";
+            XpTotalText = "";
+        }
+
+        private void TickXp(float deltaTime)
+        {
+            if (!_xpVisible) return;
+            if (_xpShown < _xpTarget)
+            {
+                var step = MathF.Max((_xpTarget - _xpShown) * XpCountRate * deltaTime, 60f * deltaTime);
+                _xpShown = MathF.Min(_xpTarget, _xpShown + step);
+                XpTotalText = $"+{(int)_xpShown}";
+            }
+            _xpRemaining -= deltaTime;
+            if (_xpRemaining <= 0f) XpVisible = false;
+        }
+
         public void SetLocalPlayer(int networkId)
         {
             if (_localNetworkId == networkId) return;
@@ -229,6 +325,7 @@ namespace Chopper.Presentation.Hud
         {
             _timeRemaining = MathF.Max(0f, _timeRemaining - deltaTime);
             RefreshTimer();
+            TickXp(deltaTime);
 
             var removed = false;
             for (var i = _killFeed.Count - 1; i >= 0; i--)

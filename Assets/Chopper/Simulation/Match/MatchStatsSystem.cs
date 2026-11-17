@@ -20,12 +20,20 @@ namespace Chopper.Simulation.Match
     {
         private MatchPhase _phase;
         private bool _firstBloodTaken;
+        /// <summary>Damage per attacker on each victim's current life, for assists and the kill's damage line.</summary>
+        private NativeList<DamageShare> _shares;
 
         public void OnCreate(ref SystemState state)
         {
             var entity = state.EntityManager.CreateEntity();
             state.EntityManager.SetName(entity, "MatchLog");
             state.EntityManager.AddBuffer<MatchLogEntry>(entity);
+            _shares = new NativeList<DamageShare>(64, Allocator.Persistent);
+        }
+
+        public void OnDestroy(ref SystemState state)
+        {
+            if (_shares.IsCreated) _shares.Dispose();
         }
 
         [BurstCompile]
@@ -61,8 +69,27 @@ namespace Chopper.Simulation.Match
                 connections[networkId.ValueRO.Value] = connection;
 
             var statsLookup = SystemAPI.GetComponentLookup<PlayerStats>();
+            var networkIds = SystemAPI.GetComponentLookup<NetworkId>(true);
+            var rates = SystemAPI.TryGetSingleton<Progression.ProgressionRules>(out var rules) ? rules.Xp : Progression.XpRates.Default;
+            var awards = new NativeList<XpAward>(4, Allocator.Temp);
+            var ecb = new EntityCommandBuffer(Allocator.Temp);
             foreach (var entry in buffer)
             {
+                // XP popups (kills, assists, repairs, evaded missiles), also counted into the stats for the end screen.
+                awards.Clear();
+                XpAwards.Collect(entry, _shares, rates, awards);
+                foreach (var award in awards)
+                {
+                    if (!connections.TryGetValue(award.Player, out var recipient)) continue;
+                    var stats = statsLookup[recipient];
+                    XpAwards.Count(award, ref stats.Value);
+                    statsLookup[recipient] = stats;
+                    if (!networkIds.HasComponent(recipient)) continue;
+                    var rpc = ecb.CreateEntity();
+                    ecb.AddComponent(rpc, new XpAwardRpc { Reason = (byte)award.Reason, Amount = award.Amount, Other = award.Other, DamageXp = award.DamageXp });
+                    ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = recipient });
+                }
+
                 var hasActor = connections.TryGetValue(entry.Actor, out var actorEntity);
                 var hasTarget = connections.TryGetValue(entry.Target, out var targetEntity);
                 if (!hasActor && !hasTarget) continue;
@@ -82,11 +109,15 @@ namespace Chopper.Simulation.Match
                 if (hasTarget) statsLookup[targetEntity] = target;
             }
             connections.Dispose();
+            awards.Dispose();
+            ecb.Playback(state.EntityManager);
+            ecb.Dispose();
         }
 
         private void Reset(ref SystemState state)
         {
             _firstBloodTaken = false;
+            _shares.Clear();
             foreach (var stats in SystemAPI.Query<RefRW<PlayerStats>>())
                 stats.ValueRW = default;
         }

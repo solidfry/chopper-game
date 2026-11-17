@@ -44,6 +44,14 @@ namespace Chopper.Simulation.Match
         public float LongestKill;
         /// <summary>This player made the first kill of the match.</summary>
         public bool FirstBlood;
+        /// <summary>Kills by others on victims this player damaged enough (<see cref="Progression.XpRates.AssistMinShare"/>).</summary>
+        public int Assists;
+        /// <summary>Missiles aimed at this player that missed (flares or flying).</summary>
+        public int Evades;
+        /// <summary>XP the popups showed during the match (<see cref="XpAwards"/>), so the end screen adds up the same.</summary>
+        public int AssistXp;
+        public int EvadeXp;
+        public int RepairXp;
 
         /// <summary>Hits per shot, 0..1 (rockets can hit more than one target).</summary>
         public float Accuracy => Shots > 0 ? math.saturate((float)Hits / Shots) : 0f;
@@ -166,6 +174,11 @@ namespace Chopper.Simulation.Match
         public float Repaired;
         public float LongestKill;
         public byte FirstBlood;
+        public int Assists;
+        public int Evades;
+        public int AssistXp;
+        public int EvadeXp;
+        public int RepairXp;
 
         public static MatchStatsRpc From(int networkId, in PlayerMatchStats s) => new()
         {
@@ -189,6 +202,11 @@ namespace Chopper.Simulation.Match
             Repaired = s.Repaired,
             LongestKill = s.LongestKill,
             FirstBlood = (byte)(s.FirstBlood ? 1 : 0),
+            Assists = s.Assists,
+            Evades = s.Evades,
+            AssistXp = s.AssistXp,
+            EvadeXp = s.EvadeXp,
+            RepairXp = s.RepairXp,
         };
 
         public PlayerMatchStats ToStats() => new()
@@ -212,6 +230,11 @@ namespace Chopper.Simulation.Match
             Repaired = Repaired,
             LongestKill = LongestKill,
             FirstBlood = FirstBlood != 0,
+            Assists = Assists,
+            Evades = Evades,
+            AssistXp = AssistXp,
+            EvadeXp = EvadeXp,
+            RepairXp = RepairXp,
         };
     }
 }

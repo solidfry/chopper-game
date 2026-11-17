@@ -156,4 +156,22 @@ namespace Chopper.Presentation.Events
             WasConnected = wasConnected;
         }
     }
+
+    /// <summary>The server gave the local player XP just now (the Battlefield-style popup).</summary>
+    public readonly struct XpAwarded
+    {
+        public readonly XpReason Reason;
+        public readonly int Amount;
+        /// <summary>The victim (kill, assist) or the missile's shooter. 0 = none.</summary>
+        public readonly int OtherNetworkId;
+        /// <summary>Kills: the damage XP done to this victim, shown as its own line.</summary>
+        public readonly int DamageXp;
+        public XpAwarded(XpReason reason, int amount, int otherNetworkId, int damageXp)
+        {
+            Reason = reason;
+            Amount = amount;
+            OtherNetworkId = otherNetworkId;
+            DamageXp = damageXp;
+        }
+    }
 }

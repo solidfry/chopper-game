@@ -18,6 +18,13 @@
       <ui:VisualElement name="death-alert" class="hud-death-alert hud-death-alert--hidden" picking-mode="Ignore">
         <ui:Label name="death-alert-text" text="" class="hud-death-alert__text chopper-title" />
       </ui:VisualElement>
+      <!-- XP popup (Battlefield style): MatchHudModel.AddXp; punch on each award, fades after the combo -->
+      <ui:VisualElement name="xp-popup" class="hud-xp hud-xp--hidden" picking-mode="Ignore">
+        <ui:Label name="xp-title" text="" class="hud-xp__title chopper-title" picking-mode="Ignore" />
+        <ui:Label name="xp-name" text="" class="hud-xp__name" picking-mode="Ignore" />
+        <ui:Label name="xp-total" text="" class="hud-xp__total chopper-title" picking-mode="Ignore" />
+        <ui:Label name="xp-lines" text="" class="hud-xp__lines" picking-mode="Ignore" />
+      </ui:VisualElement>
       <ui:Label name="banner" text="" class="hud-match__banner hud-match__banner--hidden chopper-title" />
       <!-- Scoreboard: hold Tab / gamepad View; always shown on the results. Rows are made by ScoreboardView -->
       <ui:VisualElement name="scoreboard" class="hud-scoreboard hud-scoreboard--hidden" picking-mode="Ignore">

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Chopper.Simulation.Loadout;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -17,6 +19,18 @@ namespace Chopper.Simulation.Visuals
         public Entity Rotor;
         /// <summary>Local axes, like Transform.Rotate.</summary>
         public float3 RadiansPerSecond;
+    }
+
+    /// <summary>
+    /// Client only: where a boost jet flame leaves the chopper. Chopper-local position and the direction the flame
+    /// shoots (unit vector). Baked from the Engine sockets (see the BoostFlameSystem in presentation).
+    /// </summary>
+    [GhostComponent(PrefabType = GhostPrefabType.Client)]
+    [InternalBufferCapacity(2)]
+    public struct ExhaustPoint : IBufferElementData
+    {
+        public float3 LocalPosition;
+        public float3 LocalDirection;
     }
 
     /// <summary>
@@ -43,9 +57,39 @@ namespace Chopper.Simulation.Visuals
 
         private sealed class Baker : Baker<ChopperVisualsAuthoring>
         {
+            /// <summary>
+            /// One engine socket: two nozzles at +-0.3 m (same layout as the smoke from Setup). Several: one nozzle per
+            /// socket. None: two nozzles behind the hull centre. Flames shoot along the chopper's -Z.
+            /// </summary>
+            private void BakeExhaust(ChopperVisualsAuthoring authoring, Entity entity)
+            {
+                var buffer = AddBuffer<ExhaustPoint>(entity);
+                var root = authoring.transform;
+                var back = new float3(0f, 0f, -1f);
+                var engines = new List<Vector3>();
+                foreach (var socket in GetComponentsInChildren<SocketAuthoring>())
+                    if (socket.Slot == SlotType.Engine) engines.Add(root.InverseTransformPoint(socket.transform.position));
+                if (engines.Count == 1)
+                {
+                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + new float3(0.3f, 0f, -0.6f), LocalDirection = back });
+                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + new float3(-0.3f, 0f, -0.6f), LocalDirection = back });
+                }
+                else if (engines.Count > 1)
+                {
+                    foreach (var engine in engines)
+                        buffer.Add(new ExhaustPoint { LocalPosition = (float3)engine + new float3(0f, 0f, -0.6f), LocalDirection = back });
+                }
+                else
+                {
+                    buffer.Add(new ExhaustPoint { LocalPosition = new float3(0.3f, 0f, -1.2f), LocalDirection = back });
+                    buffer.Add(new ExhaustPoint { LocalPosition = new float3(-0.3f, 0f, -1.2f), LocalDirection = back });
+                }
+            }
+
             public override void Bake(ChopperVisualsAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
+                BakeExhaust(authoring, entity);
                 var buffer = AddBuffer<RotorSpin>(entity);
                 foreach (var rotor in authoring.rotors)
                 {

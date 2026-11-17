@@ -90,6 +90,7 @@ namespace Chopper.UI.Hud
         private VisualElement _killFeed;
         private VisualElement _deathTint;
         private VisualElement _deathAlert;
+        private VisualElement _xpPopup;
         private VisualElement _pilot;
         private VisualElement _pilotPicture;
         private const string PilotHiddenClass = "hud-pilot--hidden";
@@ -203,6 +204,11 @@ namespace Chopper.UI.Hud
             _deathTint = match.Q("death-tint");
             _deathAlert = match.Q("death-alert");
             Bind(match.Q<Label>("death-alert-text"), "text", nameof(MatchHudModel.DeathAlertText));
+            _xpPopup = match.Q("xp-popup");
+            Bind(match.Q<Label>("xp-title"), "text", nameof(MatchHudModel.XpTitle));
+            Bind(match.Q<Label>("xp-name"), "text", nameof(MatchHudModel.XpName));
+            Bind(match.Q<Label>("xp-total"), "text", nameof(MatchHudModel.XpTotalText));
+            Bind(match.Q<Label>("xp-lines"), "text", nameof(MatchHudModel.XpLinesText));
             _scoreboard = new ScoreboardView(match, _match);
 
             _opacityGroups.Clear();
@@ -234,6 +240,7 @@ namespace Chopper.UI.Hud
             RefreshAbility();
             RefreshBanner();
             RefreshDeathAlert();
+            RefreshXp();
         }
 
         /// <summary>Drops the old tree's elements and model events (before a rebuild, or on disable).</summary>
@@ -465,6 +472,26 @@ namespace Chopper.UI.Hud
                 RefreshBanner();
             else if (args.propertyName == nameof(MatchHudModel.DeathAlertVisible))
                 RefreshDeathAlert();
+            else if (args.propertyName == nameof(MatchHudModel.XpVisible) || args.propertyName == nameof(MatchHudModel.XpBig))
+                RefreshXp();
+            else if (args.propertyName == nameof(MatchHudModel.XpPulse))
+                PunchXp();
+        }
+
+        private void RefreshXp()
+        {
+            if (_xpPopup == null) return;
+            _xpPopup.EnableInClassList("hud-xp--hidden", !_match.XpVisible);
+            _xpPopup.EnableInClassList("hud-xp--big", _match.XpBig);
+        }
+
+        /// <summary>Each award slams the popup in big for one frame; the transition settles it back with an overshoot.</summary>
+        private void PunchXp()
+        {
+            if (_xpPopup == null) return;
+            RefreshXp();
+            _xpPopup.AddToClassList("hud-xp--punch");
+            _xpPopup.schedule.Execute(() => _xpPopup?.RemoveFromClassList("hud-xp--punch")).StartingIn(30);
         }
 
         private void RefreshBanner() => _banner.EnableInClassList(BannerHiddenClass, !_match.BannerVisible);

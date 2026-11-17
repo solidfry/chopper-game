@@ -1029,3 +1029,83 @@
   flex-grow: 1;
   -unity-background-scale-mode: scale-to-fit;
 }
+
+/* XP popup (Battlefield style), under the reticle. MatchHudModel.AddXp drives it; the view adds --punch for one
+   frame at each award, so it slams in big and settles with an overshoot. Kills (--big) burn hot yellow, support
+   awards (assist, repair, evaded) glow cyan. */
+.hud-xp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 57%;
+  align-items: center;
+  opacity: 1;
+  scale: 1 1;
+  translate: 0 0;
+  transition-property: scale, opacity, translate;
+  transition-duration: 0.32s, 0.25s, 0.4s;
+  transition-timing-function: ease-out-back, ease-out, ease-out;
+}
+
+.hud-xp--hidden {
+  opacity: 0;
+  translate: 0 -24px;
+}
+
+.hud-xp--punch {
+  scale: 1.6 1.6;
+  transition-duration: 0s, 0s, 0s;
+}
+
+.hud-xp__title {
+  font-size: 34px;
+  letter-spacing: 8px;
+  color: var(--chopper-cyan);
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.85);
+  -unity-text-align: middle-center;
+  padding: 2px 28px;
+  border-top-width: 2px;
+  border-bottom-width: 2px;
+  border-color: rgba(0, 240, 255, 0.55);
+  background-color: rgba(0, 18, 22, 0.55);
+}
+
+.hud-xp--big .hud-xp__title {
+  font-size: 46px;
+  color: var(--chopper-yellow);
+  text-shadow: 0 0 22px rgba(255, 200, 40, 0.95);
+  border-color: rgba(255, 200, 40, 0.7);
+  background-color: rgba(30, 20, 0, 0.6);
+}
+
+.hud-xp__name {
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: var(--chopper-red);
+  text-shadow: 0 0 10px rgba(255, 66, 70, 0.8);
+  margin-top: 4px;
+  -unity-text-align: middle-center;
+}
+
+.hud-xp__total {
+  font-size: 40px;
+  letter-spacing: 2px;
+  color: rgb(255, 255, 255);
+  text-shadow: 0 0 18px rgba(0, 255, 150, 0.95);
+  margin-top: 2px;
+  -unity-text-align: middle-center;
+}
+
+.hud-xp--big .hud-xp__total {
+  font-size: 54px;
+  text-shadow: 0 0 24px rgba(255, 200, 40, 1);
+}
+
+.hud-xp__lines {
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: var(--chopper-green);
+  text-shadow: 0 0 8px rgba(0, 255, 150, 0.6);
+  -unity-text-align: upper-center;
+  margin-top: 2px;
+}

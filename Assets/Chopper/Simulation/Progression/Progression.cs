@@ -85,8 +85,22 @@ namespace Chopper.Simulation.Progression
         public float PerDamage;
         /// <summary>A kill on a server bot gives this part of <see cref="PerKill"/> (0..1).</summary>
         public float BotKillFactor;
+        /// <summary>XP for an assist: damage on a victim that someone else killed (a bot victim gives <see cref="BotKillFactor"/> of it).</summary>
+        public int PerAssist;
+        /// <summary>Part of the victim's damage this life (0..1) an attacker must have done for an assist.</summary>
+        public float AssistMinShare;
+        /// <summary>The assist's last hit must be at most this many seconds before the kill.</summary>
+        public float AssistSeconds;
+        /// <summary>XP per point of hull mended by field repair.</summary>
+        public float PerRepair;
+        /// <summary>XP for a missile aimed at you that missed (flares or flying).</summary>
+        public int PerMissileEvaded;
 
-        public static XpRates Default => new() { MatchComplete = 150, Victory = 300, PerKill = 100, PerDamage = 0.2f, BotKillFactor = 0.5f };
+        public static XpRates Default => new()
+        {
+            MatchComplete = 150, Victory = 300, PerKill = 100, PerDamage = 0.2f, BotKillFactor = 0.5f,
+            PerAssist = 50, AssistMinShare = 0.25f, AssistSeconds = 15f, PerRepair = 0.1f, PerMissileEvaded = 25,
+        };
     }
 
     /// <summary>Time one player flew one chassis class with one pilot in a match.</summary>

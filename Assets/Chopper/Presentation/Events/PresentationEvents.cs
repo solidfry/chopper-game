@@ -24,6 +24,7 @@ namespace Chopper.Presentation.Events
             builder.AddMessageBroker<ScoreChanged>();
             builder.AddMessageBroker<PlayerLeft>();
             builder.AddMessageBroker<PlayerKilled>();
+            builder.AddMessageBroker<XpAwarded>();
             builder.AddMessageBroker<MatchStateChanged>();
             builder.AddMessageBroker<MatchStatsReceived>();
             builder.AddMessageBroker<RocketLaunched>();

@@ -64,6 +64,36 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Camera shake per second for the own chopper at full strength (0..1 trauma).")]
         private float downwashShake = 0.15f;
 
+        [Header("Boost flames (jet flames from the exhaust while boosting; uses the Damage Spark Material)")]
+        [SerializeField, Tooltip("Flame length (m) at full strength: speed times life.")]
+        private float boostFlameLength = 7f;
+        [SerializeField, Tooltip("Flame width (m) at the nozzle.")]
+        private float boostFlameSize = 0.7f;
+        [SerializeField, Tooltip("Flame particles per second at full strength, per exhaust point.")]
+        private float boostFlameRate = 140f;
+        [SerializeField, Tooltip("Extra particles at the start of a boost (the kick), per exhaust point.")]
+        private int boostFlameBurst = 40;
+        [SerializeField, ColorUsage(false, true), Tooltip("Hot core colour (HDR, so bloom catches it).")]
+        private Color boostFlameCore = new(6f, 4.2f, 2.2f, 1f);
+        [SerializeField, ColorUsage(false, true), Tooltip("Colour at the flame tip (HDR).")]
+        private Color boostFlameTip = new(0.1f, 1.2f, 3.5f, 1f);
+        [SerializeField, Range(0f, 1f), Tooltip("Random flicker of the flame brightness and length.")]
+        private float boostFlameFlicker = 0.35f;
+        [SerializeField, Tooltip("Strength rise speed when a boost starts (1/s).")]
+        private float boostFlameRise = 18f;
+        [SerializeField, Tooltip("Strength fall speed when a boost ends (1/s). High = fades out fast.")]
+        private float boostFlameFall = 7f;
+        [SerializeField, Range(0f, 1f), Tooltip("Flame size and rate for the own chopper while the camera is inside the cockpit.")]
+        private float boostFlameCockpitScale = 0.15f;
+
+        [Header("Boost trail (glowing streak left behind while boosting)")]
+        [SerializeField, Tooltip("Seconds the trail lasts before it has faded. 0 = no trail.")]
+        private float boostTrailTime = 0.9f;
+        [SerializeField, Tooltip("Trail width (m) at the exhaust.")]
+        private float boostTrailWidth = 0.35f;
+        [SerializeField, ColorUsage(true, true), Tooltip("Trail colour at the exhaust (HDR); it fades to clear along the trail.")]
+        private Color boostTrailColour = new(0.5f, 1.6f, 4f, 1f);
+
         [Header("Damage (sparks at hits, smoke and fire as the hull runs low)")]
         [SerializeField, Tooltip("Additive particle material for sparks and flames (URP Particles Unlit, HDR base colour so " +
                                  "bloom catches it). Empty: no sparks or fire.")]
@@ -145,6 +175,19 @@ namespace Chopper.Presentation.Effects
         public float DownwashSize => downwashSize;
         public Color DownwashColour => downwashColour;
         public float DownwashShake => downwashShake;
+        public float BoostFlameLength => boostFlameLength;
+        public float BoostFlameSize => boostFlameSize;
+        public float BoostFlameRate => boostFlameRate;
+        public int BoostFlameBurst => boostFlameBurst;
+        public Color BoostFlameCore => boostFlameCore;
+        public Color BoostFlameTip => boostFlameTip;
+        public float BoostFlameFlicker => boostFlameFlicker;
+        public float BoostFlameRise => boostFlameRise;
+        public float BoostFlameFall => boostFlameFall;
+        public float BoostFlameCockpitScale => boostFlameCockpitScale;
+        public float BoostTrailTime => boostTrailTime;
+        public float BoostTrailWidth => boostTrailWidth;
+        public Color BoostTrailColour => boostTrailColour;
         public Material DamageSparkMaterial => damageSparkMaterial;
         public Material DamageSmokeMaterial => damageSmokeMaterial;
         public float SparksPerDamage => sparksPerDamage;

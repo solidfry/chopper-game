@@ -49,6 +49,10 @@ namespace Chopper.Presentation.Results
             if (botXp > 0) lines.Add(new XpLine($"BOT KILLS x{botKills}", botXp));
             var damage = Mathf.RoundToInt(stats.DamageDealt * rates.PerDamage);
             if (damage > 0) lines.Add(new XpLine($"DAMAGE {stats.DamageDealt:0}", damage));
+            // Counted live on the server (the in-match XP popups), so these add up to what the player saw.
+            if (stats.AssistXp > 0) lines.Add(new XpLine($"ASSISTS x{stats.Assists}", stats.AssistXp));
+            if (stats.EvadeXp > 0) lines.Add(new XpLine($"MISSILES EVADED x{stats.Evades}", stats.EvadeXp));
+            if (stats.RepairXp > 0) lines.Add(new XpLine($"REPAIRS {stats.Repaired:0}", stats.RepairXp));
             var awardXp = 0;
             foreach (var award in awards) awardXp += award.Xp;
             if (awardXp > 0) lines.Add(new XpLine(awards.Count == 1 ? "AWARD" : $"AWARDS x{awards.Count}", awardXp));

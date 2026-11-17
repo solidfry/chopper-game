@@ -22,12 +22,21 @@ namespace Chopper.Presentation.Feedback
                 events.Subscribe<PlayerKilled>(m => context.Match.AddKill(m.KillerNetworkId, m.VictimNetworkId)),
                 events.Subscribe<MatchStateChanged>(OnMatchState),
                 events.Subscribe<MatchStatsReceived>(m => context.Results.ApplyStats(m.NetworkId, m.Stats)),
+                events.Subscribe<XpAwarded>(OnXp),
             };
         }
 
         public void Dispose()
         {
             foreach (var subscription in _subscriptions) subscription.Dispose();
+        }
+
+        private void OnXp(XpAwarded xp)
+        {
+            _context.Match.AddXp(xp.Reason, xp.Amount, xp.OtherNetworkId, xp.DamageXp);
+            // Kills already ring the kill confirm; the XP chime sits on top of it, and alone for the support awards.
+            var sounds = _context.Sounds;
+            if (sounds != null) _context.Audio.Play(sounds.ResultsXp);
         }
 
         private void OnMatchState(MatchStateChanged state)
