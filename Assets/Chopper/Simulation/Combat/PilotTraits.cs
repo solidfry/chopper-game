@@ -79,6 +79,8 @@ namespace Chopper.Simulation.Combat
         public Entity Source;
         /// <summary><see cref="DamageKind.Corrosion"/> or <see cref="DamageKind.Burn"/>.</summary>
         public DamageKind Kind;
+        /// <summary>The weapon of the hit that started it, so a kill by the damage over time names that weapon.</summary>
+        public Unity.Collections.FixedString32Bytes Weapon;
     }
 
     /// <summary>
@@ -117,6 +119,7 @@ namespace Chopper.Simulation.Combat
                 if (effect.Source != dot.Source || effect.Kind != dot.Kind) continue;
                 effect.Remaining += dot.Remaining;
                 effect.SecondsLeft = math.max(effect.SecondsLeft, dot.SecondsLeft);
+                effect.Weapon = dot.Weapon;
                 effects[i] = effect;
                 return;
             }

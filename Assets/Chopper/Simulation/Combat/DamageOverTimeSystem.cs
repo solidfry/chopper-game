@@ -43,7 +43,7 @@ namespace Chopper.Simulation.Combat
                     if (pulse)
                     {
                         var amount = DamageOverTimeRules.Pulse(ref effect, pulseSeconds);
-                        if (amount > 0f) damage.Add(new DamageEvent { Amount = amount, Source = effect.Source, Kind = effect.Kind });
+                        if (amount > 0f) damage.Add(new DamageEvent { Amount = amount, Source = effect.Source, Kind = effect.Kind, Weapon = effect.Weapon });
                     }
                     if (effect.Remaining <= 0.01f || effect.SecondsLeft <= 0f)
                     {

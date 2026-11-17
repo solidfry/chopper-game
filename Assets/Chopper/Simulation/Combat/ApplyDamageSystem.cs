@@ -114,6 +114,7 @@ namespace Chopper.Simulation.Combat
                     if (sourceTraits.DotFor(hit.Kind, hit.Amount, out var dot) && _dotLookup.HasBuffer(victim))
                     {
                         dot.Source = hit.Source;
+                        dot.Weapon = hit.Weapon;
                         // Venom Belt, Napalm Salvo: the attacker's ability makes it stronger.
                         if (_abilityConfigLookup.TryGetComponent(hit.Source, out var sourceAbility) &&
                             _abilityLookup.TryGetComponent(hit.Source, out var sourceAbilityState))

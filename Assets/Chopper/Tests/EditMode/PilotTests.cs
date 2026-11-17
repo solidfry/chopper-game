@@ -132,11 +132,13 @@ namespace Chopper.Tests
             var other = world.EntityManager.CreateEntity();
 
             DamageOverTimeRules.Add(buffer, new DamageOverTime { Remaining = 3f, SecondsLeft = 3f, Source = shooter, Kind = DamageKind.Corrosion });
-            DamageOverTimeRules.Add(buffer, new DamageOverTime { Remaining = 3f, SecondsLeft = 3f, Source = shooter, Kind = DamageKind.Corrosion });
+            DamageOverTimeRules.Add(buffer, new DamageOverTime { Remaining = 3f, SecondsLeft = 3f, Source = shooter, Kind = DamageKind.Corrosion, Weapon = "M134 MINIGUN" });
             DamageOverTimeRules.Add(buffer, new DamageOverTime { Remaining = 5f, SecondsLeft = 4f, Source = other, Kind = DamageKind.Burn });
 
             Assert.That(buffer.Length, Is.EqualTo(2));
             Assert.That(buffer[0].Remaining, Is.EqualTo(6f).Within(1e-4f));
+            // The merged effect names the latest weapon, so a kill by it is not shown with no weapon.
+            Assert.That(buffer[0].Weapon.ToString(), Is.EqualTo("M134 MINIGUN"));
         }
 
         [Test]
