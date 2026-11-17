@@ -57,9 +57,10 @@ namespace Chopper.Simulation.Combat
                 }
 
                 // Rewind from the current tick by the stored delay (never from the fire tick), so the history needs
-                // only the rewind cap.
+                // only the rewind cap. No delay (host, bots): this tick's world. The history system runs in the same
+                // OrderLast slot, so it may not hold this tick yet and would give the last one.
                 var collisionWorld = physicsWorld.CollisionWorld;
-                if (hasHistory)
+                if (hasHistory && bullet.RewindTicks > 0)
                     history.GetCollisionWorldFromTick(serverTick, bullet.RewindTicks, ref physicsWorld, out collisionWorld);
 
                 if (Explosions.TryRaycast(collisionWorld, bullet.Shooter, from, bullet.Position, out var hit))

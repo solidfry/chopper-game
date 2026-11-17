@@ -117,4 +117,4 @@ Five steps, each one compiles and plays on its own:
 - [ ] Pulse laser: keep it instant as its trade, or give it travel time too?
 - [ ] Gun lead marker: always on near a target, or only with a lock?
 - [ ] Gravity on rounds: leave out (proposed), or add a small drop for long range?
-- [ ] Cap on live rounds per shooter, if the server load test needs one?
+- [x] Cap on live rounds per shooter: 48 (`Ballistics.MaxRoundsPerShooter`); the oldest round is dropped. Normal fire peaks near 14.

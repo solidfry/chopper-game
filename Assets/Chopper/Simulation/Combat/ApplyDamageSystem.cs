@@ -136,7 +136,9 @@ namespace Chopper.Simulation.Combat
                     if (hit.HasPoint && hit.Amount > strongest.Amount) strongest = hit;
                     if (hit.Amount > 0f) InterruptRepair(victim);
                     var killed = health.ValueRW.TakeDamage(hit.Amount);
-                    var attacker = gone ? RememberAttacker(victim, hit.Attacker.NetworkId, now) : RememberAttacker(victim, hit.Source, now);
+                    // A player who left: Netcode gives the id to the next player, so no credit for it.
+                    var attacker = gone ? RememberAttacker(victim, ShooterLeft(hit.Attacker) ? 0 : hit.Attacker.NetworkId, now)
+                        : RememberAttacker(victim, hit.Source, now);
                     if (killed && sourceTraits.KillHeal > 0f && hit.Source != Entity.Null && !gone)
                         killHeals.Add(new KillHeal { Healer = hit.Source, Share = sourceTraits.KillHeal });
 
@@ -280,6 +282,15 @@ namespace Chopper.Simulation.Combat
                 _lastAttackerLookup[victim] = new LastAttacker { NetworkId = owner.NetworkId, Time = now };
             return owner.NetworkId;
         }
+
+        /// <summary>
+        /// The shooter of a saved snapshot has disconnected: its connection no longer has the saved id. Netcode uses a
+        /// freed id again, so a later player could get the credit. Server bots (ids from <see cref="Bots.BotIds.First"/>)
+        /// have no connection and always count.
+        /// </summary>
+        private bool ShooterLeft(in AttackerSnapshot attacker) =>
+            attacker.NetworkId > 0 && attacker.NetworkId < Bots.BotIds.First &&
+            !(_networkIdLookup.TryGetComponent(attacker.Connection, out var id) && id.Value == attacker.NetworkId);
 
         /// <summary>The same, for an attacker whose chopper is gone: its saved network id (0 = none).</summary>
         private int RememberAttacker(Entity victim, int attackerNetworkId, double now)

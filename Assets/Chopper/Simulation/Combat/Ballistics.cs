@@ -1,3 +1,4 @@
+using Unity.Entities;
 using Unity.Mathematics;
 
 namespace Chopper.Simulation.Combat
@@ -8,6 +9,30 @@ namespace Chopper.Simulation.Combat
     /// </summary>
     public static class Ballistics
     {
+        /// <summary>
+        /// Most live rounds one shooter can have. The fastest gun (1500 rpm, 0.56 s flight) has about 14 in the air, so
+        /// only a fault or a much faster future gun reaches it. A guard for the server's per-tick ray casts.
+        /// </summary>
+        public const int MaxRoundsPerShooter = 48;
+
+        /// <summary>
+        /// Adds a round. When its shooter already has <paramref name="cap"/> rounds in flight, its oldest round (the first
+        /// in the buffer: rounds are appended and removal keeps the order) goes first.
+        /// </summary>
+        public static void AddCapped(DynamicBuffer<ActiveBullet> bullets, in ActiveBullet round, int cap)
+        {
+            var count = 0;
+            var oldest = -1;
+            for (var i = 0; i < bullets.Length; i++)
+            {
+                if (bullets[i].Shooter != round.Shooter) continue;
+                if (oldest < 0) oldest = i;
+                count++;
+            }
+            if (cap > 0 && count >= cap) bullets.RemoveAt(oldest);
+            bullets.Add(round);
+        }
+
         /// <summary>A gun with no round speed hits at once along one ray (hitscan).</summary>
         public static bool IsInstant(float bulletSpeed) => bulletSpeed <= 0f;
 

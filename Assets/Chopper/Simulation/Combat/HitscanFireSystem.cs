@@ -123,7 +123,7 @@ namespace Chopper.Simulation.Combat
                 {
                     if (!hasBullets) continue;
                     var chopperVelocity = _velocityLookup.TryGetComponent(shooter, out var velocity) ? velocity.Linear : float3.zero;
-                    bullets.Add(new ActiveBullet
+                    Ballistics.AddCapped(bullets, new ActiveBullet
                     {
                         Position = muzzle,
                         Velocity = Ballistics.LaunchVelocity(chopperVelocity, forward, config.ValueRO.BulletSpeed),
@@ -132,13 +132,14 @@ namespace Chopper.Simulation.Combat
                         RewindTicks = delay,
                         Gun = config.ValueRO,
                         Attacker = AttackerSnapshot.Of(shooter, _ownerLookup, _connectionLookup, _traitsLookup, _abilityConfigLookup, _abilityLookup),
-                    });
+                    }, Ballistics.MaxRoundsPerShooter);
                     continue;
                 }
 
                 // Instant gun (pulse laser): one ray now.
                 var collisionWorld = physicsWorld.CollisionWorld;
-                if (hasHistory)
+                // No delay (host, bots): this tick's world (see BulletStepSystem).
+                if (hasHistory && delay > 0)
                     history.GetCollisionWorldFromTick(serverTick, delay, ref physicsWorld, out collisionWorld);
                 if (!Explosions.TryRaycast(collisionWorld, shooter, muzzle, muzzle + forward * config.ValueRO.Range, out var hit))
                     continue;

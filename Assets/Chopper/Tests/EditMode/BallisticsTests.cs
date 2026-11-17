@@ -137,6 +137,26 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void AddCapped_DropsTheShootersOldestRound_AndLeavesOthersAlone()
+        {
+            using var world = new Unity.Entities.World("BallisticsTests");
+            var em = world.EntityManager;
+            var a = em.CreateEntity();
+            var b = em.CreateEntity();
+            var bullets = em.AddBuffer<ActiveBullet>(em.CreateEntity());
+
+            Ballistics.AddCapped(bullets, new ActiveBullet { Shooter = a, TimeLeft = 1f }, 2);
+            Ballistics.AddCapped(bullets, new ActiveBullet { Shooter = b, TimeLeft = 9f }, 2);
+            Ballistics.AddCapped(bullets, new ActiveBullet { Shooter = a, TimeLeft = 2f }, 2);
+            Ballistics.AddCapped(bullets, new ActiveBullet { Shooter = a, TimeLeft = 3f }, 2);
+
+            Assert.That(bullets.Length, Is.EqualTo(3));
+            Assert.That(bullets[0].Shooter, Is.EqualTo(b));
+            Assert.That(bullets[1].TimeLeft, Is.EqualTo(2f));
+            Assert.That(bullets[2].TimeLeft, Is.EqualTo(3f));
+        }
+
+        [Test]
         public void SpeedZero_StaysInstant()
         {
             Assert.That(Ballistics.IsInstant(0f), Is.True);
