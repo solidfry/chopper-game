@@ -43,6 +43,7 @@ namespace Chopper.Editor.Setup
         private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         /// <summary>Cockpit alarm tones made for the game (beeps, not effects-pack loops): lock and missile warnings.</summary>
         private const string Warnings = "Assets/Chopper/Audio/SFX/Warnings";
+        private const string Flares = "Assets/Chopper/Audio/SFX/Flares";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
         private const string DistantExplosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_DistantExplosion_";
         internal const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
@@ -128,7 +129,7 @@ namespace Chopper.Editor.Setup
                 Slot(library.LockedTone, () => Cue("LockedTone", Clips(SciFi + "/Loops/loop_laser2.wav"), ui, 0.45f, blend: 0f, voices: 1, pitch: 1.3f)),
                 Slot(library.LockWarning, () => Cue("LockWarning", Clips(Warnings + "/LockWarning_Beep.wav"), ui, 0.45f, blend: 0f, voices: 1)),
                 Slot(library.MissileWarning, () => Cue("MissileWarning", Clips(Warnings + "/MissileWarning_Alarm.wav"), ui, 0.6f, blend: 0f, voices: 1)),
-                Slot(library.Flares, () => Cue("Flares", Clips(SciFi + "/Impact/shoot_fireball.wav"), effects, 0.7f, blend: 1f, voices: 4, muffle: CueMuffle.Outside)));
+                Slot(library.Flares, () => Cue("Flares", Clips(Flares + "/FlareBurst_01.wav", Flares + "/FlareBurst_02.wav", Flares + "/FlareBurst_03.wav"), effects, 0.7f, blend: 1f, voices: 4, muffle: CueMuffle.Outside)));
 
             // Boost: deep, rolling distant explosions (and one sci-fi blast) for the kick; the loudest, bassiest rocket loop,
             // pitched well down, for the roar. Chosen by low-frequency content; the close explosions crackle (tinny).
