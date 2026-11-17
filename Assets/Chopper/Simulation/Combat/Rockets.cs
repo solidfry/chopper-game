@@ -16,6 +16,8 @@ namespace Chopper.Simulation.Combat
         public float3 Velocity;
         public float Remaining;
         public Entity Shooter;
+        /// <summary>Server: the shooter at launch, for kill credit if its chopper is gone at impact.</summary>
+        public AttackerSnapshot Attacker;
         public float DirectDamage;
         public float SplashDamage;
         public float SplashRadius;

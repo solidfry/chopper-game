@@ -110,7 +110,10 @@ namespace Chopper.Simulation.Combat
                     // The shooter's chopper is gone (it died while its round or burn was on the way): use what was
                     // saved at fire time, so the kill, the hit marker and the pilot's traits still count.
                     var gone = hit.Attacker.Valid && !_ownerLookup.HasComponent(hit.Source);
-                    var sourceTraits = gone ? hit.Attacker.Traits
+                    // A dead shooter's round can reach the same player's respawned chopper: that is self damage.
+                    var goneSelf = gone && _ownerLookup.TryGetComponent(victim, out var victimId) && victimId.NetworkId == hit.Attacker.NetworkId;
+                    var sourceTraits = goneSelf ? PilotTraits.None
+                        : gone ? hit.Attacker.Traits
                         : hit.Source != victim && _traitsLookup.TryGetComponent(hit.Source, out var theirs) ? theirs
                         : PilotTraits.None;
                     var overTime = hit.Kind is DamageKind.Corrosion or DamageKind.Burn;
@@ -160,7 +163,8 @@ namespace Chopper.Simulation.Combat
                         ecb.AddComponent(taken, new SendRpcCommandRequest { TargetConnection = victimConnection.Value });
                     }
 
-                    var shooterConnection = gone ? hit.Attacker.Connection
+                    var shooterConnection = goneSelf ? Entity.Null
+                        : gone ? hit.Attacker.Connection
                         : _connectionLookup.TryGetComponent(hit.Source, out var shooter) ? shooter.Value
                         : Entity.Null;
                     if (shooterConnection == Entity.Null || !_networkIdLookup.HasComponent(shooterConnection)) continue;

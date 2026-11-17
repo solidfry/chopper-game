@@ -65,9 +65,10 @@ namespace Chopper.Simulation.Combat
                             Normal = hit.SurfaceNormal,
                             Kind = DamageKind.Explosion,
                             Weapon = rocket.Weapon,
+                            Attacker = rocket.Attacker,
                         });
                     Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity,
-                        rocket.Weapon);
+                        rocket.Weapon, rocket.Attacker);
                     ecb.DestroyEntity(entity);
                     continue;
                 }
@@ -75,7 +76,7 @@ namespace Chopper.Simulation.Combat
                 if (rocket.ProximityFuse > 0f && TryFuse(fuseTargets, rocket, end, out var burst))
                 {
                     Explosions.Splash(world, ref _damageLookup, burst, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, Entity.Null,
-                        rocket.Weapon);
+                        rocket.Weapon, rocket.Attacker);
                     ecb.DestroyEntity(entity);
                     continue;
                 }

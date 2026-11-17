@@ -21,6 +21,8 @@ namespace Chopper.Simulation.Combat
 
         // Server only (damage is decided there).
         public Entity Shooter;
+        /// <summary>Server only (not sent): the shooter at launch, for kill credit if its chopper is gone at impact.</summary>
+        public AttackerSnapshot Attacker;
         public float ProximityFuse;
         public float DirectDamage;
         public float SplashDamage;

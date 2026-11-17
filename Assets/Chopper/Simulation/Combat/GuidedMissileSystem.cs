@@ -153,9 +153,10 @@ namespace Chopper.Simulation.Combat
                         Normal = directNormal,
                         Kind = DamageKind.Explosion,
                         Weapon = missile.Weapon,
+                        Attacker = missile.Attacker,
                     });
                 Explosions.Splash(world, ref _damage, detonateAt, missile.SplashRadius, missile.SplashDamage, missile.Shooter, directTarget,
-                    missile.Weapon);
+                    missile.Weapon, missile.Attacker);
                 if (hasLog)
                     log.Add(new MatchLogEntry
                     {
@@ -195,6 +196,7 @@ namespace Chopper.Simulation.Combat
                     Velocity = Cluster.Direction(forward, cluster.ConeCos, seed, i) * cluster.Speed,
                     Remaining = cluster.Lifetime,
                     Shooter = missile.Shooter,
+                    Attacker = missile.Attacker,
                     DirectDamage = cluster.DirectDamage,
                     SplashDamage = cluster.SplashDamage,
                     SplashRadius = cluster.SplashRadius,

@@ -398,8 +398,8 @@ namespace Chopper.Simulation.Bots
             // that also lines up with the gun lead.
             var fireCone = math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
             var onTarget = math.dot(s.Forward, math.normalizesafe(lead - s.Position)) > fireCone;
-            var gunLead = rockets ? AimPoint(s, target, TargetVelocity, false) : lead;
-            var gunOnTarget = math.dot(s.Forward, math.normalizesafe(gunLead - s.Position)) > fireCone;
+            var gunSolved = GunLead(s, target, TargetVelocity, out var gunLead);
+            var gunOnTarget = gunSolved && math.dot(s.Forward, math.normalizesafe(gunLead - s.Position)) > fireCone;
             if (s.GunOverheated || s.GunHeat >= h.GunHeatRelease) GunCooling = true;
             else if (s.GunHeat < h.GunHeatRelease * 0.4f) GunCooling = false;
             order.Fire = Aiming && gunOnTarget && s.HasGun && distance < s.GunRange && !GunCooling;
@@ -423,10 +423,24 @@ namespace Chopper.Simulation.Bots
                     : target;
             }
 
-            return Ballistics.LeadPoint(s.Position, s.Velocity, target, targetVelocity, s.GunBulletSpeed,
-                Ballistics.FlightTime(s.GunRange, s.GunBulletSpeed), out var gunLead, out _)
-                ? gunLead
-                : target;
+            GunLead(s, target, targetVelocity, out var gunLead);
+            return gunLead;
+        }
+
+        /// <summary>
+        /// The gun's lead point. False when gun rounds cannot reach the target in their flight time (it pulls away
+        /// faster than they close, or it is too far): the point is then the target itself and the bot holds fire.
+        /// An instant gun always has a solution: the target.
+        /// </summary>
+        public static bool GunLead(in BotSituation s, float3 target, float3 targetVelocity, out float3 point)
+        {
+            point = target;
+            if (Ballistics.IsInstant(s.GunBulletSpeed)) return true;
+            if (!Ballistics.LeadPoint(s.Position, s.Velocity, target, targetVelocity, s.GunBulletSpeed,
+                    Ballistics.FlightTime(s.GunRange, s.GunBulletSpeed), out var lead, out _))
+                return false;
+            point = lead;
+            return true;
         }
 
         private void Evade(in BotSituation s,in NativeArray<BotContact> contacts, in BotHandling h, ref PilotOrder order, ref BotIntent intent)

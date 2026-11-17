@@ -35,11 +35,17 @@ namespace Chopper.Simulation.Combat
         /// A system field, so prediction rollback does not restore it.
         /// </summary>
         private FixedList64Bytes<uint> _launchTicks;
+        private ComponentLookup<GhostOwner> _ownerLookup;
+        private ComponentLookup<Session.ConnectionOwner> _connectionLookup;
+        private ComponentLookup<PilotTraits> _traitsLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<NetworkTime>();
+            _ownerLookup = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            _connectionLookup = state.GetComponentLookup<Session.ConnectionOwner>(isReadOnly: true);
+            _traitsLookup = state.GetComponentLookup<PilotTraits>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -54,6 +60,9 @@ namespace Chopper.Simulation.Combat
             var now = SystemAPI.Time.ElapsedTime;
             // Server: one Shot per rocket or missile for the match log (when logging is on).
             var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log) && isServer;
+            _ownerLookup.Update(ref state);
+            _connectionLookup.Update(ref state);
+            _traitsLookup.Update(ref state);
 
             foreach (var (input, weapons, cooldownBuffer, selection, transform, velocity, owner, shooter) in SystemAPI
                          .Query<RefRO<ChopperInput>, DynamicBuffer<PylonWeapon>, DynamicBuffer<PylonWeaponState>, RefRW<PylonSelection>,
@@ -67,6 +76,8 @@ namespace Chopper.Simulation.Combat
 
                 var pose = transform.ValueRO;
                 var shooterId = owner.ValueRO.NetworkId;
+                // Server: who fired, kept on the rocket or missile for kill credit if this chopper dies first.
+                var attacker = isServer ? AttackerSnapshot.Of(shooter, _ownerLookup, _connectionLookup, _traitsLookup) : default;
                 var lockTarget = Entity.Null;
                 if (SystemAPI.HasComponent<TargetLock>(shooter))
                 {
@@ -92,9 +103,9 @@ namespace Chopper.Simulation.Combat
                             cooldown.SalvoRemaining--;
                             var claimed = firstPrediction && ClaimLaunch(i, networkTime.ServerTick);
                             if (salvoWeapon.Behaviour == PylonBehaviour.Rocket)
-                                LaunchRocket(ecb, salvoWeapon, shooter, shooterId, pose, velocity.ValueRO.Linear, shot, isServer, claimed);
+                                LaunchRocket(ecb, salvoWeapon, shooter, shooterId, attacker, pose, velocity.ValueRO.Linear, shot, isServer, claimed);
                             else if (isServer || claimed)
-                                LaunchMissile(ecb, salvoWeapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot);
+                                LaunchMissile(ecb, salvoWeapon, shooter, shooterId, attacker, lockTarget, pose, velocity.ValueRO.Linear, shot);
                             if (hasLog) LogShot(log, now, shooterId, salvoWeapon.Name, pose.Position);
                         }
                     }
@@ -122,12 +133,12 @@ namespace Chopper.Simulation.Combat
 
                 if (weapon.Behaviour == PylonBehaviour.Rocket)
                 {
-                    LaunchRocket(ecb, weapon, shooter, shooterId, pose, velocity.ValueRO.Linear, shot: 0, isServer,
+                    LaunchRocket(ecb, weapon, shooter, shooterId, attacker, pose, velocity.ValueRO.Linear, shot: 0, isServer,
                         firstPrediction && ClaimLaunch(selected, networkTime.ServerTick));
                 }
                 else if (isServer || (firstPrediction && ClaimLaunch(selected, networkTime.ServerTick)))
                 {
-                    LaunchMissile(ecb, weapon, shooter, shooterId, lockTarget, pose, velocity.ValueRO.Linear, shot: 0);
+                    LaunchMissile(ecb, weapon, shooter, shooterId, attacker, lockTarget, pose, velocity.ValueRO.Linear, shot: 0);
                 }
                 if (hasLog) LogShot(log, now, shooterId, weapon.Name, pose.Position);
             }
@@ -157,7 +168,7 @@ namespace Chopper.Simulation.Combat
         }
 
         /// <param name="shot">Index in the salvo (0 for a single rocket): sets the spread direction.</param>
-        private static void LaunchRocket(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId,
+        private static void LaunchRocket(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId, in AttackerSnapshot attacker,
             in LocalTransform pose, float3 chopperVelocity, int shot, bool isServer, bool firstPrediction)
         {
             var position = pose.Position + math.mul(pose.Rotation, weapon.MuzzleOffset);
@@ -173,6 +184,7 @@ namespace Chopper.Simulation.Combat
                     Velocity = velocity,
                     Remaining = weapon.Lifetime,
                     Shooter = shooter,
+                    Attacker = attacker,
                     DirectDamage = weapon.DirectDamage,
                     SplashDamage = weapon.SplashDamage,
                     SplashRadius = weapon.SplashRadius,
@@ -220,7 +232,7 @@ namespace Chopper.Simulation.Combat
         /// by type and spawn tick; if the server did not fire, the predicted copy is removed).
         /// </summary>
         /// <param name="shot">Index in the salvo (0 for a single missile): sets the spread direction and flare resistance.</param>
-        private static void LaunchMissile(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId,
+        private static void LaunchMissile(EntityCommandBuffer ecb, in PylonWeapon weapon, Entity shooter, int shooterId, in AttackerSnapshot attacker,
             Entity target, in LocalTransform pose, float3 chopperVelocity, int shot)
         {
             if (weapon.MissilePrefab == Entity.Null) return;
@@ -250,6 +262,7 @@ namespace Chopper.Simulation.Combat
                 ArmRemaining = weapon.ArmTime,
                 Seeker = weapon.Seeker,
                 Shooter = shooter,
+                Attacker = attacker,
                 ProximityFuse = weapon.ProximityFuse,
                 DirectDamage = weapon.DirectDamage,
                 SplashDamage = weapon.SplashDamage,
