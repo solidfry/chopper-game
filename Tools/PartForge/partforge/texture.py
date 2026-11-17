@@ -157,6 +157,9 @@ def unwrap(objects, values=None):
     pieces (small_area) keep their islands at small_scale."""
     values = values or DEFAULTS
     view_layer = bpy.context.view_layer
+    # Live screens (palette.apply_screens: material slot 1) keep their page UVs. They are not in the set, but the pack
+    # moves every UV island of the mesh, so the screens showed the wrong part of the page atlas; put them back after.
+    kept = {obj.name: _screen_uvs(obj) for obj in objects}
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objects:
         obj.data.uv_layers.active = obj.data.uv_layers["UVMap"]
@@ -191,6 +194,21 @@ def unwrap(objects, values=None):
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.pack_islands(rotate=True, margin=float(values["pack_margin"]))
     bpy.ops.object.mode_set(mode="OBJECT")
+    for obj in objects:
+        layer = obj.data.uv_layers["UVMap"]
+        for index, uv in kept[obj.name]:
+            layer.data[index].uv = uv
+
+
+def _screen_uvs(obj):
+    """(loop index, UV) of every live-screen face (material slot named *_Screen), to restore after the unwrap."""
+    mesh = obj.data
+    slots = {i for i, material in enumerate(mesh.materials) if material is not None and material.name.endswith("_Screen")}
+    if not slots:
+        return []
+    layer = mesh.uv_layers["UVMap"]
+    return [(index, tuple(layer.data[index].uv)) for polygon in mesh.polygons if polygon.material_index in slots
+            for index in polygon.loop_indices]
 
 
 def _deflate_details(mesh, values, subset=None):
