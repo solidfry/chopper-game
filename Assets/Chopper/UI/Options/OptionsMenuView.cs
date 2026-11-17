@@ -20,6 +20,10 @@ namespace Chopper.UI.Options
     {
         private const string HiddenClass = "options--hidden";
         private const string ButtonHiddenClass = "options__button--hidden";
+        private const string TabOnClass = "options__tab--on";
+        private const string GroupHiddenClass = "options__group--hidden";
+        /// <summary>Tab button and settings group names, in tab order.</summary>
+        private static readonly string[] TabNames = { "controls", "display", "hud", "audio" };
 
         [SerializeField, Tooltip("Scene presentation bridge; it owns the HUD look and the audio service.")]
         private PresentationBridge bridge;
@@ -41,6 +45,8 @@ namespace Chopper.UI.Options
         private InputPromptLabels _prompts;
         private readonly List<(Slider Slider, AudioChannel Channel)> _volumes = new();
         private readonly List<(Slider Slider, HudGroup Group)> _hudOpacity = new();
+        private readonly List<(Button Tab, VisualElement Group, System.Action Show)> _tabs = new();
+        private int _tab;
         /// <summary>Same order as <see cref="HudLookPreset"/>.</summary>
         private readonly List<string> _presetNames = new() { "CLEAN", "VECTOR", "CRT 84" };
         /// <summary>Same order as <see cref="InputOptions.MouseSteerIndex"/>.</summary>
@@ -120,6 +126,19 @@ namespace Chopper.UI.Options
             AddHudOpacity("hud-opacity-match", HudGroup.MatchInfo);
             AddHudOpacity("hud-opacity-pilot", HudGroup.Pilot);
 
+            _tabs.Clear();
+            for (var i = 0; i < TabNames.Length; i++)
+            {
+                var tab = _root.Q<Button>("tab-" + TabNames[i]);
+                var group = _root.Q("group-" + TabNames[i]);
+                if (tab == null || group == null) continue;
+                var index = i;
+                System.Action show = () => ShowTab(index);
+                tab.clicked += show;
+                _tabs.Add((tab, group, show));
+            }
+            ShowTab(_tab);
+
             _prompts = new InputPromptLabels(_root, _context.Prompts);
             SetOpen(IsOpen);
         }
@@ -148,6 +167,8 @@ namespace Chopper.UI.Options
             if (_home != null) _home.clicked -= OpenHome;
             foreach (var (slider, _) in _volumes) slider.UnregisterValueChangedCallback(OnVolumeChanged);
             foreach (var (slider, _) in _hudOpacity) slider.UnregisterValueChangedCallback(OnHudOpacityChanged);
+            foreach (var (tab, _, show) in _tabs) tab.clicked -= show;
+            _tabs.Clear();
             _root = null;
         }
 
@@ -156,6 +177,12 @@ namespace Chopper.UI.Options
             var escape = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             var start = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
             if (toggleWithEscape && (escape || start) && _root != null) SetOpen(!IsOpen);
+            // Shoulder buttons step through the tabs.
+            if (IsOpen && Gamepad.current != null && _tabs.Count > 0)
+            {
+                if (Gamepad.current.rightShoulder.wasPressedThisFrame) ShowTab((_tab + 1) % _tabs.Count);
+                if (Gamepad.current.leftShoulder.wasPressedThisFrame) ShowTab((_tab + _tabs.Count - 1) % _tabs.Count);
+            }
         }
 
         public void Close()
@@ -198,6 +225,18 @@ namespace Chopper.UI.Options
             _hangar?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHangar);
             _home?.EnableInClassList(ButtonHiddenClass, !_context.CanOpenHome);
             _resume.Focus();
+        }
+
+        /// <summary>One settings group at a time (the menu stays inside the screen); remembered while the scene lives.</summary>
+        private void ShowTab(int index)
+        {
+            if (_tabs.Count == 0) return;
+            _tab = Mathf.Clamp(index, 0, _tabs.Count - 1);
+            for (var i = 0; i < _tabs.Count; i++)
+            {
+                _tabs[i].Tab.EnableInClassList(TabOnClass, i == _tab);
+                _tabs[i].Group.EnableInClassList(GroupHiddenClass, i != _tab);
+            }
         }
 
         private void AddVolume(string elementName, AudioChannel channel)

@@ -1,4 +1,5 @@
-/* Options overlay, terminal style. Colours, fonts and control styles come from the shared theme (ChopperTheme.uss). */
+/* Options, full screen, terminal style. Colours, fonts and control styles come from the shared theme (ChopperTheme.uss).
+   Left: commands. Right: one settings tab at a time, in a scroll view, so the menu never runs off the screen. */
 
 /* Full-screen layer: darkens and blurs the game behind the menu. */
 .options {
@@ -7,87 +8,86 @@
   top: 0;
   right: 0;
   bottom: 0;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(4, 13, 5, 0.75);
-  backdrop-filter: blur(6px);
+  background-color: rgba(3, 10, 4, 0.86);
+  backdrop-filter: blur(8px);
 }
 
 .options--hidden {
   display: none;
 }
 
-/* The terminal window: near-black, square, thin green frame with a title bar. */
-.options__panel {
-  width: 680px;
+/* The whole screen, with a thin green frame inset from the edges. */
+.options__frame {
+  position: absolute;
+  left: 4%;
+  top: 6%;
+  right: 4%;
+  bottom: 6%;
+  flex-direction: row;
   background-color: var(--chopper-terminal);
   border-width: var(--chopper-border-width);
-  border-color: var(--chopper-green);
+  border-color: var(--chopper-green-dim);
   border-radius: 0;
 }
 
-.options__bar {
-  flex-direction: row;
-  justify-content: space-between;
-  padding: 4px 12px;
-  background-color: var(--chopper-green-faint);
-  border-bottom-width: 1px;
-  border-color: var(--chopper-green-dim);
+/* ---- Left: title and commands ---- */
+.options__side {
+  width: 30%;
+  min-width: 240px;
+  padding: 28px 28px 24px 28px;
+  border-right-width: 1px;
+  border-color: var(--chopper-green-faint);
+  background-color: rgba(0, 40, 14, 0.25);
 }
 
 .options__bar-text {
   font-size: 11px;
   color: var(--chopper-green);
   padding: 0;
-  opacity: 0.8;
-}
-
-.options__body {
-  padding: 18px 28px 22px 28px;
+  opacity: 0.7;
 }
 
 .options__title {
-  font-size: 26px;
+  font-size: 44px;
   color: var(--chopper-green);
-  margin-bottom: 8px;
-  -unity-text-align: middle-left;
+  margin-top: 10px;
   padding: 0;
+  -unity-text-align: middle-left;
 }
 
-.options__section {
-  font-size: 12px;
+.options__subtitle {
+  font-size: 11px;
   color: var(--chopper-yellow);
-  margin-top: 16px;
-  margin-bottom: 4px;
-  padding: 0 0 4px 0;
-  border-bottom-width: 1px;
-  border-color: var(--chopper-green-faint);
+  padding: 0;
+  opacity: 0.85;
 }
 
-.options__row {
-  margin: 5px 0;
+.options__commands {
+  margin-top: 36px;
 }
 
-.options__row > .unity-label {
-  min-width: 280px;
-  font-size: 13px;
-}
-
-.options__row .unity-base-popup-field__text,
-.options__row .unity-base-dropdown__label {
-  font-size: 13px;
+.options__hint {
+  position: absolute;
+  left: 28px;
+  bottom: 22px;
+  font-size: 11px;
+  color: var(--chopper-green);
+  opacity: 0.6;
+  padding: 0;
 }
 
 /* Button: a bracketed command line. */
 .options__button {
-  margin: 22px 0 0 0;
-  height: 40px;
-  font-size: 16px;
+  margin: 0 0 10px 0;
+  height: 44px;
+  font-size: 17px;
   color: var(--chopper-green);
   background-color: rgba(0, 0, 0, 0.4);
   border-width: var(--chopper-border-width);
   border-color: var(--chopper-green-dim);
   border-radius: 0;
+  -unity-text-align: middle-left;
+  padding-left: 16px;
 }
 
 .options__button:hover,
@@ -97,13 +97,85 @@
   color: var(--chopper-text);
 }
 
-/* Second command under RESUME: less weight, same style. */
 .options__button--secondary {
-  margin-top: 8px;
-  height: 34px;
+  height: 36px;
   font-size: 13px;
 }
 
 .options__button--hidden {
   display: none;
+}
+
+/* ---- Right: tabs and the open settings group ---- */
+.options__main {
+  flex-grow: 1;
+  flex-shrink: 1;
+  padding: 22px 32px 18px 32px;
+}
+
+.options__tabs {
+  flex-direction: row;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-dim);
+  margin-bottom: 12px;
+}
+
+.options__tab {
+  margin: 0 6px -1px 0;
+  height: 32px;
+  padding: 0 18px;
+  font-size: 13px;
+  color: var(--chopper-green);
+  opacity: 0.6;
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 1px 1px 0 1px;
+  border-color: rgba(0, 0, 0, 0);
+  border-radius: 0;
+}
+
+.options__tab:hover,
+.options__tab:focus {
+  opacity: 1;
+  background-color: var(--chopper-green-faint);
+}
+
+.options__tab--on {
+  opacity: 1;
+  color: var(--chopper-text);
+  background-color: var(--chopper-terminal);
+  border-color: var(--chopper-green-dim);
+}
+
+.options__scroll {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.options__group--hidden {
+  display: none;
+}
+
+.options__section {
+  font-size: 12px;
+  color: var(--chopper-yellow);
+  margin-top: 4px;
+  margin-bottom: 8px;
+  padding: 0 0 4px 0;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+.options__row {
+  margin: 7px 0;
+  max-width: 720px;
+}
+
+.options__row > .unity-label {
+  min-width: 260px;
+  font-size: 13px;
+}
+
+.options__row .unity-base-popup-field__text,
+.options__row .unity-base-dropdown__label {
+  font-size: 13px;
 }

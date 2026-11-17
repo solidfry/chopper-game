@@ -1,44 +1,60 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
   <Style src="OptionsMenu.uss" />
-  <!-- Options overlay: Escape / Start opens it (OptionsMenuView). Hidden at start. Terminal style. -->
+  <!-- Options: Escape / Start opens it (OptionsMenuView). Hidden at start. Full screen, terminal style:
+       commands on the left, one settings tab at a time on the right (scrolls, so it never runs off the screen). -->
   <ui:VisualElement name="options" class="options options--hidden">
-    <ui:VisualElement class="options__panel">
-      <ui:VisualElement class="options__bar">
+    <ui:VisualElement class="options__frame">
+      <ui:VisualElement class="options__side">
         <ui:Label text="CHOPPER//SYS" class="options__bar-text chopper-title" />
-        <ui:Label text="{Menu} = CLOSE" class="options__bar-text input-prompt" />
+        <ui:Label text="SYSTEM_" class="options__title chopper-title" />
+        <ui:Label text="OPTIONS // LOADOUT // EXIT" class="options__subtitle chopper-title" />
+        <ui:VisualElement class="options__commands">
+          <ui:Button name="resume" text="[ RESUME ]" class="options__button chopper-title" />
+          <ui:Button name="hangar" text="[ HANGAR ]" class="options__button options__button--secondary chopper-title" />
+          <ui:Button name="home" text="[ MAIN MENU ]" class="options__button options__button--secondary chopper-title" />
+        </ui:VisualElement>
+        <ui:Label text="{Menu} = CLOSE" class="options__hint input-prompt" />
       </ui:VisualElement>
-      <ui:VisualElement class="options__body">
-        <ui:Label text="&gt; OPTIONS_" class="options__title chopper-title" />
 
-        <ui:Label text="// CONTROLS" class="options__section chopper-title" />
-        <ui:DropdownField name="mouse-steer" label="MOUSE LEFT / RIGHT" class="options__row" />
-        <ui:Slider name="mouse-sensitivity" label="MOUSE SENSITIVITY" low-value="0.25" high-value="3" class="options__row" />
-        <ui:Toggle name="invert-pitch" label="INVERT PITCH" class="options__row" />
-
-        <ui:Label text="// DISPLAY" class="options__section chopper-title" />
-        <ui:DropdownField name="default-view" label="START VIEW" class="options__row" />
-        <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
-        <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
-
-        <ui:Label text="// HUD OPACITY" class="options__section chopper-title" />
-        <ui:Slider name="hud-opacity-horizon" label="HORIZON" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-ring" label="FLIGHT RING" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-readouts" label="SPEED / ALT / HULL" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-weapons" label="WEAPONS" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-targeting" label="RETICLE / MARKERS" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-match" label="SCORE / TIMER" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="hud-opacity-pilot" label="PILOT PORTRAIT" low-value="0" high-value="1" class="options__row" />
-
-        <ui:Label text="// AUDIO" class="options__section chopper-title" />
-        <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="volume-effects" label="EFFECTS" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="volume-ui" label="INTERFACE" low-value="0" high-value="1" class="options__row" />
-        <ui:Slider name="volume-ambient" label="AMBIENT" low-value="0" high-value="1" class="options__row" />
-
-        <ui:Button name="resume" text="[ RESUME ]" class="options__button chopper-title" />
-        <ui:Button name="hangar" text="[ HANGAR ]" class="options__button options__button--secondary chopper-title" />
-        <ui:Button name="home" text="[ MAIN MENU ]" class="options__button options__button--secondary chopper-title" />
+      <ui:VisualElement class="options__main">
+        <ui:VisualElement class="options__tabs">
+          <ui:Button name="tab-controls" text="CONTROLS" class="options__tab chopper-title" />
+          <ui:Button name="tab-display" text="DISPLAY" class="options__tab chopper-title" />
+          <ui:Button name="tab-hud" text="HUD" class="options__tab chopper-title" />
+          <ui:Button name="tab-audio" text="AUDIO" class="options__tab chopper-title" />
+        </ui:VisualElement>
+        <ui:ScrollView class="options__scroll" mode="Vertical" horizontal-scroller-visibility="Hidden">
+          <ui:VisualElement name="group-controls" class="options__group">
+            <ui:Label text="// CONTROLS" class="options__section chopper-title" />
+            <ui:DropdownField name="mouse-steer" label="MOUSE LEFT / RIGHT" class="options__row" />
+            <ui:Slider name="mouse-sensitivity" label="MOUSE SENSITIVITY" low-value="0.25" high-value="3" class="options__row" />
+            <ui:Toggle name="invert-pitch" label="INVERT PITCH" class="options__row" />
+          </ui:VisualElement>
+          <ui:VisualElement name="group-display" class="options__group">
+            <ui:Label text="// DISPLAY" class="options__section chopper-title" />
+            <ui:DropdownField name="default-view" label="START VIEW" class="options__row" />
+            <ui:DropdownField name="hud-look" label="HUD LOOK" class="options__row" />
+            <ui:Toggle name="reduce-effects" label="REDUCE FLICKER / EFFECTS" class="options__row" />
+          </ui:VisualElement>
+          <ui:VisualElement name="group-hud" class="options__group">
+            <ui:Label text="// HUD OPACITY" class="options__section chopper-title" />
+            <ui:Slider name="hud-opacity-horizon" label="HORIZON" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-ring" label="FLIGHT RING" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-readouts" label="SPEED / ALT / HULL" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-weapons" label="WEAPONS" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-targeting" label="RETICLE / MARKERS" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-match" label="SCORE / TIMER" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="hud-opacity-pilot" label="PILOT PORTRAIT" low-value="0" high-value="1" class="options__row" />
+          </ui:VisualElement>
+          <ui:VisualElement name="group-audio" class="options__group">
+            <ui:Label text="// AUDIO" class="options__section chopper-title" />
+            <ui:Slider name="volume-master" label="MASTER" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="volume-music" label="MUSIC" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="volume-effects" label="EFFECTS" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="volume-ui" label="INTERFACE" low-value="0" high-value="1" class="options__row" />
+            <ui:Slider name="volume-ambient" label="AMBIENT" low-value="0" high-value="1" class="options__row" />
+          </ui:VisualElement>
+        </ui:ScrollView>
       </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>
