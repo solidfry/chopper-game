@@ -29,6 +29,7 @@ namespace Chopper.Presentation.Hangar
             var text = new StringBuilder();
             text.Append($"{gun.DamagePerSecond:0} DPS").Append(Gap).Append($"{gun.Range:0} M");
             if (gun.FalloffStart > 0f && gun.FalloffStart < gun.Range) text.Append(Gap).Append($"{gun.FalloffFloor * 100f:0}% AT RANGE");
+            text.Append(Gap).Append(gun.BulletSpeed > 0f ? $"{gun.BulletSpeed:0} M/S" : "INSTANT");
             if (gun.MaxZoom > 1f) text.Append(Gap).Append($"ZOOM TO {gun.MaxZoom:0.#}x");
             return text.ToString();
         }

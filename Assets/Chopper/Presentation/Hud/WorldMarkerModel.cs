@@ -33,7 +33,7 @@ namespace Chopper.Presentation.Hud
     }
 
     /// <summary>
-    /// View model for world markers (plan section 3b, "Dynamic HUD overlay") and the rocket lead indicator.
+    /// View model for world markers (plan section 3b, "Dynamic HUD overlay"), the rocket lead indicator and the gun lead.
     /// <see cref="WorldMarkerSystem"/> fills it each frame (<see cref="Begin"/>, <see cref="Add"/>, <see cref="End"/>);
     /// the HUD view draws it with a fixed pool of elements. Markers change every frame, so this raises one
     /// <see cref="Changed"/> event per frame instead of per-property events.
@@ -59,10 +59,15 @@ namespace Chopper.Presentation.Hud
         /// <summary>True: the lead is on a target. False: free aim, where the rockets go (first hit, or end of range).</summary>
         public bool LeadOnTarget { get; private set; }
 
+        /// <summary>Where to put the gun reticle so the gun's rounds meet the target (guns with travel time only).</summary>
+        public bool GunLeadVisible { get; private set; }
+        public Vector2 GunLeadViewport { get; private set; }
+
         public void Begin()
         {
             Count = 0;
             LeadVisible = false;
+            GunLeadVisible = false;
         }
 
         /// <summary>False when full.</summary>
@@ -78,16 +83,25 @@ namespace Chopper.Presentation.Hud
         public void SetLead(Vector3 viewport, bool onTarget)
         {
             LeadOnTarget = onTarget;
-            LeadVisible = viewport.z > 0f && viewport.x is >= 0f and <= 1f && viewport.y is >= 0f and <= 1f;
+            LeadVisible = OnScreen(viewport);
             if (LeadVisible) LeadViewport = new Vector2(viewport.x, viewport.y);
         }
+
+        /// <param name="viewport">Gun lead point in viewport space; z below 0 = behind the camera (hidden).</param>
+        public void SetGunLead(Vector3 viewport)
+        {
+            GunLeadVisible = OnScreen(viewport);
+            if (GunLeadVisible) GunLeadViewport = new Vector2(viewport.x, viewport.y);
+        }
+
+        private static bool OnScreen(Vector3 viewport) => viewport.z > 0f && viewport.x is >= 0f and <= 1f && viewport.y is >= 0f and <= 1f;
 
         public void End() => Changed?.Invoke();
 
         /// <summary>No local chopper: nothing to show.</summary>
         public void Clear()
         {
-            if (Count == 0 && !LeadVisible) return;
+            if (Count == 0 && !LeadVisible && !GunLeadVisible) return;
             Begin();
             End();
         }

@@ -1,6 +1,6 @@
 # Gun Bullet Travel and Lead Reticle — Design
 
-14 Nov 2026 · Status: design, not built. Live copy: https://claude.ai/artifact/2yv8aaD6Ho7Qgk1qshd3yT
+14 Nov 2026 · Status: code written 17 Nov 2026 (steps 1–5; not compiled or played yet — see "Editor steps for the owner"). Rounds live in an ECS singleton buffer (`ActiveBullet`, made by `BulletStepSystem`), not a C# singleton. Bots also lead rockets with the shared solution (relative velocity + drop). Live copy: https://claude.ai/artifact/2yv8aaD6Ho7Qgk1qshd3yT
 
 ## Summary
 

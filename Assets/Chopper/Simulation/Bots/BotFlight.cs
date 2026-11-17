@@ -265,6 +265,7 @@ namespace Chopper.Simulation.Bots
                 var gunState = _gunState[chopper];
                 s.HasGun = gun.Range > 0f;
                 s.GunRange = gun.Range;
+                s.GunBulletSpeed = gun.BulletSpeed;
                 s.GunHeat = gunState.Heat;
                 s.GunOverheated = gunState.Overheated;
             }
@@ -286,6 +287,8 @@ namespace Chopper.Simulation.Bots
                         if (s.RocketPylon >= 0 || pylon.Drag > 0f || pylon.Gravity > MaxBotRocketGravity) continue;
                         s.RocketPylon = i;
                         s.RocketSpeed = pylon.Speed;
+                        s.RocketGravity = pylon.Gravity;
+                        s.RocketLifetime = pylon.Lifetime;
                     }
                     else if (pylon.Behaviour == PylonBehaviour.Guided && pylon.Seeker != SeekerType.None &&
                              (pylon.Targets & TargetClass.Air) != 0 && s.SeekerPylon < 0)

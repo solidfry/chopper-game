@@ -195,7 +195,9 @@ namespace Chopper.Simulation.Combat
                 Weapon = hit.Weapon,
                 Damage = hit.Kind,
                 Amount = hit.Amount,
-                Distance = hasVictim && hasSource ? math.distance(victimPose.Position, sourcePose.Position) : -1f,
+                // Gun rounds: the distance flown (the shooter may have moved since it fired).
+                Distance = hit.FlightDistance > 0f ? hit.FlightDistance
+                    : hasVictim && hasSource ? math.distance(victimPose.Position, sourcePose.Position) : -1f,
                 ActorPosition = hasSource ? sourcePose.Position : float3.zero,
                 TargetPosition = hasVictim ? victimPose.Position : float3.zero,
                 Detail = (byte)(killed ? 1 : 0),

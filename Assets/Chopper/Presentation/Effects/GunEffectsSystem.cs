@@ -16,8 +16,10 @@ namespace Chopper.Presentation.Effects
     /// Client only. Nose gun effects for every chopper, from <see cref="HitscanWeaponState.ShotCount"/> (predicted for
     /// the local player, replicated for others): muzzle flash, a bullet visual flown to where the shot ends, and an
     /// impact if it hit something, with the impact sound of what it hit (<see cref="Surfaces.Classify"/>: a ping on
-    /// metal, chips off concrete, a thud in dirt, a splash). Cosmetic: the client ray-casts its own world; the server
-    /// decides hits. Prefabs and sounds come from the presentation context.
+    /// metal, chips off concrete, a thud in dirt, a splash). A gun with a bullet speed flies its tracers like the server's
+    /// rounds (gun speed plus the chopper's velocity) and ray-casts each frame's step; an instant gun ray-casts once and
+    /// flies the visual at the settings' speed. Cosmetic: the client ray-casts its own world; the server decides hits.
+    /// Prefabs and sounds come from the presentation context.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -37,8 +39,13 @@ namespace Chopper.Presentation.Effects
             public Vector3 Position;
             public Vector3 Direction;
             public float DistanceLeft;
+            /// <summary>m/s: the gun's round speed (with the chopper's velocity), or the settings' speed for an instant gun.</summary>
+            public float Speed;
             public bool Impact;
             public SurfaceKind Surface;
+            /// <summary>A round with travel time: ray-cast each frame's step, so it stops on what is there when it arrives.</summary>
+            public bool CastEachFrame;
+            public Entity Shooter;
         }
 
         private readonly Dictionary<Entity, uint> _lastShotCount = new();
@@ -71,8 +78,9 @@ namespace Chopper.Presentation.Effects
             var audio = context.Audio;
             var gunSound = context.Sounds != null ? context.Sounds.GunFire : null;
             var settings = _effects.Settings;
-            MoveBullets(settings, UnityEngine.Time.deltaTime);
-            if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
+            var hasPhysics = SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics);
+            MoveBullets(settings, UnityEngine.Time.deltaTime, hasPhysics, hasPhysics ? physics.CollisionWorld : default);
+            if (!hasPhysics) return;
             var world = physics.CollisionWorld;
             var now = UnityEngine.Time.time;
             var cockpitView = context.CameraRig != null && context.CameraRig.HidesOwnChopper;
@@ -103,11 +111,32 @@ namespace Chopper.Presentation.Effects
 
                 audio.Play(gunSound, muzzle);
 
-                var hit = RayCast(world, _surfaces, entity, muzzle, forward, config.ValueRO.Range, out var distance, out var surface);
                 var shots = math.min(count - last, MaxShotsPerFrame);
-                var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
-                for (var i = 0u; i < shots; i++)
-                    Fire(settings, muzzle + forward * start, forward, rotation, distance - start, hit, surface);
+                var bulletSpeed = config.ValueRO.BulletSpeed;
+                if (Ballistics.IsInstant(bulletSpeed))
+                {
+                    // Instant gun: the hit is decided now, the visual flies at the settings' speed.
+                    var hit = RayCast(world, _surfaces, entity, muzzle, forward, config.ValueRO.Range, out var distance, out var surface);
+                    var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
+                    for (var i = 0u; i < shots; i++)
+                        Fire(settings, muzzle + forward * start, forward, rotation, distance - start, settings.GunBulletSpeed, hit, surface,
+                            castEachFrame: false, entity);
+                }
+                else
+                {
+                    // Round with travel time: flies as the server's round does (chopper velocity + nose × speed, for the
+                    // gun's flight time) and stops on whatever is in its path when it gets there.
+                    var chopperVelocity = SystemAPI.HasComponent<PhysicsVelocity>(entity) ? SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear : float3.zero;
+                    var launch = Ballistics.LaunchVelocity(chopperVelocity, forward, bulletSpeed);
+                    var speed = math.length(launch);
+                    var direction = math.normalizesafe(launch, forward);
+                    var flight = speed * Ballistics.FlightTime(config.ValueRO.Range, bulletSpeed);
+                    var start = fromCockpit ? math.min(CockpitBulletStart, flight) : 0f;
+                    var flightRotation = quaternion.LookRotationSafe(direction, pose.ValueRO.Up);
+                    for (var i = 0u; i < shots; i++)
+                        Fire(settings, muzzle + direction * start, direction, flightRotation, flight - start, speed, false, SurfaceKind.Concrete,
+                            castEachFrame: true, entity);
+                }
             }
 
             // Swap, so despawned choppers drop out.
@@ -124,20 +153,22 @@ namespace Chopper.Presentation.Effects
             foreach (var entity in gone) _lastFlashTime.Remove(entity);
         }
 
-        private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, bool hit,
-            SurfaceKind surface)
+        private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, float speed,
+            bool hit, SurfaceKind surface, bool castEachFrame, Entity shooter)
         {
             var visual = _effects.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
-            if (visual == null)
+            // No bullet visual set: an instant gun shows the impact at once; a round with travel time still flies unseen,
+            // so its impact shows when it arrives.
+            if (visual == null && !castEachFrame)
             {
-                // No bullet visual set: show the impact at once.
                 if (hit) Impact(settings, muzzle + forward * distance, forward, surface);
                 return;
             }
 
             _bullets.Add(new Bullet
             {
-                Visual = visual, Position = muzzle, Direction = forward, DistanceLeft = distance, Impact = hit, Surface = surface,
+                Visual = visual, Position = muzzle, Direction = forward, DistanceLeft = distance, Speed = speed, Impact = hit, Surface = surface,
+                CastEachFrame = castEachFrame, Shooter = shooter,
             });
         }
 
@@ -149,13 +180,21 @@ namespace Chopper.Presentation.Effects
             if (sounds != null) _context.Audio.Play(sounds.SurfaceHit(surface), point);
         }
 
-        private void MoveBullets(CombatEffectsSettings settings, float deltaTime)
+        private void MoveBullets(CombatEffectsSettings settings, float deltaTime, bool hasWorld, in CollisionWorld world)
         {
-            var step = settings.GunBulletSpeed * deltaTime;
             for (var i = _bullets.Count - 1; i >= 0; i--)
             {
                 var bullet = _bullets[i];
-                var move = Mathf.Min(step, bullet.DistanceLeft);
+                var move = Mathf.Min(bullet.Speed * deltaTime, bullet.DistanceLeft);
+                if (bullet.CastEachFrame && hasWorld && move > 0f &&
+                    RayCast(world, _surfaces, bullet.Shooter, bullet.Position, bullet.Direction, move, out var hitDistance, out var surface))
+                {
+                    Impact(settings, bullet.Position + bullet.Direction * hitDistance, bullet.Direction, surface);
+                    if (bullet.Visual != null) _effects.Release(bullet.Visual);
+                    _bullets.RemoveAt(i);
+                    continue;
+                }
+
                 bullet.Position += bullet.Direction * move;
                 bullet.DistanceLeft -= move;
 

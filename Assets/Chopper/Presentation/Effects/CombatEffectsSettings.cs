@@ -17,7 +17,7 @@ namespace Chopper.Presentation.Effects
         private GameObject gunBullet;
         [SerializeField] private GameObject gunMuzzleFlash;
         [SerializeField] private GameObject gunImpact;
-        [SerializeField, Tooltip("Visual bullet speed, m/s. Damage is instant (hitscan); this is only how it looks.")]
+        [SerializeField, Tooltip("Visual bullet speed, m/s, for instant guns only (bullet speed 0, hitscan). A gun with its own bullet speed flies its tracers at that speed.")]
         private float gunBulletSpeed = 900f;
         [SerializeField, Tooltip("Least time between two muzzle flashes of one chopper, so fast guns do not spawn one per shot.")]
         private float gunMuzzleFlashInterval = 0.1f;

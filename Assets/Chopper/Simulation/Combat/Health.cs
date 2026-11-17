@@ -59,6 +59,9 @@ namespace Chopper.Simulation.Combat
         public DamageKind Kind;
         /// <summary>Crashes and landings: the impact speed (m/s), for the victim's camera shake. 0 for other hits.</summary>
         public float ImpactSpeed;
+        /// <summary>Gun hits: metres the round flew from the muzzle, for the match log. 0 = not set (the log uses the
+        /// distance between the choppers).</summary>
+        public float FlightDistance;
         /// <summary>The weapon's short name, for the match log; empty for crashes, bounds and damage over time.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
 

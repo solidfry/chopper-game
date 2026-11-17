@@ -176,7 +176,8 @@ namespace Chopper.UI.Hud
             var attitude = _chopper.Q<AttitudeIndicator>("attitude");
             Bind(attitude, nameof(AttitudeIndicator.roll), nameof(ChopperHudModel.RollDegrees));
             Bind(attitude, nameof(AttitudeIndicator.pitch), nameof(ChopperHudModel.PitchDegrees));
-            _markers = new WorldMarkerView(bridge.Context.Markers, bridge.Context.HudLook, _chopper.Q("markers"), _chopper.Q("lead"));
+            _markers = new WorldMarkerView(bridge.Context.Markers, bridge.Context.HudLook, _chopper.Q("markers"), _chopper.Q("lead"),
+                _chopper.Q("gun-lead"));
 
             _chopper.dataSource = _model;
             BindNumber(_chopper.Q<Label>("health-value"), nameof(ChopperHudModel.HealthText));

@@ -42,6 +42,8 @@ namespace Chopper.Simulation.Bots
 
         public bool HasGun;
         public float GunRange;
+        /// <summary>Round speed, m/s (<see cref="HitscanWeaponConfig.BulletSpeed"/>). 0 = instant: no lead.</summary>
+        public float GunBulletSpeed;
         public float GunHeat;
         public bool GunOverheated;
 
@@ -49,6 +51,10 @@ namespace Chopper.Simulation.Bots
         /// <summary>Index of a straight rocket pylon with rounds, or -1.</summary>
         public int RocketPylon;
         public float RocketSpeed;
+        /// <summary>Downward acceleration of those rockets, m/s² (0 = straight).</summary>
+        public float RocketGravity;
+        /// <summary>Flight time of those rockets, seconds (0 = unknown: no limit on the lead).</summary>
+        public float RocketLifetime;
         /// <summary>Index of a seeker pylon with rounds that can lock air targets, or -1.</summary>
         public int SeekerPylon;
         public float SeekerLockRange;
@@ -357,9 +363,11 @@ namespace Chopper.Simulation.Bots
             var rockets = wanted >= 0 && wanted == s.SelectedPylon && wanted == s.RocketPylon;
             var seeker = wanted >= 0 && wanted == s.SelectedPylon && wanted == s.SeekerPylon;
 
-            // Aim point: the gun is hitscan (no lead); rockets lead the target.
-            var aim = target;
-            if (rockets && s.RocketSpeed > 1f) aim += TargetVelocity * (distance / s.RocketSpeed);
+            // Aim point: rockets and gun rounds lead the target, with the same solution as the HUD lead reticle
+            // (relative to the bot's own velocity, which both keep; rockets also aim up by their drop). An instant gun
+            // aims straight at the target.
+            var aim = AimPoint(s, target, TargetVelocity, rockets);
+            var lead = aim;
             if (now >= NextAimOffset)
             {
                 NextAimOffset = now + Random.NextFloat(0.4f, 0.9f);
@@ -385,15 +393,38 @@ namespace Chopper.Simulation.Bots
                 order.FacePoint = aim;
             }
 
-            // Fire when lined up (the true target, not the aim point: the error makes it miss sometimes).
-            var onTarget = math.dot(s.Forward, math.normalizesafe(target - s.Position)) > math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
+            // Fire when lined up (the true lead point, not the aim point: the error makes it miss sometimes).
+            var onTarget = math.dot(s.Forward, math.normalizesafe(lead - s.Position)) > math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
             if (s.GunOverheated || s.GunHeat >= h.GunHeatRelease) GunCooling = true;
             else if (s.GunHeat < h.GunHeatRelease * 0.4f) GunCooling = false;
             order.Fire = Aiming && onTarget && s.HasGun && distance < s.GunRange && !GunCooling;
             order.FireSecondary = (rockets && Aiming && onTarget) || (seeker && s.Locked && s.LockTarget == Target);
         }
 
-        private void Evade(in BotSituation s, in NativeArray<BotContact> contacts, in BotHandling h, ref PilotOrder order, ref BotIntent intent)
+        /// <summary>
+        /// Where to point the nose so the selected weapon meets the target (no aim error): rockets and gun rounds lead
+        /// with the shared lead solution (<see cref="Ballistics"/>),
+        /// rockets also aim up by their drop. Out of range, an instant gun, or no solution: the target itself.
+        /// </summary>
+        public static float3 AimPoint(in BotSituation s, float3 target, float3 targetVelocity, bool rockets)
+        {
+            if (rockets)
+            {
+                if (s.RocketSpeed <= 1f) return target;
+                var maxTime = s.RocketLifetime > 0f ? s.RocketLifetime : float.MaxValue;
+                return Ballistics.LeadPoint(s.Position, s.Velocity, target, targetVelocity, s.RocketSpeed, s.RocketGravity, maxTime,
+                    out var rocketLead, out _)
+                    ? rocketLead
+                    : target;
+            }
+
+            return Ballistics.LeadPoint(s.Position, s.Velocity, target, targetVelocity, s.GunBulletSpeed,
+                Ballistics.FlightTime(s.GunRange, s.GunBulletSpeed), out var gunLead, out _)
+                ? gunLead
+                : target;
+        }
+
+        private void Evade(in BotSituation s,in NativeArray<BotContact> contacts, in BotHandling h, ref PilotOrder order, ref BotIntent intent)
         {
             // Break across the missile's path and down towards cover; without a missile, across the line to the enemy.
             var threat = s.MissileIncoming ? s.MissileDirection : -Away(s, contacts);
