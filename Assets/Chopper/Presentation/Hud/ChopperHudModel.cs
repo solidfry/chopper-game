@@ -342,7 +342,7 @@ namespace Chopper.Presentation.Hud
         /// <summary>Gun heat and rounds left. Texts are made again only when a shown number changes.</summary>
         /// <param name="gunHasHeat">False: no gun, or a gun with no heat limit.</param>
         /// <param name="pylonMagazine">Magazine size of the selected pylon weapon; 0 = no magazine.</param>
-        /// <param name="flareMagazine">0 = no magazine.</param>
+        /// <param name="flareMagazine">0 = no magazine; -1 = no flares in this loadout.</param>
         /// <param name="pylonReload">Refill progress, 0..1; 1 = full.</param>
         /// <param name="flareReload">Refill progress, 0..1; 1 = full.</param>
         public void UpdateWeaponLimits(bool gunHasHeat, float gunHeat, bool gunOverheated, int pylonRounds, int pylonMagazine,
@@ -364,7 +364,7 @@ namespace Chopper.Presentation.Hud
             PylonEmpty = pylonMagazine > 0 && pylonRounds <= 0;
 
             if (Changed(ref _flareRounds, flareRounds) | Changed(ref _flareMagazine, flareMagazine))
-                FlaresText = flareMagazine > 0 ? $"FLARES {flareRounds}" : "FLARES";
+                FlaresText = flareMagazine < 0 ? "NO FLARES" : flareMagazine > 0 ? $"FLARES {flareRounds}" : "FLARES";
         }
 
         /// <param name="missileDistance">Distance to the closest missile chasing you; ignored when none.</param>

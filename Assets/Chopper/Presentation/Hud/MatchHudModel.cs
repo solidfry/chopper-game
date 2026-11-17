@@ -174,15 +174,20 @@ namespace Chopper.Presentation.Hud
 
         // ---- XP popup (Battlefield style): a title, the victim, a stack of "+XP" lines and a total that counts up. ----
 
-        /// <summary>Seconds a popup stays after its last award; a new award in that time adds to it (a combo).</summary>
+        /// <summary>Seconds a popup with a kill stays after its last award; a new award in that time adds to it (a combo).</summary>
         public const float XpPopupSeconds = 3.2f;
-        /// <summary>Lines kept in one popup, newest at the bottom.</summary>
-        public const int MaxXpLines = 5;
+        /// <summary>Seconds for small awards only (repair, assist, evaded), so a stream of them does not hold the popup up.</summary>
+        public const float XpSmallPopupSeconds = 1.8f;
+        /// <summary>Lines kept in one popup, newest at the bottom. The same award again joins its line ("EVADED x3  +75").</summary>
+        public const int MaxXpLines = 3;
         /// <summary>How fast the shown total counts up to the real one (its share per second, so big jumps roll fast).</summary>
         private const float XpCountRate = 9f;
         private const char Newline = '\n';
 
         private readonly List<string> _xpLines = new();
+        private string _xpLastLabel = "";
+        private int _xpLastCount;
+        private int _xpLastSum;
         private float _xpRemaining;
         private int _xpTarget;
         private float _xpShown;
@@ -229,18 +234,29 @@ namespace Chopper.Presentation.Hud
                 XpTitle = title;
                 XpName = otherNetworkId != 0 && reason is XpReason.Kill or XpReason.BotKill or XpReason.Assist ? PlayerName(otherNetworkId) : "";
             }
-            if (amount > 0) AddXpLine($"{line}  +{amount}");
-            if (damageXp > 0) AddXpLine($"DAMAGE  +{damageXp}");
+            if (amount > 0) AddXpLine(line, amount);
+            if (damageXp > 0) AddXpLine("DAMAGE", damageXp);
             _xpTarget += amount + damageXp;
-            _xpRemaining = XpPopupSeconds;
+            _xpRemaining = _xpTitleRank >= 3 ? XpPopupSeconds : XpSmallPopupSeconds;
             XpBig = _xpTitleRank >= 3;
             XpVisible = true;
             XpPulse = _xpPulse + 1;
         }
 
-        private void AddXpLine(string text)
+        private void AddXpLine(string label, int amount)
         {
-            _xpLines.Add(text);
+            if (_xpLines.Count > 0 && label == _xpLastLabel)
+            {
+                _xpLastCount++;
+                _xpLastSum += amount;
+                _xpLines[^1] = $"{label} x{_xpLastCount}  +{_xpLastSum}";
+                XpLinesText = string.Join(Newline, _xpLines);
+                return;
+            }
+            _xpLastLabel = label;
+            _xpLastCount = 1;
+            _xpLastSum = amount;
+            _xpLines.Add($"{label}  +{amount}");
             if (_xpLines.Count > MaxXpLines) _xpLines.RemoveAt(0);
             XpLinesText = string.Join(Newline, _xpLines);
         }
@@ -248,6 +264,7 @@ namespace Chopper.Presentation.Hud
         private void ClearXp()
         {
             _xpLines.Clear();
+            _xpLastLabel = "";
             _xpTarget = 0;
             _xpShown = 0f;
             _xpTitleRank = -1;

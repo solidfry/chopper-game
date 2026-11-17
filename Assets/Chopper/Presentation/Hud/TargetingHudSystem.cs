@@ -77,13 +77,14 @@ namespace Chopper.Presentation.Hud
 
             var flaresReady = false;
             var flareRounds = 0;
-            var flareMagazine = 0;
+            var flareMagazine = -1;
             var flareReload = 1f;
             if (SystemAPI.HasComponent<CountermeasureConfig>(self))
             {
                 var config = SystemAPI.GetComponent<CountermeasureConfig>(self);
                 var flares = SystemAPI.GetComponent<CountermeasureState>(self);
-                flareMagazine = config.MagazineSize;
+                // Cooldown 0 = the loadout has no flare module (flares are a utility choice): the HUD says NO FLARES.
+                flareMagazine = config.Cooldown > 0f ? config.MagazineSize : -1;
                 flareRounds = Magazine.RoundsLeft(flares.RoundsUsed, config.MagazineSize);
                 flareReload = Magazine.ReloadProgress(flares.RoundsUsed, flares.ReloadRemaining, config.ReloadSeconds);
                 flaresReady = config.Cooldown > 0f && flares.CooldownRemaining <= 0f && Magazine.HasRound(flares.RoundsUsed, config.MagazineSize);

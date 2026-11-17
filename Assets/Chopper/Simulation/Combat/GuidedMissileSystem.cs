@@ -181,7 +181,8 @@ namespace Chopper.Simulation.Combat
                         Kind = MatchLogKind.MissileEnd,
                         Time = now,
                         Actor = _owners.TryGetComponent(entity, out var endOwner) ? endOwner.NetworkId : 0,
-                        Target = _owners.TryGetComponent(missile.Target, out var endTarget) ? endTarget.NetworkId : 0,
+                        // A decoyed missile was already counted as evaded (MissileDecoyed): target 0, so no second award.
+                        Target = !missile.Decoyed && _owners.TryGetComponent(missile.Target, out var endTarget) ? endTarget.NetworkId : 0,
                         Weapon = missile.Weapon,
                         ActorPosition = detonateAt,
                         TargetPosition = hasTarget ? targetPose.Position : detonateAt,

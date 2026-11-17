@@ -54,7 +54,10 @@ namespace Chopper.Simulation.Match
             // Counted while the match runs; the end frame's events are counted before the stats are sent.
             if (phase == MatchPhase.InProgress || _phase == MatchPhase.InProgress)
                 Count(ref state, buffer);
-            buffer.Clear();
+            // Count plays back structural changes (XP RPC entities), which invalidates the buffer handle: fetch it again.
+            // Clearing through the stale handle threw, the log was never cleared, and every entry was counted again
+            // each tick (endless "MISSILE EVADED" XP).
+            SystemAPI.GetSingletonBuffer<MatchLogEntry>().Clear();
 
             if (phase != MatchPhase.InProgress && _phase == MatchPhase.InProgress)
                 SendAll(ref state);
