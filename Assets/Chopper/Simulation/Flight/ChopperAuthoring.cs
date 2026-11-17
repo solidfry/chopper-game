@@ -93,6 +93,8 @@ namespace Chopper.Simulation.Flight
                 AddComponent(entity, built.Countermeasure);
                 AddComponent<CountermeasureState>(entity);
                 AddComponent(entity, built.Optics);
+                // Repair drone (a pylon item): the state is on every chopper; it stays docked without a drone pylon.
+                AddComponent<RepairDroneState>(entity);
 
                 var pylons = AddBuffer<PylonWeapon>(entity);
                 foreach (var pylon in built.Pylons) pylons.Add(pylon);

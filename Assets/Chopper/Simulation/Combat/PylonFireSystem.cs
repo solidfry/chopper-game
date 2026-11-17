@@ -127,6 +127,12 @@ namespace Chopper.Simulation.Combat
 
                 var weapon = weapons[selected];
                 if (weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock && lockTarget == Entity.Null) continue;
+                // Drone: only when it is docked and its target is hurt (never wasted on a full hull).
+                var droneTarget = RepairDrone.PickTarget(shooter);
+                if (weapon.Behaviour == PylonBehaviour.Drone &&
+                    (!SystemAPI.HasComponent<RepairDroneState>(shooter) || !SystemAPI.HasComponent<Health>(droneTarget) ||
+                     !RepairDrone.CanLaunch(SystemAPI.GetComponent<RepairDroneState>(shooter), SystemAPI.GetComponent<Health>(droneTarget))))
+                    continue;
                 var fired = cooldowns[selected];
                 if (!Magazine.HasRound(fired.RoundsUsed, weapon.MagazineSize)) continue;
 
@@ -141,6 +147,21 @@ namespace Chopper.Simulation.Combat
                 {
                     LaunchRocket(ecb, weapon, shooter, shooterId, attacker, pose, velocity.ValueRO.Linear, shot: 0, isServer,
                         firstPrediction && ClaimLaunch(selected, networkTime.ServerTick));
+                }
+                else if (weapon.Behaviour == PylonBehaviour.Drone)
+                {
+                    // Server only: the drone state is sent to everyone, so clients draw it from there.
+                    if (isServer)
+                    {
+                        var drone = SystemAPI.GetComponent<RepairDroneState>(shooter);
+                        var distance = SystemAPI.HasComponent<LocalTransform>(droneTarget)
+                            ? math.distance(pose.Position, SystemAPI.GetComponent<LocalTransform>(droneTarget).Position)
+                            : 0f;
+                        RepairDrone.Launch(ref drone, droneTarget, distance, weapon.Speed, weapon.HealShare, weapon.HealSeconds,
+                            SystemAPI.GetComponent<Health>(droneTarget).Max);
+                        ecb.SetComponent(shooter, drone);
+                    }
+                    continue;
                 }
                 else if (isServer || (firstPrediction && ClaimLaunch(selected, networkTime.ServerTick)))
                 {

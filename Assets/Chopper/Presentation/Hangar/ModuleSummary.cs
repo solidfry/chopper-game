@@ -20,6 +20,7 @@ namespace Chopper.Presentation.Hangar
             if (module.Weapon is HitscanWeaponDefinition gun) return Gun(gun);
             if (module.Weapon is RocketWeaponDefinition rocket) return Rocket(rocket);
             if (module.Weapon is GuidedMissileDefinition missile) return Missile(missile);
+            if (module.Weapon is RepairDroneDefinition drone) return Drone(drone);
             if (module.Ability is OpticsDefinition optics) return Optics(optics);
             return "";
         }
@@ -45,6 +46,9 @@ namespace Chopper.Presentation.Hangar
             if (rocket.ProximityFuse > 0f) text.Append(Gap).Append($"FUSE {rocket.ProximityFuse:0} M");
             return text.ToString();
         }
+
+        public static string Drone(RepairDroneDefinition drone) =>
+            $"HEALS {drone.HealShare * 100f:0}% IN {drone.HealSeconds:0} S{Gap}NOT STOPPED BY HITS{Gap}READY EVERY {drone.ReloadSeconds:0} S";
 
         public static string Missile(GuidedMissileDefinition missile)
         {

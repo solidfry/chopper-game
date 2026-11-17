@@ -582,7 +582,7 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Mouse and Keyboard"",
-                    ""action"": ""Fire2"",
+                    ""action"": ""Fire3"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },

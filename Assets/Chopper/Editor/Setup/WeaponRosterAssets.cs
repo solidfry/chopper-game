@@ -26,6 +26,7 @@ namespace Chopper.Editor.Setup
         public const ushort SalvoPodId = 120;
         public const ushort FlakRocketsId = 122;
         public const ushort RocketPodMk2Id = 124;
+        public const ushort RepairDroneId = 125;
         // Utility: optics (zoom).
         public const ushort TargetingOpticsId = 136;
         public const ushort LongRangeScopeId = 137;
@@ -51,6 +52,7 @@ namespace Chopper.Editor.Setup
             EnsureGuns(catalog);
             EnsureRockets(catalog);
             EnsureOptics(catalog);
+            EnsureRepairDrone(catalog);
             EnsureBulletSpeeds();
             AssetDatabase.SaveAssets();
         }
@@ -231,6 +233,15 @@ namespace Chopper.Editor.Setup
         private static ModuleDefinition Nose(LoadoutCatalog catalog, ushort id, string displayName, string description, string assetName,
             float weight, int unlockLevel, WeaponDefinition weapon) =>
             GuidedWeaponAssets.EnsureModule(catalog, id, displayName, description, assetName, weight, unlockLevel, weapon, SlotType.Nose);
+
+        /// <summary>Repair drone (owner, 17 Nov): a pylon item. Pylon fire sends it; it heals, then comes back.</summary>
+        private static void EnsureRepairDrone(LoadoutCatalog catalog)
+        {
+            var drone = GuidedWeaponAssets.Definition<RepairDroneDefinition>("Weapon_RepairDrone", d => d.SetMuzzleOffset(PylonMuzzle));
+            Pylon(catalog, RepairDroneId, "Repair Drone",
+                "Pylon fire sends a drone that mends 40% of the hull in 6 s. Hits do not stop it. One drone; ready again after 30 s.",
+                "Pylon_RepairDrone", 9f, 4, drone);
+        }
 
         private static ModuleDefinition Pylon(LoadoutCatalog catalog, ushort id, string displayName, string description, string assetName,
             float weight, int unlockLevel, WeaponDefinition weapon) =>

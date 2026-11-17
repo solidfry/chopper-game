@@ -12,6 +12,8 @@ namespace Chopper.Simulation.Combat
         Rocket = 0,
         /// <summary>Guided missile ghosts (<see cref="GuidedMissileSystem"/>).</summary>
         Guided = 1,
+        /// <summary>Repair drone (<see cref="RepairDroneSystem"/>): flies to a chopper and mends its hull. One per magazine.</summary>
+        Drone = 2,
     }
 
     /// <summary>
@@ -72,6 +74,12 @@ namespace Chopper.Simulation.Combat
         public float SalvoConeCos;
         /// <summary>Guided only. 0..1: part of a salvo that flares do not fool (swarms saturate flares).</summary>
         public float FlareResistance;
+
+        // Drone only (Speed = drone flight speed).
+        /// <summary>Share of the target's max health the drone mends (0..1).</summary>
+        public float HealShare;
+        /// <summary>Seconds the drone heals once it is at the target.</summary>
+        public float HealSeconds;
     }
 
     /// <summary>

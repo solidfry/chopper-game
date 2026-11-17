@@ -41,6 +41,18 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Seconds between flares in one drop: they fire out one by one, in time with the pops of the flare sound.")]
         private float flareInterval = 0.11f;
 
+        [Header("Repair drone")]
+        [SerializeField, Tooltip("Drone model. Pooled. Empty = a simple built-in quad drone with a green light.")]
+        private GameObject repairDrone;
+        [SerializeField, Tooltip("Metres from the chopper's centre while the drone heals it.")]
+        private float droneOrbitRadius = 4f;
+        [SerializeField, Tooltip("Metres above the chopper's centre while it heals.")]
+        private float droneOrbitHeight = 2.6f;
+        [SerializeField, Tooltip("Orbit speed, degrees per second.")]
+        private float droneOrbitSpeed = 110f;
+        [SerializeField, ColorUsage(false, true), Tooltip("Repair beam colour (HDR).")]
+        private Color droneBeamColour = new(0.3f, 3f, 1.1f, 1f);
+
         [Header("Audio")]
         [SerializeField, Tooltip("Mixer group for sounds inside the effect prefabs (rocket launch and flight, explosions).")]
         private AudioMixerGroup effectsMixerGroup;
@@ -165,6 +177,11 @@ namespace Chopper.Presentation.Effects
         public GameObject Missile => missile != null ? missile : rocket;
         public GameObject MissileImpact => missileImpact != null ? missileImpact : rocketImpact;
         public GameObject Flare => flare;
+        public GameObject RepairDrone => repairDrone;
+        public float DroneOrbitRadius => droneOrbitRadius;
+        public float DroneOrbitHeight => droneOrbitHeight;
+        public float DroneOrbitSpeed => droneOrbitSpeed;
+        public Color DroneBeamColour => droneBeamColour;
         public int FlaresPerDrop => flaresPerDrop;
         public float FlareLifetime => flareLifetime;
         public float FlareInterval => flareInterval;

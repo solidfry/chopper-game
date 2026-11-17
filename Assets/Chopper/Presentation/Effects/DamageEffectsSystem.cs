@@ -89,11 +89,12 @@ namespace Chopper.Presentation.Effects
             ApplyHits(settings);
 
             _seen.Clear();
+            var repairs = SystemAPI.GetComponentLookup<ChopperRepair>(true);
+            var drones = SystemAPI.GetComponentLookup<RepairDroneState>(true);
             foreach (var (health, pose, entity) in SystemAPI.Query<RefRO<Health>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
                 _seen.Add(entity);
-                if (!health.ValueRO.IsDead && SystemAPI.HasComponent<ChopperRepair>(entity) &&
-                    SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing)
+                if (!health.ValueRO.IsDead && RepairDrone.IsBeingHealed(entity, repairs, drones))
                 {
                     EmitRepair(settings, entity, pose.ValueRO, deltaTime, cockpit, eye);
                     var ownChopper = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&

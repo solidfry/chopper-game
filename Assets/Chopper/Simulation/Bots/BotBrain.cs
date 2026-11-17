@@ -60,6 +60,8 @@ namespace Chopper.Simulation.Bots
         public float SeekerLockRange;
         public bool Locked;
         public Entity LockTarget;
+        /// <summary>Index of the repair drone pylon when the drone is docked and has a round, or -1.</summary>
+        public int DronePylon;
 
         public bool MissileIncoming;
         public float MissileTimeToImpact;
@@ -206,7 +208,26 @@ namespace Chopper.Simulation.Bots
             }
 
             Gadgets(s, contacts, targetIndex, h, now, ref intent.Actions);
+
+            // Repair drone (a pylon item), in any mode: hurt and the drone is ready, so select its pylon and send it.
+            if (s.DronePylon >= 0 && s.Health01 < DroneHealth)
+            {
+                if (s.SelectedPylon == s.DronePylon)
+                {
+                    intent.Actions.CyclePylon = false;
+                    order.FireSecondary = true;
+                }
+                else
+                {
+                    order.FireSecondary = false;
+                    intent.Actions.CyclePylon = now >= NextCycle;
+                    if (intent.Actions.CyclePylon) NextCycle = now + CycleRepeatSeconds;
+                }
+            }
         }
+
+        /// <summary>Health share below which a bot sends its repair drone.</summary>
+        public const float DroneHealth = 0.5f;
 
         /// <summary>The target as the bot sees it: a lagged position, and a velocity from that.</summary>
         private void Perceive(in NativeArray<BotContact> contacts, int targetIndex, in BotHandling h, float deltaTime)

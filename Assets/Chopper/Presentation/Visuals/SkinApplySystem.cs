@@ -51,12 +51,13 @@ namespace Chopper.Presentation.Visuals
 
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             _seen.Clear();
+            var repairs = SystemAPI.GetComponentLookup<ChopperRepair>(true);
+            var drones = SystemAPI.GetComponentLookup<RepairDroneState>(true);
             foreach (var (skin, group, entity) in SystemAPI.Query<RefRO<ChopperSkin>, DynamicBuffer<LinkedEntityGroup>>()
                          .WithEntityAccess())
             {
                 _seen.Add(entity);
-                var repairing = sheen > 0f && SystemAPI.HasComponent<ChopperRepair>(entity) &&
-                                SystemAPI.GetComponent<ChopperRepair>(entity).State == RepairPhase.Repairing &&
+                var repairing = sheen > 0f && RepairDrone.IsBeingHealed(entity, repairs, drones) &&
                                 !(SystemAPI.HasComponent<Health>(entity) && SystemAPI.GetComponent<Health>(entity).IsDead);
                 _heal.TryGetValue(entity, out var heal);
                 heal = UnityEngine.Mathf.MoveTowards(heal, repairing ? 1f : 0f, fadeStep);

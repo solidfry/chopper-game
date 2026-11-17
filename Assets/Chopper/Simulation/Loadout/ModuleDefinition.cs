@@ -61,7 +61,7 @@ namespace Chopper.Simulation.Loadout
                 problems.Add($"{name}: stat multipliers must be above 0 (1 = no change).");
             if (weapon is HitscanWeaponDefinition && slot != SlotType.Nose)
                 problems.Add($"{name}: a hitscan weapon must be in the Nose slot.");
-            if ((weapon is RocketWeaponDefinition || weapon is GuidedMissileDefinition) && slot != SlotType.Pylon)
+            if ((weapon is RocketWeaponDefinition || weapon is GuidedMissileDefinition || weapon is RepairDroneDefinition) && slot != SlotType.Pylon)
                 problems.Add($"{name}: rockets and missiles must be in a Pylon slot.");
             CollectChainProblems(problems);
         }

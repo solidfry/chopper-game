@@ -78,6 +78,7 @@ namespace Chopper.Simulation.Bots
         [ReadOnly] private ComponentLookup<AbilityConfig> _abilityConfig;
         [ReadOnly] private ComponentLookup<AbilityState> _ability;
         [ReadOnly] private ComponentLookup<ChopperRepair> _repair;
+        [ReadOnly] private ComponentLookup<RepairDroneState> _drone;
         [ReadOnly] private BufferLookup<PylonWeapon> _pylons;
         [ReadOnly] private BufferLookup<PylonWeaponState> _pylonStates;
 
@@ -98,6 +99,7 @@ namespace Chopper.Simulation.Bots
             _abilityConfig = state.GetComponentLookup<AbilityConfig>(isReadOnly: true);
             _ability = state.GetComponentLookup<AbilityState>(isReadOnly: true);
             _repair = state.GetComponentLookup<ChopperRepair>(isReadOnly: true);
+            _drone = state.GetComponentLookup<RepairDroneState>(isReadOnly: true);
             _pylons = state.GetBufferLookup<PylonWeapon>(isReadOnly: true);
             _pylonStates = state.GetBufferLookup<PylonWeaponState>(isReadOnly: true);
         }
@@ -119,6 +121,7 @@ namespace Chopper.Simulation.Bots
             _abilityConfig.Update(ref state);
             _ability.Update(ref state);
             _repair.Update(ref state);
+            _drone.Update(ref state);
             _pylons.Update(ref state);
             _pylonStates.Update(ref state);
         }
@@ -250,6 +253,7 @@ namespace Chopper.Simulation.Bots
                 Health01 = 1f,
                 RocketPylon = -1,
                 SeekerPylon = -1,
+                DronePylon = -1,
                 MissileTimeToImpact = float.MaxValue,
             };
 
@@ -281,7 +285,12 @@ namespace Chopper.Simulation.Bots
                     var pylonState = pylonStates[i];
                     var empty = pylon.MagazineSize > 0 && pylonState.RoundsUsed >= pylon.MagazineSize;
                     if (empty) continue;
-                    if (pylon.Behaviour == PylonBehaviour.Rocket)
+                    if (pylon.Behaviour == PylonBehaviour.Drone)
+                    {
+                        // Only while the drone is docked: once it is out, the bot goes back to its weapons.
+                        if (s.DronePylon < 0 && (!_drone.HasComponent(chopper) || !_drone[chopper].Out)) s.DronePylon = i;
+                    }
+                    else if (pylon.Behaviour == PylonBehaviour.Rocket)
                     {
                         // Bombs and mines need another way to aim: bots leave them alone.
                         if (s.RocketPylon >= 0 || pylon.Drag > 0f || pylon.Gravity > MaxBotRocketGravity) continue;

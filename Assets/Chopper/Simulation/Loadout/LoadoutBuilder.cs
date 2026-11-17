@@ -213,6 +213,8 @@ namespace Chopper.Simulation.Loadout
                 else if (module.Weapon is GuidedMissileDefinition missile)
                     built.Pylons.Add(MissilePylon(module, missile, Muzzle(sockets, SlotType.Pylon, pylonIndex, module.Muzzle, missile.MuzzleOffset, mirror),
                         resolveMissilePrefab));
+                else if (module.Weapon is RepairDroneDefinition drone)
+                    built.Pylons.Add(DronePylon(module, drone, Muzzle(sockets, SlotType.Pylon, pylonIndex, module.Muzzle, drone.MuzzleOffset, mirror)));
                 pylonIndex++;
             }
 
@@ -260,6 +262,21 @@ namespace Chopper.Simulation.Loadout
             SalvoCount = rocket.SalvoCount,
             SalvoInterval = rocket.SalvoInterval,
             SalvoConeCos = rocket.SalvoConeCos,
+        };
+
+        private static PylonWeapon DronePylon(ModuleDefinition module, RepairDroneDefinition drone, float3 muzzle) => new()
+        {
+            Behaviour = PylonBehaviour.Drone,
+            Name = ShortName(module),
+            // Fire interval: a repeat press cannot launch twice; the magazine is the real limit.
+            FireInterval = 0.5f,
+            Speed = drone.Speed,
+            Lifetime = drone.HealSeconds,
+            MuzzleOffset = muzzle,
+            MagazineSize = drone.MagazineSize,
+            ReloadSeconds = drone.ReloadSeconds,
+            HealShare = drone.HealShare,
+            HealSeconds = drone.HealSeconds,
         };
 
         private static PylonWeapon MissilePylon(ModuleDefinition module, GuidedMissileDefinition missile, float3 muzzle,
