@@ -20,8 +20,9 @@ namespace Chopper.Presentation.Effects
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class FlareEffectsSystem : PresentationSystemBase
     {
-        private const float FlareGravity = 3f;
-        private const float FlareDrag = 1.6f;
+        // Same flight as the server's flare cloud, so the lock box and missiles sit on the flares.
+        private const float FlareGravity = FlareFlight.Gravity;
+        private const float FlareDrag = FlareFlight.Drag;
         private const float FizzRate = 22f;
 
         private sealed class Flare
@@ -42,6 +43,8 @@ namespace Chopper.Presentation.Effects
             public int Left;
             public int Index;
             public float Wait;
+            /// <summary>Seconds the flares burn: the server's burn time (FlareRemaining) when sent, else the settings.</summary>
+            public float Burn;
         }
 
         private readonly Dictionary<Entity, uint> _lastCount = new();
@@ -81,7 +84,8 @@ namespace Chopper.Presentation.Effects
                 _seen[entity] = count;
                 if (!_lastCount.TryGetValue(entity, out var last) || count <= last) continue;
 
-                _salvos.Add(new Salvo { Chopper = entity, Left = settings.FlaresPerDrop });
+                var burn = countermeasure.ValueRO.FlareRemaining > 0f ? countermeasure.ValueRO.FlareRemaining : settings.FlareLifetime;
+                _salvos.Add(new Salvo { Chopper = entity, Left = settings.FlaresPerDrop, Burn = burn });
                 if (context.Sounds != null) context.Audio.Play(context.Sounds.Flares, pose.ValueRO.Position);
             }
 
@@ -103,7 +107,7 @@ namespace Chopper.Presentation.Effects
                 {
                     if (!poses.HasComponent(salvo.Chopper)) { salvo.Left = 0; break; }
                     Vector3 velocity = ObservedVelocity.Of(salvo.Chopper, observed, physics);
-                    Launch(settings, poses[salvo.Chopper], velocity, salvo.Index++);
+                    Launch(settings, poses[salvo.Chopper], velocity, salvo.Index++, salvo.Burn);
                     salvo.Left--;
                     salvo.Wait += Mathf.Max(0.01f, settings.FlareInterval) * Random.Range(0.85f, 1.2f);
                 }
@@ -112,7 +116,7 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>One flare kicks out sideways (left and right in turn) and up a little, then drag slows it to a hang.</summary>
-        private void Launch(CombatEffectsSettings settings, in LocalToWorld pose, Vector3 chopperVelocity, int index)
+        private void Launch(CombatEffectsSettings settings, in LocalToWorld pose, Vector3 chopperVelocity, int index, float burn)
         {
             if (settings.Flare == null) return;
             Vector3 right = pose.Right;
@@ -126,7 +130,7 @@ namespace Chopper.Presentation.Effects
                            + up * Random.Range(-2f, 5f)
                            + back * Random.Range(4f, 9f);
             var visual = _effects.SpawnPooled(settings.Flare, origin, Quaternion.LookRotation(velocity.normalized));
-            var lifetime = settings.FlareLifetime * Random.Range(0.9f, 1.15f);
+            var lifetime = burn * Random.Range(0.9f, 1.1f);
             _flares.Add(new Flare
             {
                 Visual = visual, Position = origin, Velocity = velocity, Remaining = lifetime, Lifetime = lifetime,

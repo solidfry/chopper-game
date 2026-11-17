@@ -8,8 +8,9 @@ using Unity.Physics.Systems;
 namespace Chopper.Simulation.Combat
 {
     /// <summary>
-    /// Flares (predicted on the owner, decided on the server). Dropping them starts the cooldown and a decoy window:
-    /// the chopper cannot be heat-locked, and heat seekers chasing it lose it (<see cref="GuidedMissileSystem"/>).
+    /// Flares (predicted on the owner, decided on the server). Dropping them starts the cooldown and puts a burning
+    /// flare cloud in the air (<see cref="FlareFlight"/>) for the decoy duration: heat locks on the chopper move to the
+    /// flares (<see cref="TargetLockSystem"/>) and heat missiles chasing it go after them (<see cref="GuidedMissileSystem"/>).
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
@@ -23,21 +24,25 @@ namespace Chopper.Simulation.Combat
             var deltaTime = SystemAPI.Time.DeltaTime;
             var now = SystemAPI.Time.ElapsedTime;
             var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log) && state.WorldUnmanaged.IsServer();
-            foreach (var (input, config, countermeasure, chopper) in SystemAPI
-                         .Query<RefRO<ChopperInput>, RefRO<CountermeasureConfig>, RefRW<CountermeasureState>>()
+            foreach (var (input, config, countermeasure, transform, chopper) in SystemAPI
+                         .Query<RefRO<ChopperInput>, RefRO<CountermeasureConfig>, RefRW<CountermeasureState>, RefRO<Unity.Transforms.LocalTransform>>()
                          .WithAll<Simulate>()
                          .WithEntityAccess())
             {
                 ref var flares = ref countermeasure.ValueRW;
                 flares.CooldownRemaining = math.max(0f, flares.CooldownRemaining - deltaTime);
                 flares.DecoyRemaining = math.max(0f, flares.DecoyRemaining - deltaTime);
+                FlareFlight.Tick(ref flares, deltaTime);
                 Magazine.Tick(ref flares.RoundsUsed, ref flares.ReloadRemaining, deltaTime);
 
                 // Cooldown 0 = this loadout has no flares.
                 if (config.ValueRO.Cooldown <= 0f || !input.ValueRO.Countermeasure.IsSet || flares.CooldownRemaining > 0f) continue;
                 if (!Magazine.HasRound(flares.RoundsUsed, config.ValueRO.MagazineSize)) continue;
                 flares.CooldownRemaining = config.ValueRO.Cooldown;
-                flares.DecoyRemaining = config.ValueRO.DecoyDuration;
+                var velocity = SystemAPI.HasComponent<Unity.Physics.PhysicsVelocity>(chopper)
+                    ? SystemAPI.GetComponent<Unity.Physics.PhysicsVelocity>(chopper).Linear
+                    : float3.zero;
+                FlareFlight.Drop(ref flares, transform.ValueRO.Position, transform.ValueRO.Rotation, velocity, config.ValueRO.DecoyDuration);
                 flares.FlareCount++;
                 Magazine.Spend(ref flares.RoundsUsed, ref flares.ReloadRemaining, config.ValueRO.MagazineSize, config.ValueRO.ReloadSeconds);
                 if (hasLog)

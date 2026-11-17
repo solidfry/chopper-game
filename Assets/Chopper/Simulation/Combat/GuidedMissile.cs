@@ -33,6 +33,8 @@ namespace Chopper.Simulation.Combat
         public float SplitRemaining;
         /// <summary>Flares do not fool this one (part of a swarm salvo).</summary>
         public bool IgnoresFlares;
+        /// <summary>Fooled: it chases the target's flare cloud, and loses the target when the flares burn out.</summary>
+        public bool Decoyed;
         /// <summary>Server: short name of the weapon that fired it, for the match log.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
     }

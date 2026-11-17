@@ -68,7 +68,14 @@ namespace Chopper.Simulation.Combat
                 {
                     ref var flares = ref countermeasure.ValueRW;
                     flares.DecoyRemaining = math.max(flares.DecoyRemaining, now.ActiveLeft);
-                    if (cfg.Kind == AbilityKind.StripDown) flares.FlareCount++;
+                    if (cfg.Kind == AbilityKind.StripDown)
+                    {
+                        var velocity = SystemAPI.HasComponent<Unity.Physics.PhysicsVelocity>(entity)
+                            ? SystemAPI.GetComponent<Unity.Physics.PhysicsVelocity>(entity).Linear
+                            : float3.zero;
+                        FlareFlight.Drop(ref flares, transform.ValueRO.Position, transform.ValueRO.Rotation, velocity, now.ActiveLeft);
+                        flares.FlareCount++;
+                    }
                 }
                 if (isServer && cfg.Kind == AbilityKind.Blackout)
                     pulses.Add(new Pulse { Source = entity, Position = transform.ValueRO.Position, Radius = cfg.Radius, Seconds = cfg.Strength });

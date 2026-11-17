@@ -34,6 +34,8 @@ namespace Chopper.Simulation.Combat
             public TargetClass Class;
             public float Heat;
             public float LockScale;
+            /// <summary>The flares of <see cref="Entity"/>, not the chopper.</summary>
+            public bool Flares;
         }
 
         private ComponentLookup<ThreatState> _threats;
@@ -82,6 +84,7 @@ namespace Chopper.Simulation.Combat
                 var best = Entity.Null;
                 var bestScore = 0f;
                 var bestLockScale = 1f;
+                var bestFlares = false;
                 var current = lockState.Target;
                 var currentSeen = false;
                 var currentInSight = false;
@@ -90,7 +93,7 @@ namespace Chopper.Simulation.Combat
                 foreach (var candidate in candidates)
                 {
                     if (candidate.Entity == self || (candidate.Class & weapon.Targets) == 0) continue;
-                    var isCurrent = candidate.Entity == current && current != Entity.Null;
+                    var isCurrent = candidate.Entity == current && current != Entity.Null && candidate.Flares == lockState.OnFlares;
                     var inCone = Seeker.InCone(origin, forward, candidate.Position, weapon.LockConeCos, weapon.LockRange, out var distance, out var alignment);
                     if (isCurrent)
                     {
@@ -108,6 +111,7 @@ namespace Chopper.Simulation.Combat
                     best = candidate.Entity;
                     bestScore = score;
                     bestLockScale = candidate.LockScale;
+                    bestFlares = candidate.Flares;
                 }
 
                 // Keep the current target while it is in sight, or for the grace time after it leaves.
@@ -130,7 +134,7 @@ namespace Chopper.Simulation.Combat
                 }
                 else
                 {
-                    lockState = new TargetLock { Target = best, Grace = weapon.LockGrace };
+                    lockState = new TargetLock { Target = best, Grace = weapon.LockGrace, OnFlares = bestFlares };
                     currentInSight = true;
                 }
 
@@ -139,7 +143,8 @@ namespace Chopper.Simulation.Combat
                     lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime * bestLockScale, 0.01f));
                 lockState.Locked = lockState.Progress >= 1f;
 
-                if (_threats.HasComponent(best))
+                // A seeker on the flares is no threat to the pilot: the warning stops, so they know the flares worked.
+                if (!lockState.OnFlares && _threats.HasComponent(best))
                 {
                     var threat = _threats[best];
                     if (lockState.Locked) threat.LockedBy++;
@@ -151,15 +156,31 @@ namespace Chopper.Simulation.Combat
             candidates.Dispose();
         }
 
-        /// <summary>Every lockable thing this tick, with its heat. Targets with flares out are left out.</summary>
+        /// <summary>
+        /// Every lockable thing this tick, with its heat. A chopper with flares burning is replaced by its flare cloud
+        /// (much hotter), so a seeker on it, or looking that way, goes for the flares; when they burn out that lock breaks.
+        /// A chopper in a decoy window without flares (Ghost ability) is left out.
+        /// </summary>
         private NativeList<Candidate> CollectCandidates(ref SystemState state)
         {
             var candidates = new NativeList<Candidate>(32, Allocator.Temp);
             foreach (var (targetable, pose, entity) in SystemAPI.Query<RefRO<Targetable>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
-                if (SystemAPI.HasComponent<CountermeasureState>(entity) &&
-                    SystemAPI.GetComponent<CountermeasureState>(entity).DecoyRemaining > 0f)
-                    continue;
+                if (SystemAPI.HasComponent<CountermeasureState>(entity))
+                {
+                    var flares = SystemAPI.GetComponent<CountermeasureState>(entity);
+                    if (flares.FlaresInAir)
+                        candidates.Add(new Candidate
+                        {
+                            Entity = entity,
+                            Position = FlareFlight.Position(flares),
+                            Class = targetable.ValueRO.Class,
+                            Heat = FlareFlight.Heat,
+                            LockScale = targetable.ValueRO.LockScale,
+                            Flares = true,
+                        });
+                    if (flares.FlaresInAir || flares.DecoyRemaining > 0f) continue;
+                }
 
                 var speed = SystemAPI.HasComponent<PhysicsVelocity>(entity)
                     ? math.length(SystemAPI.GetComponent<PhysicsVelocity>(entity).Linear)

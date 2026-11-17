@@ -103,9 +103,11 @@ namespace Chopper.Presentation.Hud
                 pylonReload, flareReload);
 
             var hasTarget = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target) && camera != null;
-            var viewport = hasTarget
-                ? camera.WorldToViewportPoint(SystemAPI.GetComponent<LocalToWorld>(targetLock.Target).Position)
-                : Vector3.back;
+            // A seeker fooled by flares: the lock box sits on the flare cloud, not the chopper.
+            float3 lockPoint = hasTarget ? SystemAPI.GetComponent<LocalToWorld>(targetLock.Target).Position : float3.zero;
+            if (hasTarget && targetLock.OnFlares && SystemAPI.HasComponent<CountermeasureState>(targetLock.Target))
+                lockPoint = FlareFlight.Position(SystemAPI.GetComponent<CountermeasureState>(targetLock.Target));
+            var viewport = hasTarget ? camera.WorldToViewportPoint(lockPoint) : Vector3.back;
             model.UpdateTargeting(hasTarget, viewport, targetLock.Progress, targetLock.Locked, pylonName, needsLock, flaresReady);
         }
 

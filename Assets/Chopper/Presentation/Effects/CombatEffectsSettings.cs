@@ -37,7 +37,7 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Looping visual for one flare (falls and burns out). Pooled.")]
         private GameObject flare;
         [SerializeField] private int flaresPerDrop = 6;
-        [SerializeField] private float flareLifetime = 2.5f;
+        [SerializeField] private float flareLifetime = 3.5f;
         [SerializeField, Tooltip("Seconds between flares in one drop: they fire out one by one, in time with the pops of the flare sound.")]
         private float flareInterval = 0.11f;
 

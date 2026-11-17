@@ -45,6 +45,8 @@ namespace Chopper.Simulation.Combat
         /// <summary>0 = just started, 1 = locked.</summary>
         [GhostField(Quantization = 100)] public float Progress;
         [GhostField] public bool Locked;
+        /// <summary>The seeker is on the target's burning flares, not the target (see <see cref="FlareFlight"/>).</summary>
+        [GhostField] public bool OnFlares;
         /// <summary>Server only (not sent): seconds the lock still holds with the target out of the cone or sight.</summary>
         public float Grace;
     }

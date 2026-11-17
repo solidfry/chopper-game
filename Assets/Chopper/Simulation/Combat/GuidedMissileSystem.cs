@@ -67,9 +67,16 @@ namespace Chopper.Simulation.Combat
                 missile.Remaining -= deltaTime;
                 missile.ArmRemaining = math.max(0f, missile.ArmRemaining - deltaTime);
 
-                // Flares: a heat seeker loses a target that is dropping them.
-                if (missile.Seeker == SeekerType.Heat && !missile.IgnoresFlares && _countermeasures.TryGetComponent(missile.Target, out var flares) &&
-                    flares.DecoyRemaining > 0f)
+                // Flares: a heat seeker chasing a target with flares burning goes for the flares instead (once fooled it
+                // stays fooled), and loses the target when they burn out. The Ghost ability's decoy window loses it at once.
+                var hasFlares = _countermeasures.TryGetComponent(missile.Target, out var flares);
+                var heat = missile.Seeker == SeekerType.Heat && !missile.IgnoresFlares && hasFlares;
+                if (missile.Decoyed && !(hasFlares && flares.FlaresInAir))
+                {
+                    missile.Target = Entity.Null;
+                    missile.Decoyed = false;
+                }
+                else if (!missile.Decoyed && heat && (flares.FlaresInAir || flares.DecoyRemaining > 0f))
                 {
                     if (hasLog)
                         log.Add(new MatchLogEntry
@@ -83,17 +90,23 @@ namespace Chopper.Simulation.Combat
                             TargetPosition = _poses.TryGetComponent(missile.Target, out var decoyPose) ? decoyPose.Position : start,
                             Distance = _poses.TryGetComponent(missile.Target, out var decoyAt) ? math.distance(start, decoyAt.Position) : -1f,
                         });
-                    missile.Target = Entity.Null;
+                    if (flares.FlaresInAir) missile.Decoyed = true;
+                    else missile.Target = Entity.Null;
                 }
 
+                // Where the missile steers: the target, or its flare cloud when fooled.
                 LocalToWorld targetPose = default;
                 var hasTarget = missile.Target != Entity.Null && _poses.TryGetComponent(missile.Target, out targetPose);
-                if (hasTarget && missile.ArmRemaining <= 0f)
+                var aimPoint = targetPose.Position;
+                var aimVelocity = _velocities.TryGetComponent(missile.Target, out var v) ? v.Linear : float3.zero;
+                if (hasTarget && missile.Decoyed)
                 {
-                    var targetVelocity = _velocities.TryGetComponent(missile.Target, out var v) ? v.Linear : float3.zero;
-                    missile.Velocity = Guidance.Steer(start, missile.Velocity, targetPose.Position, targetVelocity,
-                        missile.Speed, missile.TurnRate, missile.NavigationGain, deltaTime);
+                    aimPoint = FlareFlight.Position(flares);
+                    aimVelocity = FlareFlight.Velocity(flares);
                 }
+                if (hasTarget && missile.ArmRemaining <= 0f)
+                    missile.Velocity = Guidance.Steer(start, missile.Velocity, aimPoint, aimVelocity,
+                        missile.Speed, missile.TurnRate, missile.NavigationGain, deltaTime);
 
                 var end = start + missile.Velocity * deltaTime;
                 pose.Position = end;
@@ -112,7 +125,7 @@ namespace Chopper.Simulation.Combat
                 if (!impact && missile.Cluster.IsCluster)
                 {
                     missile.SplitRemaining -= deltaTime;
-                    var targetDistance = hasTarget ? math.distance(end, targetPose.Position) : -1f;
+                    var targetDistance = hasTarget ? math.distance(end, aimPoint) : -1f;
                     if (Cluster.ShouldSplit(missile.Cluster, math.min(missile.SplitRemaining, missile.Remaining), targetDistance))
                     {
                         Split(ecb, missile, end, _owners.TryGetComponent(entity, out var owner) ? owner.NetworkId : 0);
@@ -128,6 +141,11 @@ namespace Chopper.Simulation.Combat
                     directTarget = hit.Entity;
                     directPoint = hit.Position;
                     directNormal = hit.SurfaceNormal;
+                }
+                else if (hasTarget && missile.Decoyed && math.distance(end, aimPoint) <= missile.ProximityFuse)
+                {
+                    // Fooled: it bursts on the flares. Only the splash can still reach the chopper.
+                    detonate = true;
                 }
                 else if (hasTarget && math.distance(end, targetPose.Position) <= missile.ProximityFuse)
                 {

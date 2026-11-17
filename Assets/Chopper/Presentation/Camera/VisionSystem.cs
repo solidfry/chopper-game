@@ -24,8 +24,6 @@ namespace Chopper.Presentation.Camera
         private const int MaxGlows = 48;
         /// <summary>A missile moves at least this fast for the kinetic tracker (its velocity is not sent to every client).</summary>
         private const float MissileSpeed = 100f;
-        /// <summary>The flare mark sits this far under the chopper, metres.</summary>
-        private const float FlareDrop = 6f;
 
         private readonly List<VisionGlow> _glows = new();
         private readonly List<HeatMark> _marks = new();
@@ -73,10 +71,13 @@ namespace Chopper.Presentation.Camera
                                    SystemAPI.GetComponent<ChopperFlightState>(entity).Boosting;
                     Add(mode, pose.ValueRO.Position, Seeker.Heat(targetable.ValueRO, speed, boosting), speed, eye, range);
 
-                    // A burning flare: a second, hotter mark under the chopper (thermal sees the decoy too).
-                    if (mode == VisionMode.Thermal && SystemAPI.HasComponent<CountermeasureState>(entity) &&
-                        SystemAPI.GetComponent<CountermeasureState>(entity).DecoyRemaining > 0f)
-                        Add(mode, pose.ValueRO.Position - pose.ValueRO.Up * FlareDrop, VisionMath.FlareHeat, speed, eye, range);
+                    // Burning flares: a second, hotter mark on the flare cloud (thermal sees the decoy too).
+                    if (mode == VisionMode.Thermal && SystemAPI.HasComponent<CountermeasureState>(entity))
+                    {
+                        var flares = SystemAPI.GetComponent<CountermeasureState>(entity);
+                        if (flares.FlaresInAir)
+                            Add(mode, FlareFlight.Position(flares), VisionMath.FlareHeat, speed, eye, range);
+                    }
                 }
                 ForgetGone();
 
