@@ -76,6 +76,7 @@ namespace Chopper.Simulation.Match
                     break;
 
                 case MatchLogKind.MissileDecoyed:
+                case MatchLogKind.RocketEvaded:
                     Evaded(entry, rates, awards);
                     break;
 

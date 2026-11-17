@@ -22,6 +22,8 @@ namespace Chopper.Simulation.Session
         Repair = 6,
         /// <summary>The actor started their pilot ability; <see cref="MatchLogEntry.Detail"/> is its <see cref="AbilityKind"/>.</summary>
         Ability = 7,
+        /// <summary>A rocket, bomb or air mine aimed at the target missed it (<see cref="Combat.RocketEvade"/>).</summary>
+        RocketEvaded = 8,
     }
 
     public enum MissileOutcome : byte

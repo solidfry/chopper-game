@@ -224,7 +224,7 @@ namespace Chopper.Presentation.Hud
                 XpReason.Kill => ("ENEMY DOWN", "KILL", 4),
                 XpReason.BotKill => ("BOT DOWN", "BOT KILL", 3),
                 XpReason.Assist => ("ASSIST", "ASSIST", 2),
-                XpReason.MissileEvaded => ("MISSILE EVADED", "EVADED", 1),
+                XpReason.MissileEvaded => ("EVADED", "EVADED", 1),
                 _ => ("REPAIRED", "REPAIR", 0),
             };
             // The best event of the combo keeps the title (a kill outranks the repair after it).

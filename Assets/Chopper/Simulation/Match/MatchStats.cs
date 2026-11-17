@@ -129,6 +129,7 @@ namespace Chopper.Simulation.Match
                     break;
 
                 case MatchLogKind.MissileDecoyed:
+                case MatchLogKind.RocketEvaded:
                     if (hasTarget) target.Value.MissilesDodged++;
                     break;
 

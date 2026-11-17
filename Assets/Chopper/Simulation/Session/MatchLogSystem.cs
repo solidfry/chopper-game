@@ -322,6 +322,14 @@ namespace Chopper.Simulation.Session
                         Field("dist", entry.Distance);
                         End();
                         break;
+                    case MatchLogKind.RocketEvaded:
+                        Begin(entry.Time, "rocket_evaded");
+                        Field("shooter", entry.Actor);
+                        Field("target", entry.Target);
+                        Field("weapon", entry.Weapon.ToString());
+                        Field("dist", entry.Distance);
+                        End();
+                        break;
                     case MatchLogKind.MissileEnd:
                         Begin(entry.Time, "missile");
                         Field("shooter", entry.Actor);

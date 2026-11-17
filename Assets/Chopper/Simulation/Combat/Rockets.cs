@@ -30,6 +30,10 @@ namespace Chopper.Simulation.Combat
         public TargetClass FuseTargets;
         /// <summary>Short name of the weapon that fired it, for the match log.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
+        /// <summary>The chopper this round was aimed at (see <see cref="RocketEvade"/>); Null until one is.</summary>
+        public Entity Threat;
+        /// <summary>The evade for <see cref="Threat"/> was given (once per round).</summary>
+        public bool EvadeDone;
     }
 
     /// <summary>Server to all clients: a rocket was launched. The shooter's client ignores its own (it predicted it).</summary>
@@ -99,5 +103,55 @@ namespace Chopper.Simulation.Combat
             salvoCount > 1 && salvoConeCos < 1f
                 ? Cluster.Direction(forward, salvoConeCos, (uint)shooterId * 7919u, shot)
                 : forward;
+    }
+
+    /// <summary>
+    /// "Evaded" for rockets, bombs and air mines: a round that was aimed at a chopper (a moving round inside a narrow
+    /// cone, or a hanging mine with the chopper close) and then flew past it, burst out of reach of it, or was left
+    /// behind. One evade per round. Server only (<see cref="RocketSystem"/>), counted like an evaded missile.
+    /// </summary>
+    public static class RocketEvade
+    {
+        /// <summary>A moving round is aimed at a chopper inside this cone half-angle (cos 20°) and range.</summary>
+        public const float AimCos = 0.94f;
+        public const float AimRange = 120f;
+        /// <summary>A round slower than this hangs (air mine).</summary>
+        public const float HangSpeed = 5f;
+        /// <summary>Passing within this many metres and flying on counts as a near miss.</summary>
+        public const float NearMiss = 10f;
+        /// <summary>A burst this far outside the splash still counts as close (beyond it, it was nowhere near).</summary>
+        public const float BurstMargin = 15f;
+
+        /// <summary>The round threatens the target: aimed at it (moving), or a hanging mine with the target near.</summary>
+        public static bool Threatens(float3 position, float3 velocity, float3 target, float fuse, float splash)
+        {
+            var to = target - position;
+            var distance = math.length(to);
+            var speed = math.length(velocity);
+            if (speed < HangSpeed) return distance <= 2f * math.max(fuse, splash);
+            if (distance < 1e-3f || distance > AimRange) return false;
+            return math.dot(velocity / speed, to / distance) >= AimCos;
+        }
+
+        /// <summary>This step passed the target within <see cref="NearMiss"/> and now flies away from it.</summary>
+        public static bool PassedBy(float3 start, float3 end, float3 target)
+        {
+            var path = end - start;
+            var length = math.lengthsq(path);
+            var t = length > 1e-6f ? math.saturate(math.dot(target - start, path) / length) : 0f;
+            var closest = start + path * t;
+            return math.distance(closest, target) <= NearMiss && math.dot(path, target - end) < 0f;
+        }
+
+        /// <summary>A hanging mine the target got clear of without setting it off.</summary>
+        public static bool LeftBehind(float3 position, float3 velocity, float3 target, float fuse, float splash) =>
+            math.length(velocity) < HangSpeed && math.distance(position, target) > 3f * math.max(fuse, splash);
+
+        /// <summary>The round burst near the target but its splash missed.</summary>
+        public static bool BurstMissed(float3 burst, float3 target, float splash)
+        {
+            var distance = math.distance(burst, target);
+            return distance > splash && distance <= splash + BurstMargin;
+        }
     }
 }

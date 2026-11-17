@@ -23,12 +23,14 @@ namespace Chopper.Simulation.Combat
     public partial struct RocketSystem : ISystem
     {
         private BufferLookup<DamageEvent> _damageLookup;
+        private ComponentLookup<GhostOwner> _owners;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PhysicsWorldSingleton>();
             _damageLookup = state.GetBufferLookup<DamageEvent>();
+            _owners = state.GetComponentLookup<GhostOwner>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -37,6 +39,9 @@ namespace Chopper.Simulation.Combat
             var deltaTime = SystemAPI.Time.DeltaTime;
             var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
             _damageLookup.Update(ref state);
+            _owners.Update(ref state);
+            var hasLog = SystemAPI.TryGetSingletonBuffer<Session.MatchLogEntry>(out var log);
+            var now = SystemAPI.Time.ElapsedTime;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
             // What a proximity fuse can react to: live targets, this tick's positions.
@@ -69,6 +74,9 @@ namespace Chopper.Simulation.Combat
                         });
                     Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity,
                         rocket.Weapon, rocket.Attacker);
+                    if (hit.Entity != rocket.Threat && TryFind(fuseTargets, rocket.Threat, out var threatAt) &&
+                        RocketEvade.BurstMissed(hit.Position, threatAt, rocket.SplashRadius))
+                        Evaded(ref rocket, hasLog, log, now, threatAt);
                     ecb.DestroyEntity(entity);
                     continue;
                 }
@@ -77,10 +85,13 @@ namespace Chopper.Simulation.Combat
                 {
                     Explosions.Splash(world, ref _damageLookup, burst, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, Entity.Null,
                         rocket.Weapon, rocket.Attacker);
+                    if (TryFind(fuseTargets, rocket.Threat, out var fusedAt) && RocketEvade.BurstMissed(burst, fusedAt, rocket.SplashRadius))
+                        Evaded(ref rocket, hasLog, log, now, fusedAt);
                     ecb.DestroyEntity(entity);
                     continue;
                 }
 
+                Watch(ref rocket, fuseTargets, end, hasLog, log, now);
                 rocket.Position = end;
                 rocket.Remaining -= deltaTime;
                 if (rocket.Remaining <= 0f)
@@ -88,6 +99,63 @@ namespace Chopper.Simulation.Combat
             }
             ecb.Playback(state.EntityManager);
             fuseTargets.Dispose();
+        }
+
+        /// <summary>Finds the chopper this round is aimed at, then gives one evade when it flies past or a mine is left behind.</summary>
+        private void Watch(ref Rocket rocket, in NativeList<FuseTarget> targets, float3 end, bool hasLog, DynamicBuffer<Session.MatchLogEntry> log, double now)
+        {
+            if (rocket.EvadeDone) return;
+            if (rocket.Threat == Entity.Null)
+            {
+                for (var i = 0; i < targets.Length; i++)
+                {
+                    var target = targets[i];
+                    if (target.Entity == rocket.Shooter || !_owners.HasComponent(target.Entity)) continue;
+                    if (!RocketEvade.Threatens(rocket.Position, rocket.Velocity, target.Position, rocket.ProximityFuse, rocket.SplashRadius)) continue;
+                    rocket.Threat = target.Entity;
+                    break;
+                }
+                return;
+            }
+            if (!TryFind(targets, rocket.Threat, out var at))
+            {
+                rocket.EvadeDone = true; // dead or gone
+                return;
+            }
+            if (RocketEvade.PassedBy(rocket.Position, end, at) ||
+                RocketEvade.LeftBehind(end, rocket.Velocity, at, rocket.ProximityFuse, rocket.SplashRadius))
+                Evaded(ref rocket, hasLog, log, now, at);
+        }
+
+        private void Evaded(ref Rocket rocket, bool hasLog, DynamicBuffer<Session.MatchLogEntry> log, double now, float3 targetAt)
+        {
+            if (rocket.EvadeDone) return;
+            rocket.EvadeDone = true;
+            if (!hasLog || !_owners.TryGetComponent(rocket.Threat, out var target)) return;
+            log.Add(new Session.MatchLogEntry
+            {
+                Kind = Session.MatchLogKind.RocketEvaded,
+                Time = now,
+                Actor = rocket.Attacker.NetworkId,
+                Target = target.NetworkId,
+                Weapon = rocket.Weapon,
+                ActorPosition = rocket.Position,
+                TargetPosition = targetAt,
+                Distance = math.distance(rocket.Position, targetAt),
+            });
+        }
+
+        private static bool TryFind(in NativeList<FuseTarget> targets, Entity entity, out float3 position)
+        {
+            position = default;
+            if (entity == Entity.Null) return false;
+            for (var i = 0; i < targets.Length; i++)
+                if (targets[i].Entity == entity)
+                {
+                    position = targets[i].Position;
+                    return true;
+                }
+            return false;
         }
 
         private struct FuseTarget
