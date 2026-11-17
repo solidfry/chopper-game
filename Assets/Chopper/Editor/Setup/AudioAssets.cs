@@ -127,7 +127,7 @@ namespace Chopper.Editor.Setup
             library.InitialiseTargeting(
                 Slot(library.LockTone, () => Cue("LockTone", Clips(SciFi + "/Loops/loop_laser.wav"), ui, 0.35f, blend: 0f, voices: 1, pitch: 0.8f)),
                 Slot(library.LockedTone, () => Cue("LockedTone", Clips(SciFi + "/Loops/loop_laser2.wav"), ui, 0.45f, blend: 0f, voices: 1, pitch: 1.3f)),
-                Slot(library.LockWarning, () => Cue("LockWarning", Clips(Warnings + "/LockWarning_Beep.wav"), ui, 0.45f, blend: 0f, voices: 1)),
+                Slot(library.LockWarning, () => Cue("LockWarning", Clips(Warnings + "/LockWarning_2070.wav"), ui, 0.45f, blend: 0f, voices: 1)),
                 Slot(library.MissileWarning, () => Cue("MissileWarning", Clips(Warnings + "/MissileWarning_Alarm.wav"), ui, 0.6f, blend: 0f, voices: 1)),
                 Slot(library.Flares, () => Cue("Flares", Clips(Flares + "/FlareBurst_01.wav", Flares + "/FlareBurst_02.wav", Flares + "/FlareBurst_03.wav"), effects, 0.7f, blend: 1f, voices: 4, muffle: CueMuffle.Outside)));
 
