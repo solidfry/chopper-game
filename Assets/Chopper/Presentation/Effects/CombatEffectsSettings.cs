@@ -38,6 +38,8 @@ namespace Chopper.Presentation.Effects
         private GameObject flare;
         [SerializeField] private int flaresPerDrop = 6;
         [SerializeField] private float flareLifetime = 2.5f;
+        [SerializeField, Tooltip("Seconds between flares in one drop: they fire out one by one, in time with the pops of the flare sound.")]
+        private float flareInterval = 0.11f;
 
         [Header("Audio")]
         [SerializeField, Tooltip("Mixer group for sounds inside the effect prefabs (rocket launch and flight, explosions).")]
@@ -165,6 +167,7 @@ namespace Chopper.Presentation.Effects
         public GameObject Flare => flare;
         public int FlaresPerDrop => flaresPerDrop;
         public float FlareLifetime => flareLifetime;
+        public float FlareInterval => flareInterval;
         public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
         public bool GunBulletAudio => gunBulletAudio;
         public Material DownwashMaterial => downwashMaterial;
