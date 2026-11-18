@@ -10,6 +10,7 @@ namespace Chopper.Simulation.Match
         [SerializeField, Tooltip("Seconds.")] private float timeLimit = 600f;
         [SerializeField, Tooltip("Free For All: one player's kills.")] private int scoreLimit = 20;
         [SerializeField, Tooltip("Team Deathmatch: one team's kills.")] private int teamScoreLimit = 40;
+        [SerializeField, Tooltip("Team modes: number of teams (2 to 8).")] private int teamCount = 2;
         [SerializeField, Tooltip("Seconds.")] private float postGameDuration = 20f;
         [SerializeField, Tooltip("Seconds.")] private float killCreditSeconds = 5f;
 
@@ -23,6 +24,7 @@ namespace Chopper.Simulation.Match
                     TimeLimit = authoring.timeLimit,
                     ScoreLimit = authoring.scoreLimit,
                     TeamScoreLimit = authoring.teamScoreLimit,
+                    TeamCount = TeamRules.ClampTeamCount(authoring.teamCount),
                     PostGameDuration = authoring.postGameDuration,
                     KillCreditSeconds = authoring.killCreditSeconds,
                 });

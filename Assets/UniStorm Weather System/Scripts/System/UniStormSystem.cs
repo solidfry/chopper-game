@@ -1503,7 +1503,8 @@ namespace UniStorm
             m_MoonPhaseMaterial.SetColor("_MoonColor", MoonPhaseColor);
             m_MoonTransform.parent = m_MoonLight.transform;
 
-            m_MoonLight.shadowResolution = MoonShadowResolution;
+            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_MoonLight.shadowResolution = MoonShadowResolution;
             m_MoonLight.shadows = MoonShadowType;
             m_MoonLight.shadowStrength = MoonShadowStrength;
 
@@ -1537,7 +1538,8 @@ namespace UniStorm
             m_CelestialAxisTransform = GameObject.Find("Celestial Axis").transform;
             RenderSettings.sun = m_SunLight;
             m_SkyBoxMaterial = RenderSettings.skybox;
-            m_SunLight.shadowResolution = SunShadowResolution;
+            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_SunLight.shadowResolution = SunShadowResolution;
             m_SunLight.shadows = SunShadowType;
             m_SunLight.shadowStrength = SunShadowStrength;
 
@@ -1625,7 +1627,8 @@ namespace UniStorm
             m_LightningLight.transform.SetParent(this.transform);
             m_LightningLight.transform.localPosition = Vector3.zero;
             m_LightningLight.intensity = 0;
-            m_LightningLight.shadowResolution = LightningShadowResolution;
+            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
+            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_LightningLight.shadowResolution = LightningShadowResolution;
             m_LightningLight.shadows = LightningShadowType;
             m_LightningLight.shadowStrength = LightningShadowStrength;
             m_LightningLight.color = LightningLightColor;

@@ -61,6 +61,19 @@ namespace Chopper.Simulation.Combat
             var networkTime = SystemAPI.GetSingleton<NetworkTime>();
             var firstPrediction = networkTime.IsFirstTimeFullyPredictingTick;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
+            // Team modes: live team mates the repair drone can fly to (empty in Free For All).
+            var teamChoppers = new NativeList<DroneAlly>(8, Allocator.Temp);
+            foreach (var (team, health, chopperPose, chopper) in SystemAPI.Query<RefRO<Match.Team>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
+            {
+                if (team.ValueRO.Value == Match.TeamRules.None || health.ValueRO.IsDead) continue;
+                teamChoppers.Add(new DroneAlly
+                {
+                    Entity = chopper,
+                    Position = chopperPose.ValueRO.Position,
+                    Hurt = health.ValueRO.Current < health.ValueRO.Max,
+                    Team = team.ValueRO.Value,
+                });
+            }
             var now = SystemAPI.Time.ElapsedTime;
             // Server: one Shot per rocket or missile for the match log (when logging is on).
             var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log) && isServer;
@@ -128,7 +141,7 @@ namespace Chopper.Simulation.Combat
                 var weapon = weapons[selected];
                 if (weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock && lockTarget == Entity.Null) continue;
                 // Drone: only when it is docked and its target is hurt (never wasted on a full hull).
-                var droneTarget = RepairDrone.PickTarget(shooter);
+                var droneTarget = weapon.Behaviour == PylonBehaviour.Drone ? DroneTarget(ref state, shooter, pose, weapon, teamChoppers) : shooter;
                 if (weapon.Behaviour == PylonBehaviour.Drone &&
                     (!SystemAPI.HasComponent<RepairDroneState>(shooter) || !SystemAPI.HasComponent<Health>(droneTarget) ||
                      !RepairDrone.CanLaunch(SystemAPI.GetComponent<RepairDroneState>(shooter), SystemAPI.GetComponent<Health>(droneTarget))))
@@ -169,6 +182,7 @@ namespace Chopper.Simulation.Combat
                 }
                 if (hasLog) LogShot(log, now, shooterId, weapon.Name, pose.Position);
             }
+            teamChoppers.Dispose();
             ecb.Playback(state.EntityManager);
         }
 
@@ -299,6 +313,23 @@ namespace Chopper.Simulation.Combat
                 IgnoresFlares = Salvo.IgnoresFlares(shot, weapon.FlareResistance),
                 Weapon = weapon.Name,
             });
+        }
+
+        /// <summary>The drone's target: a hurt team mate under the reticle (team modes), else the shooter.</summary>
+        private Entity DroneTarget(ref SystemState state, Entity shooter, in LocalTransform pose, in PylonWeapon weapon,
+            NativeList<DroneAlly> teamChoppers)
+        {
+            var own = SystemAPI.HasComponent<Match.Team>(shooter) ? SystemAPI.GetComponent<Match.Team>(shooter).Value : Match.TeamRules.None;
+            if (own == Match.TeamRules.None || teamChoppers.Length == 0) return shooter;
+            var allies = new NativeList<DroneAlly>(teamChoppers.Length, Allocator.Temp);
+            foreach (var entry in teamChoppers)
+                if (Match.TeamRules.AreAllies(own, entry.Team)) allies.Add(entry);
+            var forward = math.mul(pose.Rotation, math.forward());
+            var range = weapon.LockRange > 0f ? weapon.LockRange : RepairDrone.DefaultAimRange;
+            var cone = weapon.LockConeCos > 0f ? weapon.LockConeCos : RepairDrone.DefaultAimConeCos;
+            var target = RepairDrone.PickTarget(shooter, pose.Position, forward, allies.AsArray(), range, cone);
+            allies.Dispose();
+            return target;
         }
     }
 }

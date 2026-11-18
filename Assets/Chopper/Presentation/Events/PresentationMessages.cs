@@ -51,7 +51,17 @@ namespace Chopper.Presentation.Events
         public readonly int NetworkId;
         public readonly int Kills;
         public readonly int Deaths;
-        public ScoreChanged(int networkId, int kills, int deaths) { NetworkId = networkId; Kills = kills; Deaths = deaths; }
+        /// <summary>The player's team (0 in Free For All).</summary>
+        public readonly byte Team;
+        public ScoreChanged(int networkId, int kills, int deaths, byte team = 0) { NetworkId = networkId; Kills = kills; Deaths = deaths; Team = team; }
+    }
+
+    /// <summary>Team modes: one team's kills.</summary>
+    public readonly struct TeamScoreChanged
+    {
+        public readonly byte Team;
+        public readonly int Score;
+        public TeamScoreChanged(byte team, int score) { Team = team; Score = score; }
     }
 
     public readonly struct PlayerLeft
@@ -73,7 +83,21 @@ namespace Chopper.Presentation.Events
         public readonly MatchPhase Phase;
         public readonly float TimeRemaining;
         public readonly int WinnerNetworkId;
-        public MatchStateChanged(MatchPhase phase, float timeRemaining, int winner) { Phase = phase; TimeRemaining = timeRemaining; WinnerNetworkId = winner; }
+        public readonly MatchMode Mode;
+        /// <summary>Team modes: number of teams (0 in Free For All).</summary>
+        public readonly int TeamCount;
+        /// <summary>Team modes: the winning team; 0 = draw or still running.</summary>
+        public readonly byte WinnerTeam;
+        public MatchStateChanged(MatchPhase phase, float timeRemaining, int winner, MatchMode mode = MatchMode.FreeForAll,
+            int teamCount = 0, byte winnerTeam = 0)
+        {
+            Phase = phase;
+            TimeRemaining = timeRemaining;
+            WinnerNetworkId = winner;
+            Mode = mode;
+            TeamCount = teamCount;
+            WinnerTeam = winnerTeam;
+        }
     }
 
     /// <summary>The match ended: one player's stats from the server (one message per player).</summary>

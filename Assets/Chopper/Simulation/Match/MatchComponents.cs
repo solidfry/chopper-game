@@ -17,6 +17,8 @@ namespace Chopper.Simulation.Match
         public int ScoreLimit;
         /// <summary>Team Deathmatch: one team's kills that end the match.</summary>
         public int TeamScoreLimit;
+        /// <summary>Team modes: number of teams, 2 to <see cref="TeamRules.MaxTeams"/>.</summary>
+        public int TeamCount;
         /// <summary>Seconds the results show before the next match starts.</summary>
         public float PostGameDuration;
         /// <summary>A crash or bounds death this soon after a hit counts as the attacker's kill.</summary>
@@ -27,6 +29,7 @@ namespace Chopper.Simulation.Match
             TimeLimit = 600f,
             ScoreLimit = 20,
             TeamScoreLimit = 40,
+            TeamCount = 2,
             PostGameDuration = 20f,
             KillCreditSeconds = 5f,
         };
@@ -41,9 +44,8 @@ namespace Chopper.Simulation.Match
         public int WinnerNetworkId;
         /// <summary>Set once at server start (<see cref="MatchModeSource"/>); kept across matches.</summary>
         public MatchMode Mode;
-        /// <summary>Team Deathmatch kills of team A and B.</summary>
-        public int ScoreA;
-        public int ScoreB;
+        /// <summary>Team modes: kills of each team ([i] = team i + 1; the length is the team count). Empty in Free For All.</summary>
+        public Unity.Collections.FixedList64Bytes<int> TeamScores;
         /// <summary>Team Deathmatch winner; <see cref="TeamRules.None"/> = draw or still running.</summary>
         public byte WinnerTeam;
     }
@@ -98,8 +100,15 @@ namespace Chopper.Simulation.Match
         public int WinnerNetworkId;
         /// <summary><see cref="MatchMode"/> as a byte.</summary>
         public byte Mode;
-        public int ScoreA;
-        public int ScoreB;
+        /// <summary>Team modes: number of teams (0 in Free For All). Scores come in <see cref="TeamScoreRpc"/>.</summary>
+        public byte TeamCount;
         public byte WinnerTeam;
+    }
+
+    /// <summary>One team's kills: sent when it changes, and all of them to a player who joins.</summary>
+    public struct TeamScoreRpc : IRpcCommand
+    {
+        public byte Team;
+        public int Score;
     }
 }

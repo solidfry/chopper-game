@@ -33,6 +33,8 @@ namespace Chopper.Simulation.Bots
         public int OwnerId;
         public float3 Position;
         public float Health01;
+        /// <summary><see cref="Match.Team"/> (0 = none). Team mates are not contacts.</summary>
+        public byte Team;
     }
 
     /// <summary>A guided missile in flight.</summary>
@@ -221,14 +223,18 @@ namespace Chopper.Simulation.Bots
             return input;
         }
 
-        /// <summary>Enemy choppers (all others: free for all) with distance and line of sight.</summary>
+        /// <summary>Enemy choppers (all others in free for all; the other team in team modes) with distance and line of sight.</summary>
         private static NativeList<BotContact> Contacts(Entity self, int ownerId, float3 position, in NativeArray<BotChopperInfo> choppers,
             in CollisionWorld world, in BotHandling handling)
         {
             var contacts = new NativeList<BotContact>(math.max(choppers.Length, 1), Allocator.Temp);
+            var selfTeam = Match.TeamRules.None;
+            foreach (var other in choppers)
+                if (other.Entity == self) selfTeam = other.Team;
             foreach (var other in choppers)
             {
                 if (other.Entity == self || other.OwnerId == ownerId) continue;
+                if (Match.TeamRules.AreAllies(selfTeam, other.Team)) continue;
                 var distance = math.distance(position, other.Position);
                 contacts.Add(new BotContact
                 {

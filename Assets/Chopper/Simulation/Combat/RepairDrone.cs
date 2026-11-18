@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -26,7 +27,7 @@ namespace Chopper.Simulation.Combat
     {
         /// <summary>A <see cref="DronePhase"/>.</summary>
         [GhostField] public byte Phase;
-        /// <summary>The chopper it mends. Now always its own chopper; allies when teams exist (<see cref="RepairDrone.PickTarget"/>).</summary>
+        /// <summary>The chopper it mends: its own, or a hurt team mate under the reticle (<see cref="RepairDrone.PickTarget"/>).</summary>
         [GhostField] public Entity Target;
         /// <summary>Seconds in the current phase.</summary>
         [GhostField(Quantization = 100)] public float PhaseTime;
@@ -44,17 +45,47 @@ namespace Chopper.Simulation.Combat
         public bool Out => State != DronePhase.Docked;
     }
 
+    /// <summary>A live team mate the drone could fly to.</summary>
+    public struct DroneAlly
+    {
+        public Entity Entity;
+        public float3 Position;
+        public bool Hurt;
+        public byte Team;
+    }
+
     /// <summary>The repair drone rules, pure (edit-mode tests: RepairDroneTests).</summary>
     public static class RepairDrone
     {
         /// <summary>Shortest flight (s): the drone visibly leaves and docks even when the target is its own chopper.</summary>
         public const float MinFlightSeconds = 0.8f;
 
+        /// <summary>Aim cone and range when the drone weapon sets none (about 15 degrees, 400 m).</summary>
+        public const float DefaultAimConeCos = 0.966f;
+        public const float DefaultAimRange = 400f;
+
         /// <summary>
-        /// Who the drone goes to. No teams yet (every match is free for all), so only its own chopper. With teams: the
-        /// ally under the reticle in range, else itself.
+        /// Who the drone goes to: the hurt team mate nearest the reticle within <paramref name="range"/> and the aim
+        /// cone, else its own chopper. <paramref name="allies"/> holds team mates only (none in Free For All).
         /// </summary>
-        public static Entity PickTarget(Entity self) => self;
+        public static Entity PickTarget(Entity self, float3 origin, float3 forward, in NativeArray<DroneAlly> allies,
+            float range, float coneCos)
+        {
+            var best = self;
+            var bestAlignment = coneCos;
+            foreach (var ally in allies)
+            {
+                if (ally.Entity == self || !ally.Hurt) continue;
+                var offset = ally.Position - origin;
+                var distance = math.length(offset);
+                if (distance < 0.01f || distance > range) continue;
+                var alignment = math.dot(offset / distance, forward);
+                if (alignment < bestAlignment) continue;
+                best = ally.Entity;
+                bestAlignment = alignment;
+            }
+            return best;
+        }
 
         /// <summary>Docked, and the target lives and is hurt: a drone is never wasted on a full hull.</summary>
         public static bool CanLaunch(in RepairDroneState drone, in Health target) =>

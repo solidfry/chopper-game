@@ -36,6 +36,8 @@ namespace Chopper.Simulation.Combat
             public float LockScale;
             /// <summary>The flares of <see cref="Entity"/>, not the chopper.</summary>
             public bool Flares;
+            /// <summary><see cref="Match.Team"/> of the target (0 = none); team mates are never locked.</summary>
+            public byte Team;
         }
 
         private ComponentLookup<ThreatState> _threats;
@@ -78,6 +80,7 @@ namespace Chopper.Simulation.Combat
 
                 var weapon = weapons[selected];
                 var pose = transform.ValueRO;
+                var selfTeam = TeamOf(ref state, self);
                 var origin = pose.Position + math.mul(pose.Rotation, weapon.MuzzleOffset);
                 var forward = math.mul(pose.Rotation, math.forward());
 
@@ -93,6 +96,7 @@ namespace Chopper.Simulation.Combat
                 foreach (var candidate in candidates)
                 {
                     if (candidate.Entity == self || (candidate.Class & weapon.Targets) == 0) continue;
+                    if (Match.TeamRules.AreAllies(selfTeam, candidate.Team)) continue;
                     var isCurrent = candidate.Entity == current && current != Entity.Null && candidate.Flares == lockState.OnFlares;
                     var inCone = Seeker.InCone(origin, forward, candidate.Position, weapon.LockConeCos, weapon.LockRange, out var distance, out var alignment);
                     if (isCurrent)
@@ -166,6 +170,7 @@ namespace Chopper.Simulation.Combat
             var candidates = new NativeList<Candidate>(32, Allocator.Temp);
             foreach (var (targetable, pose, entity) in SystemAPI.Query<RefRO<Targetable>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
+                var team = TeamOf(ref state, entity);
                 if (SystemAPI.HasComponent<CountermeasureState>(entity))
                 {
                     var flares = SystemAPI.GetComponent<CountermeasureState>(entity);
@@ -178,6 +183,7 @@ namespace Chopper.Simulation.Combat
                             Heat = FlareFlight.Heat,
                             LockScale = targetable.ValueRO.LockScale,
                             Flares = true,
+                            Team = team,
                         });
                     if (flares.FlaresInAir || flares.DecoyRemaining > 0f) continue;
                 }
@@ -197,10 +203,14 @@ namespace Chopper.Simulation.Combat
                     Class = targetable.ValueRO.Class,
                     Heat = Seeker.Heat(targetable.ValueRO, speed, dashing),
                     LockScale = targetable.ValueRO.LockScale,
+                    Team = team,
                 });
             }
             return candidates;
         }
+
+        private byte TeamOf(ref SystemState state, Entity entity) =>
+            SystemAPI.HasComponent<Match.Team>(entity) ? SystemAPI.GetComponent<Match.Team>(entity).Value : Match.TeamRules.None;
 
         /// <summary>Nothing but the target (or nothing at all) between the seeker and the target.</summary>
         private static bool HasLineOfSight(in CollisionWorld world, Entity self, Entity target, float3 from, float3 to)

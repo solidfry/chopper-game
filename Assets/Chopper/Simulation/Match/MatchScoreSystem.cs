@@ -40,8 +40,9 @@ namespace Chopper.Simulation.Match
             var matchEntity = SystemAPI.GetSingletonEntity<MatchState>();
             var match = SystemAPI.GetComponent<MatchState>(matchEntity);
             var previousPhase = match.Phase;
-            var previousScoreA = match.ScoreA;
-            var previousScoreB = match.ScoreB;
+            // Team modes: one score per team (a baked rules singleton can arrive after OnCreate).
+            var teamCount = TeamRules.IsTeamMode(match.Mode) ? TeamRules.ClampTeamCount(rules.TeamCount) : 0;
+            if (match.TeamScores.Length != teamCount) match.TeamScores = TeamRules.Zeros(teamCount);
 
             AddJoinedPlayers(ref state, match);
             RemoveLeftPlayers(ref state);
@@ -74,9 +75,9 @@ namespace Chopper.Simulation.Match
                 var killerScore = ChangeScore(ref state, ecb, killerConnection, killer, kills: 1, deaths: 0);
                 if (TeamRules.ScoresForTeam(match.Mode, killerTeam, victimTeam))
                 {
-                    if (killerTeam == TeamRules.A) match.ScoreA++;
-                    else match.ScoreB++;
-                    var teamScore = killerTeam == TeamRules.A ? match.ScoreA : match.ScoreB;
+                    if (killerTeam > match.TeamScores.Length) continue;
+                    var teamScore = ++match.TeamScores[killerTeam - 1];
+                    Broadcast(ecb, new TeamScoreRpc { Team = killerTeam, Score = teamScore });
                     if (rules.TeamScoreLimit > 0 && teamScore >= rules.TeamScoreLimit)
                         EndMatch(ref match, rules, 0, killerTeam);
                 }
@@ -91,12 +92,20 @@ namespace Chopper.Simulation.Match
             {
                 if (match.Phase == MatchPhase.InProgress)
                 {
-                    if (TeamRules.IsTeamMode(match.Mode)) EndMatch(ref match, rules, 0, TeamRules.Leader(match.ScoreA, match.ScoreB));
+                    if (TeamRules.IsTeamMode(match.Mode)) EndMatch(ref match, rules, 0, TeamRules.Leader(match.TeamScores));
                     else EndMatch(ref match, rules, TopScorer(ref state), TeamRules.None);
                 }
                 else
                 {
-                    match = new MatchState { Phase = MatchPhase.InProgress, TimeRemaining = rules.TimeLimit, Mode = match.Mode };
+                    match = new MatchState
+                    {
+                        Phase = MatchPhase.InProgress,
+                        TimeRemaining = rules.TimeLimit,
+                        Mode = match.Mode,
+                        TeamScores = TeamRules.Zeros(teamCount),
+                    };
+                    for (var team = 1; team <= teamCount; team++)
+                        Broadcast(ecb, new TeamScoreRpc { Team = (byte)team, Score = 0 });
                     foreach (var (score, networkId, player) in SystemAPI.Query<RefRW<PlayerScore>, RefRO<PlayerId>>().WithEntityAccess())
                     {
                         score.ValueRW = default;
@@ -105,7 +114,7 @@ namespace Chopper.Simulation.Match
                 }
             }
 
-            if (match.Phase != previousPhase || match.ScoreA != previousScoreA || match.ScoreB != previousScoreB)
+            if (match.Phase != previousPhase)
                 Broadcast(ecb, ToRpc(match));
 
             SystemAPI.SetComponent(matchEntity, match);
@@ -116,19 +125,17 @@ namespace Chopper.Simulation.Match
         private void AddJoinedPlayers(ref SystemState state, in MatchState match)
         {
             var ecb = new EntityCommandBuffer(Allocator.Temp);
-            var countA = 0;
-            var countB = 0;
+            var members = TeamRules.Zeros(match.TeamScores.Length);
             foreach (var team in SystemAPI.Query<RefRO<Team>>().WithAll<PlayerId, PlayerScore>())
             {
-                if (team.ValueRO.Value == TeamRules.A) countA++;
-                else if (team.ValueRO.Value == TeamRules.B) countB++;
+                var value = team.ValueRO.Value;
+                if (value != TeamRules.None && value <= members.Length) members[value - 1]++;
             }
             foreach (var (networkId, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithNone<PlayerScore>().WithEntityAccess())
             {
                 var id = networkId.ValueRO.Value;
-                var joined = TeamRules.JoinTeam(match.Mode, countA, countB);
-                if (joined == TeamRules.A) countA++;
-                else if (joined == TeamRules.B) countB++;
+                var joined = TeamRules.JoinTeam(match.Mode, members);
+                if (joined != TeamRules.None) members[joined - 1]++;
                 ecb.AddComponent<PlayerScore>(connection);
                 ecb.AddComponent(connection, new PlayerScoreCleanup { NetworkId = id });
                 ecb.AddComponent(connection, new Team { Value = joined });
@@ -147,6 +154,8 @@ namespace Chopper.Simulation.Match
                     });
                 }
                 Send(ecb, connection, ToRpc(match));
+                for (var team = 0; team < match.TeamScores.Length; team++)
+                    Send(ecb, connection, new TeamScoreRpc { Team = (byte)(team + 1), Score = match.TeamScores[team] });
             }
             ecb.Playback(state.EntityManager);
         }
@@ -213,8 +222,7 @@ namespace Chopper.Simulation.Match
             TimeRemaining = match.TimeRemaining,
             WinnerNetworkId = match.WinnerNetworkId,
             Mode = (byte)match.Mode,
-            ScoreA = match.ScoreA,
-            ScoreB = match.ScoreB,
+            TeamCount = (byte)match.TeamScores.Length,
             WinnerTeam = match.WinnerTeam,
         };
 

@@ -24,6 +24,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _kills;
         private EntityQuery _xpAwards;
         private EntityQuery _matchStates;
+        private EntityQuery _teamScores;
         private EntityQuery _matchStats;
         private EntityQuery _remoteRockets;
         private EntityQuery _localRockets;
@@ -43,6 +44,7 @@ namespace Chopper.Presentation.Events
             _kills = Rpc<KillFeedRpc>();
             _xpAwards = Rpc<XpAwardRpc>();
             _matchStates = Rpc<MatchStateRpc>();
+            _teamScores = Rpc<TeamScoreRpc>();
             _matchStats = Rpc<MatchStatsRpc>();
             _remoteRockets = Rpc<RocketLaunchRpc>();
             _localRockets = GetEntityQuery(ComponentType.ReadOnly<LocalRocketLaunch>());
@@ -70,6 +72,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_kills);
             EntityManager.DestroyEntity(_xpAwards);
             EntityManager.DestroyEntity(_matchStates);
+            EntityManager.DestroyEntity(_teamScores);
             EntityManager.DestroyEntity(_matchStats);
             EntityManager.DestroyEntity(_remoteRockets);
             EntityManager.DestroyEntity(_localRockets);
@@ -89,11 +92,14 @@ namespace Chopper.Presentation.Events
 
             // Match state first, so scores and kills land in the right match.
             foreach (var rpc in SystemAPI.Query<RefRO<MatchStateRpc>>().WithAll<ReceiveRpcCommandRequest>())
-                events.Publish(new MatchStateChanged((MatchPhase)rpc.ValueRO.Phase, rpc.ValueRO.TimeRemaining, rpc.ValueRO.WinnerNetworkId));
+                events.Publish(new MatchStateChanged((MatchPhase)rpc.ValueRO.Phase, rpc.ValueRO.TimeRemaining, rpc.ValueRO.WinnerNetworkId,
+                    (MatchMode)rpc.ValueRO.Mode, rpc.ValueRO.TeamCount, rpc.ValueRO.WinnerTeam));
+            foreach (var rpc in SystemAPI.Query<RefRO<TeamScoreRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                events.Publish(new TeamScoreChanged(rpc.ValueRO.Team, rpc.ValueRO.Score));
             foreach (var rpc in SystemAPI.Query<RefRO<MatchStatsRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new MatchStatsReceived(rpc.ValueRO.NetworkId, rpc.ValueRO.ToStats()));
             foreach (var rpc in SystemAPI.Query<RefRO<ScoreRpc>>().WithAll<ReceiveRpcCommandRequest>())
-                events.Publish(new ScoreChanged(rpc.ValueRO.NetworkId, rpc.ValueRO.Kills, rpc.ValueRO.Deaths));
+                events.Publish(new ScoreChanged(rpc.ValueRO.NetworkId, rpc.ValueRO.Kills, rpc.ValueRO.Deaths, rpc.ValueRO.Team));
             foreach (var rpc in SystemAPI.Query<RefRO<PlayerLeftRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new PlayerLeft(rpc.ValueRO.NetworkId));
             foreach (var rpc in SystemAPI.Query<RefRO<KillFeedRpc>>().WithAll<ReceiveRpcCommandRequest>())

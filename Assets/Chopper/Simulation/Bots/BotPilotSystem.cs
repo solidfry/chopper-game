@@ -101,6 +101,7 @@ namespace Chopper.Simulation.Bots
                     OwnerId = owner.ValueRO.NetworkId,
                     Position = pose.ValueRO.Position,
                     Health01 = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f,
+                    Team = SystemAPI.HasComponent<Match.Team>(entity) ? SystemAPI.GetComponent<Match.Team>(entity).Value : Match.TeamRules.None,
                 });
             }
             var missiles = new NativeList<BotMissileInfo>(4, Allocator.Temp);
