@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Chopper.Presentation.Effects;
 using Chopper.Simulation.Visuals;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -1062,6 +1063,75 @@ namespace Chopper.Editor.Setup
             renderer.receiveShadows = false;
             renderer.sortMode = ParticleSystemSortMode.Distance;
             renderer.maxParticleSize = 4f;
+            SmokeSheet.Apply(system);
+
+            // Heat shimmer stays one thin layer; steam, vents and smoke get a dense billowing base at the outlet.
+            if (look.Kind != "heat") MakePlumeBase(go, look, radius, material);
+        }
+
+        /// <summary>
+        /// The thick part right at the outlet: short-lived, denser, faster puffs that roll as they leave, under the long
+        /// soft column (real steam is opaque where it leaves the pipe and thins out higher up). Child of the plume.
+        /// </summary>
+        private static void MakePlumeBase(GameObject parent, PlumeLook look, float radius, Material material)
+        {
+            var go = new GameObject("Base");
+            go.transform.SetParent(parent.transform, false);
+            var system = go.AddComponent<ParticleSystem>();
+            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = system.main;
+            main.loop = true;
+            main.prewarm = true;
+            main.playOnAwake = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = Mathf.Max(12, look.MaxParticles / 3);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.6f, 2.8f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(look.Speed.x * 1.4f, look.Speed.y * 1.8f);
+            var size = Mathf.Max(look.MinSize * 0.6f, radius * 1.1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(size * 0.7f, size * 1.2f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            var dense = new Color(look.Colour.r, look.Colour.g, look.Colour.b, Mathf.Min(0.9f, look.Colour.a * 1.5f));
+            main.startColor = new ParticleSystem.MinMaxGradient(dense, dense * new Color(0.92f, 0.92f, 0.92f, 0.85f));
+
+            var emission = system.emission;
+            emission.rateOverTime = Mathf.Max(look.MinRate * 2f, radius * look.RatePerMetre * 2.5f);
+
+            var shape = system.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 10f;
+            shape.radius = radius * 0.8f;
+
+            var noise = system.noise;
+            noise.enabled = true;
+            noise.strength = new ParticleSystem.MinMaxCurve(1.1f);
+            noise.frequency = 0.5f;
+            noise.scrollSpeed = 0.6f;
+            noise.damping = true;
+
+            var growth = system.sizeOverLifetime;
+            growth.enabled = true;
+            growth.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 0.6f, 1f, 1.8f));
+
+            var fade = new Gradient();
+            fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.1f), new GradientAlphaKey(0.6f, 0.6f), new GradientAlphaKey(0f, 1f) });
+            var colourOverLifetime = system.colorOverLifetime;
+            colourOverLifetime.enabled = true;
+            colourOverLifetime.color = new ParticleSystem.MinMaxGradient(fade);
+
+            var rotation = system.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.8f, 0.8f);
+            SmokeSheet.Apply(system);
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortMode = ParticleSystemSortMode.Distance;
+            renderer.maxParticleSize = 3f;
         }
 
         /// <summary>Plumes: URP Particles Simple Lit (lit by the city lights), transparent alpha blend, Unity's soft round
@@ -1071,7 +1141,18 @@ namespace Chopper.Editor.Setup
         {
             var path = PlumeMaterialPath(look.Kind);
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material != null) return material;
+            if (material != null)
+            {
+                // Repair (18 Nov 2026): the shared smoke flipbook instead of the round blob, and the glow kept on.
+                var sheet = EffectsAssets.EnsureSmokeSheet();
+                if (sheet != null && material.GetTexture("_BaseMap") != sheet)
+                {
+                    material.SetTexture("_BaseMap", sheet);
+                    EditorUtility.SetDirty(material);
+                }
+                EffectsAssets.Emissive(material);
+                return material;
+            }
             var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null)
             {
@@ -1079,7 +1160,7 @@ namespace Chopper.Editor.Setup
                 return null;
             }
             material = new Material(shader) { name = $"CityPlume_{look.Kind}" };
-            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetTexture("_BaseMap", EffectsAssets.EnsureSmokeSheet());
             material.SetColor("_BaseColor", Color.white);
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 0f);

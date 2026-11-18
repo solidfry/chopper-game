@@ -117,6 +117,8 @@ namespace Chopper.Presentation.Effects
         private Material damageSparkMaterial;
         [SerializeField, Tooltip("Alpha-blend particle material for damage smoke (URP Particles Simple Lit). Empty: no smoke.")]
         private Material damageSmokeMaterial;
+        [SerializeField, Tooltip("Additive material for damage flames, with a 4 x 4 fireball flipbook. Empty: the spark material.")]
+        private Material damageFlameMaterial;
         [SerializeField, Tooltip("Sparks per point of damage in one hit; the count is kept inside Spark Count.")]
         private float sparksPerDamage = 1.5f;
         [SerializeField, Tooltip("Least and most sparks for one hit.")]
@@ -214,6 +216,9 @@ namespace Chopper.Presentation.Effects
         public Color BoostTrailColour => boostTrailColour;
         public Material DamageSparkMaterial => damageSparkMaterial;
         public Material DamageSmokeMaterial => damageSmokeMaterial;
+        public Material DamageFlameMaterial => damageFlameMaterial != null ? damageFlameMaterial : damageSparkMaterial;
+        /// <summary>The flames have their own (flipbook) material.</summary>
+        public bool FlameFlipbook => damageFlameMaterial != null;
         public float SparksPerDamage => sparksPerDamage;
         public Vector2Int SparkCount => sparkCount;
         public float SparkSpeed => sparkSpeed;
@@ -281,8 +286,9 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: fills empty damage material slots.</summary>
-        public void FillDamage(Material sparks, Material smoke)
+        public void FillDamage(Material sparks, Material smoke, Material flames)
         {
+            if (damageFlameMaterial == null) damageFlameMaterial = flames;
             if (damageSparkMaterial == null) damageSparkMaterial = sparks;
             if (damageSmokeMaterial == null) damageSmokeMaterial = smoke;
         }

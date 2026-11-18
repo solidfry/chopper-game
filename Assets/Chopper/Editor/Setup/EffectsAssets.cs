@@ -32,7 +32,7 @@ namespace Chopper.Editor.Setup
                 // Repair: fill slots added after the asset was made (guided missiles, flares).
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillDownwash(EnsureDownwashMaterial());
-                settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial());
+                settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 DressExhaustSmoke();
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
@@ -48,7 +48,7 @@ namespace Chopper.Editor.Setup
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             settings.FillDownwash(EnsureDownwashMaterial());
-            settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial());
+            settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
@@ -177,12 +177,58 @@ namespace Chopper.Editor.Setup
             return material;
         }
 
-        /// <summary>Damage sparks and flames: URP Particles Unlit, additive, HDR base colour (about 4x) so bloom
-        /// catches them. Made once.</summary>
+        private const string FlameMaterialPath = "Assets/Chopper/Data/Effects/DamageFlames.mat";
+        private const string SciFiTextures = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Textures/";
+        /// <summary>Spark streak (a soft teardrop, stretched along the spark's flight) from the Sci-Fi Arsenal pack.</summary>
+        private const string SparkTexture = SciFiTextures + "bullet_modular.png";
+        /// <summary>Fireball flipbook (4 x 4, played through) from the Sci-Fi Arsenal pack, white so the particle tints it.</summary>
+        private const string FlameTexture = SciFiTextures + "fire4x4_modular.png";
+
+        /// <summary>
+        /// The pack texture, or Unity's round blob only if the pack is missing (owner rule, 18 Nov 2026: never use the
+        /// default particle when the project has a proper one; a warning says when it falls back).
+        /// </summary>
+        private static Texture2D PackTexture(string path)
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture != null) return texture;
+            Debug.LogWarning($"Combat effects: no texture at {path} (Sci-Fi Arsenal pack missing?); using Unity's default particle.");
+            return AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd");
+        }
+
+        /// <summary>Repair: an existing material that still has the round blob gets the pack texture.</summary>
+        private static void UsePackTexture(Material material, string path)
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null || material.GetTexture("_BaseMap") == texture) return;
+            material.SetTexture("_BaseMap", texture);
+            EditorUtility.SetDirty(material);
+        }
+
+        /// <summary>Damage flames: the spark material's look (Unlit, additive, HDR) on the pack's fireball flipbook.</summary>
+        private static Material EnsureFlameMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(FlameMaterialPath);
+            if (material != null) return material;
+            var sparks = EnsureSparkMaterial();
+            if (sparks == null) return null;
+            material = new Material(sparks) { name = "DamageFlames" };
+            material.SetTexture("_BaseMap", PackTexture(FlameTexture));
+            material.SetColor("_BaseColor", new Color(3f, 1.9f, 0.9f, 1f));
+            material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 1f, 0f, 0f));
+            return Save(material, FlameMaterialPath, emission: false);
+        }
+
+        /// <summary>Damage sparks: URP Particles Unlit, additive, HDR base colour (about 4x) so bloom catches them, the
+        /// pack's streak texture. Made once (an old one is repaired to the streak).</summary>
         private static Material EnsureSparkMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(SparkMaterialPath);
-            if (material != null) return material;
+            if (material != null)
+            {
+                UsePackTexture(material, SparkTexture);
+                return material;
+            }
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null)
             {
@@ -190,7 +236,7 @@ namespace Chopper.Editor.Setup
                 return null;
             }
             material = new Material(shader) { name = "DamageSparks" };
-            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetTexture("_BaseMap", PackTexture(SparkTexture));
             material.SetColor("_BaseColor", new Color(4f, 2.6f, 1.2f, 1f));
             // Transparent, additive (Blend 2), no depth write, soft particles.
             material.SetFloat("_Surface", 1f);
@@ -432,7 +478,7 @@ namespace Chopper.Editor.Setup
             EditorUtility.SetDirty(material);
         }
 
-        private static void Emissive(Material material)
+        internal static void Emissive(Material material)
         {
             if (material.globalIlluminationFlags == MaterialGlobalIlluminationFlags.RealtimeEmissive && material.IsKeywordEnabled("_EMISSION")) return;
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;

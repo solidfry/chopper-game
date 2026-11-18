@@ -503,8 +503,20 @@ namespace Chopper.Presentation.Effects
             {
                 _sparks = Create("Sparks", settings.DamageSparkMaterial, 1500, ParticleSystemRenderMode.Stretch, gravity: 1f,
                     Fade(new Color(1f, 0.95f, 0.75f), new Color(1f, 0.45f, 0.1f), 0.7f), grow: 0.6f, drag: 0.02f);
-                _flames = Create("Flames", settings.DamageSparkMaterial, 600, ParticleSystemRenderMode.Billboard, gravity: -0.2f,
+                _flames = Create("Flames", settings.DamageFlameMaterial, 600, ParticleSystemRenderMode.Billboard, gravity: -0.2f,
                     Fade(new Color(1f, 0.75f, 0.3f), new Color(0.9f, 0.2f, 0.05f), 0.25f), grow: 1.6f, drag: 0.1f);
+                if (settings.FlameFlipbook)
+                {
+                    // The fireball flipbook: all 16 frames over the life (it flares, then breaks up).
+                    var sheet = _flames.textureSheetAnimation;
+                    sheet.enabled = true;
+                    sheet.mode = ParticleSystemAnimationMode.Grid;
+                    sheet.numTilesX = 4;
+                    sheet.numTilesY = 4;
+                    sheet.animation = ParticleSystemAnimationType.WholeSheet;
+                    sheet.frameOverTime = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                    sheet.cycleCount = 1;
+                }
             }
             if (settings.DamageSmokeMaterial != null)
                 _smoke = Create("Smoke", settings.DamageSmokeMaterial, 2000, ParticleSystemRenderMode.Billboard, gravity: -0.03f,

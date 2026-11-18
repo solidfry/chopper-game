@@ -110,12 +110,12 @@ namespace Chopper.Presentation.Visuals
             if (!_lightsFound && UnityEngine.Time.time >= _nextLightSearch)
             {
                 _nextLightSearch = UnityEngine.Time.time + 2f;
-                // City lights are companion objects of the SubScene (hidden): reach them through ECS, not FindObjectsByType.
-                using var entities = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<Light>()).ToEntityArray(Unity.Collections.Allocator.Temp);
-                foreach (var entity in entities)
+                // City lights are companion objects of the SubScene (hidden, so FindObjectsByType misses them). The
+                // managed component API is deprecated in 6.6; FindObjectsOfTypeAll sees hidden objects too. Skip assets
+                // (no valid scene) and switched-off lights.
+                foreach (var light in Resources.FindObjectsOfTypeAll<Light>())
                 {
-                    var light = EntityManager.GetComponentObject<Light>(entity);
-                    if (light == null) continue;
+                    if (light == null || !light.gameObject.scene.IsValid() || !light.isActiveAndEnabled) continue;
                     if (light.type != LightType.Point && light.type != LightType.Spot) continue;
                     var buto = light.GetComponent<ButoLight>();
                     if (buto == null) buto = light.gameObject.AddComponent<ButoLight>();
