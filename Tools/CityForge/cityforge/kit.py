@@ -329,8 +329,11 @@ def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0, columns_at=L01):
     # The glass core, the columns and the fins stop under the roof band (it hides them): ending at `top` put their tops
     # on the roof plane, and they z-fought with it (owner, 18 Nov 2026: white flicker on tower roofs).
     under = top - 0.9
+    # Same at the bottom: they start inside the bottom band, not on its underside (they z-fought it under overhangs,
+    # e.g. Tower_Crown's crown; owner 18 Nov 2026).
+    over = y0 + band / 4
     core = rect.inset(inset)
-    b.span(core.x0, core.x1, y0, under, core.z0, core.z1, "glass", L01)
+    b.span(core.x0, core.x1, over, under, core.z0, core.z1, "glass", L01)
     for f in range(floors + 1):
         y = y0 + f * storey
         lo, hi = (y0, y0 + band / 2) if f == 0 else ((top - 0.9, top) if f == floors else (y - band / 2, y + band / 2))
@@ -338,7 +341,7 @@ def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0, columns_at=L01):
     column = max(0.8, inset * 2)
     for x in (rect.x0 + column / 2, rect.x1 - column / 2):
         for z in (rect.z0 + column / 2, rect.z1 - column / 2):
-            b.span(x - column / 2, x + column / 2, y0, under, z - column / 2, z + column / 2, "wall", columns_at)
+            b.span(x - column / 2, x + column / 2, over, under, z - column / 2, z + column / 2, "wall", columns_at)
     _lit_strips(b, rect, y0, floors, storey, inset, band)
     return top
 
@@ -350,8 +353,8 @@ def grid(b, rect, y0, floors, storey, inset=0.35, band=0.5, fin_spacing=3.0):
         count = max(1, int(face.length // fin_spacing))
         step = face.length / count
         for i in range(1, count):
-            under = top - 0.9   # under the roof band, not on the roof plane (see ribbon)
-            b.on_face(face, i * step, (y0 + under) / 2, -inset / 2 + 0.15, 0.32, under - y0, inset + 0.3, "trim")
+            under, over = top - 0.9, y0 + band / 4   # inside the roof and bottom bands, not on their planes (see ribbon)
+            b.on_face(face, i * step, (over + under) / 2, -inset / 2 + 0.15, 0.32, under - over, inset + 0.3, "trim")
     return top
 
 
