@@ -326,8 +326,11 @@ def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0, columns_at=L01):
     stretches of window. Returns the roof height."""
     rng, style = b.rng, b.style
     top = y0 + floors * storey
+    # The glass core, the columns and the fins stop under the roof band (it hides them): ending at `top` put their tops
+    # on the roof plane, and they z-fought with it (owner, 18 Nov 2026: white flicker on tower roofs).
+    under = top - 0.9
     core = rect.inset(inset)
-    b.span(core.x0, core.x1, y0, top, core.z0, core.z1, "glass", L01)
+    b.span(core.x0, core.x1, y0, under, core.z0, core.z1, "glass", L01)
     for f in range(floors + 1):
         y = y0 + f * storey
         lo, hi = (y0, y0 + band / 2) if f == 0 else ((top - 0.9, top) if f == floors else (y - band / 2, y + band / 2))
@@ -335,7 +338,7 @@ def ribbon(b, rect, y0, floors, storey, inset=0.5, band=1.0, columns_at=L01):
     column = max(0.8, inset * 2)
     for x in (rect.x0 + column / 2, rect.x1 - column / 2):
         for z in (rect.z0 + column / 2, rect.z1 - column / 2):
-            b.span(x - column / 2, x + column / 2, y0, top, z - column / 2, z + column / 2, "wall", columns_at)
+            b.span(x - column / 2, x + column / 2, y0, under, z - column / 2, z + column / 2, "wall", columns_at)
     _lit_strips(b, rect, y0, floors, storey, inset, band)
     return top
 
@@ -347,7 +350,8 @@ def grid(b, rect, y0, floors, storey, inset=0.35, band=0.5, fin_spacing=3.0):
         count = max(1, int(face.length // fin_spacing))
         step = face.length / count
         for i in range(1, count):
-            b.on_face(face, i * step, (y0 + top) / 2, -inset / 2 + 0.15, 0.32, top - y0, inset + 0.3, "trim")
+            under = top - 0.9   # under the roof band, not on the roof plane (see ribbon)
+            b.on_face(face, i * step, (y0 + under) / 2, -inset / 2 + 0.15, 0.32, under - y0, inset + 0.3, "trim")
     return top
 
 
@@ -540,12 +544,12 @@ def helipad(b, rect, y):
     for x0, x1, z0, z1 in ((pad.x0, pad.x1, pad.z1 - edge, pad.z1), (pad.x0, pad.x1, pad.z0, pad.z0 + edge),
                            (pad.x0, pad.x0 + edge, pad.z0 + edge, pad.z1 - edge),
                            (pad.x1 - edge, pad.x1, pad.z0 + edge, pad.z1 - edge)):
-        b.span(x0, x1, deck, deck + 0.03, z0, z1, "hazard")
+        b.span(x0, x1, deck, deck + 0.03, z0, z1, "hazard")   # each marking at its own height: no z-fight
     h = size * 0.36
     bar = size * 0.07
     for dx in (-h / 2, h / 2):
-        b.span(pad.cx + dx - bar / 2, pad.cx + dx + bar / 2, deck, deck + 0.03, pad.cz - h / 2, pad.cz + h / 2, "trim", L01)
-    b.span(pad.cx - h / 2, pad.cx + h / 2, deck, deck + 0.03, pad.cz - bar / 2, pad.cz + bar / 2, "trim", L01)
+        b.span(pad.cx + dx - bar / 2, pad.cx + dx + bar / 2, deck, deck + 0.05, pad.cz - h / 2, pad.cz + h / 2, "trim", L01)
+    b.span(pad.cx - h / 2, pad.cx + h / 2, deck, deck + 0.07, pad.cz - bar / 2, pad.cz + bar / 2, "trim", L01)
     count = 3
     for i in range(count + 1):
         t = i / count

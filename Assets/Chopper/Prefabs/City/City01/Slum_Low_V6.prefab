@@ -33,7 +33,7 @@ Transform:
   - {fileID: 7726928601140414625}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1562205873715106584
+--- !u!1 &932663985655242380
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,9 +41,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6431262930367142972}
-  - component: {fileID: 8137800942561296961}
-  - component: {fileID: 4094517115486454917}
+  - component: {fileID: 4647911645277563286}
+  - component: {fileID: 232607436524023406}
+  - component: {fileID: 8033683676074283997}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -51,13 +51,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &6431262930367142972
+--- !u!4 &4647911645277563286
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1562205873715106584}
+  m_GameObject: {fileID: 932663985655242380}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.303, y: 16.946, z: -6.067}
@@ -66,13 +66,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &8137800942561296961
+--- !u!65 &232607436524023406
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1562205873715106584}
+  m_GameObject: {fileID: 932663985655242380}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -87,20 +87,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.093, y: 3.204, z: 4.633}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4094517115486454917
+--- !u!114 &8033683676074283997
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1562205873715106584}
+  m_GameObject: {fileID: 932663985655242380}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
   kind: 1
---- !u!1 &2389804029713256029
+--- !u!1 &1008454614572007437
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,9 +108,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4199301125188729710}
-  - component: {fileID: 3191996701368650276}
-  - component: {fileID: 637011411599084095}
+  - component: {fileID: 7122750412618188926}
+  - component: {fileID: 6691218114898109330}
+  - component: {fileID: 3414955553030531665}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -118,28 +118,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &4199301125188729710
+--- !u!4 &7122750412618188926
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2389804029713256029}
+  m_GameObject: {fileID: 1008454614572007437}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.599, y: 11.274, z: 6.415}
+  m_LocalPosition: {x: -7.625, y: 14.108, z: -1.957}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &3191996701368650276
+--- !u!65 &6691218114898109330
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2389804029713256029}
+  m_GameObject: {fileID: 1008454614572007437}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -152,22 +152,22 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.365, y: 2.948, z: 4.519}
+  m_Size: {x: 3.123, y: 2.902, z: 4.341}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &637011411599084095
+--- !u!114 &3414955553030531665
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2389804029713256029}
+  m_GameObject: {fileID: 1008454614572007437}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
   kind: 1
---- !u!1 &3763155092342130711
+--- !u!1 &1346749413882767807
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -175,9 +175,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7012807971262184342}
-  - component: {fileID: 4185760721131055511}
-  - component: {fileID: 1374140945099240599}
+  - component: {fileID: 4319285203771153013}
+  - component: {fileID: 624944751583019019}
+  - component: {fileID: 8134185363964178662}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -185,80 +185,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &7012807971262184342
+--- !u!4 &4319285203771153013
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3763155092342130711}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.434, y: 11.229, z: -1.079}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7726928601140414625}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &4185760721131055511
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3763155092342130711}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 5.544, y: 2.857, z: 3.125}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1374140945099240599
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3763155092342130711}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
-  kind: 1
---- !u!1 &4293779841688409328
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2589781197881842082}
-  - component: {fileID: 3941258956284398993}
-  - component: {fileID: 4359365742939630767}
-  m_Layer: 0
-  m_Name: Box
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
---- !u!4 &2589781197881842082
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4293779841688409328}
+  m_GameObject: {fileID: 1346749413882767807}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.136, y: 13.978, z: -7.361}
@@ -267,13 +200,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &3941258956284398993
+--- !u!65 &624944751583019019
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4293779841688409328}
+  m_GameObject: {fileID: 1346749413882767807}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -288,20 +221,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4.703, y: 2.733, z: 4.964}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4359365742939630767
+--- !u!114 &8134185363964178662
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4293779841688409328}
+  m_GameObject: {fileID: 1346749413882767807}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
   kind: 1
---- !u!1 &5259081402289785403
+--- !u!1 &2760678219347390494
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -309,9 +242,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 211704955341015563}
-  - component: {fileID: 3209722325593909131}
-  - component: {fileID: 566886204370789341}
+  - component: {fileID: 3064911491566772366}
+  - component: {fileID: 828243099405863108}
+  - component: {fileID: 262056671988223501}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -319,28 +252,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &211704955341015563
+--- !u!4 &3064911491566772366
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5259081402289785403}
+  m_GameObject: {fileID: 2760678219347390494}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.13, y: 4.9, z: 0}
+  m_LocalPosition: {x: -2.258, y: 11.206, z: -7.602}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &3209722325593909131
+--- !u!65 &828243099405863108
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5259081402289785403}
+  m_GameObject: {fileID: 2760678219347390494}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -353,15 +286,15 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 23, y: 9.8, z: 17}
+  m_Size: {x: 5.73, y: 2.811, z: 4.848}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &566886204370789341
+--- !u!114 &262056671988223501
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5259081402289785403}
+  m_GameObject: {fileID: 2760678219347390494}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
@@ -395,7 +328,7 @@ Transform:
   m_GameObject: {fileID: 6177307276275901843}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.258, y: 11.206, z: -7.602}
+  m_LocalPosition: {x: 0.13, y: 4.9, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -420,7 +353,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.73, y: 2.811, z: 4.848}
+  m_Size: {x: 23, y: 9.8, z: 17}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &2619549289025107203
 MonoBehaviour:
@@ -435,7 +368,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
   kind: 1
---- !u!1 &6398998287827482489
+--- !u!1 &6460735719910687829
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -443,9 +376,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4706182076286255291}
-  - component: {fileID: 5717729866374279784}
-  - component: {fileID: 4228739186210615188}
+  - component: {fileID: 7106052087779707650}
+  - component: {fileID: 9157696557947459876}
+  - component: {fileID: 8498911220576790366}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -453,28 +386,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &4706182076286255291
+--- !u!4 &7106052087779707650
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6398998287827482489}
+  m_GameObject: {fileID: 6460735719910687829}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.882, y: 14.288, z: 6.008}
+  m_LocalPosition: {x: -7.434, y: 11.229, z: -1.079}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &5717729866374279784
+--- !u!65 &9157696557947459876
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6398998287827482489}
+  m_GameObject: {fileID: 6460735719910687829}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -487,15 +420,15 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.974, y: 3.08, z: 3.442}
+  m_Size: {x: 5.544, y: 2.857, z: 3.125}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &4228739186210615188
+--- !u!114 &8498911220576790366
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6398998287827482489}
+  m_GameObject: {fileID: 6460735719910687829}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
@@ -531,18 +464,18 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 211704955341015563}
   - {fileID: 3783721029869547994}
-  - {fileID: 6805439438942535228}
-  - {fileID: 4199301125188729710}
-  - {fileID: 7012807971262184342}
-  - {fileID: 2589781197881842082}
-  - {fileID: 7146912870806945469}
-  - {fileID: 4706182076286255291}
-  - {fileID: 6431262930367142972}
+  - {fileID: 3064911491566772366}
+  - {fileID: 2104920532988451551}
+  - {fileID: 345726181791132447}
+  - {fileID: 7106052087779707650}
+  - {fileID: 4319285203771153013}
+  - {fileID: 7122750412618188926}
+  - {fileID: 3813942659645951754}
+  - {fileID: 4647911645277563286}
   m_Father: {fileID: 7893176517292104917}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &6794281643324118012
+--- !u!1 &7202764394358878172
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -550,9 +483,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6805439438942535228}
-  - component: {fileID: 7333640459977877779}
-  - component: {fileID: 5760267499226687641}
+  - component: {fileID: 2104920532988451551}
+  - component: {fileID: 4643196765321645125}
+  - component: {fileID: 6329734023075948169}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -560,13 +493,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &6805439438942535228
+--- !u!4 &2104920532988451551
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6794281643324118012}
+  m_GameObject: {fileID: 7202764394358878172}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 9.206, y: 11.364, z: -3.748}
@@ -575,13 +508,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &7333640459977877779
+--- !u!65 &4643196765321645125
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6794281643324118012}
+  m_GameObject: {fileID: 7202764394358878172}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -596,20 +529,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 5.871, y: 3.129, z: 4.383}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &5760267499226687641
+--- !u!114 &6329734023075948169
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6794281643324118012}
+  m_GameObject: {fileID: 7202764394358878172}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
   kind: 1
---- !u!1 &9126727729175193794
+--- !u!1 &8440448713647454183
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -617,9 +550,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7146912870806945469}
-  - component: {fileID: 7114077330261267662}
-  - component: {fileID: 6530342084903832313}
+  - component: {fileID: 3813942659645951754}
+  - component: {fileID: 3123370291340435192}
+  - component: {fileID: 1668591424637240703}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -627,28 +560,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
   m_IsActive: 1
---- !u!4 &7146912870806945469
+--- !u!4 &3813942659645951754
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9126727729175193794}
+  m_GameObject: {fileID: 8440448713647454183}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.625, y: 14.108, z: -1.957}
+  m_LocalPosition: {x: -5.882, y: 14.288, z: 6.008}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7726928601140414625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &7114077330261267662
+--- !u!65 &3123370291340435192
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9126727729175193794}
+  m_GameObject: {fileID: 8440448713647454183}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -661,15 +594,82 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.123, y: 2.902, z: 4.341}
+  m_Size: {x: 5.974, y: 3.08, z: 3.442}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &6530342084903832313
+--- !u!114 &1668591424637240703
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9126727729175193794}
+  m_GameObject: {fileID: 8440448713647454183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Chopper.Simulation::Chopper.Simulation.Visuals.SurfaceAuthoring
+  kind: 1
+--- !u!1 &9179371217603107249
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 345726181791132447}
+  - component: {fileID: 962683764662490051}
+  - component: {fileID: 7617244319195796451}
+  m_Layer: 0
+  m_Name: Box
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!4 &345726181791132447
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9179371217603107249}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5.599, y: 11.274, z: 6.415}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7726928601140414625}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &962683764662490051
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9179371217603107249}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 5.365, y: 2.948, z: 4.519}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7617244319195796451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9179371217603107249}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e4b085932364e14abe0ba3e2bb4fc47, type: 3}
