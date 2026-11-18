@@ -33,7 +33,9 @@ namespace Chopper.Presentation.Visuals
             public Color AmbientEquator = new(0.05f, 0.045f, 0.045f);
             public Color AmbientGround = new(0.03f, 0.025f, 0.02f);
             [Tooltip("Camera background behind the backdrop (no sky box yet).")] public Color Background = new(0.03f, 0.03f, 0.045f);
-            [Tooltip("Planned: x the map's height fog colour.")] public Color FogTint = Color.white;
+            [Tooltip("x the map's height fog colour (city fog pass).")] public Color FogTint = Color.white;
+            [Tooltip("How much the fog low down takes the map's glow colour (city neon from below): 1 at night, low by day.")]
+            [Range(0f, 1f)] public float FogGlow = 1f;
             [Tooltip("Planned: street lamps, floodlights and window glow on.")] public bool CityLights = true;
         }
 
@@ -41,8 +43,8 @@ namespace Chopper.Presentation.Visuals
         public sealed class WeatherLook
         {
             public Weather Weather = Weather.Clear;
-            [Tooltip("Planned: x the map's height fog density.")] [Min(0f)] public float FogDensityScale = 1f;
-            [Tooltip("Planned: fog colour this weather pulls towards; alpha = how much.")] public Color FogColour = new(0f, 0f, 0f, 0f);
+            [Tooltip("x the map's height fog density (city fog pass).")] [Min(0f)] public float FogDensityScale = 1f;
+            [Tooltip("Fog colour this weather pulls towards; alpha = how much (city fog pass).")] public Color FogColour = new(0f, 0f, 0f, 0f);
             [Tooltip("Planned: wet ground and puddles (0 = dry).")] [Range(0f, 1f)] public float Wetness;
             [Tooltip("Planned: particles that follow the camera (rain, sand, snow, ash). Empty = none.")] public GameObject Effect;
         }

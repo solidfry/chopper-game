@@ -58,6 +58,7 @@ STYLES = {
         # 330 m), a tower core, packed lots.
         layout=dict(
             city=(1700.0, 1360.0), fill=24, gap=4.0, pack=True, tower_scale=(1.4, 3.2),
+            spacing=(170.0, 160.0, 120.0, 90.0),   # wide core blocks: room for the colossus towers (owner, 18 Nov 2026)
             variants={"tower": 14, "block": 8, "slum": 6, "industrial": 3},
             zones=[(0.4, 3000.0, (("tower", 1.0),)),
                    (0.7, 3400.0, (("tower", 0.7), ("block", 0.3))),
@@ -115,7 +116,7 @@ STYLES = {
             # to 3.2 times taller (about 80 to 330 m); the refinery moves to the outer rings.
             tower_scale=(1.4, 3.2),
             # Refinery plots are big: wider street spacing and bigger lots outside the core.
-            spacing=(118.0, 140.0, 150.0, 120.0),
+            spacing=(165.0, 155.0, 150.0, 120.0),   # core 118 -> 165: room for the colossus towers (owner, 18 Nov 2026)
             zones=[(0.45, 3200.0, (("tower", 1.0),)),
                    (0.75, 3800.0, (("tower", 0.8), ("block", 0.1), ("industrial", 0.1))),
                    (0.92, 4800.0, (("industrial", 0.6), ("tower", 0.25), ("slum", 0.1), ("block", 0.05))),

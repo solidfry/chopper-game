@@ -13,7 +13,9 @@ namespace Chopper.Presentation.Visuals
     /// Hands them to the scene's <see cref="EnvironmentDriver"/> (sky asset), or with none applies the plain
     /// <see cref="EnvironmentSettings"/> look: sun light colour, strength and angle, ambient trilight, camera background.
     /// Always sets the global shader values <c>_ChopperCityLights</c> (0 or 1: street lamps and window glow on) and
-    /// <c>_ChopperWetness</c> (0..1), for city and terrain shaders. In the editor, the settings' preview override wins.
+    /// <c>_ChopperWetness</c> (0..1), for city and terrain shaders, and the city fog's conditions (<c>_CityFogEnvTint</c>,
+    /// <c>_CityFogEnvColour</c>, <c>_CityFogEnvGlow</c>: time tint and glow, weather density and colour; see
+    /// CityHeightFog.shader). In the editor, the settings' preview override wins.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -21,6 +23,9 @@ namespace Chopper.Presentation.Visuals
     {
         private static readonly int CityLightsId = Shader.PropertyToID("_ChopperCityLights");
         private static readonly int WetnessId = Shader.PropertyToID("_ChopperWetness");
+        private static readonly int FogTintId = Shader.PropertyToID("_CityFogEnvTint");
+        private static readonly int FogColourId = Shader.PropertyToID("_CityFogEnvColour");
+        private static readonly int FogGlowId = Shader.PropertyToID("_CityFogEnvGlow");
 
         private EnvironmentDriver _driver;
         private UnityEngine.SceneManagement.Scene _scene;
@@ -78,6 +83,21 @@ namespace Chopper.Presentation.Visuals
 
             Shader.SetGlobalFloat(CityLightsId, timeLook == null || timeLook.CityLights ? 1f : 0f);
             Shader.SetGlobalFloat(WetnessId, weatherLook != null ? weatherLook.Wetness : 0f);
+            ApplyFog(timeLook, weatherLook);
+        }
+
+        /// <summary>The city fog's conditions: the time of day tints it and sets how much neon glow it takes, the weather
+        /// scales its density and pulls its colour. y of <c>_CityFogEnvGlow</c> = 1 marks them set (the shader ignores
+        /// them while it is 0, outside matches).</summary>
+        private static void ApplyFog(EnvironmentSettings.TimeOfDayLook timeLook, EnvironmentSettings.WeatherLook weatherLook)
+        {
+            var tint = timeLook != null ? timeLook.FogTint.linear : Color.white;
+            var density = weatherLook != null ? weatherLook.FogDensityScale : 1f;
+            var colour = weatherLook != null ? weatherLook.FogColour : new Color(0f, 0f, 0f, 0f);
+            var linear = colour.linear;
+            Shader.SetGlobalVector(FogTintId, new Vector4(tint.r, tint.g, tint.b, density));
+            Shader.SetGlobalVector(FogColourId, new Vector4(linear.r, linear.g, linear.b, Mathf.Clamp01(colour.a)));
+            Shader.SetGlobalVector(FogGlowId, new Vector4(timeLook != null ? timeLook.FogGlow : 1f, 1f, 0f, 0f));
         }
 
         /// <summary>No sky asset: the scene's sun and ambient light from the look (as Setup step 10 bakes them).</summary>

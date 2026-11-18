@@ -86,8 +86,9 @@ def variant_specs(base_specs=None, variants=None, seed=11, tower_scale=(0.7, 1.3
                 spec["facade"] = rng.choice(("ribbon", "grid"))
                 spec["crown"] = rng.choice(("pad", "antennas", "sign", "spire"))
                 spec["neon_colour"] = rng.choice(("neon_cyan", "neon_pink"))
-                spec["strips"] = rng.choice((0, 2, 3, 4)) if base.get("strips") is None else max(1, base["strips"] + rng.choice((-1, 0, 1)))
-                spec["bands"] = rng.choice((0, 0, 6, 9))
+                spec["strips"] = rng.choice((0, 0, 2, 3)) if base.get("strips") is None else max(1, base["strips"] + rng.choice((-2, -1, 0)))
+                # Strips or bands, never both: together they caged the towers in a cyan grid (18 Nov 2026).
+                spec["bands"] = 0 if spec["strips"] else rng.choice((0, 9, 12))
                 spec["screen"] = [rng.randrange(len(spec["tiers"])), rng.choice(("front", "left", "right"))] \
                     if rng.random() < 0.45 else None
             elif kind == "block":
@@ -378,6 +379,9 @@ class Layout:
                 if not self.ring_area.buffer(140).contains(block.centroid):
                     continue
                 fit = self._fit(spec, block, rng, near_centre=True)
+                # Landmarks are 300-550 m tall: never under the sky-road loop (wide core blocks put two there).
+                if fit and fit[2].intersects(self.sky_band):
+                    fit = None
                 if fit:
                     yaw, centre, shape = fit
                     self._place(spec, yaw, centre, shape)

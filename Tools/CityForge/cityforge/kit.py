@@ -593,13 +593,16 @@ def roof_sign(b, rect, y, width=None, height=None):
     b.collider(rect.cx - width / 2, rect.cx + width / 2, y0, y1, z - 0.25, z + 0.35)
 
 
-def dress_roof(b, rect, y, blocked=(), density=1.0, kinds=("vent", "ac", "vent", "ac", "hut"), margin=1.0):
-    """Scatter roof props over a flat roof, clear of the blocked rectangles."""
+def dress_roof(b, rect, y, blocked=(), density=1.0, kinds=("vent", "ac", "vent", "ac", "hut"), margin=1.0, most=None):
+    """Scatter roof props over a flat roof, clear of the blocked rectangles. most: cap on the count (the count grows
+    with the roof area; wide tower roofs got ~100 small boxes: clutter and triangles, owner 18 Nov 2026)."""
     rng = b.rng
     placer = Placer(rng, rect, margin)
     for other in blocked:
         placer.block(other)
     count = int(rect.w * rect.d / 55 * density * b.style["props"])
+    if most is not None:
+        count = min(count, most)
     huts = 0
     for _ in range(count):
         kind = rng.choice(kinds)

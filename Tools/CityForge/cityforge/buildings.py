@@ -65,7 +65,9 @@ def tower(b):
             zone = None if spec["crown"] == "pad" else kit.roof_zone(b, rect.inset(0.4), top, blocked)
             if zone:
                 blocked.append(zone)
-        placer = kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.8)
+        # Few, bigger props: towers are seen from above and far away (top roof 6, step roofs 3).
+        placer = kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.8, kinds=("ac", "hut", "tank", "ac"),
+                                most=6 if upper is None else 3)
         if upper is None:
             _roof_steam(b, placer, top, 2 if rect.w * rect.d > 1500.0 else 1)
         y = top
@@ -158,7 +160,7 @@ def _megatower(b, tiers, podium, every, neon, crown, street=("front", "left", "r
         blocked = [upper.inset(-1.0)] if upper else []
         if upper is None:
             blocked += _mega_crown(b, rect, top, crown)
-        kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.6)
+        kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.6, kinds=("ac", "hut", "tank", "ac"), most=5)
         info.append((rect, y, top, floors))
         y = top
     return info

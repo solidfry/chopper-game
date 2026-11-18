@@ -38,13 +38,17 @@ BUILDINGS = [
          tiers=[(1.0, 1.0, 14, 0, 0), (0.72, 0.72, 6, 0.08, 0.08)]),
     # Wide masses (owner, 18 Nov 2026: "some buildings are very large in width and height"): a sheer monolith, a thin
     # shaft under a wider overhanging crown, a stepped block with offset tiers.
-    dict(name="Tower_Monolith", type="tower", seed=105, plot=(62, 40), podium=8.0, facade="grid", crown="antennas",
-         tiers=[(1.0, 1.0, 24, 0, 0), (0.9, 0.86, 4, 0, 0)], strips=4, bands=0, screen=[0, "front"]),
-    dict(name="Tower_Crown", type="tower", seed=106, plot=(50, 50), podium=7.0, facade="ribbon", crown="pad",
-         tiers=[(0.6, 0.6, 22, 0, 0), (1.0, 1.0, 5, 0, 0), (0.7, 0.7, 3, 0, 0)], strips=2, bands=6),
-    dict(name="Tower_Stepped", type="tower", seed=107, plot=(56, 56), podium=7.0, facade="grid", crown="spire",
-         tiers=[(1.0, 1.0, 10, 0, 0), (0.8, 0.74, 10, 0.08, -0.1), (0.62, 0.56, 10, -0.1, 0.06),
-                (0.42, 0.4, 8, 0.05, 0.08)], strips=3, bands=0, screen=[1, "left"]),
+    dict(name="Tower_Monolith", type="tower", seed=105, plot=(86, 56), podium=9.0, facade="grid", crown="antennas",
+         tiers=[(1.0, 1.0, 30, 0, 0), (0.9, 0.86, 5, 0, 0)], strips=3, bands=0, screen=[0, "front"]),
+    dict(name="Tower_Crown", type="tower", seed=106, plot=(70, 70), podium=8.0, facade="ribbon", crown="pad",
+         tiers=[(0.6, 0.6, 28, 0, 0), (1.0, 1.0, 6, 0, 0), (0.7, 0.7, 4, 0, 0)], strips=0, bands=8),
+    dict(name="Tower_Stepped", type="tower", seed=107, plot=(78, 78), podium=8.0, facade="grid", crown="spire",
+         tiers=[(1.0, 1.0, 12, 0, 0), (0.8, 0.74, 12, 0.08, -0.1), (0.62, 0.56, 12, -0.1, 0.06),
+                (0.42, 0.4, 10, 0.05, 0.08)], strips=3, bands=0, screen=[1, "left"]),
+    # The biggest: a city-block colossus (owner, 18 Nov 2026: "even bigger towers would be awesome").
+    dict(name="Tower_Colossus", type="tower", seed=108, plot=(100, 72), podium=10.0, facade="grid", crown="antennas",
+         tiers=[(1.0, 1.0, 26, 0, 0), (0.86, 0.8, 14, -0.04, 0.03), (0.6, 0.5, 8, 0.1, 0)], strips=4, bands=0,
+         screen=[1, "front"]),
     # -- megatowers: the cyberpunk skyline, 300 to 550 m; pads high up the walls ---------------------------------------
     dict(name="Mega_Arcology", type="mega", seed=501, plot=(64, 64), podium=10.0, crown="spire", lobby_every=20,
          tiers=[(1.0, 1.0, 24, 0, 0, "ribbon"), (0.86, 0.86, 30, 0, 0, "grid"), (0.72, 0.72, 32, 0, 0, "ribbon"),
