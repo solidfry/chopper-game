@@ -36,6 +36,8 @@ namespace Chopper.Presentation.Visuals
         private float _nextLightPick;
         private bool _lightsFound;
         private float _nextLightSearch;
+        private RenderTexture _emptyShadowmap;
+        private static readonly int MainLightShadowmapId = Shader.PropertyToID("_MainLightShadowmapTexture");
 
         protected override void OnUpdate()
         {
@@ -57,6 +59,12 @@ namespace Chopper.Presentation.Visuals
         protected override void OnDestroy()
         {
             Off();
+            if (_emptyShadowmap != null)
+            {
+                _emptyShadowmap.Release();
+                Object.Destroy(_emptyShadowmap);
+                _emptyShadowmap = null;
+            }
             base.OnDestroy();
         }
 
@@ -70,6 +78,17 @@ namespace Chopper.Presentation.Visuals
             volume.isGlobal = true;
             volume.priority = 50f;
             volume.sharedProfile = _profile;
+
+            // Buto's LightingSampler compute reads the main light shadow map. When URP draws no main light shadows
+            // (quality level or light without shadows; seen 18 Nov 2026 in the Windows build), nothing binds it and the
+            // dispatch logs "Property (_MainLightShadowmapTexture) ... is not set" every frame. A 1x1 shadow map as the
+            // global fallback: URP's own binding replaces it whenever it draws shadows.
+            if (_emptyShadowmap == null)
+            {
+                _emptyShadowmap = new RenderTexture(1, 1, 16, RenderTextureFormat.Shadowmap) { name = "Chopper Buto empty shadowmap" };
+                _emptyShadowmap.Create();
+            }
+            Shader.SetGlobalTexture(MainLightShadowmapId, _emptyShadowmap);
         }
 
         private void Apply(EnvironmentSettings.VolumetricFogLook look, in CityAtmosphere atmosphere)
