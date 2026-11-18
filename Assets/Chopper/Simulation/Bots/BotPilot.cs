@@ -138,7 +138,8 @@ namespace Chopper.Simulation.Bots
 
             // Collective: climb rate error -> vertical acceleration along the (tilted) rotor axis.
             var up = math.mul(sense.Rotation, worldUp);
-            var upright = math.max(math.dot(up, worldUp), MinUpright);
+            var axis = math.normalizesafe(math.lerp(up, worldUp, math.saturate(flight.CollectiveLevel)), up);
+            var upright = math.max(math.dot(axis, worldUp), MinUpright);
             var vertical = (desired.y - sense.Velocity.y) * handling.VerticalGain;
             var thrust = vertical >= 0f
                 ? vertical / math.max(flight.CollectiveUp * upright, 0.1f)

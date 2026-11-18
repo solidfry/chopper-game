@@ -50,6 +50,8 @@ namespace Chopper.Simulation.Flight
 
         /// <summary>How fast the rotor spools to the collective input (1/s). Lower = heavier, higher = snappier.</summary>
         public float CollectiveResponse;
+        /// <summary>0..1: turns the collective push from the rotor axis towards world up (see FlightTuning).</summary>
+        public float CollectiveLevel;
         /// <summary>Part of the hover lift dropped while diving (Ctrl), 0..1.</summary>
         public float DiveLiftCut;
         /// <summary>Rotor spool rate while diving (1/s).</summary>

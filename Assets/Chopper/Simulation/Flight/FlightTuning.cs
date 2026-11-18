@@ -18,6 +18,10 @@ namespace Chopper.Simulation.Flight
         public float CollectiveDown = 18f;
         [Tooltip("How fast the rotor spools to the W/S input (1/s). Lower = heavier, higher = snappier.")]
         public float CollectiveResponse = 6f;
+        [Range(0f, 1f), Tooltip("Turns the W/S push from the rotor axis towards world up. 0 = along the rotor (nose down: " +
+                                "W mostly pushes forward). 1 = W always climbs straight up, at any tilt. Higher = climb and " +
+                                "stop a sink while aiming ahead.")]
+        public float CollectiveLevel;
 
         [Header("Dive (Ctrl, held)")]
         [Range(0f, 1f), Tooltip("Part of the hover lift the rotor drops while diving. 1 = falls at full gravity, plus the S sink.")]

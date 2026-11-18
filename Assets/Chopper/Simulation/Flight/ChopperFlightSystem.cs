@@ -117,7 +117,10 @@ namespace Chopper.Simulation.Flight
                 state.Collective += (thrust - state.Collective) * (1f - math.exp(-spool * DeltaTime));
                 var spooled = state.Collective;
                 var collective = spooled >= 0f ? spooled * config.CollectiveUp : spooled * config.CollectiveDown;
-                velocity.Linear += up * (collective * DeltaTime);
+                // CollectiveLevel turns the push towards world up: W still climbs with the nose down to aim (owner,
+                // 18 Nov 2026: "the ascend feels too weak when I'm aiming ahead").
+                var collectiveAxis = math.normalizesafe(math.lerp(up, worldUp, math.saturate(config.CollectiveLevel)), up);
+                velocity.Linear += collectiveAxis * (collective * DeltaTime);
 
                 var endless = AbilityConfigs.TryGetComponent(entity, out var abilityConfig) &&
                               AbilityStates.TryGetComponent(entity, out var abilityState) &&
