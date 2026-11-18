@@ -210,6 +210,13 @@ namespace Chopper.Presentation.Bridge
         public bool CanOpenHangar => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != HangarStage.SceneName &&
                                      Application.CanStreamedLevelBeLoaded(HangarStage.SceneName);
 
+        /// <summary>
+        /// Test windows (<c>-autoMatch</c> or <c>-join IP:PORT</c>): the home screen goes straight on to the hangar,
+        /// where <see cref="HangarStage"/> starts the search or the join.
+        /// </summary>
+        public bool TestAutoStart => Simulation.Session.ServerArgs.Flag("-autoMatch") ||
+                                     !string.IsNullOrEmpty(Simulation.Session.ServerArgs.String("-join"));
+
         /// <summary>Leaves the match (<see cref="Simulation.Session.LocalSession.Stop"/>) and loads the hangar.</summary>
         public void OpenHangar()
         {

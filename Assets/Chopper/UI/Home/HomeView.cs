@@ -151,7 +151,11 @@ namespace Chopper.UI.Home
             _bootText = string.Join("\n", BootLines);
             _renderer = GetComponent<PanelRenderer>();
             _renderer.RegisterUIReloadCallback(OnUIReload);
+            if (_context.TestAutoStart) Invoke(nameof(OpenHangar), TestAutoStartDelay);
         }
+
+        /// <summary>Seconds on the home screen before a test window (<c>-autoMatch</c>, <c>-join</c>) goes to the hangar.</summary>
+        private const float TestAutoStartDelay = 2f;
 
         private void OnDisable()
         {
