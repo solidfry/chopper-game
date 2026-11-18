@@ -19,6 +19,10 @@ namespace Chopper.Simulation.Match
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct MatchScoreSystem : ISystem
     {
+        /// <summary>Seconds between two resends of the match state to everyone.</summary>
+        private const double HeartbeatSeconds = 2.0;
+        private double _nextHeartbeat;
+
         // Not Burst: the mode comes from the command line or the environment (managed).
         public void OnCreate(ref SystemState state)
         {
@@ -114,8 +118,16 @@ namespace Chopper.Simulation.Match
                 }
             }
 
-            if (match.Phase != previousPhase)
+            // On a phase change, and as a heartbeat: a client that was still loading its map when it joined missed the
+            // state sent then (seen 18 Nov 2026: a TDM match showed FREE FOR ALL on the HUD). Small RPC, every 2 s.
+            var now = SystemAPI.Time.ElapsedTime;
+            // Only with someone to send to: Netcode warns when it broadcasts with no connection (server start).
+            var anyone = !SystemAPI.QueryBuilder().WithAll<NetworkStreamConnection>().Build().IsEmpty;
+            if (anyone && (match.Phase != previousPhase || now >= _nextHeartbeat))
+            {
+                _nextHeartbeat = now + HeartbeatSeconds;
                 Broadcast(ecb, ToRpc(match));
+            }
 
             SystemAPI.SetComponent(matchEntity, match);
             ecb.Playback(state.EntityManager);
