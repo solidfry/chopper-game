@@ -25,6 +25,7 @@ namespace Chopper.Editor.Setup
         private const string ConfigPath = "Assets/Chopper/Data/NetcodeConfig.asset";
         private const int StepsPerFrame = 4;
         private const int ClientReceiveQueue = 256;
+        private const int RepeatedTickBatch = 4;
         private const string ServerExcludedBaking = "Unity.Entities.Graphics";
 
         /// <summary>
@@ -65,6 +66,14 @@ namespace Chopper.Editor.Setup
                 config.IsGlobalConfig = true;
                 AssetDatabase.CreateAsset(config, ConfigPath);
             }
+            if (config.ClientTickRate.MaxPredictionStepBatchSizeRepeatedTick < RepeatedTickBatch)
+            {
+                // Rollback re-simulation in steps of up to 4 ticks instead of 1 (client physics ran ~12 times a frame
+                // with 9 choppers in the editor profile, 18 Nov 2026). New ticks are still predicted one by one.
+                config.ClientTickRate.MaxPredictionStepBatchSizeRepeatedTick = RepeatedTickBatch;
+                EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssets();
+            }
             if (config.ClientReceiveQueueCapacity < ClientReceiveQueue)
             {
                 config.ClientReceiveQueueCapacity = ClientReceiveQueue;
@@ -100,6 +109,9 @@ namespace Chopper.Editor.Setup
                 yield return "No global Netcode config: slow frames batch server ticks. Press '1. Create / repair config'.";
             else if (config.ClientServerTickRate.MaxSimulationStepsPerFrame < 2)
                 yield return $"{config.name}: Max Simulation Steps Per Frame is 1, so every slow frame batches server ticks (set 4).";
+            if (config != null && config.ClientTickRate.MaxPredictionStepBatchSizeRepeatedTick < RepeatedTickBatch)
+                yield return $"{config.name}: prediction replays every tick one by one (client physics many times a frame); " +
+                             $"set Max Prediction Step Batch Size Repeated Tick to {RepeatedTickBatch}, or press '1. Create / repair config'.";
             if (config != null && config.ClientReceiveQueueCapacity < ClientReceiveQueue)
                 yield return $"{config.name}: Client Receive Queue Capacity is {config.ClientReceiveQueueCapacity}; a remote server " +
                              $"can overflow it while the client loads (set {ClientReceiveQueue}, or press '1. Create / repair config').";
