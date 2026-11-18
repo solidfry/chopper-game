@@ -762,6 +762,11 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
 
 - **Free For All** — port as-is (score from `Networking/ScoreManager.cs`).
 - **Team Deathmatch** — 2 teams (`Enums/Team.cs`), team spawns, friendly fire off, first to N team kills or most at time-out. Revive `TeamDataBuilder` and lobby team UI.
+  - **Build steps (18 Nov, Claude; started without asking, owner said "just roll"):** one mode value from the server to every system, no second code path.
+    1. **Simulation core.** `MatchMode` (FreeForAll, TeamDeathmatch) on `MatchState`, picked once at server start by `MatchModeSource` (`-mode tdm` arg, else env `MATCH_MODE` from the allocator, else FFA). `Team` ghost component (0 none, 1 A, 2 B) on the player entity and on the chopper ghost (re-bake). `MatchScoreSystem`: new players join the smaller team; team scores on `MatchState` (`ScoreA`, `ScoreB`), `MatchRules.TeamScoreLimit`, winner team at limit or time-out (tie = draw). `ApplyDamageSystem`: friendly fire off (same non-zero team, not self). Pure rules in `TeamRules` with EditMode tests.
+    2. **Targeting and AI.** `TargetLockSystem` and bot target choice skip team mates; spawn choice keeps distance from enemies only; `RepairDrone.PickTarget` heals an aimed team mate in range.
+    3. **Presentation.** RPCs carry team (`ScoreRpc.Team`, `MatchStateRpc` mode, team scores, winner team). `MatchHudModel` team scores and the scoreboard by team; world markers in team colours (ally Dream Cyan, enemy Lightning Yellow); results "TEAM A WINS".
+    4. **Services.** `Matchmaker/Tdm.mmq` (2 teams of 1-4), the allocator sets `MATCH_MODE` from the queue name, `GameModeCatalog` tdm Available with queue `tdm`; deploy queue and module (editor Deployment).
 - **Capture the Nuke** — 2 teams, each with a base.
   - States: `AtSpawn → Carried(team) → Dropped(30 s, then reset) → Arming(team, progress) → Armed(team) → Carried to enemy base → Detonated (round win)`.
   - **Carry:** chopper hooks nuke by winch (slung-load physics). Carrier is slower and cannot use pylons. Lifter carries faster.
