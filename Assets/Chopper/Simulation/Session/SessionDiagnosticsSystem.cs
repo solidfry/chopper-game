@@ -6,8 +6,9 @@ using UnityEngine;
 namespace Chopper.Simulation.Session
 {
     /// <summary>
-    /// Dev only. If a world has no chopper a few seconds after start, logs once what is missing on the way to a spawn
-    /// (connection, in-game state, spawner from the subscene, chopper ghost), so a failed spawn says why.
+    /// Dev only. If a world has no chopper a few seconds after its first connection goes in game, logs once what is
+    /// missing on the way to a spawn (in-game state, spawner from the subscene, chopper ghost), so a failed spawn says
+    /// why. The clock starts at in game, not at world start: a matchmade client's world waits for the Edgegap server.
     /// Server: widens Netcode's "Server Tick Batching" warning window (see <see cref="BatchWarningWindowFrames"/>) and
     /// mutes it while the match loads (<see cref="LoadGraceSeconds"/>). The global Netcode config (Setup step 1) lets
     /// the server run up to 4 full ticks in a slow frame, so batching itself is now only for a real overload.
@@ -27,6 +28,7 @@ namespace Chopper.Simulation.Session
         private const double LoadGraceSeconds = 15.0;
 
         private bool _done;
+        private double _inGameSince = -1.0;
         private bool _batchWindowSet;
         private bool _warnAfterLoad;
         private bool _loadGraceOver;
@@ -50,21 +52,28 @@ namespace Chopper.Simulation.Session
                 }
             }
 
-            if (_done || SystemAPI.Time.ElapsedTime < CheckAfterSeconds) return;
+            if (_done) return;
+            var inGame = SystemAPI.QueryBuilder().WithAll<NetworkId, NetworkStreamInGame>().Build().CalculateEntityCount();
+            var now = SystemAPI.Time.ElapsedTime;
+            if (_inGameSince < 0.0)
+            {
+                if (inGame > 0) _inGameSince = now;
+                return;
+            }
+            if (now - _inGameSince < CheckAfterSeconds) return;
             _done = true;
 
             var choppers = SystemAPI.QueryBuilder().WithAll<GhostOwner, Flight.ChopperFlightConfig>().Build().CalculateEntityCount();
             if (choppers > 0) return;
 
             var connections = SystemAPI.QueryBuilder().WithAll<NetworkId>().Build().CalculateEntityCount();
-            var inGame = SystemAPI.QueryBuilder().WithAll<NetworkId, NetworkStreamInGame>().Build().CalculateEntityCount();
             var spawners = SystemAPI.QueryBuilder().WithAll<ChopperSpawner>().Build().CalculateEntityCount();
             var prefabValid = SystemAPI.TryGetSingleton<ChopperSpawner>(out var spawner) &&
                               EntityManager.Exists(spawner.Prefab);
 
-            Debug.LogWarning($"[{World.Name}] No chopper after {CheckAfterSeconds:0} s. Connections: {connections}, " +
+            Debug.LogWarning($"[{World.Name}] No chopper {CheckAfterSeconds:0} s after going in game. Connections: {connections}, " +
                              $"in game: {inGame}, ChopperSpawner (from subscene): {spawners}, spawner prefab valid: {prefabValid}. " +
-                             "Spawner 0 = subscene not loaded or not baked (reimport it). Connections 0 = client did not connect.");
+                             "Spawner 0 = subscene not loaded or not baked (reimport it).");
         }
     }
 }
