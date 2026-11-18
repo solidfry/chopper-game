@@ -69,9 +69,13 @@ namespace Chopper.Editor.Setup
 
         /// <summary>
         /// The mode catalog with the default modes. Modes already listed keep their edits; new defaults are added.
-        /// Only Free For All exists on the server, so Quick Play and FFA join the hangar's default queue (empty
-        /// <see cref="GameModeCatalog.ModeEntry.Queue"/>); TDM and Capture the Nuke are OFFLINE until they are built.
+        /// Quick Play and FFA join the hangar's default queue (empty <see cref="GameModeCatalog.ModeEntry.Queue"/>, Free
+        /// For All); TDM joins the "tdm" queue (<c>Matchmaker/Tdm.mmq</c>: the allocator sets MATCH_MODE=tdm). Capture
+        /// the Nuke is OFFLINE until it is built.
         /// </summary>
+        /// <summary>Matchmaker queue of Team Deathmatch (the "name" in <c>Matchmaker/Tdm.mmq</c>).</summary>
+        private const string TdmQueue = "tdm";
+
         private static GameModeCatalog EnsureModes()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<GameModeCatalog>(ModesPath);
@@ -98,9 +102,17 @@ namespace Chopper.Editor.Setup
             {
                 Id = "tdm", DisplayName = "Team Deathmatch", Tagline = "Two squads, one sky",
                 Description = "Two teams with their own spawns. No friendly fire. The first team to the kill limit wins.",
-                Rules = Lines("Two teams", "Team kill limit", "No friendly fire"), Players = "2 teams", Accent = ModeAccent.Cyan,
-                Available = false,
+                Rules = Lines("Two teams", "Team kill limit", "No friendly fire"), Players = "2 teams of 1-4", Accent = ModeAccent.Cyan,
+                Available = true, Queue = TdmQueue,
             });
+            // Repair (18 Nov 2026, TDM step 4): an older catalog lists TDM as OFFLINE with no queue.
+            var tdm = catalog.Find("tdm");
+            if (tdm != null && !tdm.Available && string.IsNullOrWhiteSpace(tdm.Queue))
+            {
+                tdm.Available = true;
+                tdm.Queue = TdmQueue;
+                tdm.Players = "2 teams of 1-4";
+            }
             catalog.Add(new GameModeCatalog.ModeEntry
             {
                 Id = "ctn", DisplayName = "Capture the Nuke", Tagline = "Winch it. Arm it. Drop it.",

@@ -75,6 +75,9 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
             var environment = new JArray
             {
                 new JObject { ["key"] = "MATCH_ID", ["value"] = request.MatchId, ["is_hidden"] = false },
+                // The game mode is the queue: "tdm" plays Team Deathmatch, any other queue Free For All
+                // (server: MatchModeSource reads MATCH_MODE; TeamRules.ParseMode). Plan section 7, step 4.
+                new JObject { ["key"] = "MATCH_MODE", ["value"] = ModeOfQueue(request.MatchmakingResults.QueueName), ["is_hidden"] = false },
             };
             await AddServerAccount(context, environment);
 
@@ -141,6 +144,10 @@ public sealed class EdgegapAllocator(IGameApiClient gameApi, ILogger<EdgegapAllo
             return new PollResponse(PollStatus.Error) { Message = e.Message };
         }
     }
+
+    /// <summary>Server mode for a matchmaker queue name (the queue file name, e.g. Tdm.mmq is "Tdm").</summary>
+    internal static string ModeOfQueue(string queue) =>
+        string.Equals(queue?.Trim(), "tdm", StringComparison.OrdinalIgnoreCase) ? "tdm" : "ffa";
 
     /// <summary>The project, the environment and the service account for the match server (see ProgressStore).</summary>
     private async Task AddServerAccount(IExecutionContext context, JArray environment)
