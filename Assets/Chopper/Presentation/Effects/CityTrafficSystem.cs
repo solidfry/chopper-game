@@ -374,7 +374,7 @@ namespace Chopper.Presentation.Effects
                 var mesh = _meshes[m];
                 var drawn = _drawn[m];
                 if (mesh == null || drawn == 0) continue;
-                var slice = _matrices.GetSubArray(m * _count, drawn);
+                var slice = _matrices.GetSubArray(m * _count, drawn).Reinterpret<Matrix4x4>();   // RenderMeshInstanced takes Matrix4x4, not float4x4
                 for (var start = 0; start < drawn; start += Batch)
                     Graphics.RenderMeshInstanced(parameters, mesh, 0, slice, math.min(Batch, drawn - start), start);
             }
@@ -387,7 +387,7 @@ namespace Chopper.Presentation.Effects
             _trailMesh ??= TrailMesh();
             var parameters = Params(material, shadows: false);
             for (var start = 0; start < trailCount; start += Batch)
-                Graphics.RenderMeshInstanced(parameters, _trailMesh, 0, _trails, math.min(Batch, trailCount - start), start);
+                Graphics.RenderMeshInstanced(parameters, _trailMesh, 0, _trails.Reinterpret<Matrix4x4>(), math.min(Batch, trailCount - start), start);
         }
 
         /// <summary>Searchlights: a slow turn plus a nod between 50 and 80 degrees up, each at its own phase and speed;
