@@ -106,7 +106,7 @@ namespace Chopper.Simulation.Bots
             }
             var missiles = new NativeList<BotMissileInfo>(4, Allocator.Temp);
             foreach (var (missile, pose) in SystemAPI.Query<RefRO<GuidedMissile>, RefRO<LocalTransform>>())
-                missiles.Add(new BotMissileInfo { Target = missile.ValueRO.Target, Position = pose.ValueRO.Position, Velocity = missile.ValueRO.Velocity });
+                missiles.Add(new BotMissileInfo { Target = missile.ValueRO.Decoyed ? Entity.Null : missile.ValueRO.Target, Position = pose.ValueRO.Position, Velocity = missile.ValueRO.Velocity });
 
             foreach (var (pilot, order, wander, brain, navigator, waypoints) in
                      SystemAPI.Query<RefRW<BotPilotState>, RefRW<PilotOrder>, RefRW<BotWander>, RefRW<BotBrain>, RefRW<BotNavigator>, DynamicBuffer<BotWaypoint>>())

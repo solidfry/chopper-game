@@ -85,7 +85,7 @@ namespace Chopper.Simulation.Bots
             }
             var missiles = new NativeList<BotMissileInfo>(8, Allocator.Temp);
             foreach (var (missile, pose) in SystemAPI.Query<RefRO<GuidedMissile>, RefRO<LocalTransform>>())
-                missiles.Add(new BotMissileInfo { Target = missile.ValueRO.Target, Position = pose.ValueRO.Position, Velocity = missile.ValueRO.Velocity });
+                missiles.Add(new BotMissileInfo { Target = missile.ValueRO.Decoyed ? Entity.Null : missile.ValueRO.Target, Position = pose.ValueRO.Position, Velocity = missile.ValueRO.Velocity });
 
             _flight.Update(ref state);
             // SystemAPI.Query takes 7 types at most: the navigator and the path come by entity.

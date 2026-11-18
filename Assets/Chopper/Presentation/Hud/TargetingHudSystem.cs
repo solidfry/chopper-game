@@ -118,7 +118,8 @@ namespace Chopper.Presentation.Hud
             var closestPosition = float3.zero;
             foreach (var (missile, missilePose) in SystemAPI.Query<RefRO<GuidedMissile>, RefRO<LocalToWorld>>())
             {
-                if (missile.ValueRO.Target != self) continue;
+                // A missile fooled by flares still names its target (it loses it when they burn out): no warning.
+                if (missile.ValueRO.Target != self || missile.ValueRO.Decoyed) continue;
                 var distance = math.distance(position, missilePose.ValueRO.Position);
                 if (distance >= closest) continue;
                 closest = distance;
