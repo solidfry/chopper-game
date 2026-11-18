@@ -30,6 +30,14 @@ namespace Chopper.Editor.Setup
                 removed++;
             }
             if (removed > 0) Debug.Log($"Server build: removed {removed} presentation object(s) from {scene.name}.");
+
+            // Client-only assemblies (for example Chopper.Presentation.UniStorm, define UNISTORM_PRESENT) do not compile
+            // for Linux Server, so their components are missing scripts here and the build warns about each one.
+            var missing = 0;
+            foreach (var root in scene.GetRootGameObjects())
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                    missing += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
+            if (missing > 0) Debug.Log($"Server build: removed {missing} client-only component(s) from {scene.name}.");
         }
 
         private static bool IsPresentation(GameObject root) =>

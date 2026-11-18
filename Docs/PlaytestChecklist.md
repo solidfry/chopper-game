@@ -14,7 +14,8 @@
 
 **Balance**
 - Weapons: time to kill, magazine sizes, which weapon everyone picks.
-- Missiles, flares and locks against people (not bots): fair? Too strong?
+- Missiles, flares and locks against people (not bots): fair? Too strong? Do flares pull locks and missiles?
+- Repair drone: 40 % in 6 s, 30 s reload. Too strong in a duel?
 - Chassis: is one clearly best?
 
 **Feel**
@@ -29,11 +30,14 @@
 
 **Map flow**
 - Where do fights happen? Dead areas nobody visits?
-- Spawns: too close to enemies or walls? (Known: all players spawn near one point.)
+- Spawns: too close to enemies or walls? (Editor check 17 Nov: all respawns 150 m+ from the nearest chopper.)
 - Can you find enemies? Too much or too little cover?
+
+**Progression (step 4, only testable on Edgegap)**
+- After the match: results screen XP matches the popups; restart the client and check that level and XP stayed (Cloud Save write).
 
 ## After
 
 - [ ] Top 3 problems, top 3 good things.
 - [ ] Decide: bots next, or Capture the Nuke (owner).
-- [ ] Stop the Edgegap deployment by hand if version 0.1.0 is still in use (it has no idle stop).
+- [ ] Check the Edgegap dashboard: no deployment left running (stop it by hand if one is).
