@@ -9,6 +9,8 @@ namespace Chopper.Presentation.Hud
         Enemy = 0,
         /// <summary>Ground target (training targets now; later turrets, vehicles).</summary>
         Ground = 1,
+        /// <summary>A team mate's chopper (team modes): always with health, for the repair drone.</summary>
+        Ally = 2,
     }
 
     /// <summary>One screen marker. Positions are viewport space: (0,0) bottom left to (1,1) top right.</summary>

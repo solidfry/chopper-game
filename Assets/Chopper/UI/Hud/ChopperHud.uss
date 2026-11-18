@@ -920,6 +920,17 @@
   border-bottom-color: var(--chopper-yellow);
 }
 
+/* Team mate (team modes): a blue ring (cyan is taken by the OVERWATCH ping) */
+.hud-marker--ally .hud-marker__icon {
+  rotate: 0deg;
+  border-radius: 50%;
+  border-color: var(--chopper-blue);
+}
+
+.hud-marker--ally .hud-marker__arrow {
+  border-bottom-color: var(--chopper-blue);
+}
+
 /* Rocket lead indicator */
 .hud-lead {
   position: absolute;

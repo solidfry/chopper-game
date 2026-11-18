@@ -20,8 +20,10 @@ namespace Chopper.Presentation.Hud
         public readonly int Kills;
         public readonly int Deaths;
         public readonly bool IsLocal;
+        /// <summary>Team modes: the player's team (0 in Free For All).</summary>
+        public readonly byte Team;
 
-        public ScoreboardRow(int networkId, int place, string name, string chassis, int kills, int deaths, bool isLocal)
+        public ScoreboardRow(int networkId, int place, string name, string chassis, int kills, int deaths, bool isLocal, byte team = 0)
         {
             NetworkId = networkId;
             Place = place;
@@ -30,6 +32,7 @@ namespace Chopper.Presentation.Hud
             Kills = kills;
             Deaths = deaths;
             IsLocal = isLocal;
+            Team = team;
         }
     }
 
@@ -58,6 +61,20 @@ namespace Chopper.Presentation.Hud
         private MatchPhase _phase;
         private float _timeRemaining;
         private int _winnerNetworkId;
+        private MatchMode _mode;
+        private int _teamCount;
+        private byte _winnerTeam;
+        private readonly Dictionary<int, byte> _teams = new();
+        private readonly int[] _teamScores = new int[TeamRules.MaxTeams + 1];
+
+        /// <summary>Team names in order (team 1 = ALPHA). Shown on the HUD, the scoreboard and the banner.</summary>
+        public static readonly string[] TeamNames = { "", "ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL" };
+
+        public static string TeamName(byte team) => team < TeamNames.Length ? TeamNames[team] : $"TEAM {team}";
+
+        public bool IsTeamMode => TeamRules.IsTeamMode(_mode);
+        public byte LocalTeam => _teams.TryGetValue(_localNetworkId, out var team) ? team : TeamRules.None;
+        public int TeamScore(byte team) => team < _teamScores.Length ? _teamScores[team] : 0;
 
         private string _timerText = "00:00";
         private string _localScoreText = "0 K / 0 D";
@@ -294,15 +311,26 @@ namespace Chopper.Presentation.Hud
             RefreshBanner();
         }
 
-        public void ApplyScore(int networkId, int kills, int deaths)
+        public void ApplyScore(int networkId, int kills, int deaths, byte team = 0)
         {
             _scores[networkId] = (kills, deaths);
+            _teams[networkId] = team;
+            RefreshScores();
+            RefreshBanner();
+        }
+
+        /// <summary>Team modes: one team's kills (from the server).</summary>
+        public void SetTeamScore(byte team, int score)
+        {
+            if (team == TeamRules.None || team >= _teamScores.Length) return;
+            _teamScores[team] = score;
             RefreshScores();
         }
 
         public void RemovePlayer(int networkId)
         {
             // Call signs and chassis stay: PilotNamesSystem sends only changes, and the rows come from the scores.
+            _teams.Remove(networkId);
             if (_scores.Remove(networkId))
                 RefreshScores();
         }
@@ -328,11 +356,16 @@ namespace Chopper.Presentation.Hud
             RefreshKillFeed();
         }
 
-        public void SetMatch(MatchPhase phase, float timeRemaining, int winnerNetworkId)
+        public void SetMatch(MatchPhase phase, float timeRemaining, int winnerNetworkId, MatchMode mode = MatchMode.FreeForAll,
+            int teamCount = 0, byte winnerTeam = 0)
         {
             _phase = phase;
             _timeRemaining = timeRemaining;
             _winnerNetworkId = winnerNetworkId;
+            _mode = mode;
+            _teamCount = Math.Min(teamCount, TeamRules.MaxTeams);
+            _winnerTeam = winnerTeam;
+            RefreshScores();
             RefreshTimer();
             RefreshBanner();
         }
@@ -429,8 +462,23 @@ namespace Chopper.Presentation.Hud
                     leaderKills = score.Kills;
                 }
             }
-            LeaderText = leaderKills > 0 ? $"LEAD {PilotName(leader)} {leaderKills}" : "";
+            LeaderText = IsTeamMode ? TeamScoresText() : leaderKills > 0 ? $"LEAD {PilotName(leader)} {leaderKills}" : "";
             RefreshScoreboard();
+        }
+
+        /// <summary>"ALPHA 12  BRAVO 9" (your team first).</summary>
+        private string TeamScoresText()
+        {
+            _builder.Clear();
+            var own = LocalTeam;
+            if (own != TeamRules.None && own <= _teamCount) _builder.Append(TeamName(own)).Append(' ').Append(_teamScores[own]);
+            for (byte team = 1; team <= _teamCount; team++)
+            {
+                if (team == own) continue;
+                if (_builder.Length > 0) _builder.Append("  ");
+                _builder.Append(TeamName(team)).Append(' ').Append(_teamScores[team]);
+            }
+            return _builder.ToString();
         }
 
         private void RefreshScoreboard()
@@ -439,11 +487,14 @@ namespace Chopper.Presentation.Hud
             foreach (var (networkId, score) in _scores)
             {
                 _chassis.TryGetValue(networkId, out var chassis);
+                _teams.TryGetValue(networkId, out var team);
                 _rows.Add(new ScoreboardRow(networkId, 0, PlayerName(networkId), chassis ?? "", score.Kills, score.Deaths,
-                    networkId == _localNetworkId));
+                    networkId == _localNetworkId, team));
             }
+            // Team modes: grouped by team (team 1 first), then by kills.
             _rows.Sort(static (a, b) =>
-                a.Kills != b.Kills ? b.Kills.CompareTo(a.Kills)
+                a.Team != b.Team ? a.Team.CompareTo(b.Team)
+                : a.Kills != b.Kills ? b.Kills.CompareTo(a.Kills)
                 : a.Deaths != b.Deaths ? a.Deaths.CompareTo(b.Deaths)
                 : a.NetworkId.CompareTo(b.NetworkId));
 
@@ -451,13 +502,24 @@ namespace Chopper.Presentation.Hud
             for (var i = 0; i < _rows.Count; i++)
             {
                 var row = _rows[i];
-                var tied = i > 0 && _rows[i - 1].Kills == row.Kills && _rows[i - 1].Deaths == row.Deaths;
-                if (!tied) place = i + 1;
-                _rows[i] = new ScoreboardRow(row.NetworkId, place, row.Name, row.Chassis, row.Kills, row.Deaths, row.IsLocal);
+                var newTeam = i == 0 || _rows[i - 1].Team != row.Team;
+                if (newTeam) place = 0;
+                var tied = !newTeam && _rows[i - 1].Kills == row.Kills && _rows[i - 1].Deaths == row.Deaths;
+                if (!tied) place = newTeam ? 1 : i + 1 - FirstOfTeam(i);
+                _rows[i] = new ScoreboardRow(row.NetworkId, place, row.Name, row.Chassis, row.Kills, row.Deaths, row.IsLocal, row.Team);
             }
 
-            ScoreboardTitle = _rows.Count == 1 ? "FREE FOR ALL // 1 PILOT" : $"FREE FOR ALL // {_rows.Count} PILOTS";
+            var mode = IsTeamMode ? "TEAM DEATHMATCH" : "FREE FOR ALL";
+            ScoreboardTitle = _rows.Count == 1 ? $"{mode} // 1 PILOT" : $"{mode} // {_rows.Count} PILOTS";
             ScoreboardChanged?.Invoke();
+        }
+
+        /// <summary>Index of the first row of row <paramref name="index"/>'s team (rows are sorted by team).</summary>
+        private int FirstOfTeam(int index)
+        {
+            var first = index;
+            while (first > 0 && _rows[first - 1].Team == _rows[index].Team) first--;
+            return first;
         }
 
         private void RefreshScoreboardVisible() => ScoreboardVisible = _scoreboardHeld || _phase == MatchPhase.PostGame;
@@ -479,6 +541,9 @@ namespace Chopper.Presentation.Hud
             BannerVisible = _phase == MatchPhase.PostGame;
             if (BannerVisible) DeathAlertVisible = false;
             BannerText = !BannerVisible ? ""
+                : IsTeamMode ? (_winnerTeam == TeamRules.None ? "DRAW"
+                    : _winnerTeam == LocalTeam ? "VICTORY"
+                    : $"{TeamName(_winnerTeam)} WINS")
                 : _winnerNetworkId == 0 ? "DRAW"
                 : _winnerNetworkId == _localNetworkId ? "VICTORY"
                 : $"{PilotName(_winnerNetworkId)} WINS";

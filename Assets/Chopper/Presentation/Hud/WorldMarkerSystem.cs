@@ -59,7 +59,8 @@ namespace Chopper.Presentation.Hud
                 // Ping (pilot OVERWATCH): every enemy chopper at any range, with health.
                 var ping = SystemAPI.HasComponent<AbilityConfig>(self) && SystemAPI.HasComponent<AbilityState>(self) &&
                            Abilities.ShowsAllEnemies(SystemAPI.GetComponent<AbilityConfig>(self), SystemAPI.GetComponent<AbilityState>(self));
-                AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping);
+                var selfTeam = SystemAPI.HasComponent<Simulation.Match.Team>(self) ? SystemAPI.GetComponent<Simulation.Match.Team>(self).Value : (byte)0;
+                AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping, selfTeam);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
                 UpdateGunLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO);
                 model.End();
@@ -69,7 +70,8 @@ namespace Chopper.Presentation.Hud
             model.Clear();
         }
 
-        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, Entity lockTarget, bool ping)
+        private void AddMarkers(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, Entity lockTarget, bool ping,
+            byte selfTeam)
         {
             var heading = math.atan2(forward.x, forward.z);
             _candidates.Clear();
@@ -81,7 +83,9 @@ namespace Chopper.Presentation.Hud
                 if (health.ValueRO.IsDead) continue;
                 var distanceSq = math.distancesq(position, pose.ValueRO.Position);
                 var air = (targetable.ValueRO.Class & TargetClass.Air) != 0;
-                var pinged = ping && air;
+                var team = SystemAPI.HasComponent<Simulation.Match.Team>(entity) ? SystemAPI.GetComponent<Simulation.Match.Team>(entity).Value : (byte)0;
+                var ally = Simulation.Match.TeamRules.AreAllies(selfTeam, team);
+                var pinged = ping && air && !ally;
                 if (!pinged && distanceSq > MarkerRange * MarkerRange) continue;
 
                 var distance = math.sqrt(distanceSq);
@@ -89,13 +93,13 @@ namespace Chopper.Presentation.Hud
                 var max = health.ValueRO.Max;
                 _candidates.Add((distanceSq, new WorldMarker
                 {
-                    Kind = (targetable.ValueRO.Class & TargetClass.Air) != 0 ? WorldMarkerKind.Enemy : WorldMarkerKind.Ground,
+                    Kind = ally ? WorldMarkerKind.Ally : air ? WorldMarkerKind.Enemy : WorldMarkerKind.Ground,
                     Viewport = viewport,
                     OnScreen = onScreen,
                     EdgeAngleDegrees = angle,
                     BearingDegrees = Bearing(pose.ValueRO.Position - position, heading),
                     Distance = (int)math.round(distance / WorldMarkerModel.DistanceStep) * WorldMarkerModel.DistanceStep,
-                    HealthFraction = (pinged || distance <= HealthBarRange) && max > 0f ? math.saturate(health.ValueRO.Current / max) : -1f,
+                    HealthFraction = (pinged || ally || distance <= HealthBarRange) && max > 0f ? math.saturate(health.ValueRO.Current / max) : -1f,
                     IsLockTarget = entity == lockTarget,
                     Pinged = pinged,
                 }));

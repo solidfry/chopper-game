@@ -17,7 +17,8 @@ namespace Chopper.Presentation.Feedback
             _subscriptions = new[]
             {
                 events.Subscribe<LocalPlayerIdentified>(m => context.Match.SetLocalPlayer(m.NetworkId)),
-                events.Subscribe<ScoreChanged>(m => context.Match.ApplyScore(m.NetworkId, m.Kills, m.Deaths)),
+                events.Subscribe<ScoreChanged>(m => context.Match.ApplyScore(m.NetworkId, m.Kills, m.Deaths, m.Team)),
+                events.Subscribe<TeamScoreChanged>(m => context.Match.SetTeamScore(m.Team, m.Score)),
                 events.Subscribe<PlayerLeft>(m => context.Match.RemovePlayer(m.NetworkId)),
                 events.Subscribe<PlayerKilled>(m => context.Match.AddKill(m.KillerNetworkId, m.VictimNetworkId)),
                 events.Subscribe<MatchStateChanged>(OnMatchState),
@@ -42,7 +43,7 @@ namespace Chopper.Presentation.Feedback
         private void OnMatchState(MatchStateChanged state)
         {
             var wasOver = _context.Match.BannerVisible;
-            _context.Match.SetMatch(state.Phase, state.TimeRemaining, state.WinnerNetworkId);
+            _context.Match.SetMatch(state.Phase, state.TimeRemaining, state.WinnerNetworkId, state.Mode, state.TeamCount, state.WinnerTeam);
             _context.Results.SetMatch(state.Phase, state.WinnerNetworkId);
 
             var sounds = _context.Sounds;

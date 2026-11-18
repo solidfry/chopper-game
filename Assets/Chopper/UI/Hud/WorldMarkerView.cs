@@ -15,6 +15,7 @@ namespace Chopper.UI.Hud
         private const string MarkerClass = "hud-marker";
         private const string HiddenClass = "hud-marker--hidden";
         private const string GroundClass = "hud-marker--ground";
+        private const string AllyClass = "hud-marker--ally";
         private const string OffScreenClass = "hud-marker--offscreen";
         private const string LockedClass = "hud-marker--locked";
         private const string PingedClass = "hud-marker--pinged";
@@ -120,6 +121,7 @@ namespace Chopper.UI.Hud
             root.style.left = Length.Percent(point.x * 100f);
             root.style.top = Length.Percent((1f - point.y) * 100f);
             root.EnableInClassList(GroundClass, marker.Kind == WorldMarkerKind.Ground);
+            root.EnableInClassList(AllyClass, marker.Kind == WorldMarkerKind.Ally);
             root.EnableInClassList(OffScreenClass, !marker.OnScreen);
             root.EnableInClassList(LockedClass, marker.IsLockTarget);
             root.EnableInClassList(PingedClass, marker.Pinged);
