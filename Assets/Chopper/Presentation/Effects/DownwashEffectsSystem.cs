@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Flight;
 using Chopper.Simulation.Visuals;
+using Unity.Burst;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -20,6 +22,7 @@ namespace Chopper.Presentation.Effects
     /// <see cref="CombatEffectsSettings"/>).
     /// Dust colour: the map's height fog colour when a city is loaded (its sand or ash), else the settings' colour.
     /// Lit particles: at night the chopper's spotlight shows the dust. Checked in the editor 5 Nov 2026.
+    /// 18 Nov 2026: the rays are one Burst job for all choppers (<see cref="CastJob"/>); managed ray casts were ~0.5 ms.
     /// Next: surface type from what the ray hits (water spray, snow, grass), and weather (wet ground = less dust).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -78,18 +81,35 @@ namespace Chopper.Presentation.Effects
             var deltaTime = SystemAPI.Time.DeltaTime;
 
             _seen.Clear();
-            foreach (var (pose, flight, entity) in SystemAPI
-                         .Query<RefRO<LocalToWorld>, RefRO<ChopperFlightState>>()
-                         .WithAll<ChopperFlightConfig>()
-                         .WithEntityAccess())
+            // All rays at once in Burst, then the managed particle work per chopper.
+            var choppers = new NativeList<Entity>(16, Allocator.TempJob);
+            var starts = new NativeList<float3>(16, Allocator.TempJob);
+            foreach (var (pose, entity) in SystemAPI.Query<RefRO<LocalToWorld>>()
+                         .WithAll<ChopperFlightConfig, ChopperFlightState>().WithEntityAccess())
             {
+                choppers.Add(entity);
+                starts.Add(pose.ValueRO.Position);
+            }
+            var hits = new NativeArray<Unity.Physics.RaycastHit>(choppers.Length, Allocator.TempJob);
+            var found = new NativeArray<bool>(choppers.Length, Allocator.TempJob);
+            new CastJob
+            {
+                World = world, Choppers = choppers.AsArray(), Starts = starts.AsArray(), Range = settings.DownwashHeight,
+                Hits = hits, Found = found,
+            }.Run(choppers.Length);
+
+            for (var c = 0; c < choppers.Length; c++)
+            {
+                var entity = choppers[c];
+                var flight = SystemAPI.GetComponentRO<ChopperFlightState>(entity);
                 _seen.Add(entity);
-                float3 position = pose.ValueRO.Position;
+                var position = starts[c];
                 var target = 0f;
                 var height = settings.DownwashHeight;
                 var hitPoint = position;
                 var normal = new float3(0f, 1f, 0f);
-                if (CastDown(world, entity, position, settings.DownwashHeight, out var hit) && hit.SurfaceNormal.y >= MinSurfaceUp)
+                var hit = hits[c];
+                if (found[c] && hit.SurfaceNormal.y >= MinSurfaceUp)
                 {
                     height = math.distance(position, hit.Position);
                     hitPoint = hit.Position;
@@ -111,7 +131,29 @@ namespace Chopper.Presentation.Effects
                 if (isLocal && context.CameraRig != null && emitter.Strength > 0.05f)
                     context.CameraRig.AddShake(settings.DownwashShake * emitter.Strength * deltaTime);
             }
+            hits.Dispose();
+            found.Dispose();
+            choppers.Dispose();
+            starts.Dispose();
             RemoveMissing();
+        }
+
+        /// <summary>Per chopper: the nearest surface straight down within <see cref="Range"/>, not the chopper itself.</summary>
+        [BurstCompile]
+        private struct CastJob : IJobFor
+        {
+            [ReadOnly] public CollisionWorld World;
+            [ReadOnly] public NativeArray<Entity> Choppers;
+            [ReadOnly] public NativeArray<float3> Starts;
+            public float Range;
+            public NativeArray<Unity.Physics.RaycastHit> Hits;
+            public NativeArray<bool> Found;
+
+            public void Execute(int index)
+            {
+                Found[index] = CastDown(World, Choppers[index], Starts[index], Range, out var hit);
+                Hits[index] = hit;
+            }
         }
 
         /// <summary>Nearest surface straight down within <paramref name="range"/>, not the chopper itself.</summary>
