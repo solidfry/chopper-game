@@ -98,7 +98,8 @@ namespace Chopper.Presentation.Effects
                             applyShapeToPosition = true,
                             startSize = settings.BoostFlameSize * 2.2f * scale,
                         };
-                        flame.Systems[i].Emit(emit, Mathf.RoundToInt(settings.BoostFlameBurst * scale));
+                        if (settings.BoostFlameParticles)
+                            flame.Systems[i].Emit(emit, Mathf.RoundToInt(settings.BoostFlameBurst * scale));
                     }
                 }
                 _seen.Add(entity);
@@ -116,7 +117,7 @@ namespace Chopper.Presentation.Effects
                     main.startSizeMultiplier = settings.BoostFlameSize * factor * (0.6f + 0.4f * flame.Strength);
                     main.startSpeedMultiplier = settings.BoostFlameLength / Life * (0.5f + 0.5f * strength);
                     var emission = system.emission;
-                    emission.rateOverTimeMultiplier = settings.BoostFlameRate * strength * factor;
+                    emission.rateOverTimeMultiplier = settings.BoostFlameParticles ? settings.BoostFlameRate * strength * factor : 0f;
                     if (flame.Strength > Off && !system.isEmitting) system.Play();
                     var trail = TrailOf(system);
                     if (trail != null) trail.widthMultiplier = settings.BoostTrailWidth * factor * (0.5f + 0.5f * flame.Strength);
@@ -294,6 +295,7 @@ namespace Chopper.Presentation.Effects
             trail.colorGradient = gradient;
             trail.alignment = LineAlignment.View;
             trail.numCapVertices = 2;
+            trail.numCornerVertices = 3;   // smooth bends: one continuous ribbon
             trail.sharedMaterial = settings.DamageSparkMaterial;
             trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             trail.receiveShadows = false;

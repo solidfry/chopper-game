@@ -79,6 +79,9 @@ namespace Chopper.Presentation.Effects
         private float downwashShake = 0.15f;
 
         [Header("Boost flames (jet flames from the exhaust while boosting; uses the Damage Spark Material)")]
+        [SerializeField, Tooltip("Flame particles at the exhaust. Off = the boost shows only the continuous trail (owner, 18 Nov 2026: " +
+                                 "the particles left small bits behind the chopper).")]
+        private bool boostFlameParticles;
         [SerializeField, Tooltip("Flame length (m) at full strength: speed times life.")]
         private float boostFlameLength = 7f;
         [SerializeField, Tooltip("Flame width (m) at the nozzle.")]
@@ -197,6 +200,7 @@ namespace Chopper.Presentation.Effects
         public float DownwashShake => downwashShake;
         public float BoostFlameLength => boostFlameLength;
         public float BoostFlameSize => boostFlameSize;
+        public bool BoostFlameParticles => boostFlameParticles;
         public float BoostFlameRate => boostFlameRate;
         public int BoostFlameBurst => boostFlameBurst;
         public Color BoostFlameCore => boostFlameCore;
