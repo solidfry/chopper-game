@@ -1,6 +1,9 @@
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Visuals;
+using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -22,6 +25,8 @@ namespace Chopper.Presentation.Effects
     /// </list>
     /// Drawn with GPU instancing (one draw per model per 511 instances), no GameObjects, no colliders, no network:
     /// every player sees their own traffic. Written without the editor (6 Nov 2026).
+    /// 18 Nov 2026: the vehicle update is a Burst job (<see cref="MoveJob"/>) into native matrix arrays: the managed
+    /// loop was the costliest client system (~4.4 ms a frame in the editor profile).
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -31,25 +36,25 @@ namespace Chopper.Presentation.Effects
         private const int ModelCount = 4;     // car, truck, flyer, drone
         private const int FlyerModel = 2;
         private const int DroneModel = 3;
-        /// <summary>The flyer's tail lights (Traffic_Flyer: tail bar at y 0.82, z -2.66, x ±0.9).</summary>
-        private static readonly Vector3 FlyerTail = new(0f, 0.82f, -2.66f);
+        // The flyer tail lights (Traffic_Flyer: tail bar at y 0.82, z -2.66, x ±0.9) are written in MoveJob: Burst cannot read static fields of this class (its static constructor calls Shader).
         private static readonly int ColourId = Shader.PropertyToID("_Colour");
 
         private BlobAssetReference<TrafficBlob> _blob;
         private int _count;
-        private int[] _path;
-        private int[] _segment;
-        private int[] _leader;
-        private float[] _distance;
-        private float[] _cruise;
-        private float[] _speed;
-        private float[] _phase;
-        private byte[] _model;
-        private readonly Matrix4x4[][] _matrices = new Matrix4x4[ModelCount][];
-        private readonly int[] _drawn = new int[ModelCount];
+        private NativeArray<int> _path;
+        private NativeArray<int> _segment;
+        private NativeArray<int> _leader;
+        private NativeArray<float> _distance;
+        private NativeArray<float> _cruise;
+        private NativeArray<float> _speed;
+        private NativeArray<float> _phase;
+        private NativeArray<byte> _model;
+        /// <summary>Per model, <see cref="_count"/> slots: model m's matrices start at m x _count.</summary>
+        private NativeArray<float4x4> _matrices;
+        /// <summary>Drawn per model (0..3), then the trail count (4).</summary>
+        private NativeArray<int> _drawn;
         private readonly Mesh[] _meshes = new Mesh[ModelCount];
-        private Matrix4x4[] _trails = new Matrix4x4[1];
-        private int _trailCount;
+        private NativeArray<float4x4> _trails;
         private Matrix4x4[] _beams = new Matrix4x4[1];
         private Mesh _trailMesh;
         private Mesh _beamMesh;
@@ -61,6 +66,7 @@ namespace Chopper.Presentation.Effects
 
         protected override void OnDestroy()
         {
+            Release();
             if (_trailMesh != null) Object.Destroy(_trailMesh);
             if (_hazeMesh != null) Object.Destroy(_hazeMesh);
             if (_beamMesh != null) Object.Destroy(_beamMesh);
@@ -71,7 +77,7 @@ namespace Chopper.Presentation.Effects
             if (!SystemAPI.TryGetSingleton<CityTraffic>(out var traffic) || !traffic.Paths.IsCreated)
             {
                 _blob = default;
-                _count = 0;
+                Release();
                 return;
             }
             if (!_blob.Equals(traffic.Paths)) Spawn(traffic);
@@ -85,7 +91,13 @@ namespace Chopper.Presentation.Effects
             _meshes[3] = traffic.Drone.Value;
             if (_count > 0 && material != null && _meshes[0] != null)
             {
-                Move(ref traffic.Paths.Value, traffic.Look, SystemAPI.Time.DeltaTime, time, eye, traffic.Trail.Value != null);
+                new MoveJob
+                {
+                    Blob = traffic.Paths, Look = traffic.Look, DeltaTime = SystemAPI.Time.DeltaTime, Time = time, Eye = eye,
+                    Trails = traffic.Trail.Value != null, Count = _count,
+                    Path = _path, Segment = _segment, Leader = _leader, Distance = _distance, Cruise = _cruise, Speed = _speed,
+                    Phase = _phase, Model = _model, Matrices = _matrices, Drawn = _drawn, TrailMatrices = _trails,
+                }.Run();
                 DrawVehicles(material);
                 DrawTrails(traffic.Trail.Value);
             }
@@ -130,16 +142,19 @@ namespace Chopper.Presentation.Effects
                 total += counts[i];
             }
 
-            _path = new int[total];
-            _segment = new int[total];
-            _leader = new int[total];
-            _distance = new float[total];
-            _cruise = new float[total];
-            _speed = new float[total];
-            _phase = new float[total];
-            _model = new byte[total];
-            for (var m = 0; m < ModelCount; m++) _matrices[m] = new Matrix4x4[math.max(1, total)];
-            _trails = new Matrix4x4[math.max(1, total)];
+            Release();
+            var size = math.max(1, total);
+            _path = new NativeArray<int>(size, Allocator.Persistent);
+            _segment = new NativeArray<int>(size, Allocator.Persistent);
+            _leader = new NativeArray<int>(size, Allocator.Persistent);
+            _distance = new NativeArray<float>(size, Allocator.Persistent);
+            _cruise = new NativeArray<float>(size, Allocator.Persistent);
+            _speed = new NativeArray<float>(size, Allocator.Persistent);
+            _phase = new NativeArray<float>(size, Allocator.Persistent);
+            _model = new NativeArray<byte>(size, Allocator.Persistent);
+            _matrices = new NativeArray<float4x4>(size * ModelCount, Allocator.Persistent);
+            _drawn = new NativeArray<int>(ModelCount + 1, Allocator.Persistent);
+            _trails = new NativeArray<float4x4>(size, Allocator.Persistent);
 
             var v = 0;
             for (var i = 0; i < paths.Length; i++)
@@ -168,6 +183,22 @@ namespace Chopper.Presentation.Effects
             _count = v;
         }
 
+        private void Release()
+        {
+            _count = 0;
+            if (_path.IsCreated) _path.Dispose();
+            if (_segment.IsCreated) _segment.Dispose();
+            if (_leader.IsCreated) _leader.Dispose();
+            if (_distance.IsCreated) _distance.Dispose();
+            if (_cruise.IsCreated) _cruise.Dispose();
+            if (_speed.IsCreated) _speed.Dispose();
+            if (_phase.IsCreated) _phase.Dispose();
+            if (_model.IsCreated) _model.Dispose();
+            if (_matrices.IsCreated) _matrices.Dispose();
+            if (_drawn.IsCreated) _drawn.Dispose();
+            if (_trails.IsCreated) _trails.Dispose();
+        }
+
         private static float Wanted(ref TrafficPath path, in TrafficLook look)
         {
             var kind = (int)path.Kind;
@@ -179,105 +210,132 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>
         /// Speeds (follow the leader, stop at red lights), then positions; writes the matrices of the vehicles near
-        /// enough to draw, and the flying cars' trails.
+        /// enough to draw, and the flying cars' trails. Burst, on the main thread (Run): its results are drawn at once.
         /// </summary>
-        private void Move(ref TrafficBlob blob, in TrafficLook look, float deltaTime, float time, Vector3 eye, bool trails)
+        [BurstCompile]
+        private struct MoveJob : IJob
         {
-            for (var m = 0; m < ModelCount; m++) _drawn[m] = 0;
-            _trailCount = 0;
-            var farSq = look.DrawDistance * look.DrawDistance;
-            var cycle = math.max(1f, look.SignalCycle);
-            var inCycle = time - cycle * math.floor(time / cycle);
-            var green0 = inCycle < look.SignalGreen;
-            var green1 = inCycle >= cycle * 0.5f && inCycle < cycle * 0.5f + look.SignalGreen;
-            ref var paths = ref blob.Paths;
+            public BlobAssetReference<TrafficBlob> Blob;
+            public TrafficLook Look;
+            public float DeltaTime;
+            public float Time;
+            public float3 Eye;
+            public bool Trails;
+            public int Count;
+            public NativeArray<int> Path;
+            public NativeArray<int> Segment;
+            [ReadOnly] public NativeArray<int> Leader;
+            public NativeArray<float> Distance;
+            [ReadOnly] public NativeArray<float> Cruise;
+            public NativeArray<float> Speed;
+            [ReadOnly] public NativeArray<float> Phase;
+            [ReadOnly] public NativeArray<byte> Model;
+            public NativeArray<float4x4> Matrices;
+            public NativeArray<int> Drawn;
+            public NativeArray<float4x4> TrailMatrices;
 
-            // Speeds first, from where everyone was at the end of the last frame.
-            for (var v = 0; v < _count; v++)
+            public void Execute()
             {
-                ref var path = ref paths[_path[v]];
-                var limit = _cruise[v];
-                var leader = _leader[v];
-                if (leader != v)
-                {
-                    var gap = _distance[leader] - _distance[v];
-                    if (gap < 0f) gap = path.Closed ? gap + path.Length : float.MaxValue;   // open lane: the leader wrapped
-                    limit = math.min(limit, SafeSpeed(gap - look.MinGap, look.Braking));
-                }
-                var stop = NextRedStop(ref path, _distance[v], green0, green1);
-                if (stop >= 0f)
-                {
-                    var toStop = stop - _distance[v];
-                    // Too close to stop in time (the light just changed): carry on through.
-                    var canStop = toStop > _speed[v] * _speed[v] / (2f * look.Braking) * 0.6f;
-                    if (canStop) limit = math.min(limit, SafeSpeed(toStop - 1f, look.Braking));
-                }
-                _speed[v] = limit < _speed[v]
-                    ? math.max(limit, _speed[v] - look.Braking * 1.5f * deltaTime)
-                    : math.min(limit, _speed[v] + look.Acceleration * deltaTime);
-            }
+                var look = Look;
+                for (var m = 0; m <= ModelCount; m++) Drawn[m] = 0;
+                var trailCount = 0;
+                var farSq = look.DrawDistance * look.DrawDistance;
+                var cycle = math.max(1f, look.SignalCycle);
+                var inCycle = Time - cycle * math.floor(Time / cycle);
+                var green0 = inCycle < look.SignalGreen;
+                var green1 = inCycle >= cycle * 0.5f && inCycle < cycle * 0.5f + look.SignalGreen;
+                ref var paths = ref Blob.Value.Paths;
 
-            for (var v = 0; v < _count; v++)
-            {
-                ref var path = ref paths[_path[v]];
-                var distance = _distance[v] + _speed[v] * deltaTime;
-                var segment = _segment[v];
-                if (distance >= path.Length)
+                // Speeds first, from where everyone was at the end of the last frame.
+                for (var v = 0; v < Count; v++)
                 {
-                    distance -= path.Length * math.floor(distance / path.Length);
-                    segment = 0;
-                }
-                var segments = path.SegmentCount;
-                while (segment < segments - 1 && path.Distances[segment + 1] <= distance) segment++;
-                _distance[v] = distance;
-                _segment[v] = segment;
-
-                var count = path.Points.Length;
-                var a = path.Points[segment];
-                var b = path.Points[(segment + 1) % count];
-                var start = path.Distances[segment];
-                var span = math.max(1e-3f, path.Distances[segment + 1] - start);
-                var t = math.saturate((distance - start) / span);
-                var position = math.lerp(a, b, t);
-                if (math.distancesq(position, (float3)eye) > farSq) continue;
-
-                // Heading: this segment's direction, turning into the next one over the second half of the segment.
-                var direction = math.normalizesafe(b - a, new float3(0f, 0f, 1f));
-                var hasNext = path.Closed || segment + 2 < count;
-                var next = hasNext ? math.normalizesafe(path.Points[(segment + 2) % count] - b, direction) : direction;
-                var blend = math.smoothstep(0.5f, 1f, t);
-                var forward = math.normalizesafe(math.lerp(direction, next, blend), direction);
-
-                var model = _model[v];
-                var up = new float3(0f, 1f, 0f);
-                if (model == DroneModel)
-                {
-                    position.y += math.sin(time * 1.7f + _phase[v]) * look.DroneBob;
-                }
-                else if (model == FlyerModel)
-                {
-                    // Bank into the turn (Unity: a right turn has a positive cross y; rolling right is a negative angle).
-                    var turn = math.cross(direction, next).y;
-                    var roll = math.radians(math.clamp(-turn * 120f, -look.FlyerBank, look.FlyerBank)) * blend;
-                    up = math.mul(quaternion.AxisAngle(forward, roll), up);
-                    position.y += math.sin(time * 0.9f + _phase[v]) * 0.25f;
+                    ref var path = ref paths[Path[v]];
+                    var limit = Cruise[v];
+                    var leader = Leader[v];
+                    if (leader != v)
+                    {
+                        var gap = Distance[leader] - Distance[v];
+                        if (gap < 0f) gap = path.Closed ? gap + path.Length : float.MaxValue;   // open lane: the leader wrapped
+                        limit = math.min(limit, SafeSpeed(gap - look.MinGap, look.Braking));
+                    }
+                    var stop = NextRedStop(ref path, Distance[v], green0, green1);
+                    if (stop >= 0f)
+                    {
+                        var toStop = stop - Distance[v];
+                        // Too close to stop in time (the light just changed): carry on through.
+                        var canStop = toStop > Speed[v] * Speed[v] / (2f * look.Braking) * 0.6f;
+                        if (canStop) limit = math.min(limit, SafeSpeed(toStop - 1f, look.Braking));
+                    }
+                    Speed[v] = limit < Speed[v]
+                        ? math.max(limit, Speed[v] - look.Braking * 1.5f * DeltaTime)
+                        : math.min(limit, Speed[v] + look.Acceleration * DeltaTime);
                 }
 
-                var size = 1f;
-                if (!path.Closed && look.EndFade > 0f)
-                    size = math.saturate(distance / look.EndFade) * math.saturate((path.Length - distance) / look.EndFade);
-                if (size <= 0.01f) continue;
-
-                var rotation = quaternion.LookRotationSafe(forward, up);
-                var matrix = Matrix4x4.TRS(position, rotation, new Vector3(size, size, size));
-                _matrices[model][_drawn[model]++] = matrix;
-
-                if (trails && model == FlyerModel && look.TrailSeconds > 0f)
+                for (var v = 0; v < Count; v++)
                 {
-                    // The trail mesh runs from z 0 back to z -1 at the tail lights: stretch it by speed x seconds.
-                    var length = math.max(0.5f, _speed[v] * look.TrailSeconds) * size;
-                    _trails[_trailCount++] = matrix * Matrix4x4.TRS(FlyerTail, Quaternion.identity, new Vector3(1f, 1f, length / size));
+                    ref var path = ref paths[Path[v]];
+                    var distance = Distance[v] + Speed[v] * DeltaTime;
+                    var segment = Segment[v];
+                    if (distance >= path.Length)
+                    {
+                        distance -= path.Length * math.floor(distance / path.Length);
+                        segment = 0;
+                    }
+                    var segments = path.SegmentCount;
+                    while (segment < segments - 1 && path.Distances[segment + 1] <= distance) segment++;
+                    Distance[v] = distance;
+                    Segment[v] = segment;
+
+                    var count = path.Points.Length;
+                    var a = path.Points[segment];
+                    var b = path.Points[(segment + 1) % count];
+                    var start = path.Distances[segment];
+                    var span = math.max(1e-3f, path.Distances[segment + 1] - start);
+                    var t = math.saturate((distance - start) / span);
+                    var position = math.lerp(a, b, t);
+                    if (math.distancesq(position, Eye) > farSq) continue;
+
+                    // Heading: this segment's direction, turning into the next one over the second half of the segment.
+                    var direction = math.normalizesafe(b - a, new float3(0f, 0f, 1f));
+                    var hasNext = path.Closed || segment + 2 < count;
+                    var next = hasNext ? math.normalizesafe(path.Points[(segment + 2) % count] - b, direction) : direction;
+                    var blend = math.smoothstep(0.5f, 1f, t);
+                    var forward = math.normalizesafe(math.lerp(direction, next, blend), direction);
+
+                    var model = Model[v];
+                    var up = new float3(0f, 1f, 0f);
+                    if (model == DroneModel)
+                    {
+                        position.y += math.sin(Time * 1.7f + Phase[v]) * look.DroneBob;
+                    }
+                    else if (model == FlyerModel)
+                    {
+                        // Bank into the turn (Unity: a right turn has a positive cross y; rolling right is a negative angle).
+                        var turn = math.cross(direction, next).y;
+                        var roll = math.radians(math.clamp(-turn * 120f, -look.FlyerBank, look.FlyerBank)) * blend;
+                        up = math.mul(quaternion.AxisAngle(forward, roll), up);
+                        position.y += math.sin(Time * 0.9f + Phase[v]) * 0.25f;
+                    }
+
+                    var size = 1f;
+                    if (!path.Closed && look.EndFade > 0f)
+                        size = math.saturate(distance / look.EndFade) * math.saturate((path.Length - distance) / look.EndFade);
+                    if (size <= 0.01f) continue;
+
+                    var rotation = quaternion.LookRotationSafe(forward, up);
+                    var matrix = float4x4.TRS(position, rotation, new float3(size));
+                    var drawn = Drawn[model];
+                    Matrices[model * Count + drawn] = matrix;
+                    Drawn[model] = drawn + 1;
+
+                    if (Trails && model == FlyerModel && look.TrailSeconds > 0f)
+                    {
+                        // The trail mesh runs from z 0 back to z -1 at the tail lights: stretch it by speed x seconds.
+                        var length = math.max(0.5f, Speed[v] * look.TrailSeconds) * size;
+                        TrailMatrices[trailCount++] = math.mul(matrix, float4x4.TRS(new float3(0f, 0.82f, -2.66f), quaternion.identity, new float3(1f, 1f, length / size)));
+                    }
                 }
+                Drawn[ModelCount] = trailCount;
             }
         }
 
@@ -314,19 +372,22 @@ namespace Chopper.Presentation.Effects
             for (var m = 0; m < ModelCount; m++)
             {
                 var mesh = _meshes[m];
-                if (mesh == null) continue;
-                for (var start = 0; start < _drawn[m]; start += Batch)
-                    Graphics.RenderMeshInstanced(parameters, mesh, 0, _matrices[m], math.min(Batch, _drawn[m] - start), start);
+                var drawn = _drawn[m];
+                if (mesh == null || drawn == 0) continue;
+                var slice = _matrices.GetSubArray(m * _count, drawn);
+                for (var start = 0; start < drawn; start += Batch)
+                    Graphics.RenderMeshInstanced(parameters, mesh, 0, slice, math.min(Batch, drawn - start), start);
             }
         }
 
         private void DrawTrails(Material material)
         {
-            if (material == null || _trailCount == 0) return;
+            var trailCount = _drawn[ModelCount];
+            if (material == null || trailCount == 0) return;
             _trailMesh ??= TrailMesh();
             var parameters = Params(material, shadows: false);
-            for (var start = 0; start < _trailCount; start += Batch)
-                Graphics.RenderMeshInstanced(parameters, _trailMesh, 0, _trails, math.min(Batch, _trailCount - start), start);
+            for (var start = 0; start < trailCount; start += Batch)
+                Graphics.RenderMeshInstanced(parameters, _trailMesh, 0, _trails, math.min(Batch, trailCount - start), start);
         }
 
         /// <summary>Searchlights: a slow turn plus a nod between 50 and 80 degrees up, each at its own phase and speed;
