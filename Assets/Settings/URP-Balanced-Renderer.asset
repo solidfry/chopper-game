@@ -1,5 +1,20 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9098358109456855562
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96dab975e69883249a56554e791c4fd0, type: 3}
+  m_Name: Buto Volumetric Fog
+  m_EditorClassIdentifier: OccaSoftware.Buto.Runtime::OccaSoftware.Buto.Runtime.ButoRenderFeature
+  m_Active: 1
+  settings:
+    renderPassEvent: 450
 --- !u!114 &-7621923626895505694
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -67,8 +82,9 @@ MonoBehaviour:
   - {fileID: -1878332245247344467}
   - {fileID: 182549485377595532}
   - {fileID: 3636119974633985752}
-  m_RendererFeatureMap: adc0de57c6d2eee58ca8dc2dca8b8802d8d6c218da177632l
-  xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
+  - {fileID: -9098358109456855562}
+  m_RendererFeatureMap: adc0de57c6d2eee58ca8dc2dca8b8802d8d6c218da177632f68d872e8123bc81l
+  xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3
   m_PrepassLayerMask:
@@ -123,7 +139,7 @@ MonoBehaviour:
   m_Name: City Height Fog
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
   m_Active: 1
-  injectionPoint: 550
+  injectionPoint: 450
   fetchColorBuffer: 1
   requirements: 1
   passMaterial: {fileID: 2100000, guid: f12177dd88f41dd4db883aa03d7d1177, type: 2}

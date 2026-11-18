@@ -10,6 +10,9 @@
 //   _CityFogEnvTint   rgb x fog colour (time of day), w x density (weather)      } from EnvironmentSystem (the match's
 //   _CityFogEnvColour rgb weather fog colour, w how much it pulls (0..1)          } conditions, EnvironmentSettings);
 //   _CityFogEnvGlow   x how much glow (time of day: 1 night, low by day), y 1 = set (0 = ignore the three)
+//   _CityFogStart     metres from the camera where this fog starts (0 = at the camera). Volumetric fog (Buto)
+//                     covers the near part and sets it to its range; this pass runs before Buto, so the near fog lies
+//                     over the far fog.
 //   _CityFogGlow    rgb linear fog colour low down (city light from below), w height above the base (m) where the
 //                   colour has turned to _CityFogColour. Bright (HDR) emission partly shines through the fog, so bloom
 //                   gives neon halos in it (owner's references, 18 Nov 2026).
@@ -40,6 +43,7 @@ Shader "Hidden/Chopper/CityHeightFog"
             float4 _CityFogEnvTint;
             float4 _CityFogEnvColour;
             float4 _CityFogEnvGlow;
+            float _CityFogStart;
 
             half4 Frag(Varyings input) : SV_Target
             {
@@ -63,6 +67,17 @@ Shader "Hidden/Chopper/CityHeightFog"
                 float3 camera = _WorldSpaceCameraPos;
                 float3 ray = world - camera;
                 float distance = length(ray);
+                // The near part belongs to the volumetric fog: integrate from _CityFogStart on.
+                float start = max(0.0, _CityFogStart);
+                if (start > 0.0)
+                {
+                    if (distance <= start)
+                        return colour;
+                    float3 direction = ray / distance;
+                    camera += direction * start;
+                    ray = world - camera;
+                    distance -= start;
+                }
 
                 float falloff = max(1.0, _CityFogParams.z);
                 float k = clamp(ray.y / falloff, -80.0, 80.0);

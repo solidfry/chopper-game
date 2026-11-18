@@ -52,6 +52,28 @@ namespace Chopper.Presentation.Visuals
         [SerializeField] private List<TimeOfDayLook> times = new();
         [SerializeField] private List<WeatherLook> weathers = new();
 
+        /// <summary>Volumetric fog near the camera (Buto package, Chopper.Presentation.Buto). The map's height fog and the
+        /// conditions above feed it; the full-screen height fog carries on past <see cref="Range"/>.</summary>
+        [Serializable]
+        public sealed class VolumetricFogLook
+        {
+            [Tooltip("Use volumetric fog when the Buto package is in the project.")] public bool Enabled = true;
+            [Tooltip("Metres of volumetric fog from the camera; the height fog pass takes over beyond.")] [Min(10f)] public float Range = 450f;
+            [Tooltip("Buto depth ratio: higher = more grid slices near the camera.")] [Min(0.5f)] public float DepthRatio = 2.5f;
+            [Tooltip("Buto grid cell size in screen pixels (bigger = cheaper, blurrier).")] [Min(3)] public int GridPixelSize = 12;
+            [Tooltip("Buto grid slices along the view.")] [Range(32, 240)] public int GridSlices = 128;
+            [Tooltip("x the map's fog density (1/m) to Buto's density.")] [Min(0f)] public float DensityScale = 1.5f;
+            [Tooltip("Forward scattering (0..1): light glows round lamps and the sun when you look towards them.")]
+            [Range(-1f, 1f)] public float Anisotropy = 0.45f;
+            [Tooltip("x light in the fog.")] [Min(0f)] public float LightIntensity = 1.2f;
+            [Tooltip("Self glow of the fog from the map's glow colour (city neon from below), x the time of day's Fog Glow.")]
+            [Min(0f)] public float GlowEmission = 0.35f;
+            [Tooltip("Fog in shadow, x the lit fog colour.")] [Range(0f, 1f)] public float ShadowShade = 0.35f;
+        }
+
+        [SerializeField] private VolumetricFogLook volumetric = new();
+        public VolumetricFogLook Volumetric => volumetric;
+
         [Header("Editor preview (ignored in builds)")]
         [SerializeField, Tooltip("Editor only: show these conditions in play mode, whatever the server picked (cosmetic).")]
         private bool previewOverride;

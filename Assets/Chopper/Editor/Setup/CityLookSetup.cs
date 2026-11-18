@@ -29,6 +29,8 @@ namespace Chopper.Editor.Setup
         private const string VolumeName = "City Post Volume";
         // Internal in some URP versions: found by name.
         private const string SsaoType = "UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion, Unity.RenderPipelines.Universal.Runtime";
+        // Volumetric fog (OccaSoftware Buto package), optional: found by name, so the editor builds without it.
+        private const string ButoFeatureType = "OccaSoftware.Buto.Runtime.ButoRenderFeature, OccaSoftware.Buto.Runtime";
 
         public static void Apply()
         {
@@ -36,9 +38,11 @@ namespace Chopper.Editor.Setup
             if (renderers.Count == 0)
                 Debug.LogWarning("Setup: no URP renderer found (Project Settings > Graphics / Quality). No city fog pass or SSAO.");
             var fog = EnsureFogMaterial();
+            var buto = Type.GetType(ButoFeatureType);
             foreach (var data in renderers)
             {
-                if (fog != null) EnsureFog(data, fog);
+                if (fog != null) EnsureFog(data, fog, buto != null);
+                if (buto != null) EnsureButo(data, buto);
                 EnsureSsao(data);
             }
             var profile = EnsureProfile();
@@ -120,15 +124,39 @@ namespace Chopper.Editor.Setup
             return material;
         }
 
-        private static void EnsureFog(ScriptableRendererData data, Material fog)
+        /// <summary>The height fog pass. With Buto in the project it runs at BeforeRenderingTransparents, before Buto (list order):
+        /// it draws only the far fog (past <c>_CityFogStart</c>) and Buto's near volumetric fog lies over it.</summary>
+        private static void EnsureFog(ScriptableRendererData data, Material fog, bool beforeButo)
         {
-            if (data.rendererFeatures.OfType<FullScreenPassRendererFeature>().Any(f => f != null && f.passMaterial == fog)) return;
+            // Same event as Buto; features at one event run in list order, and Buto is added after this pass.
+            var point = beforeButo ? FullScreenPassRendererFeature.InjectionPoint.BeforeRenderingTransparents
+                : FullScreenPassRendererFeature.InjectionPoint.BeforeRenderingPostProcessing;
+            var existing = data.rendererFeatures.OfType<FullScreenPassRendererFeature>().FirstOrDefault(f => f != null && f.passMaterial == fog);
+            if (existing != null)
+            {
+                if (existing.injectionPoint != point)
+                {
+                    existing.injectionPoint = point;
+                    EditorUtility.SetDirty(existing);
+                    EditorUtility.SetDirty(data);
+                }
+                return;
+            }
             var feature = ScriptableObject.CreateInstance<FullScreenPassRendererFeature>();
             feature.name = "City Height Fog";
             feature.passMaterial = fog;
-            feature.injectionPoint = FullScreenPassRendererFeature.InjectionPoint.BeforeRenderingPostProcessing;
+            feature.injectionPoint = point;
             feature.fetchColorBuffer = true;
             feature.requirements = ScriptableRenderPassInput.Depth;
+            AddFeature(data, feature);
+        }
+
+        /// <summary>Buto's render feature (volumetric fog near the camera; ButoFogSystem drives its settings at runtime).</summary>
+        private static void EnsureButo(ScriptableRendererData data, Type type)
+        {
+            if (data.rendererFeatures.Any(f => f != null && f.GetType() == type)) return;
+            var feature = (ScriptableRendererFeature)ScriptableObject.CreateInstance(type);
+            feature.name = "Buto Volumetric Fog";
             AddFeature(data, feature);
         }
 

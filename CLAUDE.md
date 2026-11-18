@@ -19,6 +19,7 @@ These folders are excluded from version control and must be obtained separately.
 | `Assets/Ultimate SFX Bundle - HD Remaster` | 1.0 GB | Available SFX library |
 | `Assets/Colossal Game Music Collection` | 653 MB | Available music library |
 | `Assets/Total Music Collection` | 710 MB | Available music library (untracked from the index, still on disk) |
+| `Packages/com.occasoftware.buto` | 192 MB | Buto volumetric fog (embedded package). Optional: `Chopper.Presentation.Buto` compiles only with it (`BUTO_PRESENT`); Setup step 9 adds its render feature |
 
 Music used by the game lives in `Assets/Chopper/Audio/Music` and is stored with **Git LFS** (run `git lfs install` before cloning). Processed SFX are in `Assets/Chopper/Audio/SFX` (plain git).
 
