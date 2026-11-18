@@ -662,6 +662,22 @@ def sky_lobby(b, rect, y, colour="sodium"):
     b.span(rect.x0 - 0.65, rect.x1 + 0.65, y + 1.1, y + 1.4, rect.z0 - 0.65, rect.z1 + 0.65, colour, L01)
 
 
+def neon_strips(b, rect, y0, y1, count, colour, sides=("front", "right")):
+    """Full-height neon lines up a tier's faces (`count` per face, evenly spaced): the vertical light lines of the
+    cyberpunk skyline references (owner, 18 Nov 2026). They stand 0.27 m out, past the fins and floor bands."""
+    all_faces = faces(rect)
+    for name in sides:
+        face = all_faces[name]
+        for i in range(count):
+            u = (i + 0.5) * face.length / count
+            b.on_face(face, u, (y0 + y1) / 2, 0.12, 0.3, max(1.0, y1 - y0 - 1.2), 0.3, colour, L01)   # 3 cm into the wall: attached
+
+
+def light_band(b, rect, y, colour):
+    """A thin neon line round a tier at height y (a lit floor line: counts the height and lights the fog)."""
+    b.span(rect.x0 - 0.35, rect.x1 + 0.35, y, y + 0.35, rect.z0 - 0.35, rect.z1 + 0.35, colour, L01)
+
+
 def neon_edges(b, rect, y0, y1, colour):
     """Vertical neon strips on the four corners of a tier."""
     for x, sx in ((rect.x0, -1), (rect.x1, 1)):

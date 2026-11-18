@@ -264,6 +264,8 @@ namespace Chopper.Editor.Setup
             public float @base;
             public float falloff;
             public float most;
+            public string glow;         // optional: fog colour low down (city light from below)
+            public float glowHeight;    // m above the base where the fog has turned to `colour`
         }
 
         [Serializable]
@@ -942,6 +944,12 @@ namespace Chopper.Editor.Setup
                     Speed = new Vector2(2.5f, 4f), SizeOfRadius = new Vector2(0.9f, 1.5f), MinSize = 4f, Grow = 3.5f, RatePerMetre = 0.35f,
                     MinRate = 2f, MaxParticles = 140,
                     Glow = new Color(0.16f, 0.12f, 0.09f) },
+            // Rooftop vents on towers (CityForge _roof_steam): small fast wisps with a neon glow, so the steam reads in
+            // the night skyline like the owner's references (18 Nov 2026).
+            new() { Kind = "vent", Most = 90, Merge = 25f, Colour = new Color(0.8f, 0.82f, 0.88f, 0.4f), Lifetime = new Vector2(5f, 8f),
+                    Speed = new Vector2(2f, 3.5f), SizeOfRadius = new Vector2(2.5f, 4f), MinSize = 1.6f, Grow = 4f, RatePerMetre = 2.5f,
+                    MinRate = 1.5f, MaxParticles = 40,
+                    Glow = new Color(0.22f, 0.07f, 0.2f) },
             new() { Kind = "smoke", Most = 70, Merge = 3f, Colour = new Color(0.18f, 0.17f, 0.16f, 0.6f), Lifetime = new Vector2(10f, 14f),
                     Speed = new Vector2(2f, 3f), SizeOfRadius = new Vector2(2f, 3f), MinSize = 2f, Grow = 4f, RatePerMetre = 1.5f,
                     MinRate = 2.5f, MaxParticles = 70,
@@ -1145,7 +1153,8 @@ namespace Chopper.Editor.Setup
             SceneManager.MoveGameObjectToScene(go, scene);
             var authoring = go.AddComponent<Chopper.Simulation.Visuals.CityAtmosphereAuthoring>();
             var colour = ColorUtility.TryParseHtmlString(fog.colour, out var parsed) ? parsed : new Color(0.29f, 0.24f, 0.22f);
-            authoring.Set(colour, fog.density, fog.@base, fog.falloff, fog.most);
+            var glow = !string.IsNullOrEmpty(fog.glow) && ColorUtility.TryParseHtmlString(fog.glow, out var parsedGlow) ? parsedGlow : colour;
+            authoring.Set(colour, fog.density, fog.@base, fog.falloff, fog.most, glow, Mathf.Max(1f, fog.glowHeight));
         }
 
         private const string TrafficSettingsPath = "Assets/Chopper/Data/Rendering/TrafficSettings.asset";

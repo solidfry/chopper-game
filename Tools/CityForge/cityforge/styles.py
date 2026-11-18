@@ -41,6 +41,8 @@ STYLES = {
     # City01: gritty desert dystopia. Sand concrete, sodium light, a little neon.
     "dystopia": dict(
         kit="City01",
+        # Thicker fog lit magenta from below by the neon (owner's references, 18 Nov 2026).
+        height_fog=dict(colour="#6e5a6a", density=0.0007, falloff=150.0, most=0.75, glow="#c0388a", glowHeight=170.0),
         storey=3.6,             # floor to floor (m)
         lit=0.14,               # share of lit windows (0..1)
         lit_cool=0.35,          # share of lit windows with cool office light (the rest warm)
@@ -84,6 +86,8 @@ STYLES = {
     # crater walls; a few corporate towers in the core, refinery and cooling towers round it.
     "crater": dict(
         kit="City04",
+        # Smoky red haze lit from below by the lava and the refinery (owner's references, 18 Nov 2026).
+        height_fog=dict(glow="#b0352a", glowHeight=150.0),
         biome="volcanic",
         storey=3.6, lit=0.12, lit_cool=0.3, shop_lit=0.5, neon=0.45, wear=1.0, obstruction_height=30.0, props=1.0,
         edge_radius=0.0,

@@ -85,6 +85,11 @@ def variant_specs(base_specs=None, variants=None, seed=11, tower_scale=(0.7, 1.3
                                  for sw, sd, floors, ox, oz in spec["tiers"]]
                 spec["facade"] = rng.choice(("ribbon", "grid"))
                 spec["crown"] = rng.choice(("pad", "antennas", "sign", "spire"))
+                spec["neon_colour"] = rng.choice(("neon_cyan", "neon_pink"))
+                spec["strips"] = rng.choice((0, 2, 3, 4)) if base.get("strips") is None else max(1, base["strips"] + rng.choice((-1, 0, 1)))
+                spec["bands"] = rng.choice((0, 0, 6, 9))
+                spec["screen"] = [rng.randrange(len(spec["tiers"])), rng.choice(("front", "left", "right"))] \
+                    if rng.random() < 0.45 else None
             elif kind == "block":
                 spec["floors"] = rng.randint(4, 9)
                 if spec["shape"] != "U":

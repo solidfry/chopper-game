@@ -639,7 +639,9 @@ def _city_emitters(state):
 
 
 # Height fog per biome: colour (hex), density at the base (1/m), base height (m, city floor = 0), falloff height (m:
-# the density drops to 1/e this much higher), most opacity. A style's "height_fog" overrides it.
+# the density drops to 1/e this much higher), most opacity. Optional glow (hex) and glowHeight (m): the fog low down
+# takes the glow colour (city neon lighting it from below) and turns to `colour` by glowHeight above the base. A
+# style's "height_fog" overrides it.
 HEIGHT_FOG = {
     "volcanic": dict(colour="#4a3d37", density=0.0016, base=0.0, falloff=55.0, most=0.88),
     "toxic": dict(colour="#5b6a3a", density=0.0014, base=0.0, falloff=45.0, most=0.85),

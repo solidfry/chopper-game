@@ -35,8 +35,22 @@ def tower(b):
 
     y = podium
     facade = kit.ribbon if spec["facade"] == "ribbon" else kit.grid
+    # Emission (specs.py: strips, bands, screen, neon_colour): light lines and screens, the cyberpunk look.
+    colour = spec.get("neon_colour") or rng.choice(("neon_cyan", "neon_pink"))
+    strips, bands, screen = spec.get("strips") or 0, spec.get("bands") or 0, spec.get("screen")
     for index, (rect, floors) in enumerate(tiers):
         top = facade(b, rect, y, floors, storey)
+        if strips:
+            kit.neon_strips(b, rect, y, top, strips, colour)
+        if bands:
+            for f in range(bands, floors, bands):
+                kit.light_band(b, rect, y + f * storey - 0.4, colour)
+        if screen and screen[0] == index:
+            face = faces(rect)[screen[1]]
+            width = min(face.length * 0.8, 48.0)
+            height = min((top - y) * 0.7, width * 1.8)
+            if width > 8.0 and height > 8.0:
+                kit.billboard(b, face, face.length / 2, (y + top) / 2, width, height)
         b.mass(rect, 0.0 if index == 0 else y, top, swatch="glass", top="tar")
         if index == 0:
             if rng.random() < style["neon"] + 0.3:
@@ -51,8 +65,21 @@ def tower(b):
             zone = None if spec["crown"] == "pad" else kit.roof_zone(b, rect.inset(0.4), top, blocked)
             if zone:
                 blocked.append(zone)
-        kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.8)
+        placer = kit.dress_roof(b, rect.inset(0.4), top, blocked, density=0.8)
+        if upper is None:
+            _roof_steam(b, placer, top, 2 if rect.w * rect.d > 1500.0 else 1)
         y = top
+
+
+def _roof_steam(b, placer, y, count):
+    """Steam vents on a tower roof: a short stack and a "vent" emitter (Unity: CityAssets plume look "vent", lit by the
+    neon round it). The references are full of steam (owner, 18 Nov 2026)."""
+    for _ in range(count):
+        spot = placer.place(1.8, 1.8)
+        if not spot:
+            return
+        b.span(spot.cx - 0.6, spot.cx + 0.6, y, y + 1.6, spot.cz - 0.6, spot.cz + 0.6, "metal", L01)
+        b.emitter("vent", (spot.cx, y + 1.6, spot.cz), 0.7)
 
 
 def _crown(b, rect, y, crown):

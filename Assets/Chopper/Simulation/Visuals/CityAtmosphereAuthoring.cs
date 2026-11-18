@@ -21,6 +21,10 @@ namespace Chopper.Simulation.Visuals
         public float Falloff;
         /// <summary>Most opacity the fog reaches (0..1): far scenery never vanishes completely.</summary>
         public float MaxOpacity;
+        /// <summary>Linear colour of the fog low down (city light from below); <see cref="Colour"/> by <see cref="GlowHeight"/>.</summary>
+        public float3 Glow;
+        /// <summary>Height above <see cref="BaseHeight"/> (m) where the fog colour has turned from <see cref="Glow"/> to <see cref="Colour"/>.</summary>
+        public float GlowHeight;
     }
 
     [DisallowMultipleComponent]
@@ -31,10 +35,15 @@ namespace Chopper.Simulation.Visuals
         [SerializeField, Tooltip("World height (m) of the densest fog: the crater or basin floor.")] private float baseHeight;
         [SerializeField, Min(1f), Tooltip("The density drops to 1/e this much higher (m).")] private float falloff = 55f;
         [SerializeField, Range(0f, 1f), Tooltip("Most opacity: far scenery never vanishes completely.")] private float maxOpacity = 0.88f;
+        [SerializeField, Tooltip("Fog colour low down: city light from below (neon, lava).")] private Color glow = new(0.29f, 0.24f, 0.22f);
+        [SerializeField, Min(1f), Tooltip("Height above the base (m) where the fog has turned from the glow colour to the fog colour.")]
+        private float glowHeight = 1f;
 
         /// <summary>Editor only: used by the setup tool (CityForge import).</summary>
-        public void Set(Color fogColour, float fogDensity, float fogBase, float fogFalloff, float fogMax)
+        public void Set(Color fogColour, float fogDensity, float fogBase, float fogFalloff, float fogMax, Color fogGlow, float fogGlowHeight)
         {
+            glow = fogGlow;
+            glowHeight = fogGlowHeight;
             colour = fogColour;
             density = fogDensity;
             baseHeight = fogBase;
@@ -55,6 +64,8 @@ namespace Chopper.Simulation.Visuals
                     BaseHeight = authoring.baseHeight,
                     Falloff = math.max(1f, authoring.falloff),
                     MaxOpacity = math.saturate(authoring.maxOpacity),
+                    Glow = new float3(authoring.glow.linear.r, authoring.glow.linear.g, authoring.glow.linear.b),
+                    GlowHeight = math.max(1f, authoring.glowHeight),
                 });
             }
         }

@@ -1,5 +1,6 @@
 using Chopper.Simulation.Visuals;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Chopper.Presentation.Effects
@@ -15,6 +16,7 @@ namespace Chopper.Presentation.Effects
     {
         private static readonly int FogColour = Shader.PropertyToID("_CityFogColour");
         private static readonly int FogParams = Shader.PropertyToID("_CityFogParams");
+        private static readonly int FogGlow = Shader.PropertyToID("_CityFogGlow");
 
         private bool _on;
 
@@ -24,6 +26,7 @@ namespace Chopper.Presentation.Effects
             {
                 Shader.SetGlobalVector(FogColour, new Vector4(fog.Colour.x, fog.Colour.y, fog.Colour.z, 1f));
                 Shader.SetGlobalVector(FogParams, new Vector4(fog.Density, fog.BaseHeight, fog.Falloff, fog.MaxOpacity));
+                Shader.SetGlobalVector(FogGlow, new Vector4(fog.Glow.x, fog.Glow.y, fog.Glow.z, math.max(1f, fog.GlowHeight)));
                 _on = true;
             }
             else if (_on)

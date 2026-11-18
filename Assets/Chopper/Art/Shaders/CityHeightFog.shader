@@ -7,6 +7,9 @@
 // Global values (Presentation CityAtmosphereSystem, from the city scene's CityAtmosphere):
 //   _CityFogColour  rgb linear
 //   _CityFogParams  x density at the base (1/m; 0 = off), y base height (m), z falloff (m), w most opacity
+//   _CityFogGlow    rgb linear fog colour low down (city light from below), w height above the base (m) where the
+//                   colour has turned to _CityFogColour. Bright (HDR) emission partly shines through the fog, so bloom
+//                   gives neon halos in it (owner's references, 18 Nov 2026).
 //
 // Written without the editor (4 Nov 2026): check it compiles and tune the numbers in the city JSON.
 Shader "Hidden/Chopper/CityHeightFog"
@@ -30,6 +33,7 @@ Shader "Hidden/Chopper/CityHeightFog"
 
             float4 _CityFogColour;
             float4 _CityFogParams;
+            float4 _CityFogGlow;
 
             half4 Frag(Varyings input) : SV_Target
             {
@@ -55,7 +59,14 @@ Shader "Hidden/Chopper/CityHeightFog"
                 float along = abs(k) > 1e-4 ? (1.0 - exp(-k)) / k : 1.0;
                 float amount = density * distance * atCamera * along;
                 float fog = min(1.0 - exp(-amount), _CityFogParams.w);
-                colour.rgb = lerp(colour.rgb, _CityFogColour.rgb, fog);
+                // Fog colour by the height of the fog the ray crosses (its lowest point weighs most: the fog is
+                // densest there): the glow colour low down, the fog colour higher up.
+                float low = min(camera.y, world.y) - _CityFogParams.y;
+                float glowHeight = max(1.0, _CityFogGlow.w);
+                float3 fogColour = lerp(_CityFogGlow.rgb, _CityFogColour.rgb, saturate(low / glowHeight));
+                // HDR emission above 1 keeps 60 % of its excess through the fog: lights glow in it instead of fading.
+                float3 excess = max(colour.rgb - 1.0, 0.0);
+                colour.rgb = lerp(colour.rgb, fogColour, fog) + excess * fog * 0.6;
                 return colour;
             }
             ENDHLSL
