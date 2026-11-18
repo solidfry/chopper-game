@@ -69,6 +69,8 @@ namespace Chopper.Presentation.Visuals
             [Tooltip("Self glow of the fog from the map's glow colour (city neon from below), x the time of day's Fog Glow.")]
             [Min(0f)] public float GlowEmission = 0.35f;
             [Tooltip("Fog in shadow, x the lit fog colour.")] [Range(0f, 1f)] public float ShadowShade = 0.35f;
+            [Tooltip("City point lights that light the fog: the nearest this many to the camera (Buto takes 16 at most).")]
+            [Range(0, 16)] public int MaxLights = 12;
         }
 
         [SerializeField] private VolumetricFogLook volumetric = new();
