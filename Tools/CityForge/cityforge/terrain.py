@@ -446,7 +446,10 @@ class Terrain:
             """A rounded rectangle (superellipse, power 4) round the city's rectangle, with a little wobble."""
             c, s_ = abs(math.cos(angle)), abs(math.sin(angle))
             r = 1.0 / ((c / rx) ** 4 + (s_ / rz) ** 4) ** 0.25
-            return r * (1.0 + 0.02 * math.sin(3 * angle + phases[0]) + 0.01 * math.sin(7 * angle + phases[1]))
+            r *= 1.0 + 0.02 * math.sin(3 * angle + phases[0]) + 0.01 * math.sin(7 * angle + phases[1])
+            # Stay on the crater floor: the rounded corners of a big moat reached up the rim wall (18 Nov 2026), where
+            # the wall comes in to radius - warp. Keep a margin inside that.
+            return min(r, self.values["plateau"]["radius"] - self.values["plateau"]["warp"] - 60.0)
 
         moat = [(cx + math.cos(a) * moat_radius(a), cz + math.sin(a) * moat_radius(a))
                 for a in np.linspace(0.0, math.tau, 145)]
@@ -456,7 +459,9 @@ class Terrain:
         while len(self.lava) < 1 + lava["streams"] and tries < 200:
             tries += 1
             angle = rng.uniform(0, math.tau)
-            outer = plateau["radius"] + 40.0
+            # From the foot of the wall, not its crest: a flat glowing ribbon down a vertical cliff looked painted on
+            # (owner, 18 Nov 2026). The wall comes in to radius - warp.
+            outer = plateau["radius"] - plateau["warp"] - 15.0
             inner = moat_radius(angle)
             end = (cx + math.cos(angle) * inner, cz + math.sin(angle) * inner)
             start = (cx + math.cos(angle) * outer, cz + math.sin(angle) * outer)

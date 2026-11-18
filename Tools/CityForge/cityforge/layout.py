@@ -39,6 +39,10 @@ WIDTH = dict(ring=24.0, radial=20.0, boulevard=26.0, perimeter=16.0, frontage=12
 RADIAL_ANGLES = (30, 70, 110, 150, 200, 240, 290, 330)   # degrees in the (x, z) plane; 0 = +X (the spiral is there)
 BOULEVARD_X = 20.0
 SPIRAL = dict(x=385.0, z=-60.0, radius=78.0)              # plaza kept free for the sky-road spiral
+# The sky-road loop (roads.sky_roads) round the RING centre: lots under it take no towers, so the deck stays on its
+# smooth path over low buildings (18 Nov 2026: tall dense cores put towers in its way). band: half width of the strip
+# kept low (deck 7 m + clearance 14 m + the loop's wiggle 14 m + margin).
+SKY_LOOP = dict(rx=340.0, rz=255.0, band=45.0)
 UNIQUE = ("Mega_Arcology", "Mega_Twins", "Landmark_Halo", "Mega_Needle", "Landmark_Orb", "Mega_Slab", "Landmark_Twist")
 VARIANTS = {"tower": 6, "block": 6, "slum": 6, "industrial": 3}
 # A style's "layout" entry overrides these (styles.py). zones: None = the default mix (_kind, _target); else a list of
@@ -46,7 +50,8 @@ VARIANTS = {"tower": 6, "block": 6, "slum": 6, "industrial": 3}
 # spacing: local street spacing (m) in the core, then by zone (< 0.55, < 0.9, the edge).
 # fill: most buildings on one lot; gap: space kept round each building on a lot (m).
 DEFAULTS = dict(city=CITY, unique=UNIQUE, variants=VARIANTS, zones=None, spacing=(118.0, 112.0, 98.0, 84.0),
-                fill=4, gap=8.0, pack=False)
+                fill=4, gap=8.0, pack=False, tower_scale=(0.7, 1.35))
+# tower_scale: tower variants get each tier's floors times a random factor in this range (taller skylines: raise it).
 # pack: place each building where it leaves the biggest piece free (corners first) instead of the middle of the lot
 # (the middle leaves thin strips all round that nothing fits in). Denser.
 
@@ -57,7 +62,7 @@ def settings(style):
     return values
 
 
-def variant_specs(base_specs=None, variants=None, seed=11):
+def variant_specs(base_specs=None, variants=None, seed=11, tower_scale=(0.7, 1.35)):
     """New specs from the base buildings: same type, new seed and new numbers (floors, shape, crown...)."""
     rng = random.Random(seed)
     bases = {}
@@ -75,7 +80,8 @@ def variant_specs(base_specs=None, variants=None, seed=11):
             spec["seed"] = base["seed"] * 10 + k + 1
             spec["variantOf"] = base["name"]
             if kind == "tower":
-                spec["tiers"] = [[sw, sd, max(3, int(round(floors * rng.uniform(0.7, 1.35)))), ox, oz]
+                scale = rng.uniform(*tower_scale)
+                spec["tiers"] = [[sw, sd, max(3, int(round(floors * scale * rng.uniform(0.9, 1.1)))), ox, oz]
                                  for sw, sd, floors, ox, oz in spec["tiers"]]
                 spec["facade"] = rng.choice(("ribbon", "grid"))
                 spec["crown"] = rng.choice(("pad", "antennas", "sign", "spire"))
@@ -139,6 +145,8 @@ class Layout:
         self.corridor = box(-self.width, self.channel_z - CORRIDOR / 2, self.width, self.channel_z + CORRIDOR / 2)
         self.channel = box(-self.width, self.channel_z - CHANNEL_TOP / 2, self.width, self.channel_z + CHANNEL_TOP / 2)
         self.spiral = Point(SPIRAL["x"], SPIRAL["z"]).buffer(SPIRAL["radius"], 48)
+        loop = affinity.scale(Point(RING["cx"], RING["cz"]).buffer(1.0, 64), SKY_LOOP["rx"], SKY_LOOP["rz"])
+        self.sky_band = loop.exterior.buffer(SKY_LOOP["band"])
         self.specs = {spec["name"]: spec for spec in building_specs}
         self.pools = {}
         for spec in building_specs:
@@ -396,6 +404,9 @@ class Layout:
                 # The first building of a lot may fall back to a smaller kind; the rest of the lot only takes the
                 # lot's own kind (otherwise every leftover strip fills with slum shacks).
                 kinds = [kind] + fallback[kind] if placed == 0 or pack else [kind]
+                # Under the sky-road loop: no towers (they would stand in the deck's way).
+                if piece.intersects(self.sky_band):
+                    kinds = [k for k in kinds if k != "tower"] or ["block"]
                 for name in kinds:
                     pool = sorted(self.pools.get(name, []),
                                   key=lambda s: -s["plot"][0] * s["plot"][1] * rng.uniform(0.7, 1.3))

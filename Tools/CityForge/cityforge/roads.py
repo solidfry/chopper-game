@@ -312,7 +312,7 @@ def freeway(city, terrain, style):
 
 # -- City_SkyRoads ------------------------------------------------------------------------------------------------------
 
-SKY = dict(rx=340.0, rz=255.0, base=150.0, swing=30.0, width=14.0, thick=1.6, clear=14.0, spiral_turns=3.0,
+SKY = dict(rx=layout_module.SKY_LOOP["rx"], rz=layout_module.SKY_LOOP["rz"], base=150.0, swing=30.0, width=14.0, thick=1.6, clear=14.0, spiral_turns=3.0,
            spiral_radius=55.0)
 
 

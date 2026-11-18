@@ -51,6 +51,20 @@ STYLES = {
         props=1.0,              # roof prop density (vents, units, tanks)
         edge_radius=0.0,        # bevel on hard edges (m); 0 = none (seen from 20 m and more)
         budgets=dict(lod0=24000, lod1=0.8, lod2=400),  # LOD0 triangles; LOD1 share of LOD0; LOD2 triangles
+        # 18 Nov 2026 (owner): "a lot of tall buildings, dense and bustling like a cyberpunk film"; the city spans about
+        # 70 % of the basin (was the default 1000 x 800, about 40 %). Towers 1.4 to 3.2 times taller (about 80 to
+        # 330 m), a tower core, packed lots.
+        layout=dict(
+            city=(1700.0, 1360.0), fill=24, gap=4.0, pack=True, tower_scale=(1.4, 3.2),
+            variants={"tower": 14, "block": 8, "slum": 6, "industrial": 3},
+            zones=[(0.4, 3000.0, (("tower", 1.0),)),
+                   (0.7, 3400.0, (("tower", 0.7), ("block", 0.3))),
+                   (0.92, 3800.0, (("tower", 0.4), ("block", 0.4), ("slum", 0.2))),
+                   (9.0, 3400.0, (("block", 0.4), ("slum", 0.45), ("industrial", 0.15)))],
+        ),
+        # The mesas move out to the rim and get smaller, to make room for the bigger city.
+        terrain=dict(mesas=dict(count=10, ring=(1080.0, 1190.0), radius=(40.0, 90.0), height=(55.0, 140.0),
+                                cliff=10.0, talus=45.0)),
         palette={
             # name: (colour, emission or None, metallic, smoothness). Names are PartForge swatches (see SWATCH).
             "hull": ("#8b8273", None, 0.0, 0.18),         # sand concrete
@@ -89,14 +103,18 @@ STYLES = {
         },
         layout=dict(
             unique=("Mega_Slab", "Mega_Needle", "Landmark_Orb"),
-            variants={"tower": 4, "block": 4, "slum": 4, "industrial": 12},
+            variants={"tower": 12, "block": 4, "slum": 4, "industrial": 12},
             # Dense: a bigger city on the crater floor, up to 10 buildings per lot, 4 m between them.
-            city=(1150.0, 920.0), fill=40, gap=3.0, pack=True,
+            # 18 Nov 2026 (owner): the city spans about 65 % of the crater (was 1150 x 920, about 50 %); its corners must stay inside the moat, which stays off the wall.
+            city=(1380.0, 1090.0), fill=40, gap=3.0, pack=True,
+            # 18 Nov 2026 (owner): "more skyscrapers in the crater": a tall tower core like the desert city, towers 1.4
+            # to 3.2 times taller (about 80 to 330 m); the refinery moves to the outer rings.
+            tower_scale=(1.4, 3.2),
             # Refinery plots are big: wider street spacing and bigger lots outside the core.
             spacing=(118.0, 140.0, 150.0, 120.0),
-            zones=[(0.35, 3600.0, (("tower", 0.75), ("block", 0.25))),
-                   (0.62, 4200.0, (("industrial", 0.6), ("block", 0.25), ("tower", 0.15))),
-                   (0.92, 4800.0, (("industrial", 0.85), ("slum", 0.1), ("block", 0.05))),
+            zones=[(0.45, 3200.0, (("tower", 1.0),)),
+                   (0.75, 3800.0, (("tower", 0.8), ("block", 0.1), ("industrial", 0.1))),
+                   (0.92, 4800.0, (("industrial", 0.6), ("tower", 0.25), ("slum", 0.1), ("block", 0.05))),
                    (9.0, 3600.0, (("industrial", 0.6), ("slum", 0.4)))],
         ),
         terrain=dict(
@@ -104,13 +122,14 @@ STYLES = {
             # Crater wall: a steep inner cliff, a second step, a high jagged crest.
             plateau=dict(radius=1120.0, width=45.0, height=230.0, warp=90.0, wall=150.0, wall_at=130.0, crest=75.0),
             # Old cinder cones on the crater floor: flat tops (landing), steep terraced sides.
-            mesas=dict(shape="cone", count=6, ring=(920.0, 1040.0), radius=(70.0, 130.0), height=(50.0, 115.0),
+            # 18 Nov 2026: pushed out against the crater wall and smaller, to make room for the bigger city.
+            mesas=dict(shape="cone", count=6, ring=(1040.0, 1085.0), radius=(45.0, 75.0), height=(50.0, 115.0),
                        cliff=10.0, talus=30.0, top=0.38),
             strata=7.0,
             # The breach: where lava once broke out through the crater wall.
             canyon=dict(width=(120.0, 170.0), wall=30.0, floor=(-6.0, -45.0), wiggle=50.0, start=40.0),
             # Lava: a moat round the city that drains into the breach, and streams down from the crater wall.
-            lava=dict(moat=(745.0, 635.0), streams=4, width=(14.0, 26.0), depth=2.5),
+            lava=dict(moat=(1015.0, 865.0), streams=4, width=(14.0, 26.0), depth=2.5),
             backdrop=dict(rings=64, segments=320, edge_smooth=260.0),
         ),
         # Slum town dug into the crater wall (shanties.py).

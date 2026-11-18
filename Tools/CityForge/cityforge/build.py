@@ -73,7 +73,9 @@ def all_specs(style, with_variants=True):
     # One-off buildings (megatowers, landmarks) only when the style's layout places them.
     base = [spec for spec in specs.for_style(style["name"])
             if spec["type"] in ("tower", "block", "slum", "industrial") or spec["name"] in unique]
-    return base + (layout.variant_specs(base, layout.settings(style)["variants"]) if with_variants else [])
+    values = layout.settings(style)
+    return base + (layout.variant_specs(base, values["variants"], tower_scale=tuple(values["tower_scale"]))
+                   if with_variants else [])
 
 
 def make_buildings(style, names=None, with_variants=False):
