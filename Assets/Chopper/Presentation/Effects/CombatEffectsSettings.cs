@@ -68,13 +68,13 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Dust ring radius (m) at the top of the downwash height and at the surface.")]
         private Vector2 downwashRadius = new(9f, 4f);
         [SerializeField, Tooltip("Dust puffs per second at full strength.")]
-        private float downwashRate = 80f;
+        private float downwashRate = 220f;
         [SerializeField, Tooltip("Outward speed of the dust at full strength, m/s.")]
         private float downwashSpeed = 16f;
         [SerializeField, Tooltip("Dust puff size (m) when it starts; it grows as it moves out.")]
         private float downwashSize = 3.5f;
         [SerializeField, Tooltip("Dust colour (the biome's dust: sand, snow, ash...). Alpha = thickness.")]
-        private Color downwashColour = new(0.70f, 0.61f, 0.47f, 0.45f);
+        private Color downwashColour = new(0.70f, 0.61f, 0.47f, 0.85f);
         [SerializeField, Tooltip("Camera shake per second for the own chopper at full strength (0..1 trauma).")]
         private float downwashShake = 0.15f;
 

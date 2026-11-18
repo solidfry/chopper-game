@@ -183,13 +183,16 @@ namespace Chopper.Presentation.Effects
             if (system == null) return;
             var transform = system.transform;
             // The circle shape lies in the local XY plane: its forward axis on the surface normal.
-            transform.SetPositionAndRotation((Vector3)(point + normal * 0.3f), Quaternion.LookRotation((Vector3)normal));
+            transform.SetPositionAndRotation((Vector3)(point + normal * 1.1f), Quaternion.LookRotation((Vector3)normal));
 
             var near = math.saturate(1f - height / settings.DownwashHeight);
             var shape = system.shape;
             shape.radius = math.lerp(settings.DownwashRadius.x, settings.DownwashRadius.y, near);
             var main = system.main;
-            main.startSpeedMultiplier = settings.DownwashSpeed * (0.4f + 0.6f * emitter.Strength);
+            var speed = settings.DownwashSpeed * (0.4f + 0.6f * emitter.Strength);
+            main.startSpeedMultiplier = speed;
+            var limit = system.limitVelocityOverLifetime;
+            limit.limitMultiplier = speed;
             var emission = system.emission;
             emission.rateOverTimeMultiplier = settings.DownwashRate * emitter.Strength;
 
@@ -198,6 +201,12 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>A world-space ring emitter: puffs move out along the surface, slow down, rise a little, grow and fade.</summary>
+        /// <summary>
+        /// Real rotor wash: a sheet of dust thrown out fast and low along the ground from under the rotor, slowing as it
+        /// spreads, then churning and rolling up at the edge. Smoke flipbook texture (<see cref="SmokeSheet"/>), noise for
+        /// turbulence, puffs that grow and thin as they slow. (Before 18 Nov 2026: round blobs held to 2 m/s, which hung
+        /// in a ring and looked fake.)
+        /// </summary>
         private ParticleSystem Create(CombatEffectsSettings settings, Color colour)
         {
             if (_root == null) _root = new GameObject("Rotor Downwash").transform;
@@ -211,51 +220,74 @@ namespace Chopper.Presentation.Effects
             main.playOnAwake = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = MaxParticles;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2.4f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.7f, 1.2f);
-            main.startSize = new ParticleSystem.MinMaxCurve(settings.DownwashSize * 0.6f, settings.DownwashSize * 1.4f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.6f, 3f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);   // x DownwashSpeed (Drive)
+            // Big puffs: a real wash cloud is metres high; small puffs vanish in the soft fade at the ground.
+            main.startSize = new ParticleSystem.MinMaxCurve(settings.DownwashSize * 1.15f, settings.DownwashSize * 2.15f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            main.startColor = new ParticleSystem.MinMaxGradient(colour, colour * new Color(0.8f, 0.8f, 0.8f, 1f));
-            main.gravityModifier = -0.04f;
+            main.startColor = new ParticleSystem.MinMaxGradient(colour, colour * new Color(0.82f, 0.8f, 0.78f, 1f));
+            main.gravityModifier = 0f;
 
             var emission = system.emission;
             emission.rateOverTime = 0f;
 
+            // The circle lies on the ground (local XY) and throws particles out along its radius.
             var shape = system.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Circle;
             shape.radius = settings.DownwashRadius.x;
-            shape.radiusThickness = 0.35f;
+            shape.radiusThickness = 0.6f;
+            shape.randomDirectionAmount = 0.08f;
 
-            // Lift off the ground as they slow: a little velocity along the surface normal (local Z).
+            // Low at first, then the edge of the sheet rolls up off the ground (local Z = surface normal).
             var velocity = system.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.Local;
-            // All three axes in the same curve mode (two constants), or Unity rejects them.
-            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.z = new ParticleSystem.MinMaxCurve(0.5f, 2.5f);
+            var flat = AnimationCurve.Constant(0f, 1f, 0f);
+            var rise = new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(0.35f, 0.25f), new Keyframe(1f, 1f));
+            velocity.x = new ParticleSystem.MinMaxCurve(1f, flat);
+            velocity.y = new ParticleSystem.MinMaxCurve(1f, flat);
+            velocity.z = new ParticleSystem.MinMaxCurve(3.2f, rise);
 
+            // Drag: fast out, then it slows to a drift (the limit falls over the life; Drive scales it by speed).
             var limit = system.limitVelocityOverLifetime;
             limit.enabled = true;
-            // Fast out, then the dust hangs: speed above 2 m/s bleeds away.
-            limit.limit = new ParticleSystem.MinMaxCurve(2f);
-            limit.dampen = 0.04f;
+            limit.limit = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 1f), new Keyframe(0.3f, 0.45f), new Keyframe(0.7f, 0.14f), new Keyframe(1f, 0.08f)));
+            limit.dampen = 0.12f;
 
+            // Turbulence: the sheet churns and breaks up.
+            var noise = system.noise;
+            noise.enabled = true;
+            // Mostly sideways: up/down churn pushed puffs into the ground.
+            noise.separateAxes = true;
+            noise.strengthX = new ParticleSystem.MinMaxCurve(1.6f);
+            noise.strengthY = new ParticleSystem.MinMaxCurve(0.4f);
+            noise.strengthZ = new ParticleSystem.MinMaxCurve(1.6f);
+            noise.frequency = 0.22f;
+            noise.scrollSpeed = 0.5f;
+            noise.damping = true;
+            noise.octaveCount = 2;
+            noise.quality = ParticleSystemNoiseQuality.Medium;
+
+            // Puffs grow as they slow and spread.
             var size = system.sizeOverLifetime;
             size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.5f, 1f, 1.8f));
+            size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.35f), new Keyframe(0.4f, 1.3f), new Keyframe(1f, 2.6f)));
 
             var fade = new Gradient();
             fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0.6f, 0.5f), new GradientAlphaKey(0f, 1f) });
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.08f), new GradientAlphaKey(0.55f, 0.55f), new GradientAlphaKey(0f, 1f) });
             var colourOverLifetime = system.colorOverLifetime;
             colourOverLifetime.enabled = true;
             colourOverLifetime.color = new ParticleSystem.MinMaxGradient(fade);
 
             var rotation = system.rotationOverLifetime;
             rotation.enabled = true;
-            rotation.z = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.5f, 0.5f);
+
+            SmokeSheet.Apply(system);
 
             var renderer = go.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
@@ -263,7 +295,7 @@ namespace Chopper.Presentation.Effects
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.sortMode = ParticleSystemSortMode.Distance;
-            renderer.maxParticleSize = 2f;
+            renderer.maxParticleSize = 3f;
             return system;
         }
 

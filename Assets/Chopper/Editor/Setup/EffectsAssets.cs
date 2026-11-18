@@ -114,6 +114,108 @@ namespace Chopper.Editor.Setup
             return Save(material, SmokeMaterialPath, emission: true);
         }
 
+        private const string SmokeSheetPath = "Assets/Chopper/Data/Effects/SmokeSheet.png";
+
+        /// <summary>
+        /// Shared smoke and dust flipbook, made in code (no texture pack needed): <see cref="SmokeSheet.Tiles"/> x
+        /// <see cref="SmokeSheet.Tiles"/> frames. Each row is a different puff (a cluster of soft lobes broken up by
+        /// noise); along a row the same puff spreads, thins and frays (left = young). Grey shading lit from the top left
+        /// gives the lobes volume; the particle colour tints it. Particles pick a random row and play it over their
+        /// life. Made once; delete the file to make it again.
+        /// </summary>
+        internal static Texture2D EnsureSmokeSheet()
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(SmokeSheetPath);
+            if (texture != null) return texture;
+
+            const int frame = 256;
+            var tiles = SmokeSheet.Tiles;
+            var size = frame * tiles;
+            var pixels = new Color32[size * size];
+            var random = new System.Random(0x5309);
+            for (var row = 0; row < tiles; row++)
+            {
+                // A puff: 5..7 lobes round the middle, and its own noise offset.
+                var lobes = 5 + random.Next(3);
+                var lobeCentres = new Vector2[lobes];
+                var lobeRadii = new float[lobes];
+                for (var l = 0; l < lobes; l++)
+                {
+                    var angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                    var reach = l == 0 ? 0f : 0.07f + (float)random.NextDouble() * 0.1f;
+                    lobeCentres[l] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * reach;
+                    lobeRadii[l] = (l == 0 ? 0.2f : 0.13f) + (float)random.NextDouble() * 0.06f;
+                }
+                var seed = new Vector2((float)random.NextDouble() * 100f, (float)random.NextDouble() * 100f);
+
+                for (var column = 0; column < tiles; column++)
+                {
+                    var age = column / (float)(tiles - 1);
+                    var spread = 1f + 0.22f * age;
+                    var thin = 1f - 0.4f * age;
+                    var fray = 0.05f + 0.3f * age;
+                    // Unity textures start at the bottom row: row 0 of the sheet is the top row of the image.
+                    var originX = column * frame;
+                    var originY = (tiles - 1 - row) * frame;
+                    for (var y = 0; y < frame; y++)
+                    for (var x = 0; x < frame; x++)
+                    {
+                        var uv = new Vector2((x + 0.5f) / frame - 0.5f, (y + 0.5f) / frame - 0.5f);
+                        var density = Density(uv, lobeCentres, lobeRadii, lobes, spread, thin, fray, seed, age);
+                        // Light from the top left: thick smoke towards the light shades this point.
+                        var towardLight = Density(uv + new Vector2(-0.035f, 0.035f), lobeCentres, lobeRadii, lobes, spread, thin, fray, seed, age);
+                        var shade = Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(towardLight * 1.1f - density * 0.35f));
+                        var grey = (byte)Mathf.RoundToInt(Mathf.Clamp01(shade) * 255f);
+                        pixels[(originY + y) * size + originX + x] = new Color32(grey, grey, grey, (byte)Mathf.RoundToInt(density * 255f));
+                    }
+                }
+            }
+
+            var image = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            image.SetPixels32(pixels);
+            image.Apply();
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SmokeSheetPath));
+            System.IO.File.WriteAllBytes(SmokeSheetPath, image.EncodeToPNG());
+            Object.DestroyImmediate(image);
+            AssetDatabase.ImportAsset(SmokeSheetPath);
+            if (AssetImporter.GetAtPath(SmokeSheetPath) is TextureImporter importer)
+            {
+                importer.alphaIsTransparency = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = true;
+                importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(SmokeSheetPath);
+        }
+
+        /// <summary>Smoke density 0..1 at <paramref name="uv"/> (frame centre 0): soft lobes, eaten at the edge by noise.</summary>
+        private static float Density(Vector2 uv, Vector2[] centres, float[] radii, int lobes, float spread, float thin, float fray,
+            Vector2 seed, float age)
+        {
+            var body = 0f;
+            for (var l = 0; l < lobes; l++)
+            {
+                var d = (uv - centres[l] * spread).magnitude / (radii[l] * spread);
+                body += Mathf.Exp(-d * d * 2.2f);
+            }
+            body = 1f - Mathf.Exp(-body * 2.6f);
+            // Billows: fractal noise, finer as the puff ages (it frays).
+            var n = 0f;
+            var amplitude = 0.5f;
+            var frequency = 4f + 3f * age;
+            for (var o = 0; o < 4; o++)
+            {
+                n += amplitude * Mathf.PerlinNoise(seed.x + uv.x * frequency, seed.y + uv.y * frequency);
+                amplitude *= 0.5f;
+                frequency *= 2.1f;
+            }
+            var density = Mathf.Clamp01((body * (0.55f + 0.9f * n) - fray) / (1f - fray)) * thin;
+            // Never touch the frame edge (no cut lines between frames).
+            var edge = Mathf.InverseLerp(0.49f, 0.4f, uv.magnitude);
+            return density * Mathf.Clamp01(edge);
+        }
+
         /// <summary>Saves a new particle material; sets the keywords again after CreateAsset (they can be lost
         /// before it, seen with the city plumes, 5 Nov 2026).</summary>
         private static Material Save(Material material, string path, bool emission)
@@ -124,7 +226,7 @@ namespace Chopper.Editor.Setup
             AssetDatabase.CreateAsset(material, path);
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.EnableKeyword("_SOFTPARTICLES_ON");
-            if (emission) material.EnableKeyword("_EMISSION");
+            if (emission) Emissive(material);
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -135,7 +237,20 @@ namespace Chopper.Editor.Setup
         private static Material EnsureDownwashMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(DownwashMaterialPath);
-            if (material != null) return material;
+            if (material != null)
+            {
+                // Repair (18 Nov 2026): the round blob looked fake; the dust now uses the smoke sheet (flipbook).
+                var sheet = EnsureSmokeSheet();
+                if (sheet != null && material.GetTexture("_BaseMap") != sheet)
+                {
+                    material.SetTexture("_BaseMap", sheet);
+                    // The glow keyword was missing on the old asset; dust lit only by the night ambient was invisible.
+                    material.SetColor("_EmissionColor", new Color(0.11f, 0.095f, 0.075f));
+                    EditorUtility.SetDirty(material);
+                }
+                Emissive(material);
+                return material;
+            }
             var shader = Shader.Find("Universal Render Pipeline/Particles/Simple Lit");
             if (shader == null)
             {
@@ -143,7 +258,7 @@ namespace Chopper.Editor.Setup
                 return null;
             }
             material = new Material(shader) { name = "DownwashDust" };
-            material.SetTexture("_BaseMap", AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd"));
+            material.SetTexture("_BaseMap", EnsureSmokeSheet());
             material.SetColor("_BaseColor", Color.white);
             // Transparent, alpha blend, no depth write, soft particles (no hard line where dust meets the ground).
             material.SetFloat("_Surface", 1f);
@@ -155,16 +270,28 @@ namespace Chopper.Editor.Setup
             material.SetVector("_SoftParticleFadeParams", new Vector4(0f, 1.5f, 0f, 0f));
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.EnableKeyword("_SOFTPARTICLES_ON");
-            material.SetColor("_EmissionColor", new Color(0.06f, 0.05f, 0.04f));
+            material.SetColor("_EmissionColor", new Color(0.11f, 0.095f, 0.075f));
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(DownwashMaterialPath));
             AssetDatabase.CreateAsset(material, DownwashMaterialPath);
             // Keywords again on the asset: before CreateAsset they can be lost (seen with the city plumes, 5 Nov 2026).
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.EnableKeyword("_SOFTPARTICLES_ON");
-            material.EnableKeyword("_EMISSION");
+            Emissive(material);
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        /// <summary>
+        /// Keeps the glow on: URP sets _EMISSION from the material's GI flags each time it validates the material, and
+        /// "emissive is black" turned it off again (the dust was dark at night, 18 Nov 2026).
+        /// </summary>
+        private static void Emissive(Material material)
+        {
+            if (material.globalIlluminationFlags == MaterialGlobalIlluminationFlags.RealtimeEmissive && material.IsKeywordEnabled("_EMISSION")) return;
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            material.EnableKeyword("_EMISSION");
+            EditorUtility.SetDirty(material);
         }
 
         private static GameObject Load(string path)
