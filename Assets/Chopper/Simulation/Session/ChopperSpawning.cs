@@ -18,7 +18,7 @@ namespace Chopper.Simulation.Session
         /// </summary>
         public static void Spawn(EntityCommandBuffer ecb, in ChopperSpawner spawner, DynamicBuffer<ChassisPrefab> chassisPrefabs,
             Entity connection, int networkId, in LoadoutCode requested, ushort skinId, float3 position, quaternion rotation,
-            bool isConnection = true)
+            bool isConnection = true, byte team = Match.TeamRules.None)
         {
             var prefab = spawner.Prefab;
             var chassisId = requested.IsEmpty ? spawner.DefaultChassisId : requested.ChassisId;
@@ -35,6 +35,8 @@ namespace Chopper.Simulation.Session
             if (isConnection) ecb.SetComponent(connection, new CommandTarget { targetEntity = chopper });
             if (!requested.IsEmpty) ecb.SetComponent(chopper, ChopperLoadout.From(requested));
             ecb.SetComponent(chopper, new ChopperSkin { SkinId = skinId });
+            // Add, not Set: sets the baked ghost field, and still works on a prefab baked before teams existed.
+            ecb.AddComponent(chopper, new Match.Team { Value = team });
             // Despawn the chopper when the connection (or the bot) goes away.
             ecb.AppendToBuffer(connection, new LinkedEntityGroup { Value = chopper });
         }

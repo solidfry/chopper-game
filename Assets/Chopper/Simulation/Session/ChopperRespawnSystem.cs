@@ -66,7 +66,8 @@ namespace Chopper.Simulation.Session
             var prepared = false;
 
             foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>()
-                         .WithNone<Progression.LoadoutPending>().WithEntityAccess())
+                         // Team: MatchScoreSystem gives it on join (0 in Free For All); the first chopper waits for it.
+                         .WithAll<Match.Team>().WithNone<Progression.LoadoutPending>().WithEntityAccess())
             {
                 timer.ValueRW.Remaining -= deltaTime;
                 if (timer.ValueRO.Remaining > 0f) continue;
@@ -81,7 +82,8 @@ namespace Chopper.Simulation.Session
                 // Bot ids start at 1001: fold them next to the players for the fallback row.
                 var position = ChopperSpawning.FallbackPosition(spawner, Bots.BotIds.IsBot(id) ? 9 + Bots.BotIds.Slot(id) : id);
                 var rotation = spawner.Rotation;
-                var pick = placement.Choose(ref position, ref rotation);
+                var team = SystemAPI.HasComponent<Match.Team>(connection) ? SystemAPI.GetComponent<Match.Team>(connection).Value : Match.TeamRules.None;
+                var pick = placement.Choose(ref position, ref rotation, team);
                 if (pick == SpawnPick.None && placement.Points.Length > 0)
                     UnityEngine.Debug.LogWarning($"[Spawn] Player {id}: no spawn point can be used; the spawner's own point is used.");
                 else if (pick == SpawnPick.Relaxed)
@@ -91,7 +93,7 @@ namespace Chopper.Simulation.Session
                     ? SystemAPI.GetComponent<RequestedLoadout>(connection)
                     : default;
                 ChopperSpawning.Spawn(ecb, spawner, chassisPrefabs, connection, id, requested.Code, requested.SkinId, position, rotation,
-                    isConnection: SystemAPI.HasComponent<NetworkId>(connection));
+                    isConnection: SystemAPI.HasComponent<NetworkId>(connection), team: team);
                 ecb.RemoveComponent<RespawnTimer>(connection);
             }
 
@@ -141,11 +143,12 @@ namespace Chopper.Simulation.Session
                 placement.Used.Add(false);
             }
 
-            // Free for all: every live chopper is an enemy. Teams: set Enemy from the two players' teams here.
-            foreach (var (health, transform) in SystemAPI.Query<RefRO<Health>, RefRO<LocalTransform>>().WithAll<ConnectionOwner>())
+            // Enemy is set per spawning player in Choose (team mates only block the point itself).
+            foreach (var (health, transform, chopper) in SystemAPI.Query<RefRO<Health>, RefRO<LocalTransform>>().WithAll<ConnectionOwner>().WithEntityAccess())
             {
                 if (health.ValueRO.IsDead) continue;
-                placement.Threats.Add(new SpawnThreat { Position = transform.ValueRO.Position, Enemy = true });
+                var team = SystemAPI.HasComponent<Match.Team>(chopper) ? SystemAPI.GetComponent<Match.Team>(chopper).Value : Match.TeamRules.None;
+                placement.Threats.Add(new SpawnThreat { Position = transform.ValueRO.Position, Enemy = true, Team = team });
             }
             return placement;
         }
@@ -167,8 +170,14 @@ namespace Chopper.Simulation.Session
             /// Sets the place of the best point (no change when none can be used). The chosen point counts as a chopper
             /// for the next spawn of the same tick, so two players never get the same or a near point.
             /// </summary>
-            public SpawnPick Choose(ref float3 position, ref quaternion rotation)
+            public SpawnPick Choose(ref float3 position, ref quaternion rotation, byte team)
             {
+                for (var i = 0; i < Threats.Length; i++)
+                {
+                    var threat = Threats[i];
+                    threat.Enemy = Match.TeamRules.AreEnemies(team, threat.Team);
+                    Threats[i] = threat;
+                }
                 for (var i = 0; i < Candidates.Length; i++)
                 {
                     var candidate = Candidates[i];
@@ -185,7 +194,7 @@ namespace Chopper.Simulation.Session
                 var used = Candidates[best];
                 used.SecondsSinceUse = 0f;
                 Candidates[best] = used;
-                Threats.Add(new SpawnThreat { Position = position, Enemy = true });
+                Threats.Add(new SpawnThreat { Position = position, Enemy = true, Team = team });
                 return pick;
             }
 

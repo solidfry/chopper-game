@@ -12,6 +12,8 @@ namespace Chopper.Simulation.Session
         public float3 Position;
         /// <summary>False = same side as the spawning player (only <see cref="SpawnRules.OccupiedRadius"/> applies).</summary>
         public bool Enemy;
+        /// <summary>The chopper's <see cref="Match.Team"/>; <see cref="Enemy"/> is worked out from it for each spawning player.</summary>
+        public byte Team;
     }
 
     /// <summary>Server: measures a spawn point against the level and the choppers (fills a <see cref="SpawnCandidate"/>).</summary>

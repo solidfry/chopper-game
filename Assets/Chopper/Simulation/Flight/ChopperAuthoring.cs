@@ -75,6 +75,8 @@ namespace Chopper.Simulation.Flight
                 AddComponent(entity, new Health { Current = built.Health, Max = built.Health });
                 AddBuffer<DamageEvent>(entity);
                 AddComponent<LastAttacker>(entity);
+                // Team Deathmatch side, set at spawn (ChopperSpawning); a ghost field, so clients colour markers.
+                AddComponent<Match.Team>(entity);
                 AddComponent(entity, built.Crash);
                 AddComponent<CrashSensor>(entity);
                 AddComponent(entity, built.Repair);

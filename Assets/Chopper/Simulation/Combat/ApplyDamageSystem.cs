@@ -88,6 +88,7 @@ namespace Chopper.Simulation.Combat
             // Kill heals (SCRAPPER) wait until the loop ends: the healer's health may be in the query too.
             var killHeals = new NativeList<KillHeal>(4, Allocator.Temp);
             var hasLog = SystemAPI.TryGetSingletonBuffer<MatchLogEntry>(out var log);
+            var teams = SystemAPI.GetComponentLookup<Match.Team>(isReadOnly: true);
 
             foreach (var (health, damage, victim) in SystemAPI.Query<RefRW<Health>, DynamicBuffer<DamageEvent>>().WithEntityAccess())
             {
@@ -99,6 +100,7 @@ namespace Chopper.Simulation.Combat
 
                 var strongest = new DamageEvent();
                 var victimTraits = _traitsLookup.TryGetComponent(victim, out var own) ? own : PilotTraits.None;
+                var victimTeam = TeamOf(teams, victim);
                 foreach (var raw in damage)
                 {
                     if (health.ValueRO.IsDead) break;
@@ -112,6 +114,9 @@ namespace Chopper.Simulation.Combat
                     var gone = hit.Attacker.Valid && !_ownerLookup.HasComponent(hit.Source);
                     // A dead shooter's round can reach the same player's respawned chopper: that is self damage.
                     var goneSelf = gone && _ownerLookup.TryGetComponent(victim, out var victimId) && victimId.NetworkId == hit.Attacker.NetworkId;
+                    // Team Deathmatch: no friendly fire (the team of a gone shooter is on its player entity).
+                    var attackerTeam = TeamOf(teams, gone ? hit.Attacker.Connection : hit.Source);
+                    if (Match.TeamRules.BlocksDamage(attackerTeam, victimTeam, hit.Source == victim || goneSelf)) continue;
                     var sourceTraits = goneSelf ? PilotTraits.None
                         : gone ? hit.Attacker.Traits
                         : hit.Source != victim && _traitsLookup.TryGetComponent(hit.Source, out var theirs) ? theirs
@@ -235,6 +240,9 @@ namespace Chopper.Simulation.Combat
         /// The victim's ability: Battering Ram takes no crash or ram damage; the Aegis shield takes what it can (not
         /// bounds damage: the arena edge still pushes you back).
         /// </summary>
+        private static byte TeamOf(in ComponentLookup<Match.Team> teams, Entity entity) =>
+            entity != Entity.Null && teams.TryGetComponent(entity, out var team) ? team.Value : Match.TeamRules.None;
+
         private float VictimAbility(Entity victim, float amount, DamageKind kind)
         {
             if (amount <= 0f || !_abilityConfigLookup.TryGetComponent(victim, out var config) ||

@@ -7,24 +7,30 @@ using Unity.NetCode;
 namespace Chopper.Simulation.Match
 {
     /// <summary>
-    /// Server only. Free For All: keeps each player's kills and deaths, runs the match timer, ends the match at the
-    /// score or time limit, then starts the next one. Tells clients through RPCs (score, kill feed, match state).
+    /// Server only. Keeps each player's kills and deaths, runs the match timer, ends the match at the score or time
+    /// limit, then starts the next one. Tells clients through RPCs (score, kill feed, match state).
     /// A player is any entity with a <see cref="PlayerId"/>: a connection or a server bot.
+    /// Team Deathmatch (<see cref="MatchState.Mode"/>): a new player joins the smaller team (<see cref="Team"/> on the
+    /// player entity; the respawn copies it to the chopper), kills of enemies count for the killer's team, and the
+    /// team limit or the time-out ends the match (<see cref="TeamRules"/>).
     /// </summary>
     [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct MatchScoreSystem : ISystem
     {
-        [BurstCompile]
+        // Not Burst: the mode comes from the command line or the environment (managed).
         public void OnCreate(ref SystemState state)
         {
             var rules = MatchRules.Default;
+            var mode = MatchModeSource.Read();
             state.EntityManager.CreateSingleton(new MatchState
             {
                 Phase = MatchPhase.InProgress,
                 TimeRemaining = rules.TimeLimit,
+                Mode = mode,
             });
+            if (mode != MatchMode.FreeForAll) UnityEngine.Debug.Log($"[Match] Mode: {mode}.");
         }
 
         [BurstCompile]
@@ -34,6 +40,8 @@ namespace Chopper.Simulation.Match
             var matchEntity = SystemAPI.GetSingletonEntity<MatchState>();
             var match = SystemAPI.GetComponent<MatchState>(matchEntity);
             var previousPhase = match.Phase;
+            var previousScoreA = match.ScoreA;
+            var previousScoreB = match.ScoreB;
 
             AddJoinedPlayers(ref state, match);
             RemoveLeftPlayers(ref state);
@@ -58,9 +66,24 @@ namespace Chopper.Simulation.Match
                 if (killer == 0 || killer == victim || !connections.TryGetValue(killer, out var killerConnection))
                     continue;
 
+                var killerTeam = TeamOf(ref state, killerConnection);
+                var victimTeam = victimConnection != Entity.Null ? TeamOf(ref state, victimConnection) : TeamRules.None;
+                // A kill of a team mate (a crash credited to a team mate) gives nothing.
+                if (TeamRules.AreAllies(killerTeam, victimTeam)) continue;
+
                 var killerScore = ChangeScore(ref state, ecb, killerConnection, killer, kills: 1, deaths: 0);
-                if (killerScore.Kills >= rules.ScoreLimit)
-                    EndMatch(ref match, rules, killer);
+                if (TeamRules.ScoresForTeam(match.Mode, killerTeam, victimTeam))
+                {
+                    if (killerTeam == TeamRules.A) match.ScoreA++;
+                    else match.ScoreB++;
+                    var teamScore = killerTeam == TeamRules.A ? match.ScoreA : match.ScoreB;
+                    if (rules.TeamScoreLimit > 0 && teamScore >= rules.TeamScoreLimit)
+                        EndMatch(ref match, rules, 0, killerTeam);
+                }
+                else if (!TeamRules.IsTeamMode(match.Mode) && killerScore.Kills >= rules.ScoreLimit)
+                {
+                    EndMatch(ref match, rules, killer, TeamRules.None);
+                }
             }
 
             match.TimeRemaining -= SystemAPI.Time.DeltaTime;
@@ -68,20 +91,21 @@ namespace Chopper.Simulation.Match
             {
                 if (match.Phase == MatchPhase.InProgress)
                 {
-                    EndMatch(ref match, rules, TopScorer(ref state));
+                    if (TeamRules.IsTeamMode(match.Mode)) EndMatch(ref match, rules, 0, TeamRules.Leader(match.ScoreA, match.ScoreB));
+                    else EndMatch(ref match, rules, TopScorer(ref state), TeamRules.None);
                 }
                 else
                 {
-                    match = new MatchState { Phase = MatchPhase.InProgress, TimeRemaining = rules.TimeLimit };
-                    foreach (var (score, networkId) in SystemAPI.Query<RefRW<PlayerScore>, RefRO<PlayerId>>())
+                    match = new MatchState { Phase = MatchPhase.InProgress, TimeRemaining = rules.TimeLimit, Mode = match.Mode };
+                    foreach (var (score, networkId, player) in SystemAPI.Query<RefRW<PlayerScore>, RefRO<PlayerId>>().WithEntityAccess())
                     {
                         score.ValueRW = default;
-                        Broadcast(ecb, new ScoreRpc { NetworkId = networkId.ValueRO.Value });
+                        Broadcast(ecb, new ScoreRpc { NetworkId = networkId.ValueRO.Value, Team = TeamOf(ref state, player) });
                     }
                 }
             }
 
-            if (match.Phase != previousPhase)
+            if (match.Phase != previousPhase || match.ScoreA != previousScoreA || match.ScoreB != previousScoreB)
                 Broadcast(ecb, ToRpc(match));
 
             SystemAPI.SetComponent(matchEntity, match);
@@ -92,22 +116,34 @@ namespace Chopper.Simulation.Match
         private void AddJoinedPlayers(ref SystemState state, in MatchState match)
         {
             var ecb = new EntityCommandBuffer(Allocator.Temp);
+            var countA = 0;
+            var countB = 0;
+            foreach (var team in SystemAPI.Query<RefRO<Team>>().WithAll<PlayerId, PlayerScore>())
+            {
+                if (team.ValueRO.Value == TeamRules.A) countA++;
+                else if (team.ValueRO.Value == TeamRules.B) countB++;
+            }
             foreach (var (networkId, connection) in SystemAPI.Query<RefRO<PlayerId>>().WithNone<PlayerScore>().WithEntityAccess())
             {
                 var id = networkId.ValueRO.Value;
+                var joined = TeamRules.JoinTeam(match.Mode, countA, countB);
+                if (joined == TeamRules.A) countA++;
+                else if (joined == TeamRules.B) countB++;
                 ecb.AddComponent<PlayerScore>(connection);
                 ecb.AddComponent(connection, new PlayerScoreCleanup { NetworkId = id });
-                Broadcast(ecb, new ScoreRpc { NetworkId = id });
+                ecb.AddComponent(connection, new Team { Value = joined });
+                Broadcast(ecb, new ScoreRpc { NetworkId = id, Team = joined });
                 // A server bot has no connection to send the scoreboard to.
                 if (!SystemAPI.HasComponent<NetworkId>(connection)) continue;
 
-                foreach (var (otherScore, otherId) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>())
+                foreach (var (otherScore, otherId, other) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>().WithEntityAccess())
                 {
                     Send(ecb, connection, new ScoreRpc
                     {
                         NetworkId = otherId.ValueRO.Value,
                         Kills = otherScore.ValueRO.Kills,
                         Deaths = otherScore.ValueRO.Deaths,
+                        Team = TeamOf(ref state, other),
                     });
                 }
                 Send(ecb, connection, ToRpc(match));
@@ -132,9 +168,12 @@ namespace Chopper.Simulation.Match
             score.Kills += kills;
             score.Deaths += deaths;
             SystemAPI.SetComponent(connection, score);
-            Broadcast(ecb, new ScoreRpc { NetworkId = networkId, Kills = score.Kills, Deaths = score.Deaths });
+            Broadcast(ecb, new ScoreRpc { NetworkId = networkId, Kills = score.Kills, Deaths = score.Deaths, Team = TeamOf(ref state, connection) });
             return score;
         }
+
+        private byte TeamOf(ref SystemState state, Entity player) =>
+            SystemAPI.HasComponent<Team>(player) ? SystemAPI.GetComponent<Team>(player).Value : TeamRules.None;
 
         /// <summary>Most kills wins; a tie at the top is a draw (0).</summary>
         private int TopScorer(ref SystemState state)
@@ -159,14 +198,13 @@ namespace Chopper.Simulation.Match
             return tie ? 0 : best;
         }
 
-        private static void EndMatch(ref MatchState match, in MatchRules rules, int winner)
+        /// <summary>Keeps the mode and the team scores (the results show them); the next match clears them.</summary>
+        private static void EndMatch(ref MatchState match, in MatchRules rules, int winner, byte winnerTeam)
         {
-            match = new MatchState
-            {
-                Phase = MatchPhase.PostGame,
-                TimeRemaining = rules.PostGameDuration,
-                WinnerNetworkId = winner,
-            };
+            match.Phase = MatchPhase.PostGame;
+            match.TimeRemaining = rules.PostGameDuration;
+            match.WinnerNetworkId = winner;
+            match.WinnerTeam = winnerTeam;
         }
 
         private static MatchStateRpc ToRpc(in MatchState match) => new()
@@ -174,6 +212,10 @@ namespace Chopper.Simulation.Match
             Phase = (byte)match.Phase,
             TimeRemaining = match.TimeRemaining,
             WinnerNetworkId = match.WinnerNetworkId,
+            Mode = (byte)match.Mode,
+            ScoreA = match.ScoreA,
+            ScoreB = match.ScoreB,
+            WinnerTeam = match.WinnerTeam,
         };
 
         private static void Broadcast<T>(EntityCommandBuffer ecb, T rpc) where T : unmanaged, IRpcCommand

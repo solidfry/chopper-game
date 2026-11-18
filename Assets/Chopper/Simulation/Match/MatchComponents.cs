@@ -9,11 +9,14 @@ namespace Chopper.Simulation.Match
         PostGame = 1,
     }
 
-    /// <summary>Free For All rules. Singleton from <see cref="MatchRulesAuthoring"/>, or <see cref="Default"/>.</summary>
+    /// <summary>Match rules (both modes). Singleton from <see cref="MatchRulesAuthoring"/>, or <see cref="Default"/>.</summary>
     public struct MatchRules : IComponentData
     {
         public float TimeLimit;
+        /// <summary>Free For All: one player's kills that end the match.</summary>
         public int ScoreLimit;
+        /// <summary>Team Deathmatch: one team's kills that end the match.</summary>
+        public int TeamScoreLimit;
         /// <summary>Seconds the results show before the next match starts.</summary>
         public float PostGameDuration;
         /// <summary>A crash or bounds death this soon after a hit counts as the attacker's kill.</summary>
@@ -23,6 +26,7 @@ namespace Chopper.Simulation.Match
         {
             TimeLimit = 600f,
             ScoreLimit = 20,
+            TeamScoreLimit = 40,
             PostGameDuration = 20f,
             KillCreditSeconds = 5f,
         };
@@ -35,6 +39,13 @@ namespace Chopper.Simulation.Match
         public float TimeRemaining;
         /// <summary>0 = no winner (draw or match still running).</summary>
         public int WinnerNetworkId;
+        /// <summary>Set once at server start (<see cref="MatchModeSource"/>); kept across matches.</summary>
+        public MatchMode Mode;
+        /// <summary>Team Deathmatch kills of team A and B.</summary>
+        public int ScoreA;
+        public int ScoreB;
+        /// <summary>Team Deathmatch winner; <see cref="TeamRules.None"/> = draw or still running.</summary>
+        public byte WinnerTeam;
     }
 
     /// <summary>Server only, on a player entity (a connection or a server bot).</summary>
@@ -63,6 +74,8 @@ namespace Chopper.Simulation.Match
         public int NetworkId;
         public int Kills;
         public int Deaths;
+        /// <summary><see cref="TeamRules"/> team of that player (0 in Free For All).</summary>
+        public byte Team;
     }
 
     public struct PlayerLeftRpc : IRpcCommand
@@ -83,5 +96,10 @@ namespace Chopper.Simulation.Match
         public byte Phase;
         public float TimeRemaining;
         public int WinnerNetworkId;
+        /// <summary><see cref="MatchMode"/> as a byte.</summary>
+        public byte Mode;
+        public int ScoreA;
+        public int ScoreB;
+        public byte WinnerTeam;
     }
 }
