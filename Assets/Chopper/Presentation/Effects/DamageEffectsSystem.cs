@@ -508,10 +508,10 @@ namespace Chopper.Presentation.Effects
             }
             if (settings.DamageSmokeMaterial != null)
                 _smoke = Create("Smoke", settings.DamageSmokeMaterial, 2000, ParticleSystemRenderMode.Billboard, gravity: -0.03f,
-                    Fade(Color.white, Color.white, 0.6f), grow: 3f, drag: 0.08f);
+                    Fade(Color.white, Color.white, 0.6f), grow: 3f, drag: 0.08f, sheet: true);
             if (settings.DownwashMaterial != null)
                 _dust = Create("Crash Dust", settings.DownwashMaterial, 400, ParticleSystemRenderMode.Billboard, gravity: 0.05f,
-                    Fade(Color.white, Color.white, 0.5f), grow: 2f, drag: 0.12f);
+                    Fade(Color.white, Color.white, 0.5f), grow: 2f, drag: 0.12f, sheet: true);
         }
 
         /// <summary>Colour over lifetime: <paramref name="start"/> to <paramref name="end"/>, alpha up fast, held, then out.</summary>
@@ -523,14 +523,16 @@ namespace Chopper.Presentation.Effects
             return gradient;
         }
 
-        /// <summary>A world-space system that only emits by script (Emit), with drag, growth and a colour fade.</summary>
+        /// <summary>A world-space system that only emits by script (Emit), with drag, growth and a colour fade.
+        /// <paramref name="sheet"/>: the material uses the smoke flipbook (<see cref="SmokeSheet"/>).</summary>
         private ParticleSystem Create(string name, Material material, int maxParticles, ParticleSystemRenderMode mode, float gravity,
-            Gradient colour, float grow, float drag)
+            Gradient colour, float grow, float drag, bool sheet = false)
         {
             var go = new GameObject(name);
             go.transform.SetParent(_root, false);
             var system = go.AddComponent<ParticleSystem>();
             system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (sheet) SmokeSheet.Apply(system);
 
             var main = system.main;
             main.loop = true;
