@@ -7,7 +7,9 @@ namespace Chopper.Presentation.Effects
 {
     /// <summary>
     /// Pool for looping effect objects (projectile visuals). Spawning restarts every particle system and clears trails;
-    /// releasing can wait so smoke trails fade out instead of vanishing.
+    /// releasing can wait so smoke trails fade out instead of vanishing. While it waits, only the world-space smoke and
+    /// trails stay: the body (meshes, sprites) hides and local-space particles (flame, glow) clear at once, or the
+    /// projectile looks paused at the impact point (owner, 18 Nov 2026: "the rockets seem to pause when they hit").
     /// Sounds with Play On Awake play again on every spawn (the object is enabled again).
     /// </summary>
     public sealed class EffectPool : IDisposable
@@ -19,6 +21,8 @@ namespace Chopper.Presentation.Effects
             public TrailRenderer[] Trails;
             public AudioSource[] Audio;
             public Light[] Lights;
+            /// <summary>Renderers that are not particles or trails: the projectile body.</summary>
+            public Renderer[] Bodies;
             public float ReleaseIn = -1f;
         }
 
@@ -55,6 +59,8 @@ namespace Chopper.Presentation.Effects
                     Trails = instance.GetComponentsInChildren<TrailRenderer>(true),
                     Audio = instance.GetComponentsInChildren<AudioSource>(true),
                     Lights = instance.GetComponentsInChildren<Light>(true),
+                    Bodies = Array.FindAll(instance.GetComponentsInChildren<Renderer>(true),
+                        r => r is not ParticleSystemRenderer && r is not TrailRenderer),
                 };
                 return instance;
             }
@@ -65,6 +71,7 @@ namespace Chopper.Presentation.Effects
             entry.ReleaseIn = -1f;
             foreach (var trail in entry.Trails) trail.Clear();
             foreach (var light in entry.Lights) light.enabled = true;
+            foreach (var body in entry.Bodies) body.enabled = true;
             foreach (var particles in entry.Particles)
             {
                 particles.Clear(withChildren: false);
@@ -83,9 +90,13 @@ namespace Chopper.Presentation.Effects
                 return;
             }
 
-            // The trail fades out; light and sound stop now.
+            // The smoke and trails fade out; body, flame, light and sound go now.
             foreach (var particles in entry.Particles)
-                particles.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmitting);
+            {
+                var local = particles.main.simulationSpace == ParticleSystemSimulationSpace.Local;
+                particles.Stop(withChildren: false, local ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
+            }
+            foreach (var body in entry.Bodies) body.enabled = false;
             foreach (var audio in entry.Audio) audio.Stop();
             foreach (var light in entry.Lights) light.enabled = false;
             if (!_releasing.Contains(instance)) _releasing.Add(instance);
