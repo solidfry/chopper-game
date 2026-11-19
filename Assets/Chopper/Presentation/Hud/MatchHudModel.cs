@@ -84,6 +84,9 @@ namespace Chopper.Presentation.Hud
         private bool _bannerVisible;
         private string _deathAlertText = "";
         private bool _deathAlertVisible;
+        private string _respawnText = "";
+        /// <summary>Seconds until the next chopper; below 0 = no countdown known.</summary>
+        private float _respawnLeft = -1f;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -205,8 +208,36 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _deathAlertVisible, value, nameof(DeathAlertVisible));
         }
 
+        /// <summary>"REDEPLOY IN 4" under the death message, then "REDEPLOYING" (the kill cam can hold a little
+        /// longer). Empty when no countdown is known.</summary>
+        [CreateProperty]
+        public string RespawnText
+        {
+            get => _respawnText;
+            private set => Set(ref _respawnText, value, nameof(RespawnText));
+        }
+
         /// <summary>You have a chopper again.</summary>
-        public void ClearDeathAlert() => DeathAlertVisible = false;
+        public void ClearDeathAlert()
+        {
+            DeathAlertVisible = false;
+            _respawnLeft = -1f;
+            RespawnText = "";
+        }
+
+        /// <summary>The server's respawn delay for your death; <see cref="Tick"/> counts it down.</summary>
+        public void SetRespawnCountdown(float seconds)
+        {
+            _respawnLeft = MathF.Max(0f, seconds);
+            RefreshRespawn();
+        }
+
+        private void RefreshRespawn()
+        {
+            if (_respawnLeft < 0f) RespawnText = "";
+            else if (_respawnLeft <= 0f) RespawnText = "REDEPLOYING";
+            else RespawnText = $"REDEPLOY IN {(int)MathF.Ceiling(_respawnLeft)}";
+        }
 
         // ---- XP popup (Battlefield style): a title, the victim, a stack of "+XP" lines and a total that counts up. ----
 
@@ -395,6 +426,11 @@ namespace Chopper.Presentation.Hud
             _timeRemaining = MathF.Max(0f, _timeRemaining - deltaTime);
             RefreshTimer();
             TickXp(deltaTime);
+            if (_respawnLeft > 0f)
+            {
+                _respawnLeft = MathF.Max(0f, _respawnLeft - deltaTime);
+                RefreshRespawn();
+            }
 
             var removed = false;
             for (var i = _killFeed.Count - 1; i >= 0; i--)

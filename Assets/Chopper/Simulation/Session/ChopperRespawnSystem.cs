@@ -13,7 +13,8 @@ namespace Chopper.Simulation.Session
     /// Server only. The one place that spawns choppers:
     /// <list type="bullet">
     /// <item>A chopper at zero health is destroyed (the ghost despawns on all clients). Its player gets a
-    /// <see cref="RespawnTimer"/> of <see cref="ChopperSpawner.RespawnDelay"/>.</item>
+    /// <see cref="RespawnTimer"/> from the mode's <see cref="Match.RespawnRule"/> (<see cref="Match.MatchRules"/>); a player
+    /// connection also gets a <see cref="Match.RespawnTimeRpc"/> for the HUD countdown.</item>
     /// <item>A new player gets a timer of 0 s (<see cref="GoInGameServerSystem"/>; a server bot:
     /// <see cref="Bots.ServerBotFillSystem"/>). A player is any entity with a <see cref="PlayerId"/>.</item>
     /// <item>When a timer ends, the player's chopper spawns at the best <see cref="SpawnPoint"/> of that moment
@@ -45,6 +46,17 @@ namespace Chopper.Simulation.Session
             var deltaTime = SystemAPI.Time.DeltaTime;
             var ecb = new EntityCommandBuffer(Allocator.Temp);
 
+            // Respawn delay comes from the mode's rule (MatchRules); no match yet = Free For All defaults.
+            var rules = SystemAPI.TryGetSingleton<Match.MatchRules>(out var r) ? r : Match.MatchRules.Default;
+            var mode = Match.MatchMode.FreeForAll;
+            var matchElapsed = 0f;
+            if (SystemAPI.TryGetSingleton<Match.MatchState>(out var matchState))
+            {
+                mode = matchState.Mode;
+                matchElapsed = rules.TimeLimit - matchState.TimeRemaining;
+            }
+            var respawnRule = rules.Respawn(mode);
+
             foreach (var (health, owner, chopper) in SystemAPI.Query<RefRO<Health>, RefRO<ConnectionOwner>>().WithEntityAccess())
             {
                 if (!health.ValueRO.IsDead) continue;
@@ -59,7 +71,18 @@ namespace Chopper.Simulation.Session
                         if (group[i].Value == chopper)
                             group.RemoveAt(i);
                     }
-                    ecb.AddComponent(connection, new RespawnTimer { Remaining = spawner.RespawnDelay });
+                    var deaths = SystemAPI.HasComponent<Match.PlayerScore>(connection)
+                        ? SystemAPI.GetComponent<Match.PlayerScore>(connection).Deaths
+                        : 0;
+                    var delay = respawnRule.Delay(deaths, matchElapsed);
+                    ecb.AddComponent(connection, new RespawnTimer { Remaining = delay });
+                    // Players (not bots) see the countdown on the death message.
+                    if (SystemAPI.HasComponent<NetworkId>(connection))
+                    {
+                        var rpc = ecb.CreateEntity();
+                        ecb.AddComponent(rpc, new Match.RespawnTimeRpc { Seconds = delay });
+                        ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = connection });
+                    }
                 }
                 // A chopper that can be a wreck falls and explodes first (WreckSystem destroys it); it is no longer
                 // this player's chopper, so it leaves this loop.

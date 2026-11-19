@@ -13,6 +13,10 @@ namespace Chopper.Simulation.Match
         [SerializeField, Tooltip("Team modes: number of teams (2 to 8).")] private int teamCount = 2;
         [SerializeField, Tooltip("Seconds.")] private float postGameDuration = 20f;
         [SerializeField, Tooltip("Seconds.")] private float killCreditSeconds = 5f;
+        [SerializeField, Tooltip("Free For All respawn: base + per death, capped; wave 0 = no waves.")]
+        private RespawnRule freeForAllRespawn = RespawnRule.FreeForAll;
+        [SerializeField, Tooltip("Team modes respawn: base + per death, capped; wave 0 = no waves.")]
+        private RespawnRule teamRespawn = RespawnRule.Team;
 
         private sealed class Baker : Baker<MatchRulesAuthoring>
         {
@@ -27,6 +31,8 @@ namespace Chopper.Simulation.Match
                     TeamCount = TeamRules.ClampTeamCount(authoring.teamCount),
                     PostGameDuration = authoring.postGameDuration,
                     KillCreditSeconds = authoring.killCreditSeconds,
+                    FreeForAllRespawn = authoring.freeForAllRespawn,
+                    TeamRespawn = authoring.teamRespawn,
                 });
             }
         }

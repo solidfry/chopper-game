@@ -78,6 +78,13 @@ namespace Chopper.Presentation.Events
         public PlayerKilled(int killer, int victim) { KillerNetworkId = killer; VictimNetworkId = victim; }
     }
 
+    /// <summary>The local player died: seconds until the next chopper (server's <c>RespawnTimeRpc</c>).</summary>
+    public readonly struct RespawnCountdown
+    {
+        public readonly float Seconds;
+        public RespawnCountdown(float seconds) => Seconds = seconds;
+    }
+
     public readonly struct MatchStateChanged
     {
         public readonly MatchPhase Phase;

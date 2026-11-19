@@ -18,8 +18,6 @@ namespace Chopper.Simulation.Session
         public quaternion Rotation;
         /// <summary>Sideways gap between players so they do not spawn inside each other.</summary>
         public float Spacing;
-        /// <summary>Seconds between death and the new chopper.</summary>
-        public float RespawnDelay;
         /// <summary>The guided missile ghost all guided weapons launch (visuals differ in presentation, not here).</summary>
         public Entity MissilePrefab;
     }
@@ -49,7 +47,6 @@ namespace Chopper.Simulation.Session
     {
         [SerializeField, Tooltip("Fallback chopper ghost when a chassis has no prefab.")] private GameObject chopperPrefab;
         [SerializeField] private float spacing = 20f;
-        [SerializeField] private float respawnDelay = 3f;
         [SerializeField, Tooltip("Chassis prefabs and module data for per-player loadouts.")] private LoadoutCatalog catalog;
         [SerializeField, Tooltip("Guided missile ghost prefab.")] private GameObject missilePrefab;
         [SerializeField, Tooltip("How bots fly on this map (BotHandling singleton).")] private Bots.BotProfile botProfile;
@@ -106,7 +103,6 @@ namespace Chopper.Simulation.Session
                     Position = transform.position,
                     Rotation = transform.rotation,
                     Spacing = authoring.spacing,
-                    RespawnDelay = authoring.respawnDelay,
                     MissilePrefab = authoring.missilePrefab != null ? GetEntity(authoring.missilePrefab, TransformUsageFlags.Dynamic) : Entity.Null,
                 });
 

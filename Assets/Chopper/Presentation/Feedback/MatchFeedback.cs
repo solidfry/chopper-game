@@ -21,6 +21,7 @@ namespace Chopper.Presentation.Feedback
                 events.Subscribe<TeamScoreChanged>(m => context.Match.SetTeamScore(m.Team, m.Score)),
                 events.Subscribe<PlayerLeft>(m => context.Match.RemovePlayer(m.NetworkId)),
                 events.Subscribe<PlayerKilled>(m => context.Match.AddKill(m.KillerNetworkId, m.VictimNetworkId)),
+                events.Subscribe<RespawnCountdown>(m => context.Match.SetRespawnCountdown(m.Seconds)),
                 events.Subscribe<MatchStateChanged>(OnMatchState),
                 events.Subscribe<MatchStatsReceived>(m => context.Results.ApplyStats(m.NetworkId, m.Stats)),
                 events.Subscribe<XpAwarded>(OnXp),

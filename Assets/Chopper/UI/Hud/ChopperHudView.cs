@@ -221,6 +221,7 @@ namespace Chopper.UI.Hud
             _deathAlert = match.Q("death-alert");
             var deathText = match.Q<Label>("death-alert-text");
             _deathReveal = new TerminalReveal(deathText, deathText, "#FF4246");
+            Bind(match.Q<Label>("death-alert-respawn"), "text", nameof(MatchHudModel.RespawnText));
             _xpPopup = match.Q("xp-popup");
             Bind(match.Q<Label>("xp-title"), "text", nameof(MatchHudModel.XpTitle));
             Bind(match.Q<Label>("xp-name"), "text", nameof(MatchHudModel.XpName));

@@ -23,6 +23,13 @@ namespace Chopper.Simulation.Match
         public float PostGameDuration;
         /// <summary>A crash or bounds death this soon after a hit counts as the attacker's kill.</summary>
         public float KillCreditSeconds;
+        /// <summary>Respawn delay in Free For All.</summary>
+        public RespawnRule FreeForAllRespawn;
+        /// <summary>Respawn delay in team modes.</summary>
+        public RespawnRule TeamRespawn;
+
+        /// <summary>The respawn rule of <paramref name="mode"/>.</summary>
+        public readonly RespawnRule Respawn(MatchMode mode) => mode == MatchMode.FreeForAll ? FreeForAllRespawn : TeamRespawn;
 
         public static MatchRules Default => new()
         {
@@ -32,6 +39,8 @@ namespace Chopper.Simulation.Match
             TeamCount = 2,
             PostGameDuration = 20f,
             KillCreditSeconds = 5f,
+            FreeForAllRespawn = RespawnRule.FreeForAll,
+            TeamRespawn = RespawnRule.Team,
         };
     }
 

@@ -22,6 +22,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _scores;
         private EntityQuery _playersLeft;
         private EntityQuery _kills;
+        private EntityQuery _respawnTimes;
         private EntityQuery _xpAwards;
         private EntityQuery _matchStates;
         private EntityQuery _teamScores;
@@ -43,6 +44,7 @@ namespace Chopper.Presentation.Events
             _scores = Rpc<ScoreRpc>();
             _playersLeft = Rpc<PlayerLeftRpc>();
             _kills = Rpc<KillFeedRpc>();
+            _respawnTimes = Rpc<RespawnTimeRpc>();
             _xpAwards = Rpc<XpAwardRpc>();
             _matchStates = Rpc<MatchStateRpc>();
             _teamScores = Rpc<TeamScoreRpc>();
@@ -72,6 +74,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_scores);
             EntityManager.DestroyEntity(_playersLeft);
             EntityManager.DestroyEntity(_kills);
+            EntityManager.DestroyEntity(_respawnTimes);
             EntityManager.DestroyEntity(_xpAwards);
             EntityManager.DestroyEntity(_matchStates);
             EntityManager.DestroyEntity(_teamScores);
@@ -107,6 +110,8 @@ namespace Chopper.Presentation.Events
                 events.Publish(new PlayerLeft(rpc.ValueRO.NetworkId));
             foreach (var rpc in SystemAPI.Query<RefRO<KillFeedRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new PlayerKilled(rpc.ValueRO.KillerNetworkId, rpc.ValueRO.VictimNetworkId));
+            foreach (var rpc in SystemAPI.Query<RefRO<RespawnTimeRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                events.Publish(new RespawnCountdown(rpc.ValueRO.Seconds));
             foreach (var rpc in SystemAPI.Query<RefRO<XpAwardRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new XpAwarded((XpReason)rpc.ValueRO.Reason, rpc.ValueRO.Amount, rpc.ValueRO.Other, rpc.ValueRO.DamageXp));
 
