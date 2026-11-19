@@ -8,7 +8,7 @@ namespace Chopper.Presentation.Effects
     /// no netcode, bots or HUD, through the same code the match uses (<see cref="CombatEffects"/>,
     /// <see cref="BlastSequence"/>). Its inspector has a button per effect; in play the keys work too:
     /// 1 ground blast, 2 air blast, 3 missile impact, 4 rocket impact, 5 gun impact, 6 next single layer,
-    /// 7 hit sparks, 8 crash dust, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
+    /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
     /// R repeat the last, C clear, [ and ] slower and faster time. Not a game scene.
     /// </summary>
     public sealed class EffectsBench : MonoBehaviour
@@ -46,6 +46,8 @@ namespace Chopper.Presentation.Effects
         private float _angle;
         private Vector3 _lastStandIn;
         private bool _hasLast;
+        private Vector3 _lastVelocity;
+        private float _hiddenUntil;
         private System.Action _last;
         private int _nextLayer;
 
@@ -81,7 +83,42 @@ namespace Chopper.Presentation.Effects
             Keys();
             _effects.Tick(Time.deltaTime);
             _sequence.Tick(_effects, Time.time);
+            _effects.Debris.Tick(Time.deltaTime, Time.time, Ray);
             Damaged(Time.deltaTime);
+            if (standIn != null && _hiddenUntil > 0f && Time.time > _hiddenUntil)
+            {
+                standIn.gameObject.SetActive(true);
+                _hiddenUntil = 0f;
+            }
+        }
+
+        /// <summary>The stand-in is shot down in the air: the blast (as a match) and its own model breaks into debris.</summary>
+        public void Wreck() => Run(() =>
+        {
+            if (standIn == null || !standIn.gameObject.activeSelf) return;
+            var position = standIn.position;
+            var velocity = _lastVelocity;
+            // A stand-in entity: the debris only uses it as a key.
+            _effects.Debris.TrackVisuals(new Unity.Entities.Entity { Index = 1, Version = 1 }, Time.time, new[] { standIn.gameObject });
+            _effects.Debris.Burst(position, velocity);
+            _sequence.Start(_effects, position, velocity, Time.time, Cast);
+            standIn.gameObject.SetActive(false);
+            _hiddenUntil = Time.time + 6f;
+        });
+
+        private static bool Ray(Vector3 from, Vector3 to, out Vector3 point, out Vector3 normal)
+        {
+            var delta = to - from;
+            var length = delta.magnitude;
+            if (length > 0f && Physics.Raycast(from, delta / length, out var hit, length, ~0, QueryTriggerInteraction.Ignore))
+            {
+                point = hit.point;
+                normal = hit.normal;
+                return true;
+            }
+            point = to;
+            normal = Vector3.up;
+            return false;
         }
 
         private void Create()
@@ -111,6 +148,8 @@ namespace Chopper.Presentation.Effects
             }
             if (standIn != null) standIn.SetPositionAndRotation(position, Quaternion.LookRotation(forward));
             var velocity = _hasLast ? (position - _lastStandIn) / deltaTime : Vector3.zero;
+            _lastVelocity = velocity;
+            if (standIn != null && !standIn.gameObject.activeSelf) return;
             _lastStandIn = position;
             _hasLast = true;
 
@@ -191,6 +230,7 @@ namespace Chopper.Presentation.Effects
             if (keys.digit6Key.wasPressedThisFrame) NextLayer();
             if (keys.digit7Key.wasPressedThisFrame) HitSparks();
             if (keys.digit8Key.wasPressedThisFrame) CrashDust();
+            if (keys.digit9Key.wasPressedThisFrame) Wreck();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
             if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;
             if (keys.rKey.wasPressedThisFrame && _last != null) _last();

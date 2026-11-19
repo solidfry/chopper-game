@@ -199,7 +199,15 @@ namespace Chopper.Presentation.Effects
             _burst.Clear();
         }
 
-        public void Tick(float deltaTime, float now, in CollisionWorld world, bool hasWorld)
+        /// <summary>A ground ray for scenes without ECS physics (the effects bench): true = hit at point, normal.</summary>
+        public delegate bool GroundRay(Vector3 from, Vector3 to, out Vector3 point, out Vector3 normal);
+
+        public void Tick(float deltaTime, float now, in CollisionWorld world, bool hasWorld) => Step(deltaTime, now, world, hasWorld, null);
+
+        /// <summary>The bench: pieces bounce on what <paramref name="ray"/> hits (scene colliders).</summary>
+        public void Tick(float deltaTime, float now, GroundRay ray) => Step(deltaTime, now, default, false, ray);
+
+        private void Step(float deltaTime, float now, in CollisionWorld world, bool hasWorld, GroundRay ray)
         {
             _gone.Clear();
             foreach (var (entity, tracked) in _tracked)
@@ -223,7 +231,8 @@ namespace Chopper.Presentation.Effects
                 {
                     piece.Velocity = DebrisMotion.Drag(piece.Velocity, piece.Size, deltaTime) + Vector3.down * (Gravity * deltaTime);
                     var to = from + piece.Velocity * deltaTime;
-                    if (hasWorld && Cast(world, from, to, out var point, out var normal))
+                    Vector3 point = default, normal = default;
+                    if (hasWorld ? Cast(world, from, to, out point, out normal) : ray != null && ray(from, to, out point, out normal))
                     {
                         piece.Velocity = DebrisMotion.Bounce(piece.Velocity, normal, out var rest);
                         piece.Spin *= 0.5f;
