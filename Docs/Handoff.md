@@ -106,7 +106,11 @@ Solved and removed from this table: Server Tick Batching warnings (29 Oct), Edge
 
 1. **Rocket Pod 3 m proximity fuse.** Another session did this on 19 Nov night (`1ff0f4ca`: Rocket Pod and Mk2 burst within 3 m of an air target; not flown). Keep it listed until it is checked in play or in a bot test.
 2. **Missile test with a bot flying the human chopper.** Missiles are the top killer (85 % of kills in the 19 Nov bot test). Check lock, flares, decoys and evade from the bot side. **Done 19 Nov 22:25** (TrainingRange, 4.5 min, bot flies the human chopper via `ScriptedPilotOverride` added by `execute_code`; match log turned on by reflection on `MatchLogSystem`): 94 missiles, 86 decoyed by flares, 76 expired, only **2 missile kills** (was 11 of 19 when the human sat idle). Flares used 42 times. Kills were mostly minigun (8 of 15). Rocket Pod with the 3 m fuse: 37 shots, 14 % (same as before; small sample). 2 landing deaths. No exceptions. **Owner decides:** flares now beat almost every missile; weaken flares (decoy chance or cooldown) or keep.
-3. **Measure each bot profile.** Three profiles in `Assets/Chopper/Data/Bots` (Rookie, Default, Ace). Use the match log. Compare hit rate, kills and deaths per profile.
+3. **Measure each bot profile.** Three profiles in `Assets/Chopper/Data/Bots` (Rookie, Default, Ace). Use the match log. Compare hit rate, kills and deaths per profile. **Done 19 Nov 22:35** (TrainingRange, 14.3 min, 3 runs of ~4.7 min; each run rotates the 3 profiles over the 3 bot slots by setting `BotSkill` in `execute_code`, so each profile flies each roster loadout once; a Default bot flies the human chopper):
+   - Ace: 23 kills, 11 deaths, 0 crashes, 21 % accuracy, 29 flares.
+   - Default: 9 kills, 10 deaths, 1 crash, 15 % accuracy, 27 flares.
+   - Rookie: 9 kills, 15 deaths, 5 crashes, 16 % accuracy, 38 flares.
+   - (Hits count burn ticks, so accuracy is approximate.) **Finding:** Ace is clearly stronger. Rookie and Default aim the same and kill the same; Rookie only dies more (mostly crashes). **Owner decides:** make Rookie aim worse (or Default better) so the three steps differ.
 4. **Second-client leave test.** A second client joins and a server bot must leave. Not tested yet.
 
 **Owner checks owed (play or listen):**
