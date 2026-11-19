@@ -90,12 +90,21 @@ namespace Chopper.Presentation.Effects
                 // from the side and stays round from the front.
                 if (renderer.renderMode == ParticleSystemRenderMode.Stretch && renderer.velocityScale <= 0f &&
                     renderer.cameraVelocityScale <= 0f)
+                {
                     renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                    FlattenRotation(renderer);
+                }
                 else if (renderer.renderMode == ParticleSystemRenderMode.Mesh && IsFlatCard(renderer.mesh))
+                {
                     FaceCamera(renderer);
+                    FlattenRotation(renderer);
+                }
                 // Vertical billboards turn round the up axis only: seen from a chopper above they are thin slivers.
                 else if (renderer.renderMode == ParticleSystemRenderMode.VerticalBillboard)
+                {
                     renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                    FlattenRotation(renderer);
+                }
             }
             RouteAudio(instance, mute: false);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
@@ -124,6 +133,31 @@ namespace Chopper.Presentation.Effects
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
             renderer.alignment = ParticleSystemRenderSpace.View;
             renderer.pivot = new Vector3(pivot.x, pivot.z, 0f);
+        }
+
+        /// <summary>
+        /// A billboard made from a stretched or mesh particle keeps only its spin in the screen plane (Z). The packs set
+        /// 3D start rotation for their own modes, where X and Y do no harm (the smoke column: Y 0-180 degrees; the
+        /// flames: X 90). A billboard applies all three, so those cards turned edge-on (owner: "long slim ones") or lay
+        /// flat (the red patch seen from above).
+        /// </summary>
+        private static void FlattenRotation(ParticleSystemRenderer renderer)
+        {
+            if (!renderer.TryGetComponent<ParticleSystem>(out var system)) return;
+            var main = system.main;
+            if (main.startRotation3D)
+            {
+                var spin = main.startRotationZ;
+                main.startRotation3D = false;
+                main.startRotation = spin;
+            }
+            var rotation = system.rotationOverLifetime;
+            if (rotation.enabled && rotation.separateAxes)
+            {
+                var spin = rotation.z;
+                rotation.separateAxes = false;
+                rotation.z = spin;
+            }
         }
 
         /// <summary>Pooled projectile visual. <paramref name="muteAudio"/> silences the prefab's own sounds.</summary>
