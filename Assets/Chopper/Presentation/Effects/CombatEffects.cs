@@ -91,10 +91,31 @@ namespace Chopper.Presentation.Effects
                 if (renderer.renderMode == ParticleSystemRenderMode.Stretch && renderer.velocityScale <= 0f &&
                     renderer.cameraVelocityScale <= 0f)
                     renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                else if (renderer.renderMode == ParticleSystemRenderMode.Mesh && IsQuad(renderer.mesh))
+                    FaceCamera(renderer);
+                // Vertical billboards turn round the up axis only: seen from a chopper above they are thin slivers.
+                else if (renderer.renderMode == ParticleSystemRenderMode.VerticalBillboard)
+                    renderer.renderMode = ParticleSystemRenderMode.Billboard;
             }
             RouteAudio(instance, mute: false);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
             Object.Destroy(instance, layer.LifeSeconds);
+        }
+
+        private static bool IsQuad(Mesh mesh) => mesh != null && mesh.vertexCount <= 4;
+
+        /// <summary>
+        /// A flat card drawn as a mesh particle (the pack's big flames: a quad with "Facing" alignment). Unity turns mesh
+        /// particles once per frame for one camera, not per camera, so the cards could face away from the player (owner:
+        /// "they face the other choppers"). A billboard is built for each camera. The mesh's pivot offset (along its
+        /// own z, its up once turned) becomes the billboard's up offset.
+        /// </summary>
+        private static void FaceCamera(ParticleSystemRenderer renderer)
+        {
+            var pivot = renderer.pivot;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.alignment = ParticleSystemRenderSpace.View;
+            renderer.pivot = new Vector3(pivot.x, pivot.z, 0f);
         }
 
         /// <summary>Pooled projectile visual. <paramref name="muteAudio"/> silences the prefab's own sounds.</summary>

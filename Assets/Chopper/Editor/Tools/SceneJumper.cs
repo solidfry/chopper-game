@@ -185,7 +185,7 @@ namespace Chopper.Editor.Tools
         }
 
         /// <summary>Plays from the scene once, then puts the start-scene choice back (see <see cref="PlayFromRestore"/>).</summary>
-        private static void PlayFrom(string path)
+        internal static void PlayFrom(string path)
         {
             if (EditorApplication.isPlaying) return;
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
