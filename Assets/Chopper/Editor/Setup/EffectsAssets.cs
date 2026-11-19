@@ -75,8 +75,12 @@ namespace Chopper.Editor.Setup
         /// red"); more green and blue against red keeps the hot core yellow-orange.
         /// </summary>
         /// <summary>The flames' peak colour over life: the pack's is deep red (0.28, 0.07, 0); this is a hotter orange-yellow.</summary>
-        private static readonly Color FlameLifeColour = new(0.34f, 0.2f, 0.04f, 1f);
-        private static readonly Color WreckFlameColour = new(260f, 380f, 700f, 0f);
+        private static readonly Color FlameLifeColour = new(0.34f, 0.22f, 0.045f, 1f);
+        /// <summary>
+        /// 19 Nov: a third of the first value (260, 380, 700). Once the flame cards faced the camera, the old value blew
+        /// out to a white core with a big red bloom (owner: "a glowing ball").
+        /// </summary>
+        private static readonly Color WreckFlameColour = new(90f, 130f, 240f, 0f);
 
         /// <summary>The pack's big flipbook flame, recoloured warmer-yellow (a copy: the pack is not changed).</summary>
         private static Material EnsureWreckFlameMaterial()
