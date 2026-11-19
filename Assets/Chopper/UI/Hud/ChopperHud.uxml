@@ -7,7 +7,18 @@
       <ui:VisualElement name="death-tint" class="hud-death-tint hud-death-tint--hidden" picking-mode="Ignore" />
       <ui:VisualElement class="hud-match__top" picking-mode="Ignore">
         <ui:VisualElement name="match-scores" class="hud-match__scores" picking-mode="Ignore">
-          <ui:Label name="local-score" text="0 K / 0 D" class="hud-match__score" />
+          <!-- Kill / death card: two big numbers with captions (kills green, deaths red) -->
+          <ui:VisualElement class="hud-kd" picking-mode="Ignore">
+            <ui:VisualElement class="hud-kd__stat hud-kd__stat--kills" picking-mode="Ignore">
+              <ui:Label name="local-kills" text="0" class="hud-kd__value" />
+              <ui:Label text="KILLS" class="hud-kd__caption" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud-kd__divider" picking-mode="Ignore" />
+            <ui:VisualElement class="hud-kd__stat hud-kd__stat--deaths" picking-mode="Ignore">
+              <ui:Label name="local-deaths" text="0" class="hud-kd__value" />
+              <ui:Label text="DEATHS" class="hud-kd__caption" />
+            </ui:VisualElement>
+          </ui:VisualElement>
           <!-- Own pilot call sign (empty without a pilot) -->
           <ui:Label name="local-pilot" text="" class="hud-match__pilot chopper-title" />
           <ui:Label name="leader" text="" class="hud-match__leader" />
@@ -25,22 +36,17 @@
         <ui:Label name="xp-total" text="" class="hud-xp__total chopper-title" picking-mode="Ignore" />
         <ui:Label name="xp-lines" text="" class="hud-xp__lines" picking-mode="Ignore" />
       </ui:VisualElement>
-      <ui:Label name="banner" text="" class="hud-match__banner hud-match__banner--hidden chopper-title" />
       <!-- Scoreboard: hold Tab / gamepad View; always shown on the results. Rows are made by ScoreboardView -->
       <ui:VisualElement name="scoreboard" class="hud-scoreboard hud-scoreboard--hidden" picking-mode="Ignore">
         <ui:VisualElement class="hud-scoreboard__head" picking-mode="Ignore">
           <ui:Label name="scoreboard-title" text="FREE FOR ALL" class="hud-scoreboard__title chopper-title" />
           <ui:Label name="scoreboard-timer" text="00:00" class="hud-scoreboard__timer" />
         </ui:VisualElement>
-        <ui:VisualElement class="hud-scoreboard__row hud-scoreboard__row--columns" picking-mode="Ignore">
-          <ui:Label text="#" class="hud-scoreboard__place" />
-          <ui:Label text="PILOT" class="hud-scoreboard__name" />
-          <ui:Label text="CHOPPER" class="hud-scoreboard__chassis" />
-          <ui:Label text="K" class="hud-scoreboard__number" />
-          <ui:Label text="D" class="hud-scoreboard__number" />
-        </ui:VisualElement>
-        <ui:VisualElement name="scoreboard-rows" class="hud-scoreboard__rows" picking-mode="Ignore" />
+        <!-- One column per team (one column in Free For All); ScoreboardView makes them -->
+        <ui:VisualElement name="scoreboard-rows" class="hud-scoreboard__columns" picking-mode="Ignore" />
       </ui:VisualElement>
+      <!-- The banner comes after the scoreboard, so it shows over its backdrop on the results -->
+      <ui:Label name="banner" text="" class="hud-match__banner hud-match__banner--hidden chopper-title" />
     </ui:VisualElement>
     <ui:VisualElement name="chopper" class="hud-layer hud--hidden" picking-mode="Ignore">
       <ui:VisualElement name="bounds-warning" class="hud-warning hud-warning--hidden" picking-mode="Ignore">

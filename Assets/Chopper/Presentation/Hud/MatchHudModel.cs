@@ -141,6 +141,25 @@ namespace Chopper.Presentation.Hud
             private set => Set(ref _localScoreText, value, nameof(LocalScoreText));
         }
 
+        private string _localKillsText = "0";
+        private string _localDeathsText = "0";
+
+        /// <summary>Own kills as a number (the top-left kill / death card).</summary>
+        [CreateProperty]
+        public string LocalKillsText
+        {
+            get => _localKillsText;
+            private set => Set(ref _localKillsText, value, nameof(LocalKillsText));
+        }
+
+        /// <summary>Own deaths as a number (the top-left kill / death card).</summary>
+        [CreateProperty]
+        public string LocalDeathsText
+        {
+            get => _localDeathsText;
+            private set => Set(ref _localDeathsText, value, nameof(LocalDeathsText));
+        }
+
         /// <summary>Player with the most kills, empty before the first kill.</summary>
         [CreateProperty]
         public string LeaderText
@@ -450,6 +469,8 @@ namespace Chopper.Presentation.Hud
         {
             _scores.TryGetValue(_localNetworkId, out var local);
             LocalScoreText = $"{local.Kills} K / {local.Deaths} D";
+            LocalKillsText = local.Kills.ToString();
+            LocalDeathsText = local.Deaths.ToString();
 
             var leader = 0;
             var leaderKills = 0;

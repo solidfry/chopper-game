@@ -196,7 +196,8 @@ namespace Chopper.UI.Hud
             _banner = match.Q("banner");
             match.dataSource = _match;
             BindNumber(match.Q<Label>("timer"), nameof(MatchHudModel.TimerText));
-            Bind(match.Q<Label>("local-score"), "text", nameof(MatchHudModel.LocalScoreText));
+            BindNumber(match.Q<Label>("local-kills"), nameof(MatchHudModel.LocalKillsText));
+            BindNumber(match.Q<Label>("local-deaths"), nameof(MatchHudModel.LocalDeathsText));
             Bind(match.Q<Label>("local-pilot"), "text", nameof(MatchHudModel.LocalPilotText));
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));

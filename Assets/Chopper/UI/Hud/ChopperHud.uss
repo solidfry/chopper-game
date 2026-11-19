@@ -186,10 +186,52 @@
   width: 360px;
 }
 
-.hud-match__score {
-  font-size: 24px;
-  color: var(--chopper-green);
+/* Kill / death card, top left: two big numbers with captions on a dark plate */
+.hud-kd {
+  flex-direction: row;
+  align-self: flex-start;
+  align-items: stretch;
+  background-color: var(--chopper-terminal);
+  border-width: 1px;
+  border-left-width: 4px;
+  border-color: var(--chopper-green);
+  margin-bottom: 6px;
+}
+
+.hud-kd__stat {
+  align-items: center;
+  padding: 4px 16px 6px 16px;
+  min-width: 78px;
+}
+
+.hud-kd__divider {
+  width: 1px;
+  margin: 8px 0;
+  background-color: var(--chopper-green-dim);
+}
+
+.hud-kd__value {
+  font-size: 36px;
   padding: 0;
+  -unity-text-align: middle-center;
+}
+
+.hud-kd__caption {
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: var(--chopper-text);
+  padding: 0;
+  -unity-text-align: middle-center;
+}
+
+.hud-kd__stat--kills > .hud-kd__value {
+  color: var(--chopper-green);
+  text-shadow: 0 0 8px rgba(0, 255, 148, 0.45);
+}
+
+.hud-kd__stat--deaths > .hud-kd__value {
+  color: var(--chopper-red);
+  text-shadow: 0 0 8px rgba(255, 66, 70, 0.45);
 }
 
 .hud-match__pilot {
@@ -290,15 +332,22 @@
   font-size: 56px;
 }
 
-/* Scoreboard: centre of the view, hold Tab / gamepad View */
+/* Scoreboard: full screen, hold Tab / gamepad View. One column per team (ScoreboardView). Dark backdrop for contrast. */
 .hud-scoreboard {
   position: absolute;
   left: 0;
   right: 0;
-  top: 24%;
-  align-items: center;
+  top: 0;
+  bottom: 0;
+  padding: 7% 6% 6% 6%;
+  background-color: rgba(4, 12, 6, 0.9);
   transition-property: opacity, translate;
   transition-duration: 0.12s;
+}
+
+/* While the scoreboard shows, the flight HUD (drawn after the match layer) is off, so it does not cover the board */
+.hud--scoreboard > #chopper {
+  display: none;
 }
 
 .hud-scoreboard--hidden {
@@ -306,79 +355,142 @@
   translate: 0 -8px;
 }
 
+/* Results: room for the banner above the board */
+.hud-match--results .hud-scoreboard {
+  padding-top: 18%;
+}
+
 .hud-scoreboard__head {
-  width: 720px;
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 6px 14px;
-  border-bottom-width: var(--chopper-border-width);
-  border-color: var(--chopper-green-dim);
+  padding: 0 4px 10px 4px;
+  margin-bottom: 18px;
+  border-bottom-width: 2px;
+  border-color: var(--chopper-green);
 }
 
 .hud-scoreboard__title {
-  font-size: 18px;
-  letter-spacing: 4px;
+  font-size: 28px;
+  letter-spacing: 5px;
   color: var(--chopper-green);
   padding: 0;
 }
 
 .hud-scoreboard__timer {
-  font-size: 18px;
-  color: var(--chopper-green-dim);
+  font-size: 28px;
+  color: var(--chopper-text);
   padding: 0;
 }
 
+.hud-scoreboard__columns {
+  flex-grow: 1;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.hud-scoreboard__column {
+  flex-grow: 1;
+  flex-basis: 0;
+  max-width: 900px;
+  margin: 0 12px;
+  background-color: var(--chopper-terminal);
+  border-width: 1px;
+  border-top-width: 4px;
+  border-color: var(--team-colour);
+  --team-colour: var(--chopper-green);
+}
+
+.hud-scoreboard__column--team1 { --team-colour: var(--chopper-cyan); }
+.hud-scoreboard__column--team2 { --team-colour: var(--chopper-yellow); }
+.hud-scoreboard__column--team3 { --team-colour: var(--chopper-red); }
+.hud-scoreboard__column--team4 { --team-colour: var(--chopper-pink); }
+.hud-scoreboard__column--team5 { --team-colour: var(--chopper-green); }
+.hud-scoreboard__column--team6 { --team-colour: var(--chopper-cyan); }
+.hud-scoreboard__column--team7 { --team-colour: var(--chopper-yellow); }
+.hud-scoreboard__column--team8 { --team-colour: var(--chopper-red); }
+
+.hud-scoreboard__team {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom-width: 1px;
+  border-color: var(--team-colour);
+}
+
+.hud-scoreboard__team-name {
+  font-size: 26px;
+  letter-spacing: 6px;
+  color: var(--team-colour);
+  padding: 0;
+}
+
+.hud-scoreboard__team-score {
+  font-size: 40px;
+  color: var(--team-colour);
+  padding: 0;
+  -unity-text-align: middle-right;
+}
+
+/* Own team: a brighter frame */
+.hud-scoreboard__column--own {
+  border-width: 2px;
+  border-top-width: 6px;
+}
+
 .hud-scoreboard__rows {
-  width: 720px;
-  background-color: var(--chopper-panel);
 }
 
 .hud-scoreboard__row {
-  width: 720px;
-  height: 34px;
+  height: 40px;
   flex-direction: row;
   align-items: center;
-  padding: 0 14px;
-  border-left-width: 3px;
+  padding: 0 16px 0 12px;
+  border-left-width: 4px;
   border-color: rgba(0, 0, 0, 0);
 }
 
 .hud-scoreboard__row > Label {
-  font-size: 17px;
-  color: var(--chopper-text);
+  font-size: 20px;
+  color: #ffffff;
   padding: 0;
   -unity-text-align: middle-left;
 }
 
+.hud-scoreboard__row--columns {
+  height: 30px;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
 .hud-scoreboard__row--columns > Label {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 3px;
-  color: var(--chopper-green-dim);
+  color: var(--chopper-text);
 }
 
 .hud-scoreboard__row--odd {
-  background-color: rgba(0, 255, 148, 0.04);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Own row: yellow, with a bar on the left */
+/* Own row: pink bar and tint, pink name */
 .hud-scoreboard__row--local {
-  border-color: var(--chopper-yellow);
-  background-color: rgba(255, 214, 0, 0.08);
+  border-color: var(--chopper-pink);
+  background-color: rgba(255, 66, 137, 0.16);
 }
 
-.hud-scoreboard__row--local > Label {
-  color: var(--chopper-yellow);
+.hud-scoreboard__row--local > .hud-scoreboard__name {
+  color: var(--chopper-pink);
 }
 
 /* The leader's place number */
 .hud-scoreboard__row--first .hud-scoreboard__place {
-  color: var(--chopper-green);
-  text-shadow: 0 0 6px rgba(0, 255, 148, 0.45);
+  color: var(--chopper-yellow);
 }
 
 .hud-scoreboard__place {
-  width: 44px;
+  width: 40px;
 }
 
 .hud-scoreboard__name {
@@ -389,15 +501,16 @@
 }
 
 .hud-scoreboard__chassis {
-  width: 160px;
+  width: 150px;
 }
 
 .hud-scoreboard__row > .hud-scoreboard__chassis {
-  color: var(--chopper-green-dim);
+  color: var(--chopper-text);
+  font-size: 16px;
 }
 
 .hud-scoreboard__number {
-  width: 64px;
+  width: 56px;
 }
 
 .hud-scoreboard__row > .hud-scoreboard__number {
