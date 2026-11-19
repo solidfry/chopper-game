@@ -619,3 +619,22 @@
   border-radius: 0;
   color: var(--chopper-text);
 }
+
+/* Terminal entry for message pills (TerminalReveal): opens from a thin scan line, then the text types in. */
+.terminal-reveal {
+  scale: 1 0.06;
+  opacity: 0.5;
+  transition-property: scale, opacity;
+  transition-duration: 0.12s;
+  transition-timing-function: ease-out;
+}
+
+.terminal-reveal--open {
+  scale: 1 1;
+  opacity: 1;
+}
+
+/* Selectors as specific as the pills' own text-shadow rules (two classes), and later, so this wins. */
+.terminal-reveal.terminal-reveal--typing {
+  text-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}

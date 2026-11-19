@@ -90,6 +90,11 @@ namespace Chopper.UI.Hud
         private VisualElement _killFeed;
         private VisualElement _deathTint;
         private VisualElement _deathAlert;
+        private TerminalReveal _deathReveal;
+        private TerminalReveal _bannerReveal;
+        private TerminalReveal _warningReveal;
+        private bool _wasOutOfBounds;
+        private string _warningText = "";
         private VisualElement _xpPopup;
         private VisualElement _pilot;
         private VisualElement _pilotPicture;
@@ -150,6 +155,10 @@ namespace Chopper.UI.Hud
             _jamWarning = _chopper.Q("jam-warning");
             _aim = _chopper.Q("aim");
             _boundsWarning = _chopper.Q("bounds-warning");
+            var warningText = _boundsWarning?.Q<Label>();
+            _warningReveal = new TerminalReveal(warningText, warningText, "#FF4246");
+            _warningText = warningText?.text ?? "";
+            _wasOutOfBounds = false;
             _damageRing = _chopper.Q("damage-ring");
             _frame = _chopper.Q("frame");
             _lock = _chopper.Q("lock");
@@ -207,10 +216,11 @@ namespace Chopper.UI.Hud
             }
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
-            Bind(_banner, "text", nameof(MatchHudModel.BannerText));
+            _bannerReveal = new TerminalReveal(_banner, _banner as Label, "#00FF94");
             _deathTint = match.Q("death-tint");
             _deathAlert = match.Q("death-alert");
-            Bind(match.Q<Label>("death-alert-text"), "text", nameof(MatchHudModel.DeathAlertText));
+            var deathText = match.Q<Label>("death-alert-text");
+            _deathReveal = new TerminalReveal(deathText, deathText, "#FF4246");
             _xpPopup = match.Q("xp-popup");
             Bind(match.Q<Label>("xp-title"), "text", nameof(MatchHudModel.XpTitle));
             Bind(match.Q<Label>("xp-name"), "text", nameof(MatchHudModel.XpName));
@@ -371,6 +381,12 @@ namespace Chopper.UI.Hud
             _chopper.EnableInClassList(HiddenClass, !_model.HasChopper);
             _zoom?.EnableInClassList("hud-zoom--hint", _model.ZoomIsHint);
             _boundsWarning.EnableInClassList(WarningHiddenClass, !_model.OutOfBounds);
+            if (_model.OutOfBounds != _wasOutOfBounds)
+            {
+                _wasOutOfBounds = _model.OutOfBounds;
+                if (_wasOutOfBounds) _warningReveal?.Play(_warningText);
+                else _warningReveal?.Stop();
+            }
             _damageRing.EnableInClassList(DamageHiddenClass, !_model.DamageIndicatorVisible);
             _boost.EnableInClassList(BoostReadyClass, _model.BoostReady);
             _chopper.EnableInClassList(BoostingClass, _model.Boosting);
@@ -475,9 +491,9 @@ namespace Chopper.UI.Hud
         {
             // Also when the panel dropped the tree (rebuild) before the reload callback rebinds: no styles on dead elements.
             if (_chopper == null || _chopper.panel == null) return;
-            if (args.propertyName == nameof(MatchHudModel.BannerVisible))
+            if (args.propertyName == nameof(MatchHudModel.BannerVisible) || args.propertyName == nameof(MatchHudModel.BannerText))
                 RefreshBanner();
-            else if (args.propertyName == nameof(MatchHudModel.DeathAlertVisible))
+            else if (args.propertyName == nameof(MatchHudModel.DeathAlertVisible) || args.propertyName == nameof(MatchHudModel.DeathAlertText))
                 RefreshDeathAlert();
             else if (args.propertyName == nameof(MatchHudModel.XpVisible) || args.propertyName == nameof(MatchHudModel.XpBig))
                 RefreshXp();
@@ -501,12 +517,25 @@ namespace Chopper.UI.Hud
             _xpPopup.schedule.Execute(() => _xpPopup?.RemoveFromClassList("hud-xp--punch")).StartingIn(30);
         }
 
-        private void RefreshBanner() => _banner.EnableInClassList(BannerHiddenClass, !_match.BannerVisible);
+        private void RefreshBanner()
+        {
+            _banner.EnableInClassList(BannerHiddenClass, !_match.BannerVisible);
+            Reveal(_bannerReveal, _match.BannerVisible, _match.BannerText);
+        }
 
         private void RefreshDeathAlert()
         {
             _deathTint.EnableInClassList("hud-death-tint--hidden", !_match.DeathAlertVisible);
             _deathAlert.EnableInClassList("hud-death-alert--hidden", !_match.DeathAlertVisible);
+            Reveal(_deathReveal, _match.DeathAlertVisible, _match.DeathAlertText);
+        }
+
+        /// <summary>Types the pill in when it shows or its text changes; stops when it hides.</summary>
+        private static void Reveal(TerminalReveal reveal, bool visible, string text)
+        {
+            if (reveal == null) return;
+            if (!visible) reveal.Stop();
+            else if (!reveal.Playing || reveal.Source != (text ?? "")) reveal.Play(text);
         }
 
         /// <summary>Viewport y goes up, panel top goes down.</summary>
