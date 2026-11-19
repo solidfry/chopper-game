@@ -52,6 +52,7 @@ namespace Chopper.Presentation.Effects
         private readonly BoostFlames<int> _boost = new();
         private readonly System.Collections.Generic.List<(Vector3 Position, Vector3 Direction)> _exhausts = new();
         private float _boostUntil;
+        private static readonly float[] Sides = { 1f, -1f };
         /// <summary>The gunship's engine socket (SOCKET_Engine_0): the exhaust points back.</summary>
         private static readonly Vector3 ExhaustPoint = new(0f, 1.1f, -1.85f);
         private System.Action _last;
@@ -111,7 +112,9 @@ namespace Chopper.Presentation.Effects
             if (standIn != null && standIn.gameObject.activeSelf)
             {
                 _exhausts.Clear();
-                _exhausts.Add((standIn.TransformPoint(ExhaustPoint), -standIn.forward));
+                foreach (var side in Sides)
+                    _exhausts.Add((standIn.TransformPoint(ExhaustPoint + (Vector3)Chopper.Simulation.Visuals.ExhaustPoint.Offset(side)),
+                        standIn.TransformDirection((Vector3)Chopper.Simulation.Visuals.ExhaustPoint.Direction(side))));
                 _boost.Update(settings, 0, Time.time < _boostUntil, _exhausts, 1f, deltaTime);
             }
             _boost.End(settings);

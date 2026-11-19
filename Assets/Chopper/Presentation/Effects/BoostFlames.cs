@@ -179,7 +179,8 @@ namespace Chopper.Presentation.Effects
             var main = system.main;
             main.loop = true;
             main.playOnAwake = false;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            // Local: the flame is a solid jet cone fixed to the nozzle. World space left loose bits behind (18 Nov).
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.maxParticles = MaxParticles;
             main.startLifetime = new ParticleSystem.MinMaxCurve(Life * 0.7f, Life * 1.2f);
             main.startSpeed = settings.BoostFlameLength / Life;

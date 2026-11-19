@@ -31,6 +31,14 @@ namespace Chopper.Simulation.Visuals
     {
         public float3 LocalPosition;
         public float3 LocalDirection;
+
+        /// <summary>
+        /// One engine socket: the twin glowing nozzles of the chassis model, measured on the Kit02 gunship (nozzle
+        /// faces at +-0.51, 0.72, -2.18 with the engine socket at 0, 1.1, -1.85). They face straight back. Owner, 20 Nov:
+        /// the boost should look like a jet from these points. The effects bench uses the same points.
+        /// </summary>
+        public static float3 Offset(float side) => new(0.51f * side, -0.38f, -0.36f);
+        public static float3 Direction(float side) => new(0f, 0f, -1f);
     }
 
     /// <summary>
@@ -71,8 +79,8 @@ namespace Chopper.Simulation.Visuals
                     if (socket.Slot == SlotType.Engine) engines.Add(root.InverseTransformPoint(socket.transform.position));
                 if (engines.Count == 1)
                 {
-                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + new float3(0.3f, 0f, -0.6f), LocalDirection = back });
-                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + new float3(-0.3f, 0f, -0.6f), LocalDirection = back });
+                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + ExhaustPoint.Offset(1f), LocalDirection = ExhaustPoint.Direction(1f) });
+                    buffer.Add(new ExhaustPoint { LocalPosition = (float3)engines[0] + ExhaustPoint.Offset(-1f), LocalDirection = ExhaustPoint.Direction(-1f) });
                 }
                 else if (engines.Count > 1)
                 {
