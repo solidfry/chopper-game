@@ -8,7 +8,7 @@ namespace Chopper.Presentation.Effects
     /// no netcode, bots or HUD, through the same code the match uses (<see cref="CombatEffects"/>,
     /// <see cref="BlastSequence"/>). Its inspector has a button per effect; in play the keys work too:
     /// 1 ground blast, 2 air blast, 3 missile impact, 4 rocket impact, 5 gun impact, 6 next single layer,
-    /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), 0 flares, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
+    /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), 0 flares, B boost, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
     /// R repeat the last, C clear, [ and ] slower and faster time. Not a game scene.
     /// </summary>
     public sealed class EffectsBench : MonoBehaviour
@@ -49,6 +49,11 @@ namespace Chopper.Presentation.Effects
         private Vector3 _lastVelocity;
         private float _hiddenUntil;
         private readonly FlareVolleys<int> _flares = new();
+        private readonly BoostFlames<int> _boost = new();
+        private readonly System.Collections.Generic.List<(Vector3 Position, Vector3 Direction)> _exhausts = new();
+        private float _boostUntil;
+        /// <summary>The gunship's engine socket (SOCKET_Engine_0): the exhaust points back.</summary>
+        private static readonly Vector3 ExhaustPoint = new(0f, 1.1f, -1.85f);
         private System.Action _last;
         private int _nextLayer;
 
@@ -75,6 +80,7 @@ namespace Chopper.Presentation.Effects
         {
             _effects?.Dispose();
             _damage?.Dispose();
+            _boost.Clear();
             Time.timeScale = 1f;
         }
 
@@ -86,12 +92,29 @@ namespace Chopper.Presentation.Effects
             _sequence.Tick(_effects, Time.time);
             _effects.Debris.Tick(Time.deltaTime, Time.time, Ray);
             _flares.Tick(_effects, Time.deltaTime, StandInPose);
+            BoostFlame(Time.deltaTime);
             Damaged(Time.deltaTime);
             if (standIn != null && _hiddenUntil > 0f && Time.time > _hiddenUntil)
             {
                 standIn.gameObject.SetActive(true);
                 _hiddenUntil = 0f;
             }
+        }
+
+        /// <summary>The stand-in boosts for 2.5 s: the kick burst, the flame and the trail (best seen flying a circle).</summary>
+        public void Boost() => Run(() => _boostUntil = Time.time + 2.5f);
+
+        private void BoostFlame(float deltaTime)
+        {
+            if (!BoostFlames<int>.Enabled(settings)) return;
+            _boost.Begin();
+            if (standIn != null && standIn.gameObject.activeSelf)
+            {
+                _exhausts.Clear();
+                _exhausts.Add((standIn.TransformPoint(ExhaustPoint), -standIn.forward));
+                _boost.Update(settings, 0, Time.time < _boostUntil, _exhausts, 1f, deltaTime);
+            }
+            _boost.End(settings);
         }
 
         /// <summary>The stand-in drops a flare salvo (the settings' count, burn time and interval), as in a match.</summary>
@@ -215,6 +238,7 @@ namespace Chopper.Presentation.Effects
         {
             _sequence.Clear();
             _flares.Clear();
+            _boost.Clear();
             _effects?.Dispose();
             _damage?.Dispose();
             Create();
@@ -245,6 +269,7 @@ namespace Chopper.Presentation.Effects
             if (keys.digit8Key.wasPressedThisFrame) CrashDust();
             if (keys.digit9Key.wasPressedThisFrame) Wreck();
             if (keys.digit0Key.wasPressedThisFrame) Flares();
+            if (keys.bKey.wasPressedThisFrame) Boost();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
             if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;
             if (keys.rKey.wasPressedThisFrame && _last != null) _last();
