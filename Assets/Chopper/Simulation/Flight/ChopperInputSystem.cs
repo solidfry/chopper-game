@@ -74,6 +74,7 @@ namespace Chopper.Simulation.Flight
             var cyclePylon = CyclePylonPressed(flight.CyclePylon);
             var repair = flight.Repair.IsPressed();
             var ability = flight.Ability.WasPressedThisFrame();
+            var lights = flight.Lights.WasPressedThisFrame();
 
             // Mouse delta (pixels this frame) -> turn rate in degrees per second, smoothed.
             var dt = math.max(SystemAPI.Time.DeltaTime, 1e-4f);
@@ -108,6 +109,8 @@ namespace Chopper.Simulation.Flight
                     input.ValueRW.CyclePylon.Set();
                 if (ability)
                     input.ValueRW.Ability.Set();
+                if (lights)
+                    input.ValueRW.Lights.Set();
             }
         }
 

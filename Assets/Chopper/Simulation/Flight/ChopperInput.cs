@@ -28,5 +28,7 @@ namespace Chopper.Simulation.Flight
         public bool Repair;
         /// <summary>The pilot's ability (F / gamepad D-pad up).</summary>
         public InputEvent Ability;
+        /// <summary>Toggle the chopper's lights (L). See <see cref="ChopperLights"/>.</summary>
+        public InputEvent Lights;
     }
 }

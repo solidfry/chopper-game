@@ -253,6 +253,16 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Lights"",
+                    ""type"": ""Button"",
+                    ""id"": ""cb9f4981-e519-4b54-8062-72db2e9ca0c5"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -827,6 +837,17 @@ namespace Chopper.Simulation.Input
                     ""action"": ""Vision"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""3f2932e0-fbe0-4ef2-97c7-fb98c82a67a5"",
+                    ""path"": ""<Keyboard>/l"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Lights"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -879,6 +900,7 @@ namespace Chopper.Simulation.Input
             m_Flight_Scoreboard = m_Flight.FindAction("Scoreboard", throwIfNotFound: true);
             m_Flight_Zoom = m_Flight.FindAction("Zoom", throwIfNotFound: true);
             m_Flight_Vision = m_Flight.FindAction("Vision", throwIfNotFound: true);
+            m_Flight_Lights = m_Flight.FindAction("Lights", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -975,6 +997,7 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_Scoreboard;
         private readonly InputAction m_Flight_Zoom;
         private readonly InputAction m_Flight_Vision;
+        private readonly InputAction m_Flight_Lights;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
         /// </summary>
@@ -1051,6 +1074,10 @@ namespace Chopper.Simulation.Input
             /// </summary>
             public InputAction @Vision => m_Wrapper.m_Flight_Vision;
             /// <summary>
+            /// Provides access to the underlying input action "Flight/Lights".
+            /// </summary>
+            public InputAction @Lights => m_Wrapper.m_Flight_Lights;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Flight; }
@@ -1124,6 +1151,9 @@ namespace Chopper.Simulation.Input
                 @Vision.started += instance.OnVision;
                 @Vision.performed += instance.OnVision;
                 @Vision.canceled += instance.OnVision;
+                @Lights.started += instance.OnLights;
+                @Lights.performed += instance.OnLights;
+                @Lights.canceled += instance.OnLights;
             }
 
             /// <summary>
@@ -1183,6 +1213,9 @@ namespace Chopper.Simulation.Input
                 @Vision.started -= instance.OnVision;
                 @Vision.performed -= instance.OnVision;
                 @Vision.canceled -= instance.OnVision;
+                @Lights.started -= instance.OnLights;
+                @Lights.performed -= instance.OnLights;
+                @Lights.canceled -= instance.OnLights;
             }
 
             /// <summary>
@@ -1361,6 +1394,13 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnVision(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Lights" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnLights(InputAction.CallbackContext context);
         }
     }
 }
