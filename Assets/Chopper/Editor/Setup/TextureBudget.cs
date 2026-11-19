@@ -20,7 +20,7 @@ namespace Chopper.Editor.Setup
         {
             "Assets/UniStorm Weather System",
             "Assets/Textures",
-            "Assets/AssetBundles",
+            "Assets/ThirdParty",
         };
 
         private const int MaxSize = 2048;

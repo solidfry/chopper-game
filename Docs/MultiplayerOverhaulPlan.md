@@ -499,7 +499,7 @@ chain lightning, hack darts), more utility abilities, and per-weapon visuals and
 effect set; next: an effect set id on the weapon definition, looked up in `CombatEffectsSettings`).
 
 ### Customisation UI (hangar scene)
-- **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/Shapes`) for neon lines and UI frames.
+- **Look:** green cyberpunk HUD (dark background, neon green lines, scanlines, glitch on change). Reuse MK Glow (`Assets/_MK`) and Shapes (`Assets/ThirdParty/Shapes`) for neon lines and UI frames.
 - **Chopper view:** 3D wireframe render of the chassis. URP full-screen/renderer feature or a wireframe Shader Graph (barycentric edges) in green. Installed modules render solid-glow; empty sockets pulse.
 - **Socket data:** each chassis prefab has named socket transforms (`Nose`, `PylonL`, `PylonR`, `Turret`, `Utility`, `Rotor`, `Engine`, `Armour`). Each socket also has a **focus pose** (camera position, FOV, chopper rotation).
 - **Focus behaviour:** select a slot → Cinemachine 3 blends camera to that socket's virtual camera (zoom in), chopper turntable rotates to the socket's rotation (eased, ~0.4 s). Back → return to overview orbit. Idle → slow auto-rotate.

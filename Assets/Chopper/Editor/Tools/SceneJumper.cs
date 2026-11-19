@@ -18,7 +18,7 @@ namespace Chopper.Editor.Tools
     public sealed class SceneJumper : EditorWindow
     {
         private const int RecentCount = 6;
-        private static readonly string[] SkipFolders = { "Assets/AssetBundles", "Assets/ThirdParty", "Assets/Plugins", "Assets/Samples" };
+        private static readonly string[] SkipFolders = { "Assets/ThirdParty", "Assets/Plugins", "Assets/Samples" };
 
         private readonly List<string> _all = new();
         private readonly HashSet<string> _build = new();

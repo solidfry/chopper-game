@@ -15,7 +15,7 @@ namespace Chopper.Editor.Setup
     {
         private const string SocketsObjectName = "Sockets";
         /// <summary>Placeholder module art. Kit art (<see cref="KitChassis"/>) replaces it.</summary>
-        public const string ArtFolder = "Assets/AssetBundles/PolygonMilitary/Prefabs/Vehicles/Veh_Attachments";
+        public const string ArtFolder = "Assets/ThirdParty/PolygonMilitary/Prefabs/Vehicles/Veh_Attachments";
 
         /// <summary>
         /// One socket per slot type and index any chassis uses, so one ghost can show every chassis until each has its

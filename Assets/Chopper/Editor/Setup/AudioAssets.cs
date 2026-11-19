@@ -17,7 +17,7 @@ namespace Chopper.Editor.Setup
         private const string LibraryPath = Folder + "/SoundLibrary.asset";
         private const string MusicPath = Folder + "/MusicLibrary.asset";
         private const string DarkSynth = "Assets/Sound/Music/";
-        private const string Packs = "Assets/Total Music Collection/Mega Game Collection/";
+        private const string Packs = "Assets/ThirdParty/Audio/Total Music Collection/Mega Game Collection/";
         /// <summary>The old main menu's track: the game's identity music (owner, 29 Oct).</summary>
         private const string IdentityTrack = Packs + "Heavy Riffs/Heavy Riff 1.mp3";
         /// <summary>
@@ -40,13 +40,13 @@ namespace Chopper.Editor.Setup
             DarkSynth + "7- Dark Fantasy Studio- The 29th planet (seamless).mp3",
         };
 
-        private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
+        private const string SciFi = "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound";
         /// <summary>Cockpit alarm tones made for the game (beeps, not effects-pack loops): lock and missile warnings.</summary>
         private const string Warnings = "Assets/Chopper/Audio/SFX/Warnings";
         private const string Flares = "Assets/Chopper/Audio/SFX/Flares";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
         private const string DistantExplosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_DistantExplosion_";
-        internal const string SciFiGuns = "Assets/AssetBundles/Sci-Fi Gun Sounds";
+        internal const string SciFiGuns = "Assets/ThirdParty/Sci-Fi Gun Sounds";
 
         public const string MixerPath = "Assets/Audio/AudioMix/Mix.mixer";
 

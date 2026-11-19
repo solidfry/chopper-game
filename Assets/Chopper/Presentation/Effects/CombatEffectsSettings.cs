@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Chopper.Simulation.Config;
 using UnityEngine;
@@ -172,6 +173,9 @@ namespace Chopper.Presentation.Effects
         [Header("Chopper death")]
         [SerializeField, Tooltip("A wreck's explosion. Empty = the missile impact, three layered blasts.")]
         private GameObject chopperExplosion;
+        [SerializeField, Tooltip("The wreck's explosion built from layers (fireball, flames, embers, smoke column). Not empty: " +
+                                 "used instead of Chopper Explosion; the missile impact still gives the first flash and light.")]
+        private BlastLayer[] chopperExplosionLayers = Array.Empty<BlastLayer>();
         [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]
         private float chopperExplosionShake = 0.7f;
         [SerializeField, Min(1f), Tooltip("No shake beyond this distance (m).")]
@@ -190,6 +194,13 @@ namespace Chopper.Presentation.Effects
         public GameObject Missile => missile != null ? missile : rocket;
         public GameObject MissileImpact => missileImpact != null ? missileImpact : rocketImpact;
         /// <summary>A wreck's explosion (Docs/ChopperDeathDesign.md); empty = the missile impact, layered.</summary>
+        /// <summary>Setup: the layered wreck explosion, when none is set.</summary>
+        public void FillExplosionLayers(BlastLayer[] layers, bool replace = false)
+        {
+            if (chopperExplosionLayers == null || chopperExplosionLayers.Length == 0 || replace) chopperExplosionLayers = layers;
+        }
+
+        public IReadOnlyList<BlastLayer> ChopperExplosionLayers => chopperExplosionLayers ?? Array.Empty<BlastLayer>();
         public GameObject ChopperExplosion => chopperExplosion != null ? chopperExplosion : MissileImpact;
         public float ChopperExplosionShake => chopperExplosionShake;
         public float ChopperExplosionShakeRange => chopperExplosionShakeRange;

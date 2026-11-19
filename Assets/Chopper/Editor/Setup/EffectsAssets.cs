@@ -11,7 +11,7 @@ namespace Chopper.Editor.Setup
     internal static class EffectsAssets
     {
         private const string SettingsPath = "Assets/Chopper/Data/Effects/CombatEffectsSettings.asset";
-        private const string SciFi = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Prefabs/Combat";
+        private const string SciFi = "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Prefabs/Combat";
 
         private const string GunBullet = "Assets/Prefabs/Projectiles/ProjectilePrefabs/BulletRed.prefab";
         private const string GunMuzzleFlash = SciFi + "/MuzzleFlash/FireSmall/RedFireSmallMuzzleFlash.prefab";
@@ -24,6 +24,57 @@ namespace Chopper.Editor.Setup
         private const string Missile = SciFi + "/Missiles/Rockets/RedRocketMissile.prefab";
         private const string Flare = SciFi + "/Missiles/Sparkler/YellowSparklerMissile.prefab";
 
+        private const string FireAndSmoke = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Prefabs";
+
+        /// <summary>
+        /// The wreck's explosion (Docs/ChopperDeathDesign.md): a lit fireball, big flames, embers, then a smoke column
+        /// that rises and drifts. Empty when the pack is not in the project (the blast is then the missile impact).
+        /// </summary>
+        private static BlastLayer[] ExplosionLayers()
+        {
+            // First the explosion itself: a big bright blast with two close pops and a shower of embers (the missile
+            // impact gives the flash and light). Then the fire and smoke: a rolling fireball swells out of it, flames
+            // burn on, late secondary pops (fuel, ammunition), and a smoke column swells and drifts.
+            var layers = new[]
+            {
+                Layer(SmallBlast, 4.5f, 0f, 0f, 3f, 0f),
+                Layer(SmallBlast, 3f, 0.06f, 0f, 3f, 0.5f, spread: 2.5f),
+                Layer(SmallBlast, 3f, 0.12f, 0f, 3f, 1f, spread: 2.5f),
+                Layer(Embers, 3f, 0f, 0.8f, 6f, 0.5f),
+                Layer(Fireball, 6.5f, 0.25f, 1.2f, 10f, 0.5f, startScale: 2.5f, grow: 1f),
+                Layer(Flames, 4.5f, 0.35f, 2.5f, 7f, 0f, startScale: 2f, grow: 1f),
+                Layer(SmallBlast, 2f, 0.6f, 0f, 3f, 1.5f, spread: 5f),
+                Layer(SmallBlast, 1.6f, 1f, 0f, 3f, 0.5f, spread: 6f),
+                Layer(Column, 4f, 0.7f, 6f, 22f, 2f, startScale: 1.5f, grow: 3f),
+            };
+            return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
+        }
+
+        private const string Fireball = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Explosion_Normal_Based_Lit.prefab";
+        private const string Flames = FireAndSmoke + "/Other/Prefab_Fire_Huge_Flames_01.prefab";
+        private const string Embers = FireAndSmoke + "/Other/Prefab_Fire_Embers_01.prefab";
+        private const string Column = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Smoke_Normal_Based_Lit_3.prefab";
+        private const string SmallBlast = RocketImpact;
+
+        private static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
+            float startScale = 0f, float grow = 0f, float spread = 0f) => new()
+        {
+            Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path),
+            Scale = scale, Delay = delay, EmitSeconds = emit, LifeSeconds = life, Up = up,
+            StartScale = startScale, GrowSeconds = grow, Spread = spread,
+        };
+
+        /// <summary>Tools: put the default explosion layers back (after tuning them in code).</summary>
+        [MenuItem("Chopper/Tools/Reset Chopper Explosion Layers")]
+        private static void ResetExplosionLayers()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(SettingsPath);
+            if (settings == null) return;
+            settings.FillExplosionLayers(ExplosionLayers(), replace: true);
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+        }
+
         public static CombatEffectsSettings Ensure(AudioMixer mixer)
         {
             var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(SettingsPath);
@@ -33,6 +84,7 @@ namespace Chopper.Editor.Setup
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
+                settings.FillExplosionLayers(ExplosionLayers());
                 DressExhaustSmoke();
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
@@ -49,6 +101,7 @@ namespace Chopper.Editor.Setup
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
+            settings.FillExplosionLayers(ExplosionLayers());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
@@ -178,7 +231,7 @@ namespace Chopper.Editor.Setup
         }
 
         private const string FlameMaterialPath = "Assets/Chopper/Data/Effects/DamageFlames.mat";
-        private const string SciFiTextures = "Assets/AssetBundles/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Textures/";
+        private const string SciFiTextures = "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Textures/";
         /// <summary>Spark streak (a soft teardrop, stretched along the spark's flight) from the Sci-Fi Arsenal pack.</summary>
         private const string SparkTexture = SciFiTextures + "bullet_modular.png";
         /// <summary>Fireball flipbook (4 x 4, played through) from the Sci-Fi Arsenal pack, white so the particle tints it.</summary>

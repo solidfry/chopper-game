@@ -24,7 +24,7 @@ instead of writing a one-off audio script.
 
 ## Use it
 
-1. **Source** folder — default `Assets/Gun & Explosion Sounds` (git-ignored, see below).
+1. **Source** folder — default `Assets/ThirdParty/Audio/Gun & Explosion Sounds` (git-ignored, see below).
 2. Tick clips in the left list (filter box at the top; All / None / Invert).
 3. Pick a **preset** or set the effects by hand.
 4. Press **Play** to audition. **Compare original** A/Bs the
@@ -74,10 +74,10 @@ Signatures verified on Unity 6.6: `PlayPreviewClip(AudioClip, int, bool)`,
 
 The bundles this tool reads are **not in the repository** (too large):
 
-- `Assets/Gun & Explosion Sounds` — 230 MB, 540 clips (the default source)
-- `Assets/Ultimate SFX Bundle - HD Remaster` — 1.0 GB
-- `Assets/Colossal Game Music Collection` — 653 MB
-- `Assets/Total Music Collection` — 710 MB
+- `Assets/ThirdParty/Audio/Gun & Explosion Sounds` — 230 MB, 540 clips (the default source)
+- `Assets/ThirdParty/Audio/Ultimate SFX Bundle - HD Remaster` — 1.0 GB
+- `Assets/ThirdParty/Audio/Colossal Game Music Collection` — 653 MB
+- `Assets/ThirdParty/Audio/Total Music Collection` — 710 MB
 
 On a fresh clone the file list is empty. Restore the folders, then press **Reload**.
 

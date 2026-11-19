@@ -31,8 +31,8 @@ namespace Chopper.Editor.AudioEffects
 
         // ── State ──────────────────────────────────────────────
         Vector2 _listScroll, _effectScroll, _exportLogScroll;
-        string _sourceFolder = "Assets/Gun & Explosion Sounds";
-        string _exportFolder = "Assets/Gun & Explosion Sounds/Processed";
+        string _sourceFolder = "Assets/ThirdParty/Audio/Gun & Explosion Sounds";
+        string _exportFolder = "Assets/ThirdParty/Audio/Gun & Explosion Sounds/Processed";
         AudioEffectChain _chain;
 
         List<string> _allFiles = new List<string>();
