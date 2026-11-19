@@ -48,7 +48,7 @@
   --chopper-border-width: 1px;
   --chopper-radius: 0;
 
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOL.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOL Centred.asset");
   /* Karnivore sets tight: extra letter spacing everywhere (chopper-body resets it for Chakra Petch). */
   letter-spacing: 1px;
   color: var(--chopper-text);
@@ -56,20 +56,20 @@
 
 /* Karnivore sets tight: extra letter spacing (px; large titles add more in their screen's USS). */
 .chopper-title {
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
   letter-spacing: 2px;
 }
 
 /* Longer text: descriptions and sentences (see the header). */
 .chopper-body {
-  -unity-font: url("/Assets/Fonts/ChakraPetch/ChakraPetch-Regular.ttf");
+  -unity-font-definition: url("/Assets/Fonts/ChakraPetch/ChakraPetch-Regular.ttf");
   font-size: 13px;
   letter-spacing: 0;
 }
 
 /* Decoration only (see the header): small, dim, never information the player needs. */
 .chopper-deco-dot {
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOD.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOD Centred.asset");
   font-size: 10px;
   color: var(--chopper-green);
   opacity: 0.45;
@@ -77,7 +77,7 @@
 }
 
 .chopper-deco-seven {
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVSV.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVSV Centred.asset");
   font-size: 11px;
   color: var(--chopper-green);
   opacity: 0.5;
@@ -441,7 +441,7 @@
   border-color: var(--chopper-green-dim);
   border-radius: 0;
   color: var(--chopper-green);
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
   letter-spacing: 2px;
   padding: 4px 14px;
 }
@@ -508,7 +508,7 @@
 
 .unity-progress-bar__title {
   color: var(--chopper-text);
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
   font-size: 12px;
 }
 
@@ -537,7 +537,7 @@
 /* Foldout: a green arrow and title, the content indented under a faint rule. */
 .unity-foldout__text {
   color: var(--chopper-green);
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
   letter-spacing: 2px;
 }
 
@@ -595,7 +595,7 @@
 
 .unity-tab__header-label {
   color: var(--chopper-green-dim);
-  -unity-font: url("/Assets/Fonts/Karnivore/KARNIVOB.ttf");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
   letter-spacing: 3px;
 }
 

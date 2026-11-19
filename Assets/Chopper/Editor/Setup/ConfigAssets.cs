@@ -37,6 +37,7 @@ namespace Chopper.Editor.Setup
             var library = AudioAssets.Ensure(mixer);
             var effects = EffectsAssets.Ensure(mixer);
             var panel = EnsurePanelSettings();
+            FontAssets.EnsureAll();
             var look = HudLookAssets.Ensure();
             var cameraSettings = EnsureCameraSettings();
             var hud = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(HudLayoutPath);
