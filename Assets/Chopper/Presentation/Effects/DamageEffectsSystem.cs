@@ -33,9 +33,8 @@ namespace Chopper.Presentation.Effects
     public partial class DamageEffectsSystem : PresentationSystemBase
     {
         private const float CockpitClearance = 2.5f;
-        /// <summary>Share of the chopper's own velocity a smoke puff keeps when it leaves the hull.</summary>
-        private const float SmokeInherit = 0.35f;
-        private const float FlameRate = 22f;
+        /// <summary>Flame puffs per second at full fire (see <see cref="DamageLook.Fire"/>).</summary>
+        public const float FlameRate = 22f;
 
         private sealed class Damaged
         {
@@ -62,11 +61,9 @@ namespace Chopper.Presentation.Effects
         private IDisposable _wreckSubscription;
         private WreckDebris _debris;
         private readonly List<WreckExploded> _blasts = new();
-        private Transform _root;
-        private ParticleSystem _sparks;
-        private ParticleSystem _flames;
-        private ParticleSystem _smoke;
-        private ParticleSystem _dust;
+        private DamageParticles _particles;
+        private ParticleSystem _sparks => _particles?.Sparks;
+        private ParticleSystem _flames => _particles?.Flames;
 
         protected override void OnCreate()
         {
@@ -214,21 +211,8 @@ namespace Chopper.Presentation.Effects
             _pending.Clear();
         }
 
-        private void EmitSparks(CombatEffectsSettings settings, Vector3 point, Vector3 normal, int count)
-        {
-            if (_sparks == null) return;
-            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
-            for (var i = 0; i < count; i++)
-            {
-                // A cone round the normal, some skimming along the hull.
-                var direction = (normal + Random.insideUnitSphere * 0.9f).normalized;
-                emit.position = point + normal * 0.05f;
-                emit.velocity = direction * (settings.SparkSpeed * Random.Range(0.35f, 1.1f));
-                emit.startLifetime = Random.Range(0.25f, 0.7f);
-                emit.startSize = Random.Range(0.05f, 0.12f);
-                _sparks.Emit(emit, 1);
-            }
-        }
+        private void EmitSparks(CombatEffectsSettings settings, Vector3 point, Vector3 normal, int count) =>
+            _particles?.EmitSparks(point, normal, count);
 
         /// <summary>
         /// Field repair: short blue-white welding sparks at the hit points (or round the hull when there are none),
@@ -446,39 +430,15 @@ namespace Chopper.Presentation.Effects
         }
 
         private void EmitSmoke(CombatEffectsSettings settings, Vector3 point, Vector3 normal, Vector3 velocity, Color colour,
-            float strength, int count)
-        {
-            if (_smoke == null || count <= 0) return;
-            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = colour };
-            for (var i = 0; i < count; i++)
-            {
-                emit.position = point + Random.insideUnitSphere * 0.25f;
-                emit.velocity = velocity * SmokeInherit + normal * Random.Range(0.5f, 1.5f) + Vector3.up * Random.Range(0.5f, 1.5f);
-                emit.startLifetime = Random.Range(2f, 3.5f) * (0.6f + 0.4f * strength);
-                emit.startSize = settings.SmokeSize * Random.Range(0.7f, 1.3f) * (0.6f + 0.4f * strength);
-                emit.rotation = Random.Range(0f, 360f);
-                _smoke.Emit(emit, 1);
-            }
-        }
+            float strength, int count) =>
+            _particles?.EmitSmoke(point, normal, velocity, colour, strength, count);
 
-        private void EmitFlames(Vector3 point, Vector3 normal, Vector3 velocity, float strength, int count)
-        {
-            if (_flames == null || count <= 0) return;
-            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
-            for (var i = 0; i < count; i++)
-            {
-                emit.position = point + Random.insideUnitSphere * 0.15f;
-                emit.velocity = velocity * 0.6f + normal * Random.Range(0.5f, 2f) + Vector3.up * Random.Range(1f, 2.5f);
-                emit.startLifetime = Random.Range(0.2f, 0.45f);
-                emit.startSize = Random.Range(0.5f, 1.1f) * (0.5f + 0.5f * strength);
-                emit.rotation = Random.Range(0f, 360f);
-                _flames.Emit(emit, 1);
-            }
-        }
+        private void EmitFlames(Vector3 point, Vector3 normal, Vector3 velocity, float strength, int count) =>
+            _particles?.EmitFlames(point, normal, velocity, strength, count);
 
         private void EmitDust(CombatEffectsSettings settings, Vector3 point, int count)
         {
-            if (_dust == null || count <= 0) return;
+            if (_particles == null || count <= 0) return;
             // The map's dust: city maps carry a height fog whose colour is their sand or ash (as the downwash).
             var colour = settings.DownwashColour;
             if (SystemAPI.TryGetSingleton<CityAtmosphere>(out var atmosphere))
@@ -486,17 +446,7 @@ namespace Chopper.Presentation.Effects
                 var fog = new Color(atmosphere.Colour.x, atmosphere.Colour.y, atmosphere.Colour.z).gamma;
                 colour = new Color(fog.r, fog.g, fog.b, colour.a);
             }
-            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false, startColor = colour };
-            for (var i = 0; i < count; i++)
-            {
-                var outward = Random.insideUnitCircle.normalized;
-                emit.position = point + new Vector3(outward.x, 0.2f, outward.y) * 0.5f;
-                emit.velocity = new Vector3(outward.x, Random.Range(0.2f, 0.6f), outward.y) * Random.Range(4f, 10f);
-                emit.startLifetime = Random.Range(1f, 2.2f);
-                emit.startSize = Random.Range(1.5f, 3f);
-                emit.rotation = Random.Range(0f, 360f);
-                _dust.Emit(emit, 1);
-            }
+            _particles.EmitDust(point, colour, count);
         }
 
         /// <summary>New context (scene change): new subscription and new particle systems.</summary>
@@ -506,107 +456,10 @@ namespace Chopper.Presentation.Effects
             Clear();
             _context = context;
             _subscription = context.Events.Subscribe<ChopperHit>(_pending.Add);
-            var settings = context.Effects.Settings;
-            _root = new GameObject("Damage Effects").transform;
-            if (settings.DamageSparkMaterial != null)
-            {
-                _sparks = Create("Sparks", settings.DamageSparkMaterial, 1500, ParticleSystemRenderMode.Stretch, gravity: 1f,
-                    Fade(new Color(1f, 0.95f, 0.75f), new Color(1f, 0.45f, 0.1f), 0.7f), grow: 0.6f, drag: 0.02f);
-                _flames = Create("Flames", settings.DamageFlameMaterial, 600, ParticleSystemRenderMode.Billboard, gravity: -0.2f,
-                    Fade(new Color(1f, 0.75f, 0.3f), new Color(0.9f, 0.2f, 0.05f), 0.25f), grow: 1.6f, drag: 0.1f);
-                if (settings.FlameFlipbook)
-                {
-                    // The fireball flipbook: all 16 frames over the life (it flares, then breaks up).
-                    var sheet = _flames.textureSheetAnimation;
-                    sheet.enabled = true;
-                    sheet.mode = ParticleSystemAnimationMode.Grid;
-                    sheet.numTilesX = 4;
-                    sheet.numTilesY = 4;
-                    sheet.animation = ParticleSystemAnimationType.WholeSheet;
-                    sheet.frameOverTime = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                    sheet.cycleCount = 1;
-                }
-            }
-            if (settings.DamageSmokeMaterial != null)
-                _smoke = Create("Smoke", settings.DamageSmokeMaterial, 2000, ParticleSystemRenderMode.Billboard, gravity: -0.03f,
-                    Fade(Color.white, Color.white, 0.6f), grow: 3f, drag: 0.08f, sheet: true);
-            if (settings.DownwashMaterial != null)
-                _dust = Create("Crash Dust", settings.DownwashMaterial, 400, ParticleSystemRenderMode.Billboard, gravity: 0.05f,
-                    Fade(Color.white, Color.white, 0.5f), grow: 2f, drag: 0.12f, sheet: true);
+            _particles = new DamageParticles(context.Effects.Settings);
             _debris = context.Effects.Debris;
-            _debris.SetTrails(DebrisSmoke, DebrisFlames, DebrisSparks);
+            _debris.SetTrails(_particles.DebrisSmoke, _particles.DebrisFlames, _particles.DebrisSparks);
             _wreckSubscription = context.Events.Subscribe<WreckExploded>(_blasts.Add);
-        }
-
-        /// <summary>Colour over lifetime: <paramref name="start"/> to <paramref name="end"/>, alpha up fast, held, then out.</summary>
-        private static Gradient Fade(Color start, Color end, float hold)
-        {
-            var gradient = new Gradient();
-            gradient.SetKeys(new[] { new GradientColorKey(start, 0f), new GradientColorKey(end, 1f) },
-                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.05f), new GradientAlphaKey(0.8f, hold), new GradientAlphaKey(0f, 1f) });
-            return gradient;
-        }
-
-        /// <summary>A world-space system that only emits by script (Emit), with drag, growth and a colour fade.
-        /// <paramref name="sheet"/>: the material uses the smoke flipbook (<see cref="SmokeSheet"/>).</summary>
-        private ParticleSystem Create(string name, Material material, int maxParticles, ParticleSystemRenderMode mode, float gravity,
-            Gradient colour, float grow, float drag, bool sheet = false)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(_root, false);
-            var system = go.AddComponent<ParticleSystem>();
-            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            if (sheet) SmokeSheet.Apply(system);
-
-            var main = system.main;
-            main.loop = true;
-            main.playOnAwake = false;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = maxParticles;
-            main.gravityModifier = gravity;
-            main.startColor = Color.white;
-
-            var emission = system.emission;
-            emission.enabled = false;
-            var shape = system.shape;
-            shape.enabled = false;
-
-            var limit = system.limitVelocityOverLifetime;
-            limit.enabled = true;
-            limit.limit = new ParticleSystem.MinMaxCurve(0f);
-            limit.drag = new ParticleSystem.MinMaxCurve(drag);
-            limit.multiplyDragByParticleSize = false;
-            limit.dampen = 0f;
-
-            var size = system.sizeOverLifetime;
-            size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, grow));
-
-            var colourOverLifetime = system.colorOverLifetime;
-            colourOverLifetime.enabled = true;
-            colourOverLifetime.color = new ParticleSystem.MinMaxGradient(colour);
-
-            if (mode == ParticleSystemRenderMode.Billboard)
-            {
-                var rotation = system.rotationOverLifetime;
-                rotation.enabled = true;
-                rotation.z = new ParticleSystem.MinMaxCurve(-0.8f, 0.8f);
-            }
-
-            var renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = mode;
-            if (mode == ParticleSystemRenderMode.Stretch)
-            {
-                renderer.velocityScale = 0.05f;
-                renderer.lengthScale = 1f;
-            }
-            renderer.sharedMaterial = material;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.sortMode = ParticleSystemSortMode.Distance;
-            renderer.maxParticleSize = 2f;
-            system.Play();
-            return system;
         }
 
         /// <summary>This frame's wreck blasts break their wrecks up; the pieces fly, bounce and trail.</summary>
@@ -621,21 +474,6 @@ namespace Chopper.Presentation.Effects
             _debris.Tick(deltaTime, (float)SystemAPI.Time.ElapsedTime, hasWorld ? physics.CollisionWorld : default, hasWorld);
         }
 
-        private void DebrisSmoke(Vector3 point, Vector3 velocity, float strength, int count)
-        {
-            var settings = _context.Effects.Settings;
-            EmitSmoke(settings, point, Vector3.up, velocity, settings.HeavySmokeColour, strength, count);
-        }
-
-        private void DebrisFlames(Vector3 point, Vector3 velocity, float strength, int count) =>
-            EmitFlames(point, Vector3.up, velocity, strength, count);
-
-        private void DebrisSparks(Vector3 point, Vector3 velocity, float strength, int count)
-        {
-            var normal = velocity.sqrMagnitude > 0.01f ? velocity.normalized : Vector3.up;
-            EmitSparks(_context.Effects.Settings, point, normal, Mathf.RoundToInt(count * strength));
-        }
-
         private void Clear()
         {
             _subscription?.Dispose();
@@ -647,9 +485,8 @@ namespace Chopper.Presentation.Effects
             _debris = null;
             _damaged.Clear();
             _pending.Clear();
-            if (_root != null) Object.Destroy(_root.gameObject);
-            _root = null;
-            _sparks = _flames = _smoke = _dust = null;
+            _particles?.Dispose();
+            _particles = null;
             _context = null;
         }
     }

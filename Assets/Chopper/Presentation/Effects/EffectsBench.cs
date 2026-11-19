@@ -8,6 +8,7 @@ namespace Chopper.Presentation.Effects
     /// no netcode, bots or HUD, through the same code the match uses (<see cref="CombatEffects"/>,
     /// <see cref="BlastSequence"/>). Its inspector has a button per effect; in play the keys work too:
     /// 1 ground blast, 2 air blast, 3 missile impact, 4 rocket impact, 5 gun impact, 6 next single layer,
+    /// 7 hit sparks, 8 crash dust, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
     /// R repeat the last, C clear, [ and ] slower and faster time. Not a game scene.
     /// </summary>
     public sealed class EffectsBench : MonoBehaviour
@@ -20,8 +21,24 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(0.05f, 2f), Tooltip("Time scale while the bench runs (slow motion to study a layer).")]
         private float timeScale = 1f;
 
+        [Header("Damaged chopper")]
+        [SerializeField, Tooltip("A stand-in chopper body (moved by the bench). Its smoke and fire follow its health.")]
+        private Transform standIn;
+        [SerializeField, Range(0f, 1f), Tooltip("Health share: smoke below the settings' Smoke Below, fire below Fire Below.")]
+        private float health = 1f;
+        [SerializeField, Tooltip("Height of the stand-in above the target, m.")] private float hoverHeight = 10f;
+        [SerializeField, Tooltip("Circle radius, m (0 = hover in place): flying shows how the smoke trails.")]
+        private float circleRadius;
+        [SerializeField, Tooltip("Speed round the circle, m/s.")] private float circleSpeed = 25f;
+
         private CombatEffects _effects;
+        private DamageParticles _damage;
         private readonly BlastSequence _sequence = new();
+        private float _smokeCarry;
+        private float _flameCarry;
+        private float _angle;
+        private Vector3 _lastStandIn;
+        private bool _hasLast;
         private System.Action _last;
         private int _nextLayer;
 
@@ -30,18 +47,24 @@ namespace Chopper.Presentation.Effects
         public float TimeScale { get => timeScale; set => timeScale = Mathf.Clamp(value, 0.05f, 2f); }
         private Vector3 Point => target != null ? target.position : transform.position;
 
-        /// <summary>Editor only: the scene builder links the settings and the target.</summary>
-        public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint)
+        public float Health { get => health; set => health = Mathf.Clamp01(value); }
+        public float CircleRadius { get => circleRadius; set => circleRadius = Mathf.Max(0f, value); }
+        private Vector3 ChopperPoint => standIn != null ? standIn.position : Point + Vector3.up * hoverHeight;
+
+        /// <summary>Editor only: the scene builder links the settings, the target and the stand-in chopper.</summary>
+        public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null)
         {
             settings = effectSettings;
             target = blastPoint;
+            standIn = chopperStandIn;
         }
 
-        private void Awake() => _effects = new CombatEffects(settings, transform);
+        private void Awake() => Create();
 
         private void OnDestroy()
         {
             _effects?.Dispose();
+            _damage?.Dispose();
             Time.timeScale = 1f;
         }
 
@@ -51,7 +74,60 @@ namespace Chopper.Presentation.Effects
             Keys();
             _effects.Tick(Time.deltaTime);
             _sequence.Tick(_effects, Time.time);
+            Damaged(Time.deltaTime);
         }
+
+        private void Create()
+        {
+            _effects = new CombatEffects(settings, transform);
+            _damage = new DamageParticles(settings, transform);
+            _effects.Debris.SetTrails(_damage.DebrisSmoke, _damage.DebrisFlames, _damage.DebrisSparks);
+        }
+
+        /// <summary>The stand-in flies its circle (or hovers) and smokes and burns for its health, as in a match.</summary>
+        private void Damaged(float deltaTime)
+        {
+            if (settings == null || deltaTime <= 0f) return;
+            var centre = Point + Vector3.up * hoverHeight;
+            Vector3 position;
+            Vector3 forward;
+            if (circleRadius > 0.5f)
+            {
+                _angle += circleSpeed / circleRadius * deltaTime;
+                position = centre + new Vector3(Mathf.Cos(_angle), 0f, Mathf.Sin(_angle)) * circleRadius;
+                forward = new Vector3(-Mathf.Sin(_angle), 0f, Mathf.Cos(_angle));
+            }
+            else
+            {
+                position = centre;
+                forward = standIn != null ? standIn.forward : Vector3.forward;
+            }
+            if (standIn != null) standIn.SetPositionAndRotation(position, Quaternion.LookRotation(forward));
+            var velocity = _hasLast ? (position - _lastStandIn) / deltaTime : Vector3.zero;
+            _lastStandIn = position;
+            _hasLast = true;
+
+            var smoke = DamageLook.Smoke(health, settings.SmokeBelow);
+            var fire = DamageLook.Fire(health, settings.FireBelow);
+            var colour = DamageLook.SmokeColour(health, settings.SmokeBelow, settings.HeavySmokeBelow, settings.LightSmokeColour,
+                settings.HeavySmokeColour);
+            _smokeCarry += settings.SmokeRate * smoke * deltaTime;
+            _flameCarry += DamageEffectsSystem.FlameRate * fire * deltaTime;
+            var smokeCount = (int)_smokeCarry;
+            var flameCount = (int)_flameCarry;
+            _smokeCarry -= smokeCount;
+            _flameCarry -= flameCount;
+            var point = position + Vector3.up * 0.5f;
+            _damage.EmitSmoke(point, Vector3.up, velocity, colour, smoke, smokeCount);
+            _damage.EmitFlames(point, Vector3.up, velocity, fire, flameCount);
+        }
+
+        /// <summary>A hit on the stand-in: sparks as for a heavy bullet hit.</summary>
+        public void HitSparks() => Run(() => _damage.EmitSparks(ChopperPoint + Vector3.up, (Vector3.up + Random.insideUnitSphere).normalized,
+            Mathf.Max(settings.SparkCount.x, settings.SparkCount.y)));
+
+        /// <summary>Crash dust at the ground point (the bench uses the downwash colour; maps use their fog colour).</summary>
+        public void CrashDust() => Run(() => _damage.EmitDust(Point, settings.DownwashColour, 40));
 
         public void GroundBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * 1.5f, Vector3.zero, Time.time, Cast));
         public void AirBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * airHeight, airVelocity, Time.time, Cast));
@@ -75,7 +151,8 @@ namespace Chopper.Presentation.Effects
         {
             _sequence.Clear();
             _effects?.Dispose();
-            _effects = new CombatEffects(settings, transform);
+            _damage?.Dispose();
+            Create();
         }
 
         private void Run(System.Action action)
@@ -99,6 +176,10 @@ namespace Chopper.Presentation.Effects
             if (keys.digit4Key.wasPressedThisFrame) RocketImpact();
             if (keys.digit5Key.wasPressedThisFrame) GunImpact();
             if (keys.digit6Key.wasPressedThisFrame) NextLayer();
+            if (keys.digit7Key.wasPressedThisFrame) HitSparks();
+            if (keys.digit8Key.wasPressedThisFrame) CrashDust();
+            if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
+            if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;
             if (keys.rKey.wasPressedThisFrame && _last != null) _last();
             if (keys.cKey.wasPressedThisFrame) Clear();
             if (keys.leftBracketKey.wasPressedThisFrame) TimeScale = timeScale * 0.5f;

@@ -76,7 +76,7 @@ namespace Chopper.Editor.Setup
             var point = new GameObject("Blast Point").transform;
             var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
             var config = ConfigAssets.Load();
-            bench.Configure(config != null ? config.Effects : null, point);
+            bench.Configure(config != null ? config.Effects : null, point, StandIn());
 
             var camera = new GameObject("Bench Camera") { tag = "MainCamera" };
             var cam = camera.AddComponent<UnityEngine.Camera>();
@@ -93,6 +93,30 @@ namespace Chopper.Editor.Setup
             volume.isGlobal = true;
             volume.sharedProfile = CityLookSetup.EnsureProfile();
         }
+
+        /// <summary>The default kit's gunship model (plain art, not the networked prefab); a box when the kit is missing.</summary>
+        private static Transform StandIn()
+        {
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(StandInModel);
+            GameObject standIn;
+            if (model != null)
+            {
+                // Name the scene: without it the model can land in the scene that was open before the build.
+                standIn = (GameObject)PrefabUtility.InstantiatePrefab(model, UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+                standIn.name = "Chopper Stand-in";
+            }
+            else
+            {
+                standIn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                standIn.name = "Chopper Stand-in (box)";
+                standIn.transform.localScale = new Vector3(3f, 2f, 9f);
+                Object.DestroyImmediate(standIn.GetComponent<Collider>());
+            }
+            standIn.transform.position = new Vector3(0f, 10f, 0f);
+            return standIn.transform;
+        }
+
+        private const string StandInModel = KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Chassis_Gunship.fbx";
 
         private static void Block(string name, Vector3 position, Vector3 size)
         {
