@@ -45,6 +45,7 @@ namespace Chopper.Simulation.Flight
                 AbilityConfigs = SystemAPI.GetComponentLookup<Combat.AbilityConfig>(isReadOnly: true),
                 AbilityStates = SystemAPI.GetComponentLookup<Combat.AbilityState>(isReadOnly: true),
                 Repairs = SystemAPI.GetComponentLookup<Combat.ChopperRepair>(isReadOnly: true),
+                Wrecks = SystemAPI.GetComponentLookup<Combat.Wreck>(isReadOnly: true),
             }.ScheduleParallel(state.Dependency);
         }
 
@@ -64,6 +65,8 @@ namespace Chopper.Simulation.Flight
             [ReadOnly] public ComponentLookup<Combat.AbilityState> AbilityStates;
             /// <summary>No boost while repairing.</summary>
             [ReadOnly] public ComponentLookup<Combat.ChopperRepair> Repairs;
+            /// <summary>A wreck has no engine: WreckFlightSystem flies it.</summary>
+            [ReadOnly] public ComponentLookup<Combat.Wreck> Wrecks;
 
             private void Execute(
                 Entity entity,
@@ -74,6 +77,7 @@ namespace Chopper.Simulation.Flight
                 ref PhysicsVelocity velocity,
                 ref ChopperFlightState state)
             {
+                if (Wrecks.TryGetComponent(entity, out var wreck) && wreck.Active) return;
                 var rotation = transform.Rotation;
                 var toLocal = math.inverse(rotation);
                 var up = math.mul(rotation, math.up());

@@ -47,6 +47,7 @@ namespace Chopper.Simulation.Combat
         private BufferLookup<DamageOverTime> _dotLookup;
         private ComponentLookup<AbilityConfig> _abilityConfigLookup;
         private ComponentLookup<AbilityState> _abilityLookup;
+        private ComponentLookup<DeathBlow> _deathBlowLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -63,6 +64,7 @@ namespace Chopper.Simulation.Combat
             _dotLookup = state.GetBufferLookup<DamageOverTime>();
             _abilityConfigLookup = state.GetComponentLookup<AbilityConfig>(isReadOnly: true);
             _abilityLookup = state.GetComponentLookup<AbilityState>();
+            _deathBlowLookup = state.GetComponentLookup<DeathBlow>();
         }
 
         [BurstCompile]
@@ -84,6 +86,7 @@ namespace Chopper.Simulation.Combat
             _dotLookup.Update(ref state);
             _abilityConfigLookup.Update(ref state);
             _abilityLookup.Update(ref state);
+            _deathBlowLookup.Update(ref state);
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             // Kill heals (SCRAPPER) wait until the loop ends: the healer's health may be in the query too.
             var killHeals = new NativeList<KillHeal>(4, Allocator.Temp);
@@ -140,7 +143,11 @@ namespace Chopper.Simulation.Combat
 
                     if (hit.HasPoint && hit.Amount > strongest.Amount) strongest = hit;
                     if (hit.Amount > 0f) InterruptRepair(victim);
+                    var healthBefore = health.ValueRO.Current;
                     var killed = health.ValueRW.TakeDamage(hit.Amount);
+                    // The killing blow picks how the wreck goes down (DeathStyles.Pick, WreckSystem).
+                    if (killed && _deathBlowLookup.HasComponent(victim))
+                        _deathBlowLookup[victim] = Blow(victim, hit, healthBefore);
                     // A player who left: Netcode gives the id to the next player, so no credit for it.
                     var attacker = gone ? RememberAttacker(victim, ShooterLeft(hit.Attacker) ? 0 : hit.Attacker.NetworkId, now)
                         : RememberAttacker(victim, hit.Source, now);
@@ -212,6 +219,20 @@ namespace Chopper.Simulation.Combat
         /// A match log line for this hit. <paramref name="actor"/> is a network id (0 = environment or self); the
         /// actor's position is the hit's source chopper when it still exists.
         /// </summary>
+        private DeathBlow Blow(Entity victim, in DamageEvent hit, float healthBefore)
+        {
+            var blow = new DeathBlow
+            {
+                Set = true,
+                Kind = hit.Kind,
+                HasPoint = hit.HasPoint,
+                Overkill = hit.Amount / math.max(healthBefore, 0.01f),
+            };
+            if (hit.HasPoint && _transformLookup.TryGetComponent(victim, out var pose))
+                blow.LocalPoint = pose.InverseTransformPoint(hit.Point);
+            return blow;
+        }
+
         private MatchLogEntry LogEntry(MatchLogKind kind, double now, int actor, Entity victim, in DamageEvent hit, float healthAfter, bool killed)
         {
             var hasVictim = _transformLookup.TryGetComponent(victim, out var victimPose);

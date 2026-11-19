@@ -124,7 +124,9 @@ namespace Chopper.Presentation.Effects
                 var velocity = state.HasPosition && deltaTime > 0f ? (position - state.LastPosition) / deltaTime : Vector3.zero;
                 state.LastPosition = position;
                 state.HasPosition = true;
-                if (smoke <= 0f || health.ValueRO.IsDead) continue;
+                // Dead: only a falling wreck still smokes and burns (at full, its health is 0).
+                var falling = SystemAPI.HasComponent<Wreck>(entity) && SystemAPI.GetComponent<Wreck>(entity).Active;
+                if (smoke <= 0f || (health.ValueRO.IsDead && !falling)) continue;
 
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 var points = state.Points.Count > 0 ? state.Points : _centre;

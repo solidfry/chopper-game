@@ -27,6 +27,9 @@ namespace Chopper.Simulation.Session
     [UpdateAfter(typeof(GoInGameServerSystem))]
     public partial struct ChopperRespawnSystem : ISystem
     {
+        /// <summary>Seconds the kill cam holds on the wreck's blast before the new chopper spawns.</summary>
+        private const float KillCamHold = 1.2f;
+
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
@@ -58,18 +61,28 @@ namespace Chopper.Simulation.Session
                     }
                     ecb.AddComponent(connection, new RespawnTimer { Remaining = spawner.RespawnDelay });
                 }
-                ecb.DestroyEntity(chopper);
+                // A chopper that can be a wreck falls and explodes first (WreckSystem destroys it); it is no longer
+                // this player's chopper, so it leaves this loop.
+                if (SystemAPI.HasComponent<WreckConfig>(chopper)) ecb.RemoveComponent<ConnectionOwner>(chopper);
+                else ecb.DestroyEntity(chopper);
             }
 
             // Built on the first spawn of this tick: most ticks have none.
             var placement = default(SpawnPlacement);
             var prepared = false;
 
+            // Players whose wreck still falls: the kill cam follows it, so the new chopper waits for the blast and a
+            // short hold on it (Docs/ChopperDeathDesign.md).
+            var falling = new NativeHashSet<int>(8, Allocator.Temp);
+            foreach (var wreck in SystemAPI.Query<RefRO<Wreck>>())
+                if (wreck.ValueRO.Active) falling.Add(wreck.ValueRO.OwnerNetworkId);
+
             foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>()
                          // Team: MatchScoreSystem gives it on join (0 in Free For All); the first chopper waits for it.
                          .WithAll<Match.Team>().WithNone<Progression.LoadoutPending>().WithEntityAccess())
             {
                 timer.ValueRW.Remaining -= deltaTime;
+                if (falling.Contains(playerId.ValueRO.Value)) timer.ValueRW.Remaining = math.max(timer.ValueRO.Remaining, KillCamHold);
                 if (timer.ValueRO.Remaining > 0f) continue;
 
                 if (!prepared)

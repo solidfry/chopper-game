@@ -12,7 +12,8 @@ namespace Chopper.Presentation.Camera
     /// <summary>
     /// Pushes the local player's chopper pose and motion to the context's <see cref="ChopperCameraRig"/>, with its
     /// chassis's cockpit eye (mounted views sit there). When a boost starts, the HUD glitches for a moment (the kick
-    /// reaches the screen too).
+    /// reaches the screen too). Kill cam: while you have no chopper, the rig chases your falling wreck
+    /// (<see cref="Wreck.OwnerNetworkId"/>), then holds on the blast until the new chopper spawns.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -22,6 +23,8 @@ namespace Chopper.Presentation.Camera
 
         private readonly ChassisIndex _chassis = new();
         private MeasuredVelocity _velocity;
+        private UnityEngine.Vector3 _wreckPoint;
+        private bool _hasWreckPoint;
 
         protected override void OnCreate()
         {
@@ -70,7 +73,26 @@ namespace Chopper.Presentation.Camera
                 if (rig.BoostKicked && glitch > 0f) context.HudLook.Disrupt(glitch, BoostGlitchSeconds);
                 break;
             }
-            if (!flying) context.Zoom.Clear();
+            if (flying)
+            {
+                _hasWreckPoint = false;
+                return;
+            }
+            context.Zoom.Clear();
+
+            // Kill cam: your wreck while it falls; after the blast, hold on the last point.
+            if (!SystemAPI.TryGetSingleton<NetworkId>(out var self)) return;
+            foreach (var (wreck, localToWorld) in SystemAPI.Query<RefRO<Wreck>, RefRO<LocalToWorld>>())
+            {
+                if (!wreck.ValueRO.Active || wreck.ValueRO.OwnerNetworkId != self.Value) continue;
+                _wreckPoint = localToWorld.ValueRO.Position;
+                _hasWreckPoint = true;
+                // Measured, like the live chopper: the wreck may be an interpolated ghost here.
+                _velocity.Update(localToWorld.ValueRO.Position, deltaTime);
+                rig.FollowWreck(_wreckPoint, _velocity.Velocity, deltaTime);
+                return;
+            }
+            if (_hasWreckPoint) rig.FollowWreck(_wreckPoint, UnityEngine.Vector3.zero, deltaTime);
         }
     }
 }

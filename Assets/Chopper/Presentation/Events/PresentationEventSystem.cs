@@ -31,6 +31,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _missileDetonations;
         private EntityQuery _clusterSplits;
         private EntityQuery _chopperHits;
+        private EntityQuery _wreckExplosions;
         private EntityQuery _disconnects;
         private int _localNetworkId;
 
@@ -51,6 +52,7 @@ namespace Chopper.Presentation.Events
             _missileDetonations = Rpc<MissileDetonatedRpc>();
             _clusterSplits = Rpc<ClusterSplitRpc>();
             _chopperHits = Rpc<ChopperHitRpc>();
+            _wreckExplosions = Rpc<WreckExplodedRpc>();
             _disconnects = GetEntityQuery(ComponentType.ReadOnly<ClientDisconnect>());
         }
 
@@ -79,6 +81,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_missileDetonations);
             EntityManager.DestroyEntity(_clusterSplits);
             EntityManager.DestroyEntity(_chopperHits);
+            EntityManager.DestroyEntity(_wreckExplosions);
         }
 
         private void Publish(PresentationEvents events)
@@ -117,6 +120,8 @@ namespace Chopper.Presentation.Events
 
             foreach (var rpc in SystemAPI.Query<RefRO<MissileDetonatedRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new MissileDetonated(rpc.ValueRO.Position));
+            foreach (var rpc in SystemAPI.Query<RefRO<WreckExplodedRpc>>().WithAll<ReceiveRpcCommandRequest>())
+                events.Publish(new WreckExploded(rpc.ValueRO.Position, rpc.ValueRO.Velocity, rpc.ValueRO.Style, rpc.ValueRO.OwnerNetworkId));
             foreach (var rpc in SystemAPI.Query<RefRO<ChopperHitRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
                 var hit = rpc.ValueRO;

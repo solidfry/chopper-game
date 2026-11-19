@@ -79,6 +79,10 @@ namespace Chopper.Simulation.Flight
                 AddComponent<Match.Team>(entity);
                 AddComponent(entity, built.Crash);
                 AddComponent<CrashSensor>(entity);
+                // Death: the killing blow picks how the wreck goes down (WreckSystem, Docs/ChopperDeathDesign.md).
+                AddComponent<Wreck>(entity);
+                AddComponent<DeathBlow>(entity);
+                AddComponent(entity, WreckConfig.Default);
                 AddComponent(entity, built.Repair);
                 AddComponent<ChopperRepair>(entity);
                 // Pilots (plan 5b): none on the prefab; each player's pilot comes with the loadout at runtime.

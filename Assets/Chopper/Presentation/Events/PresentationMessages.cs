@@ -137,6 +137,24 @@ namespace Chopper.Presentation.Events
         }
     }
 
+    /// <summary>A falling wreck exploded here (the server removed its ghost). Docs/ChopperDeathDesign.md.</summary>
+    public readonly struct WreckExploded
+    {
+        public readonly Vector3 Position;
+        public readonly Vector3 Velocity;
+        public readonly Simulation.Combat.DeathStyle Style;
+        /// <summary>The player whose chopper it was.</summary>
+        public readonly int OwnerNetworkId;
+
+        public WreckExploded(Vector3 position, Vector3 velocity, Simulation.Combat.DeathStyle style, int owner)
+        {
+            Position = position;
+            Velocity = velocity;
+            Style = style;
+            OwnerNetworkId = owner;
+        }
+    }
+
     /// <summary>A guided missile exploded here (the server removed its ghost).</summary>
     public readonly struct MissileDetonated
     {

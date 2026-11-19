@@ -248,6 +248,7 @@ namespace Chopper.Presentation.Camera
             EnsureStates();
             UpdateHeadLook(deltaTime);
             _eye = target.HasEye ? target.Eye : null;
+            EndKillCam();
             var targetPosition = target.Position;
             var targetRotation = target.Rotation;
             UpdateSpeed(target, deltaTime, settingsAsset);
@@ -287,6 +288,49 @@ namespace Chopper.Presentation.Camera
             _effects?.Apply(settingsAsset, _smoothedSpeed, speed01, _boost, BoostKicked, deltaTime,
                 feel.Effects / Mathf.Max(target.Magnification, 1f));
         }
+
+        private const float KillCamDistance = 26f;
+        private const float KillCamHeight = 9f;
+        private const float KillCamFieldOfView = 60f;
+        /// <summary>How fast the kill cam's aim point follows the wreck (1/s): low, so the spin's circling is smoothed out.</summary>
+        private const float KillCamFollow = 3f;
+        private float _killCamYaw;
+        private bool _killCamActive;
+        private Vector3 _killCamTarget;
+
+        /// <summary>
+        /// Kill cam (Docs/ChopperDeathDesign.md): while you have no chopper, chase your falling wreck from behind and
+        /// above. The heading is fixed at death (the view's heading then), not taken from the wreck's spin or wobble,
+        /// and the aim point is smoothed: a spinning wreck's origin circles round its centre, and aiming at it made the
+        /// view wobble (owner, 19 Nov). Call each frame with the wreck's position (after it exploded: the blast point,
+        /// so the view holds there).
+        /// </summary>
+        public void FollowWreck(Vector3 position, Vector3 velocity, float deltaTime)
+        {
+            if (_camera == null) return;
+            if (!_killCamActive)
+            {
+                // Start from the current view's heading, so the cut is not a jump.
+                var forward = transform.forward;
+                _killCamYaw = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+                _killCamTarget = position;
+                _killCamActive = true;
+            }
+            _killCamTarget = Vector3.Lerp(_killCamTarget, position, 1f - Mathf.Exp(-KillCamFollow * deltaTime));
+            position = _killCamTarget;
+            var back = Quaternion.Euler(0f, _killCamYaw, 0f) * Vector3.back;
+            var desired = position + back * KillCamDistance + Vector3.up * KillCamHeight;
+            var place = 1f - Mathf.Exp(-4f * deltaTime);
+            var aim = 1f - Mathf.Exp(-8f * deltaTime);
+            var at = Vector3.Lerp(transform.position, desired, place);
+            var look = Quaternion.LookRotation((position - at).normalized + Vector3.up * 1e-4f, Vector3.up);
+            var rotation = Quaternion.Slerp(transform.rotation, look, aim);
+            _camera.fieldOfView = Mathf.Lerp(_camera.fieldOfView, KillCamFieldOfView, place);
+            transform.SetPositionAndRotation(at, rotation * Shake(deltaTime, Settings, 1f));
+        }
+
+        /// <summary>The chase cam takes over again (a new chopper).</summary>
+        private void EndKillCam() => _killCamActive = false;
 
         /// <summary>
         /// Inertia lag: the camera falls behind the chopper's acceleration and catches up on a slow curve. Acceleration

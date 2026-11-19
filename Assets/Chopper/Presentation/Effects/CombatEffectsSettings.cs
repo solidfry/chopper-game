@@ -169,6 +169,14 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Seconds before a muzzle flash or impact is destroyed.")]
         private float oneShotLifetime = 3f;
 
+        [Header("Chopper death")]
+        [SerializeField, Tooltip("A wreck's explosion. Empty = the missile impact, three layered blasts.")]
+        private GameObject chopperExplosion;
+        [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]
+        private float chopperExplosionShake = 0.7f;
+        [SerializeField, Min(1f), Tooltip("No shake beyond this distance (m).")]
+        private float chopperExplosionShakeRange = 150f;
+
         public GameObject GunBullet => gunBullet;
         public GameObject GunMuzzleFlash => gunMuzzleFlash;
         public GameObject GunImpact => gunImpact;
@@ -181,6 +189,10 @@ namespace Chopper.Presentation.Effects
         public float OneShotLifetime => oneShotLifetime;
         public GameObject Missile => missile != null ? missile : rocket;
         public GameObject MissileImpact => missileImpact != null ? missileImpact : rocketImpact;
+        /// <summary>A wreck's explosion (Docs/ChopperDeathDesign.md); empty = the missile impact, layered.</summary>
+        public GameObject ChopperExplosion => chopperExplosion != null ? chopperExplosion : MissileImpact;
+        public float ChopperExplosionShake => chopperExplosionShake;
+        public float ChopperExplosionShakeRange => chopperExplosionShakeRange;
         public GameObject Flare => flare;
         public GameObject RepairDrone => repairDrone;
         public float DroneOrbitRadius => droneOrbitRadius;
