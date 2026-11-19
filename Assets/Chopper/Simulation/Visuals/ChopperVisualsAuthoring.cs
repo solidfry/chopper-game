@@ -31,9 +31,12 @@ namespace Chopper.Simulation.Visuals
     {
         public float3 LocalPosition;
         public float3 LocalDirection;
+        /// <summary>Nozzle size (1 = the standard engine's; 0 = old bake, read as 1). Scales the boost jet.</summary>
+        public float Size;
 
         /// <summary>
-        /// One engine socket: the rear ends of the engine module's twin cylinders (Kit02 Engine_Standard and
+        /// Baked default before a loadout is applied (<c>LoadoutApplySystem</c> then writes the fitted engine's nozzles):
+        /// the rear ends of the standard engine module's twin cylinders (Kit02 Engine_Standard and
         /// Engine_Boost: +-0.28, 0, -0.45 from the socket). Owner, 20 Nov: the boost jets come from these. They face
         /// straight back. The effects bench uses the same points.
         /// </summary>

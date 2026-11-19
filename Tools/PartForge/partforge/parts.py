@@ -930,7 +930,20 @@ def _attack_body(b, spec, style, ring, tail, W, H, F):
             ring(-1.4, nacelle_w * 0.95, 0.32 * H, 0.3, y=y, x=x),
             ring(-1.8, nacelle_w * 0.8, 0.26 * H, 0.3, y=y, x=x),
         ], C("hull"), cap_front=C("rubber"), cap_back=C("exhaust"))
-        b.box((x + side * 0.08, y, -1.95), (nacelle_w * 0.7, 0.24 * H, 0.45), C("gunmetal"), rotation=rot_y(side * 25))
+        # Exhaust deflector: a curved duct out of the nacelle's back that bends outward and flares, hull coloured (so
+        # skins paint it) with a glowing mouth; the bake puts soot behind it. Owner, 20 Nov: the old solid gunmetal
+        # block read as a black box.
+        b.loft([
+            ring(-1.7, nacelle_w * 0.72, 0.24 * H, 0.3, y=y, x=x),
+            ring(-2.0, nacelle_w * 0.74, 0.25 * H, 0.3, y=y + 0.01 * H, x=x + side * 0.05),
+            ring(-2.25, nacelle_w * 0.8, 0.27 * H, 0.3, y=y + 0.02 * H, x=x + side * 0.16),
+            ring(-2.42, nacelle_w * 0.9, 0.29 * H, 0.3, y=y + 0.03 * H, x=x + side * 0.28),
+        ], C("hull"), cap_front=C("hull"), cap_back=C("exhaust"))
+        # Lip round the mouth: a darker band so the flare reads.
+        b.loft([
+            ring(-2.40, nacelle_w * 0.94, 0.31 * H, 0.3, y=y + 0.03 * H, x=x + side * 0.27),
+            ring(-2.46, nacelle_w * 0.94, 0.31 * H, 0.3, y=y + 0.03 * H, x=x + side * 0.30),
+        ], C("gunmetal"), cap_front=C("gunmetal"), cap_back=C("exhaust"))
 
     # Avionics hump behind the mast, mast and fairing.
     top = 0.05 * H + 0.5 * H

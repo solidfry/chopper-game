@@ -82,6 +82,7 @@ namespace Chopper.Simulation.Loadout
             if (isServer && !built.Code.Equals(wanted)) EntityManager.SetComponentData(entity, ChopperLoadout.From(built.Code));
 
             Write(entity, built, isServer);
+            WriteExhausts(entity, ModulesFor(chassis, wanted), sockets);
             EntityManager.SetComponentData(entity, new AppliedLoadout { Code = isServer ? built.Code : wanted });
         }
 
@@ -121,6 +122,34 @@ namespace Chopper.Simulation.Loadout
 
             var selection = EntityManager.GetComponentData<PylonSelection>(entity);
             if (selection.Selected >= built.Pylons.Count) EntityManager.SetComponentData(entity, new PylonSelection());
+        }
+
+        /// <summary>
+        /// Client looks: the exhaust points become the fitted engine's nozzles on every engine socket (a heavy body shows
+        /// the engine on each pod). An engine without nozzle data keeps the baked points.
+        /// </summary>
+        private void WriteExhausts(Entity entity, ModuleDefinition[] modules, List<ChassisSocket> sockets)
+        {
+            if (!EntityManager.HasBuffer<Chopper.Simulation.Visuals.ExhaustPoint>(entity)) return;
+            ModuleDefinition engine = null;
+            foreach (var module in modules)
+                if (module != null && module.Slot == SlotType.Engine && module.Exhausts.Count > 0) { engine = module; break; }
+            if (engine == null) return;
+
+            var buffer = EntityManager.GetBuffer<Chopper.Simulation.Visuals.ExhaustPoint>(entity);
+            buffer.Clear();
+            foreach (var socket in sockets)
+            {
+                if (socket.Slot != SlotType.Engine) continue;
+                var scale = socket.Scale > 0f ? socket.Scale : 1f;
+                foreach (var nozzle in engine.Exhausts)
+                    buffer.Add(new Chopper.Simulation.Visuals.ExhaustPoint
+                    {
+                        LocalPosition = socket.LocalPosition + Unity.Mathematics.math.rotate(socket.LocalRotation, (Unity.Mathematics.float3)nozzle.Position * scale),
+                        LocalDirection = Unity.Mathematics.math.rotate(socket.LocalRotation, new Unity.Mathematics.float3(0f, 0f, -1f)),
+                        Size = (nozzle.Size > 0f ? nozzle.Size : 1f) * scale,
+                    });
+            }
         }
 
         private void Index(LoadoutCatalog catalog)

@@ -46,9 +46,9 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>
         /// One chopper this frame. <paramref name="exhausts"/>: world nozzle points and directions (out of the nozzle).
-        /// <paramref name="scale"/>: smaller in your own cockpit view.
+        /// <paramref name="scale"/>: smaller in your own cockpit view; each nozzle's Size scales its own jet.
         /// </summary>
-        public void Update(CombatEffectsSettings settings, TKey key, bool boosting, IReadOnlyList<(Vector3 Position, Vector3 Direction)> exhausts,
+        public void Update(CombatEffectsSettings settings, TKey key, bool boosting, IReadOnlyList<(Vector3 Position, Vector3 Direction, float Size)> exhausts,
             float scale, float deltaTime)
         {
             if (!_flames.TryGetValue(key, out var flame))
@@ -63,9 +63,10 @@ namespace Chopper.Presentation.Effects
                 {
                     Place(flame.Systems[i], exhausts[i]);
                     StartTrail(flame.Systems[i], settings);
-                    var emit = new ParticleSystem.EmitParams { applyShapeToPosition = true, startSize = settings.BoostFlameSize * 2.2f * scale };
+                    var kick = scale * Size(exhausts[i]);
+                    var emit = new ParticleSystem.EmitParams { applyShapeToPosition = true, startSize = settings.BoostFlameSize * 2.2f * kick };
                     if (settings.BoostFlameParticles)
-                        flame.Systems[i].Emit(emit, Mathf.RoundToInt(settings.BoostFlameBurst * scale));
+                        flame.Systems[i].Emit(emit, Mathf.RoundToInt(settings.BoostFlameBurst * kick));
                 }
             }
             _seen.Add(key);
@@ -78,14 +79,15 @@ namespace Chopper.Presentation.Effects
             {
                 var system = flame.Systems[i];
                 Place(system, exhausts[i]);
+                var nozzle = scale * Size(exhausts[i]);
                 var main = system.main;
-                main.startSizeMultiplier = settings.BoostFlameSize * scale * (0.6f + 0.4f * flame.Strength);
+                main.startSizeMultiplier = settings.BoostFlameSize * nozzle * (0.6f + 0.4f * flame.Strength);
                 main.startSpeedMultiplier = settings.BoostFlameLength / Life * (0.5f + 0.5f * strength);
                 var emission = system.emission;
-                emission.rateOverTimeMultiplier = settings.BoostFlameParticles ? settings.BoostFlameRate * strength * scale : 0f;
+                emission.rateOverTimeMultiplier = settings.BoostFlameParticles ? settings.BoostFlameRate * strength * nozzle : 0f;
                 if (flame.Strength > Off && !system.isEmitting) system.Play();
                 var trail = TrailOf(system);
-                if (trail != null) trail.widthMultiplier = settings.BoostTrailWidth * scale * (0.5f + 0.5f * flame.Strength);
+                if (trail != null) trail.widthMultiplier = settings.BoostTrailWidth * nozzle * (0.5f + 0.5f * flame.Strength);
             }
         }
 
@@ -112,7 +114,9 @@ namespace Chopper.Presentation.Effects
             }
         }
 
-        private static void Place(ParticleSystem system, (Vector3 Position, Vector3 Direction) exhaust)
+        private static float Size((Vector3 Position, Vector3 Direction, float Size) exhaust) => exhaust.Size > 0f ? exhaust.Size : 1f;
+
+        private static void Place(ParticleSystem system, (Vector3 Position, Vector3 Direction, float Size) exhaust)
         {
             var direction = exhaust.Direction.sqrMagnitude < 1e-6f ? Vector3.back : exhaust.Direction;
             system.transform.SetPositionAndRotation(exhaust.Position, Quaternion.LookRotation(direction));

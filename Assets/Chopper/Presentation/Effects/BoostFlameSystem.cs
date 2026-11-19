@@ -24,7 +24,7 @@ namespace Chopper.Presentation.Effects
     public partial class BoostFlameSystem : PresentationSystemBase
     {
         private readonly BoostFlames<Entity> _flames = new();
-        private readonly List<(Vector3 Position, Vector3 Direction)> _exhausts = new();
+        private readonly List<(Vector3 Position, Vector3 Direction, float Size)> _exhausts = new();
         private PresentationContext _context;
 
         /// <summary>See <see cref="BoostFlames{TKey}.Follow"/>.</summary>
@@ -65,7 +65,7 @@ namespace Chopper.Presentation.Effects
                 _exhausts.Clear();
                 foreach (var point in exhaust)
                     _exhausts.Add(((Vector3)math.transform(pose.ValueRO.Value, point.LocalPosition),
-                        (Vector3)math.rotate(pose.ValueRO.Value, point.LocalDirection)));
+                        (Vector3)math.rotate(pose.ValueRO.Value, point.LocalDirection), point.Size));
                 var own = cockpitView && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 _flames.Update(settings, entity, flight.ValueRO.Boosting, _exhausts, own ? settings.BoostFlameCockpitScale : 1f, deltaTime);
             }

@@ -510,7 +510,10 @@ def engine(name, ids, nozzles, glow, radius):
             b.box((x + ox, oy, -0.27), (r * 0.5, 0.012, 0.3), C("hull_dark"), rotation=rot_z(angle) @ rot_x(0))
     if nozzles > 1:
         b.tube([(xs[0], r * 0.9, 0.12), (0.0, r * 1.25, 0.1), (xs[-1], r * 0.9, 0.12)], 0.02, C("steel"), segments=5)
-    return Part(name, "module", b, slot="Engine", module_ids=ids)
+    # One "Exhaust" socket per nozzle mouth (the cone ends 0.65 behind its 0.2 start): the game's boost jets, damage
+    # smoke and fire come from here. Scale = nozzle size against the standard engine's (radius 0.13).
+    sockets = [("Exhaust", i, (round(x, 4), 0.0, -0.45), round(radius / 0.13, 3)) for i, x in enumerate(xs)]
+    return Part(name, "module", b, slot="Engine", module_ids=ids, sockets=sockets)
 
 
 def all_modules():

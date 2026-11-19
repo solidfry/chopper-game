@@ -126,6 +126,8 @@ namespace Chopper.Editor.Setup
             public int index;
             /// <summary>Unity space, metres, in the part's own space.</summary>
             public float[] position;
+            /// <summary>Socket scale (module size; on engine Exhaust sockets the nozzle size).</summary>
+            public float scale;
         }
 
         /// <summary>Colour and Normal keep the baked size; the others are capped at <see cref="DetailMapSize"/> (build size,

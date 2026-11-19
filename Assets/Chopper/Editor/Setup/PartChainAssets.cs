@@ -113,6 +113,7 @@ namespace Chopper.Editor.Setup
             // Same look as the part it upgrades, until tiers get their own art.
             module.SetVisual(parent.Visual);
             module.SetVisualSpin(parent.VisualSpin);
+            module.SetExhausts(parent.Exhausts.ToArray());
             AssetDatabase.CreateAsset(module, $"{Folder}/{parent.Slot}_{name.Replace(" ", "").Replace("-", "")}.asset");
 
             catalog.Initialise(catalog.Chassis.ToArray(), catalog.Modules.Append(module).ToArray());

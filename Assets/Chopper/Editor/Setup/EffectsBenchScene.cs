@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Chopper.Presentation.Effects;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -76,7 +77,7 @@ namespace Chopper.Editor.Setup
             var point = new GameObject("Blast Point").transform;
             var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
             var config = ConfigAssets.Load();
-            bench.Configure(config != null ? config.Effects : null, point, StandIn());
+            bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines());
 
             var camera = new GameObject("Bench Camera") { tag = "MainCamera" };
             var cam = camera.AddComponent<UnityEngine.Camera>();
@@ -123,6 +124,15 @@ namespace Chopper.Editor.Setup
             standIn.transform.position = new Vector3(0f, 10f, 0f);
             return standIn.transform;
         }
+
+        /// <summary>The engine modules to try on the stand-in: standard, boost, turbine.</summary>
+        private static Chopper.Simulation.Loadout.ModuleDefinition[] Engines() => new[]
+            {
+                "Engine_StandardEngine", "Engine_BoostEngine", "Engine_Turbine",
+            }
+            .Select(n => AssetDatabase.LoadAssetAtPath<Chopper.Simulation.Loadout.ModuleDefinition>($"Assets/Chopper/Data/Loadout/{n}.asset"))
+            .Where(m => m != null)
+            .ToArray();
 
         private const string EngineModel = KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Engine_Standard.fbx";
         private const string StandInModel =KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Chassis_Gunship.fbx";

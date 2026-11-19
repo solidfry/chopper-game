@@ -133,12 +133,12 @@ namespace Chopper.Presentation.Effects
 
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 // Smoke and fire pour from the engines (owner, 20 Nov) and from the hit points; the hull centre only
-                // when the chassis has no engine socket and there are no hits.
+                // when the chopper has no exhaust points and there are no hits.
                 _emitPoints.Clear();
-                if (SystemAPI.HasBuffer<Chopper.Simulation.Loadout.ChassisSocket>(entity))
-                    foreach (var socket in SystemAPI.GetBuffer<Chopper.Simulation.Loadout.ChassisSocket>(entity))
-                        if (socket.Slot == Chopper.Simulation.Loadout.SlotType.Engine)
-                            _emitPoints.Add(((Vector3)socket.LocalPosition + Vector3.up * 0.4f, Vector3.up));
+                // The engine's exhausts (the boost jet points, ExhaustPoint): damaged engines smoke and burn there.
+                if (SystemAPI.HasBuffer<Chopper.Simulation.Visuals.ExhaustPoint>(entity))
+                    foreach (var exhaust in SystemAPI.GetBuffer<Chopper.Simulation.Visuals.ExhaustPoint>(entity))
+                        _emitPoints.Add(((Vector3)exhaust.LocalPosition, Vector3.up));
                 _emitPoints.AddRange(state.Points);
                 var points = _emitPoints.Count > 0 ? _emitPoints : _centre;
                 var colour = DamageLook.SmokeColour(share, settings.SmokeBelow, settings.HeavySmokeBelow,

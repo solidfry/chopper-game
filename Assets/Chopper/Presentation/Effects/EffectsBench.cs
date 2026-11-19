@@ -8,7 +8,7 @@ namespace Chopper.Presentation.Effects
     /// no netcode, bots or HUD, through the same code the match uses (<see cref="CombatEffects"/>,
     /// <see cref="BlastSequence"/>). Its inspector has a button per effect; in play the keys work too:
     /// 1 ground blast, 2 air blast, 3 missile impact, 4 rocket impact, 5 gun impact, 6 next single layer,
-    /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), 0 flares, B boost, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
+    /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), 0 flares, B boost, E engine, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
     /// R repeat the last, C clear, [ and ] slower and faster time. Not a game scene.
     /// </summary>
     public sealed class EffectsBench : MonoBehaviour
@@ -30,11 +30,14 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Circle radius, m (0 = hover in place): flying shows how the smoke trails.")]
         private float circleRadius;
         [SerializeField, Tooltip("Speed round the circle, m/s.")] private float circleSpeed = 25f;
+        [SerializeField, Tooltip("Engine modules to try on the stand-in (E changes): their model and nozzles, as in a match.")]
+        private Chopper.Simulation.Loadout.ModuleDefinition[] engines = System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
 
-        /// <summary>The gunship's engine socket (SOCKET_Engine_0, +0.4 m up, as the game) and one hit on the tail boom.</summary>
+        /// <summary>The engine module's two exhausts (as the game's ExhaustPoint) and one hit on the tail boom.</summary>
         private static readonly (Vector3 Point, Vector3 Normal)[] HullPoints =
         {
-            (new Vector3(0f, 1.5f, -1.85f), Vector3.up),
+            (new Vector3(0.28f, 1.1f, -2.35f), Vector3.up),
+            (new Vector3(-0.28f, 1.1f, -2.35f), Vector3.up),
             (new Vector3(-0.3f, 1.2f, -4f), new Vector3(-1f, 0.3f, 0f)),
         };
 
@@ -50,11 +53,11 @@ namespace Chopper.Presentation.Effects
         private float _hiddenUntil;
         private readonly FlareVolleys<int> _flares = new();
         private readonly BoostFlames<int> _boost = new();
-        private readonly System.Collections.Generic.List<(Vector3 Position, Vector3 Direction)> _exhausts = new();
+        private readonly System.Collections.Generic.List<(Vector3 Position, Vector3 Direction, float Size)> _exhausts = new();
+        private int _engine;
         private float _boostUntil;
-        private static readonly float[] Sides = { 1f, -1f };
         /// <summary>The gunship's engine socket (SOCKET_Engine_0): the exhaust points back.</summary>
-        private static readonly Vector3 ExhaustPoint = new(0f, 1.1f, -1.85f);
+        private static readonly Vector3 EngineSocket = new(0f, 1.1f, -1.85f);
         private System.Action _last;
         private int _nextLayer;
 
@@ -68,8 +71,10 @@ namespace Chopper.Presentation.Effects
         private Vector3 ChopperPoint => standIn != null ? standIn.position : Point + Vector3.up * hoverHeight;
 
         /// <summary>Editor only: the scene builder links the settings, the target and the stand-in chopper.</summary>
-        public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null)
+        public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null,
+            Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null)
         {
+            engines = engineModules ?? System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
             settings = effectSettings;
             target = blastPoint;
             standIn = chopperStandIn;
@@ -112,13 +117,42 @@ namespace Chopper.Presentation.Effects
             if (standIn != null && standIn.gameObject.activeSelf)
             {
                 _exhausts.Clear();
-                foreach (var side in Sides)
-                    _exhausts.Add((standIn.TransformPoint(ExhaustPoint + (Vector3)Chopper.Simulation.Visuals.ExhaustPoint.Offset(side)),
-                        standIn.TransformDirection((Vector3)Chopper.Simulation.Visuals.ExhaustPoint.Direction(side))));
+                foreach (var (point, size) in Nozzles())
+                    _exhausts.Add((standIn.TransformPoint(point), -standIn.forward, size));
                 _boost.Update(settings, 0, Time.time < _boostUntil, _exhausts, 1f, deltaTime);
             }
             _boost.End(settings);
         }
+
+        /// <summary>The fitted engine's nozzle mouths in stand-in space (the standard twin nozzles when no engine is set).</summary>
+        private System.Collections.Generic.IEnumerable<(Vector3 Point, float Size)> Nozzles()
+        {
+            var engine = engines.Length > 0 ? engines[_engine % engines.Length] : null;
+            if (engine == null || engine.Exhausts.Count == 0)
+            {
+                yield return (EngineSocket + new Vector3(0.28f, 0f, -0.45f), 1f);
+                yield return (EngineSocket + new Vector3(-0.28f, 0f, -0.45f), 1f);
+                yield break;
+            }
+            foreach (var nozzle in engine.Exhausts) yield return (EngineSocket + nozzle.Position, nozzle.Size > 0f ? nozzle.Size : 1f);
+        }
+
+        /// <summary>The next engine module: its model goes on the stand-in's engine socket.</summary>
+        public void NextEngine() => Run(() =>
+        {
+            if (engines.Length == 0 || standIn == null) return;
+            _engine = (_engine + 1) % engines.Length;
+            var engine = engines[_engine];
+            if (engine == null || engine.Visual == null) return;
+            foreach (Transform child in standIn)
+                if (child.name.StartsWith("Engine_")) Destroy(child.gameObject);
+            var visual = Instantiate(engine.Visual, standIn);
+            visual.name = "Engine_" + engine.DisplayName;
+            visual.transform.localPosition = EngineSocket;
+            visual.transform.localRotation = Quaternion.identity;
+        });
+
+        public string EngineName => engines.Length > 0 && engines[_engine % engines.Length] != null ? engines[_engine % engines.Length].DisplayName : "-";
 
         /// <summary>The stand-in drops a flare salvo (the settings' count, burn time and interval), as in a match.</summary>
         public void Flares() => Run(() => _flares.Drop(0, settings.FlaresPerDrop, settings.FlareLifetime));
@@ -273,6 +307,7 @@ namespace Chopper.Presentation.Effects
             if (keys.digit9Key.wasPressedThisFrame) Wreck();
             if (keys.digit0Key.wasPressedThisFrame) Flares();
             if (keys.bKey.wasPressedThisFrame) Boost();
+            if (keys.eKey.wasPressedThisFrame) NextEngine();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
             if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;
             if (keys.rKey.wasPressedThisFrame && _last != null) _last();

@@ -16,8 +16,8 @@
       "skinMask": "Textures/Kit02_Scout_SkinMask.png",
       "skinWear": "Textures/Kit02_Scout_SkinWear.png",
       "heightRange": [
-        -1.3591361045837402,
-        1.7820000648498535
+        -1.3591182231903076,
+        1.7820024490356445
       ],
       "baseSkin": "factory"
     },
@@ -32,7 +32,7 @@
       "skinWear": "Textures/Kit02_Gunship_SkinWear.png",
       "heightRange": [
         -1.6231679916381836,
-        2.4041247367858887
+        2.4030375480651855
       ],
       "baseSkin": "factory"
     },
@@ -47,7 +47,7 @@
       "skinWear": "Textures/Kit02_Assault_SkinWear.png",
       "heightRange": [
         -1.7731678485870361,
-        2.478017807006836
+        2.480347156524658
       ],
       "baseSkin": "factory"
     },
@@ -1784,7 +1784,7 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 16188,
+      "triangles": 16152,
       "textureSet": "Scout",
       "sockets": [
         {
@@ -1861,7 +1861,7 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 25406,
+      "triangles": 25394,
       "textureSet": "Gunship",
       "sockets": [
         {
@@ -1949,7 +1949,7 @@
       "kind": "chassis",
       "slot": null,
       "moduleIds": [],
-      "triangles": 29946,
+      "triangles": 31338,
       "textureSet": "Assault",
       "sockets": [
         {
@@ -2501,7 +2501,30 @@
       ],
       "triangles": 2408,
       "textureSet": "Modules",
-      "sockets": []
+      "sockets": [
+        {
+          "name": "SOCKET_Exhaust_0",
+          "slot": "Exhaust",
+          "index": 0,
+          "position": [
+            -0.28,
+            0.0,
+            -0.45
+          ],
+          "scale": 1.0
+        },
+        {
+          "name": "SOCKET_Exhaust_1",
+          "slot": "Exhaust",
+          "index": 1,
+          "position": [
+            0.28,
+            0.0,
+            -0.45
+          ],
+          "scale": 1.0
+        }
+      ]
     },
     {
       "name": "Engine_Boost",
@@ -2513,7 +2536,30 @@
       ],
       "triangles": 2408,
       "textureSet": "Modules",
-      "sockets": []
+      "sockets": [
+        {
+          "name": "SOCKET_Exhaust_0",
+          "slot": "Exhaust",
+          "index": 0,
+          "position": [
+            -0.28,
+            0.0,
+            -0.45
+          ],
+          "scale": 1.154
+        },
+        {
+          "name": "SOCKET_Exhaust_1",
+          "slot": "Exhaust",
+          "index": 1,
+          "position": [
+            0.28,
+            0.0,
+            -0.45
+          ],
+          "scale": 1.154
+        }
+      ]
     },
     {
       "name": "Engine_Turbine",
@@ -2525,7 +2571,19 @@
       ],
       "triangles": 1170,
       "textureSet": "Modules",
-      "sockets": []
+      "sockets": [
+        {
+          "name": "SOCKET_Exhaust_0",
+          "slot": "Exhaust",
+          "index": 0,
+          "position": [
+            0.0,
+            0.0,
+            -0.45
+          ],
+          "scale": 1.692
+        }
+      ]
     }
   ]
 }

@@ -309,8 +309,25 @@ namespace Chopper.Editor.Setup
                     }
                     if (changed) EditorUtility.SetDirty(module);
                 }
+                // Every engine that shows this model gets its nozzles (part-chain tiers share their parent's art).
+                foreach (var module in catalog.Modules)
+                    if (module != null && module.Slot == SlotType.Engine && module.Visual == model && SetExhausts(module, part))
+                        EditorUtility.SetDirty(module);
             }
             if (linked > 0) Debug.Log($"Setup: linked kit {manifest.kit} models to {linked} module(s).");
+        }
+
+        /// <summary>The kit engine's Exhaust sockets become the module's nozzles. True when they changed.</summary>
+        private static bool SetExhausts(ModuleDefinition module, KitAssets.PartInfo part)
+        {
+            var nozzles = (part.sockets ?? System.Array.Empty<KitAssets.SocketInfo>())
+                .Where(s => s.slot == "Exhaust" && s.position != null && s.position.Length == 3)
+                .OrderBy(s => s.index)
+                .Select(s => new ExhaustNozzle(new Vector3(s.position[0], s.position[1], s.position[2]), s.scale > 0f ? s.scale : 1f))
+                .ToArray();
+            if (nozzles.Length == 0 || nozzles.SequenceEqual(module.Exhausts)) return false;
+            module.SetExhausts(nozzles);
+            return true;
         }
 
         /// <summary>
