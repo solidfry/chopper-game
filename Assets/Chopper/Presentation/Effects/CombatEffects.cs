@@ -71,6 +71,7 @@ namespace Chopper.Presentation.Effects
             {
                 var main = system.main;
                 main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                if (layer.Tint.a > 0f) main.startColor = Tinted(main.startColor, layer.Tint);
                 if (layer.LifeColour.a > 0f && system.colorOverLifetime.enabled)
                 {
                     var colour = system.colorOverLifetime;
@@ -109,6 +110,18 @@ namespace Chopper.Presentation.Effects
             RouteAudio(instance, mute: false);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
             Object.Destroy(instance, layer.LifeSeconds);
+        }
+
+        /// <summary>The start colour times <paramref name="tint"/> (RGB only: the alpha stays the prefab's).</summary>
+        private static ParticleSystem.MinMaxGradient Tinted(ParticleSystem.MinMaxGradient colour, Color tint)
+        {
+            var rgb = new Color(tint.r, tint.g, tint.b, 1f);
+            return colour.mode switch
+            {
+                ParticleSystemGradientMode.TwoColors => new ParticleSystem.MinMaxGradient(colour.colorMin * rgb, colour.colorMax * rgb),
+                ParticleSystemGradientMode.Color => new ParticleSystem.MinMaxGradient(colour.color * rgb),
+                _ => new ParticleSystem.MinMaxGradient(rgb),
+            };
         }
 
         /// <summary>A flat card (the pack's "particle plane" is a quad split 8 x 8): no depth on one axis.</summary>

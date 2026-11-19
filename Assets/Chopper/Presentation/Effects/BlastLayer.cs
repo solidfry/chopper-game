@@ -34,5 +34,8 @@ namespace Chopper.Presentation.Effects
         [Tooltip("Burns on the ground (lasting flames, the smoke column). In a blast in the air it starts where the falling " +
                  "wreck lands, not in the air; no ground under the fall = not shown.")]
         public bool Ground;
+        [Tooltip("Multiplies the start colour of all its particles; keeps the prefab's own fade in and out (dark fuel " +
+                 "smoke from the pack's white smoke). Alpha 0 = no tint.")]
+        public Color Tint;
     }
 }

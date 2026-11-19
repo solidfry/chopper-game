@@ -46,7 +46,8 @@ namespace Chopper.Editor.Setup
                     ground: true),
                 Layer(SmallBlast, 2f, 0.6f, 0f, 3f, 1.5f, spread: 5f),
                 Layer(RocketImpact, 1.6f, 1f, 0f, 3f, 0.5f, spread: 6f),
-                Layer(Column, 4f, 0.7f, 6f, 22f, 2f, startScale: 1.5f, grow: 3f, ground: true),
+                // Dark fuel smoke, a little narrower (owner, 19 Nov: the pack's white column looked odd).
+                Layer(Column, 3.2f, 0.7f, 6f, 22f, 2f, startScale: 1.2f, grow: 3f, ground: true, tint: ColumnTint),
             };
             return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
         }
@@ -60,13 +61,15 @@ namespace Chopper.Editor.Setup
 
         private static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
             float startScale = 0f, float grow = 0f, float spread = 0f, Material material = null, Color lifeColour = default,
-            bool ground = false) => new()
+            bool ground = false, Color tint = default) => new()
         {
             Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path),
             Scale = scale, Delay = delay, EmitSeconds = emit, LifeSeconds = life, Up = up,
             StartScale = startScale, GrowSeconds = grow, Spread = spread, Material = material, LifeColour = lifeColour,
-            Ground = ground,
+            Ground = ground, Tint = tint,
         };
+
+        private static readonly Color ColumnTint = new(0.3f, 0.29f, 0.28f, 1f);
 
         private const string WreckFlameMaterialPath = "Assets/Chopper/Data/Effects/WreckFlames.mat";
         private const string PackFlameMaterial = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Materials/Others/M_fire_flipbook_big_01.mat";
