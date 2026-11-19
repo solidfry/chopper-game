@@ -9,8 +9,8 @@ namespace Chopper.Simulation.Definitions
     {
         [SerializeField, Tooltip("Seconds between drops.")] private float cooldown = 3f;
         [SerializeField, Tooltip("Seconds the flares burn in the air (2-5). While they burn, heat locks and heat missiles go for the flares, not the chopper.")] private float decoyDuration = 3.5f;
-        [SerializeField, Range(0, 255), Tooltip("Drops before a reload. 0 = no limit.")] private int magazineSize = 3;
-        [SerializeField, Tooltip("Seconds after the last drop until the magazine is full again.")] private float reloadSeconds = 18f;
+        [SerializeField, Range(0, 255), Tooltip("Drops before a reload. 0 = no limit.")] private int magazineSize = 2;
+        [SerializeField, Tooltip("Seconds after the last drop until the magazine is full again.")] private float reloadSeconds = 25f;
         [SerializeField, Tooltip("When a bot drops flares. Auto = about 1 s before a missile hits.")] private Bots.BotUse bot;
 
         public float Cooldown => cooldown;

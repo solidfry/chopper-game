@@ -35,10 +35,39 @@ namespace Chopper.Simulation.Session
             server.EntityManager.SetComponentData(listen, new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.AnyIpv4.WithPort(port) });
             var connect = client.EntityManager.CreateEntity(typeof(NetworkStreamRequestConnect));
             client.EntityManager.SetComponentData(connect, new NetworkStreamRequestConnect { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port) });
+            AddThinClients(port);
 
             World.DefaultGameObjectInjectionWorld = server;
             return true;
         }
+
+        /// <summary>
+        /// Editor: the thin clients set in Multiplayer → Play Mode Tools (test players with no rendering). The start-up
+        /// bootstrap makes them only when the editor starts in a gameplay scene, so a match started from a menu adds them
+        /// here. Made before the gameplay scene loads, so its subscene (with the spawner) loads into them too. NetCode
+        /// connects a new thin world by itself only after the main client has an address; here the client has not
+        /// connected yet, so each thin world gets one connect request (a second one throws "already initiated").
+        /// </summary>
+        private static void AddThinClients(ushort port)
+        {
+#if UNITY_EDITOR
+            for (var i = 0; i < ClientServerBootstrap.RequestedNumThinClients; i++)
+            {
+                var thin = ClientServerBootstrap.CreateThinClientWorld();
+                if (HasConnection(thin)) continue;
+                var request = thin.EntityManager.CreateEntity(typeof(NetworkStreamRequestConnect));
+                thin.EntityManager.SetComponentData(request, new NetworkStreamRequestConnect { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port) });
+            }
+#endif
+        }
+
+#if UNITY_EDITOR
+        private static bool HasConnection(World world)
+        {
+            using var query = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<NetworkStreamConnection>());
+            return !query.IsEmpty;
+        }
+#endif
 
         /// <summary>
         /// Online match: makes only a client world and connects it to a hosted server (Edgegap, from the matchmaker),
