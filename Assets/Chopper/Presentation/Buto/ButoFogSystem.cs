@@ -36,6 +36,8 @@ namespace Chopper.Presentation.Visuals
         private float _nextLightPick;
         private bool _lightsFound;
         private bool _masksBuilt;
+        private int _plumeSearches;
+        private float _nextPlumeSearch;
         private float _nextLightSearch;
         private RenderTexture _emptyShadowmap;
         private static readonly int MainLightShadowmapId = Shader.PropertyToID("_MainLightShadowmapTexture");
@@ -57,6 +59,44 @@ namespace Chopper.Presentation.Visuals
             PickLights(look.MaxLights);
             if (!_masksBuilt && look.LavaFogDensity != 1f && SystemAPI.TryGetSingleton<CityTraffic>(out var traffic) && traffic.Paths.IsCreated)
                 BuildLavaMasks(look, ref traffic.Paths.Value.Lava);
+            if (_plumeSearches < 10 && look.PlumeFogDensity != 1f && UnityEngine.Time.time >= _nextPlumeSearch)
+                BuildPlumeMasks(look);
+        }
+
+        /// <summary>
+        /// Thicker fog round the city's steam outlets and roof vents: a sphere <see cref="FogDensityMask"/> on each
+        /// plume particle system (CityPlume_steam / CityPlume_vent materials, Setup's city emitters). They are hidden
+        /// companion objects that stream in with the SubScene, so look every 2 s, at most 10 times.
+        /// </summary>
+        private void BuildPlumeMasks(EnvironmentSettings.VolumetricFogLook look)
+        {
+            _plumeSearches++;
+            _nextPlumeSearch = UnityEngine.Time.time + 2f;
+            var count = 0;
+            var seen = new System.Collections.Generic.HashSet<Vector3Int>();
+            foreach (var renderer in Resources.FindObjectsOfTypeAll<ParticleSystemRenderer>())
+            {
+                if (renderer == null || !renderer.gameObject.scene.IsValid() || renderer.sharedMaterial == null) continue;
+                var name = renderer.sharedMaterial.name;
+                if (!name.StartsWith("CityPlume_steam") && !name.StartsWith("CityPlume_vent")) continue;
+                // A plume's dense base layer is a child particle system: one mask per plume.
+                var parent = renderer.transform.parent;
+                if (parent != null && parent.GetComponent<ParticleSystem>() != null) continue;
+                // A server world in the same process (training, editor) has its own companion copy: one mask per place.
+                var p = renderer.transform.position;
+                if (!seen.Add(new Vector3Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y), Mathf.RoundToInt(p.z)))) continue;
+                var go = new GameObject("Plume Fog Mask");
+                go.transform.SetParent(_volumeObject.transform, false);
+                go.transform.position = renderer.transform.position + Vector3.up * (look.PlumeFogSize * 0.4f);
+                go.transform.localScale = Vector3.one * look.PlumeFogSize;
+                var mask = go.AddComponent<FogDensityMask>();
+                mask.DensityMultiplier = look.PlumeFogDensity;
+                JsonUtility.FromJsonOverwrite($"{{\"blendDistance\":{(look.PlumeFogSize * 0.4f).ToString(System.Globalization.CultureInfo.InvariantCulture)}}}", mask);
+                count++;
+            }
+            if (count == 0) return;
+            _plumeSearches = int.MaxValue;
+            Debug.Log($"[Fog] {count} steam and vent fog masks.");
         }
 
         /// <summary>
@@ -208,6 +248,8 @@ namespace Chopper.Presentation.Visuals
             _lightsFound = false;
             _nextLightSearch = 0f;
             _masksBuilt = false;
+            _plumeSearches = 0;
+            _nextPlumeSearch = 0f;
             if (_volumeObject != null) Object.Destroy(_volumeObject);
             if (_profile != null) Object.Destroy(_profile);
             _volumeObject = null;

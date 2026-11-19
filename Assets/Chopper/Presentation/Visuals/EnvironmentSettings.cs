@@ -78,6 +78,8 @@ namespace Chopper.Presentation.Visuals
             public float LavaFogHeight = 35f;
             [Min(1f)] public float LavaFogWidthScale = 3f;
             [Tooltip("Metres over which a lava fog mask fades into the normal fog.")] [Min(0f)] public float LavaFogBlend = 15f;
+            [Tooltip("x fog density round steam outlets and roof vents. 1 = no change.")] [Min(0f)] public float PlumeFogDensity = 2f;
+            [Tooltip("Diameter (m) of the thicker fog round a steam outlet or roof vent.")] [Min(5f)] public float PlumeFogSize = 30f;
         }
 
         [SerializeField] private VolumetricFogLook volumetric = new();
