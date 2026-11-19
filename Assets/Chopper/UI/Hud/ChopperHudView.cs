@@ -198,7 +198,13 @@ namespace Chopper.UI.Hud
             BindNumber(match.Q<Label>("timer"), nameof(MatchHudModel.TimerText));
             BindNumber(match.Q<Label>("local-kills"), nameof(MatchHudModel.LocalKillsText));
             BindNumber(match.Q<Label>("local-deaths"), nameof(MatchHudModel.LocalDeathsText));
-            Bind(match.Q<Label>("local-pilot"), "text", nameof(MatchHudModel.LocalPilotText));
+            // The call sign sits under the pilot portrait (flight layer), but reads the match model.
+            var localPilot = _chopper.Q<Label>("local-pilot");
+            if (localPilot != null)
+            {
+                localPilot.dataSource = _match;
+                Bind(localPilot, "text", nameof(MatchHudModel.LocalPilotText));
+            }
             Bind(match.Q<Label>("leader"), "text", nameof(MatchHudModel.LeaderText));
             Bind(match.Q<Label>("kill-feed"), "text", nameof(MatchHudModel.KillFeedText));
             Bind(_banner, "text", nameof(MatchHudModel.BannerText));

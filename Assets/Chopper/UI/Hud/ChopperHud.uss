@@ -1139,10 +1139,8 @@
   left: 42%;
   bottom: -48px;
   width: 104px;
-  height: 156px;
   translate: -50% 0;
-  border-bottom-width: 1px;
-  border-color: var(--chopper-green-faint);
+  align-items: center;
 }
 
 .hud-pilot--hidden {
@@ -1150,8 +1148,22 @@
 }
 
 .hud-pilot__picture {
-  flex-grow: 1;
+  width: 104px;
+  height: 156px;
   -unity-background-scale-mode: scale-to-fit;
+  border-bottom-width: 1px;
+  border-color: var(--chopper-green-faint);
+}
+
+/* Call sign under the portrait */
+.hud-pilot__name {
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--chopper-yellow);
+  padding: 2px 0 0 0;
+  margin: 0;
+  -unity-text-align: upper-center;
+  white-space: nowrap;
 }
 
 /* XP popup (Battlefield style), low under the reticle, compact. MatchHudModel.AddXp drives it; the view adds --punch for one
