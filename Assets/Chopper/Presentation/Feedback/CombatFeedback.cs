@@ -45,7 +45,7 @@ namespace Chopper.Presentation.Feedback
         private void OnDamageTaken(DamageTaken damage)
         {
             if (damage.Jam) _context.HudLook.Disrupt(JamStrength, JamSeconds);
-            if (damage.Kind is Simulation.Combat.DamageKind.Corrosion or Simulation.Combat.DamageKind.Burn) return;
+            if (damage.Kind is Simulation.Combat.DamageKind.Corrosion or Simulation.Combat.DamageKind.Burn or Simulation.Combat.DamageKind.Toppled) return;
             var sounds = _context.Sounds;
             // Crashes and landings: the 3D crash sound of what you hit plays instead (Audio.CrashAudioSystem).
             var crash = damage.Kind is Simulation.Combat.DamageKind.Impact or Simulation.Combat.DamageKind.Landing;

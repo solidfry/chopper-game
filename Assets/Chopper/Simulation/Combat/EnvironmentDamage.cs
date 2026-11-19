@@ -20,6 +20,14 @@ namespace Chopper.Simulation.Combat
         public float LethalImpactSpeed;
         /// <summary>Curve between safe and lethal: 1 = straight line, above 1 = bumps are mild, big crashes hard.</summary>
         public float Curve;
+        /// <summary>Toppled when the chopper's up axis points up less than this (0.5 = tilted past 60°).</summary>
+        public float ToppleUpY;
+        /// <summary>Toppled only below this speed (m/s): resting, not flying a roll.</summary>
+        public float ToppleMaxSpeed;
+        /// <summary>Seconds toppled before the damage starts.</summary>
+        public float ToppleGrace;
+        /// <summary>Share of max health lost per second while toppled after the grace.</summary>
+        public float ToppleDamagePerSecond;
 
         public static CrashDamageConfig Default => new()
         {
@@ -27,6 +35,10 @@ namespace Chopper.Simulation.Combat
             SafeLandingSpeed = 7f,
             LethalImpactSpeed = 45f,
             Curve = 1.5f,
+            ToppleUpY = 0.5f,
+            ToppleMaxSpeed = 4f,
+            ToppleGrace = 1.5f,
+            ToppleDamagePerSecond = 0.2f,
         };
     }
 
@@ -44,6 +56,8 @@ namespace Chopper.Simulation.Combat
         /// <summary>Damage this contact already did.</summary>
         public float ContactDealt;
         public bool InContact;
+        /// <summary>Seconds this chopper has rested toppled (see <see cref="CrashDamage.Topple"/>); 0 when upright.</summary>
+        public float ToppledTime;
     }
 
     /// <summary>Crash damage maths, shared by the server system and the tests.</summary>
@@ -101,6 +115,31 @@ namespace Chopper.Simulation.Combat
         }
 
         public static bool IsLanding(float3 normal) => normal.y >= GroundNormalY;
+
+        /// <summary>
+        /// Tilted too far to fly and slow: a candidate for resting toppled (the caller also checks it touches
+        /// something). <paramref name="up"/> is the chopper's up axis in world space.
+        /// </summary>
+        public static bool IsTilted(in CrashDamageConfig config, float3 up, float speed) =>
+            up.y < config.ToppleUpY && speed < config.ToppleMaxSpeed;
+
+        /// <summary>
+        /// A chopper must not rest on its side, roof, nose or tail. Counts the time it rests toppled; after the grace
+        /// it loses <see cref="CrashDamageConfig.ToppleDamagePerSecond"/> of max health per second until it is upright
+        /// or dead. Returns this tick's damage. Upright (or flying) resets the count.
+        /// </summary>
+        public static float Topple(ref float toppledTime, bool toppled, float deltaTime, in CrashDamageConfig config, float maxHealth)
+        {
+            if (!toppled)
+            {
+                toppledTime = 0f;
+                return 0f;
+            }
+            var before = toppledTime;
+            toppledTime += deltaTime;
+            var hurting = toppledTime - math.max(before, config.ToppleGrace);
+            return hurting > 0f ? hurting * config.ToppleDamagePerSecond * maxHealth : 0f;
+        }
 
         /// <summary>Damage for one impact: 0 at the safe speed, <paramref name="maxHealth"/> at the lethal speed.</summary>
         public static float Damage(in CrashDamageConfig config, float impactSpeed, bool landing, float maxHealth)

@@ -42,6 +42,8 @@ namespace Chopper.Simulation.Combat
         Corrosion = 6,
         /// <summary>Damage over time from burning blast hits (pilot passive): no hit point, no shake.</summary>
         Burn = 7,
+        /// <summary>Resting on its side, roof, nose or tail: damage over time until upright (no hit point, no shake).</summary>
+        Toppled = 8,
     }
 
     /// <summary>

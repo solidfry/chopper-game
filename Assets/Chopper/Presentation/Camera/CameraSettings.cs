@@ -202,6 +202,7 @@ namespace Chopper.Presentation.Camera
             switch (kind)
             {
                 case DamageKind.Bounds:
+                case DamageKind.Toppled:
                     return 0f;
                 case DamageKind.Impact:
                 case DamageKind.Landing:

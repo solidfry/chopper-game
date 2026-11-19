@@ -13,6 +13,32 @@ namespace Chopper.Tests
         private static readonly CrashDamageConfig Config = CrashDamageConfig.Default;
 
         [Test]
+        public void Tilted_IsOnItsSideRoofNoseOrTail_WhenSlow()
+        {
+            Assert.That(CrashDamage.IsTilted(Config, new float3(0f, 1f, 0f), 0f), Is.False, "upright");
+            Assert.That(CrashDamage.IsTilted(Config, new float3(1f, 0f, 0f), 0f), Is.True, "on its side");
+            Assert.That(CrashDamage.IsTilted(Config, new float3(0f, -1f, 0f), 0f), Is.True, "on its roof");
+            Assert.That(CrashDamage.IsTilted(Config, math.normalize(new float3(0f, 0.2f, 1f)), 1f), Is.True, "on its tail");
+            Assert.That(CrashDamage.IsTilted(Config, new float3(1f, 0f, 0f), 30f), Is.False, "a fast roll in flight");
+        }
+
+        [Test]
+        public void Topple_HurtsAfterTheGraceUntilUpright()
+        {
+            var time = 0f;
+            var dealt = 0f;
+            for (var i = 0; i < 60; i++) dealt += CrashDamage.Topple(ref time, true, 1f / 60f, Config, 100f);
+            Assert.That(dealt, Is.EqualTo(0f), "1 s: still in the grace");
+
+            for (var i = 0; i < 90; i++) dealt += CrashDamage.Topple(ref time, true, 1f / 60f, Config, 100f);
+            // 2.5 s toppled: 1 s of damage at 20 % of max health per second.
+            Assert.That(dealt, Is.EqualTo(20f).Within(0.5f));
+
+            Assert.That(CrashDamage.Topple(ref time, false, 1f / 60f, Config, 100f), Is.EqualTo(0f));
+            Assert.That(time, Is.EqualTo(0f), "upright resets the count");
+        }
+
+        [Test]
         public void ImpactSpeed_IsTheVelocityTheContactTookAway()
         {
             // Flying at 20 m/s into a wall that faces -Z: the wall stops the chopper.

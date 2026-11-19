@@ -114,6 +114,16 @@ namespace Chopper.Simulation.Combat
                             ImpactSpeed = added,
                         });
                     }
+
+                    // Resting on its side, roof, nose or tail: damage over time until upright (owner, 19 Nov 2026).
+                    var up = math.mul(transform.ValueRO.Rotation, new float3(0f, 1f, 0f));
+                    var toppled = CrashDamage.IsTilted(config.ValueRO, up, math.length(velocity.ValueRO.Linear)) &&
+                                  Touching(world, chopper, position, SystemAPI.HasComponent<PhysicsCollider>(chopper)
+                                      ? Radius(SystemAPI.GetComponent<PhysicsCollider>(chopper))
+                                      : FallbackRadius);
+                    var toppleDamage = CrashDamage.Topple(ref sensor.ToppledTime, toppled, deltaTime, config.ValueRO, health.ValueRO.Max);
+                    if (toppleDamage > 0f)
+                        damage.Add(new DamageEvent { Amount = toppleDamage, Source = Entity.Null, Kind = DamageKind.Toppled });
                     _sensors[chopper] = sensor;
                 }
 
@@ -154,6 +164,18 @@ namespace Chopper.Simulation.Combat
             }
             hits.Dispose();
             return point;
+        }
+
+        /// <summary>True when something other than the chopper itself is within its sphere (it rests on it).</summary>
+        private static bool Touching(in CollisionWorld world, Entity self, float3 centre, float radius)
+        {
+            var hits = new NativeList<DistanceHit>(8, Allocator.Temp);
+            var touching = false;
+            if (world.OverlapSphere(centre, radius + 0.5f, ref hits, CollisionFilter.Default))
+                foreach (var hit in hits)
+                    if (hit.Entity != self) { touching = true; break; }
+            hits.Dispose();
+            return touching;
         }
 
         /// <summary>

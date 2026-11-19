@@ -93,6 +93,14 @@ namespace Chopper.Simulation.Flight
         public float LethalImpactSpeed = 45f;
         [Tooltip("Damage curve between safe and lethal speed: 1 = straight line; above 1 = bumps are mild, big crashes hard.")]
         public float Curve = 1.5f;
+        [Tooltip("Toppled when the up axis points up less than this (0.5 = tilted past 60 degrees): on its side, roof, nose or tail.")]
+        public float ToppleUpY = 0.5f;
+        [Tooltip("Toppled only below this speed (m/s): resting, not flying a roll.")]
+        public float ToppleMaxSpeed = 4f;
+        [Tooltip("Seconds resting toppled before the damage starts.")]
+        public float ToppleGrace = 1.5f;
+        [Tooltip("Share of max health lost per second while toppled after the grace (0.2 = dead in 5 s).")]
+        public float ToppleDamagePerSecond = 0.2f;
 
         public Combat.CrashDamageConfig ToConfig() => new()
         {
@@ -100,6 +108,10 @@ namespace Chopper.Simulation.Flight
             SafeLandingSpeed = SafeLandingSpeed,
             LethalImpactSpeed = LethalImpactSpeed,
             Curve = Curve,
+            ToppleUpY = ToppleUpY,
+            ToppleMaxSpeed = ToppleMaxSpeed,
+            ToppleGrace = ToppleGrace,
+            ToppleDamagePerSecond = ToppleDamagePerSecond,
         };
     }
 

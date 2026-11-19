@@ -249,7 +249,7 @@ namespace Chopper.Simulation.Combat
                 !_abilityLookup.TryGetComponent(victim, out var ability))
                 return amount;
             if (kind is DamageKind.Impact or DamageKind.Landing && Abilities.CrashImmune(config, ability)) return 0f;
-            if (kind == DamageKind.Bounds || ability.Shield <= 0f) return amount;
+            if (kind is DamageKind.Bounds or DamageKind.Toppled || ability.Shield <= 0f) return amount;
             var through = Abilities.Absorb(ref ability, amount);
             _abilityLookup[victim] = ability;
             return through;
