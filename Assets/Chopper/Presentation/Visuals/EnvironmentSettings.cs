@@ -71,6 +71,13 @@ namespace Chopper.Presentation.Visuals
             [Tooltip("Fog in shadow, x the lit fog colour.")] [Range(0f, 1f)] public float ShadowShade = 0.35f;
             [Tooltip("City point lights that light the fog: the nearest this many to the camera (Buto takes 16 at most).")]
             [Range(0, 16)] public int MaxLights = 12;
+            [Tooltip("x fog density over lava (Buto density masks; Buto uses the 8 nearest). 1 = no change, 0 = off.")]
+            [Min(0f)] public float LavaFogDensity = 3f;
+            [Tooltip("Metres between lava fog masks along a lava line.")] [Min(5f)] public float LavaFogSpacing = 40f;
+            [Tooltip("Lava fog mask height (m) and width as a multiple of the lava width.")]
+            public float LavaFogHeight = 35f;
+            [Min(1f)] public float LavaFogWidthScale = 3f;
+            [Tooltip("Metres over which a lava fog mask fades into the normal fog.")] [Min(0f)] public float LavaFogBlend = 15f;
         }
 
         [SerializeField] private VolumetricFogLook volumetric = new();

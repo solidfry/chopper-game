@@ -35,6 +35,7 @@ namespace Chopper.Presentation.Visuals
         private readonly System.Collections.Generic.List<(float Distance, ButoLight Light)> _sorted = new();
         private float _nextLightPick;
         private bool _lightsFound;
+        private bool _masksBuilt;
         private float _nextLightSearch;
         private RenderTexture _emptyShadowmap;
         private static readonly int MainLightShadowmapId = Shader.PropertyToID("_MainLightShadowmapTexture");
@@ -54,6 +55,43 @@ namespace Chopper.Presentation.Visuals
             Apply(look, atmosphere);
             Shader.SetGlobalFloat(FogStartId, look.Range);
             PickLights(look.MaxLights);
+            if (!_masksBuilt && look.LavaFogDensity != 1f && SystemAPI.TryGetSingleton<CityTraffic>(out var traffic) && traffic.Paths.IsCreated)
+                BuildLavaMasks(look, ref traffic.Paths.Value.Lava);
+        }
+
+        /// <summary>
+        /// Thicker fog over lava (owner todo, 18 Nov 2026): a sphere <see cref="FogDensityMask"/> every
+        /// <see cref="EnvironmentSettings.VolumetricFogLook.LavaFogSpacing"/> m along each lava line (Buto uses the 8
+        /// nearest the camera). Children of the fog volume object, so <see cref="Off"/> removes them.
+        /// </summary>
+        private void BuildLavaMasks(EnvironmentSettings.VolumetricFogLook look, ref Unity.Entities.BlobArray<LavaPath> lava)
+        {
+            _masksBuilt = true;
+            var line = new System.Collections.Generic.List<Unity.Mathematics.float3>();
+            var points = new System.Collections.Generic.List<Unity.Mathematics.float3>();
+            var count = 0;
+            for (var p = 0; p < lava.Length; p++)
+            {
+                ref var path = ref lava[p];
+                line.Clear();
+                points.Clear();
+                for (var i = 0; i < path.Points.Length; i++) line.Add(path.Points[i]);
+                LavaFogPlacement.Points(line, look.LavaFogSpacing, points);
+                var width = Mathf.Max(5f, path.Width * look.LavaFogWidthScale);
+                foreach (var point in points)
+                {
+                    var go = new GameObject("Lava Fog Mask");
+                    go.transform.SetParent(_volumeObject.transform, false);
+                    go.transform.position = (Vector3)point + Vector3.up * (look.LavaFogHeight * 0.3f);
+                    go.transform.localScale = new Vector3(width, look.LavaFogHeight, width);
+                    var mask = go.AddComponent<FogDensityMask>();
+                    mask.DensityMultiplier = look.LavaFogDensity;
+                    // Blend distance has no setter: set the serialized field.
+                    JsonUtility.FromJsonOverwrite($"{{\"blendDistance\":{look.LavaFogBlend.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}", mask);
+                    count++;
+                }
+            }
+            Debug.Log($"[Fog] {count} lava fog masks on {lava.Length} lava lines.");
         }
 
         protected override void OnDestroy()
@@ -169,6 +207,7 @@ namespace Chopper.Presentation.Visuals
             _lights.Clear();
             _lightsFound = false;
             _nextLightSearch = 0f;
+            _masksBuilt = false;
             if (_volumeObject != null) Object.Destroy(_volumeObject);
             if (_profile != null) Object.Destroy(_profile);
             _volumeObject = null;
