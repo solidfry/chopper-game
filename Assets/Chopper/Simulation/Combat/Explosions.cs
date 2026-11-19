@@ -13,7 +13,8 @@ namespace Chopper.Simulation.Combat
         /// direct-hit target are skipped: the shooter takes no splash, the direct target already took its hit.
         /// </summary>
         public static void Splash(in CollisionWorld world, ref BufferLookup<DamageEvent> damageLookup, float3 centre, float radius,
-            float damage, Entity source, Entity directTarget, in FixedString32Bytes weapon = default, in AttackerSnapshot attacker = default)
+            float damage, Entity source, Entity directTarget, in FixedString32Bytes weapon = default, in AttackerSnapshot attacker = default,
+            bool hurtSource = false)
         {
             if (radius <= 0f || damage <= 0f) return;
 
@@ -24,17 +25,20 @@ namespace Chopper.Simulation.Combat
                 foreach (var hit in hits)
                 {
                     var target = hit.Entity;
-                    if (target == source || target == directTarget || !damaged.Add(target)) continue;
+                    if ((target == source && !hurtSource) || target == directTarget || !damaged.Add(target)) continue;
                     if (!damageLookup.TryGetBuffer(target, out var buffer)) continue;
 
                     var falloff = 1f - math.saturate(hit.Distance / radius);
+                    var normal = SafeNormal(centre - hit.Position, hit.SurfaceNormal);
                     // The closest point of the target to the blast: sparks on the side that faces it.
                     buffer.Add(new DamageEvent
                     {
                         Amount = damage * falloff,
                         Source = source,
                         Point = hit.Position,
-                        Normal = SafeNormal(centre - hit.Position, hit.SurfaceNormal),
+                        Normal = normal,
+                        // The same blast throws it away from the centre (BlastPushSystem).
+                        Push = -normal * PushSpeed(damage * falloff),
                         Kind = DamageKind.Explosion,
                         Weapon = weapon,
                         Attacker = attacker,
@@ -44,6 +48,13 @@ namespace Chopper.Simulation.Combat
             hits.Dispose();
             damaged.Dispose();
         }
+
+        /// <summary>Speed change (m/s) a blast hit of this damage gives (BlastPushSystem): about 6 m/s for a rocket's
+        /// full splash, at most <see cref="MaxPush"/>.</summary>
+        public static float PushSpeed(float damage) => math.min(math.max(damage, 0f) * PushPerDamage, MaxPush);
+
+        public const float PushPerDamage = 0.25f;
+        public const float MaxPush = 12f;
 
         /// <summary>Unit vector along <paramref name="direction"/>, or <paramref name="fallback"/> when it is (almost) zero.</summary>
         public static float3 SafeNormal(float3 direction, float3 fallback)

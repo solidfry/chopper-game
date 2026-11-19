@@ -228,6 +228,11 @@ namespace Chopper.Simulation.Combat
                 HasPoint = hit.HasPoint,
                 Overkill = hit.Amount / math.max(healthBefore, 0.01f),
             };
+            // Who gets the kills the wreck makes (its blast, its parts): the killer, saved now, as its chopper may die
+            // before the wreck lands. None for a self kill or the environment.
+            if (hit.Source != Entity.Null && hit.Source != victim)
+                blow.Attacker = hit.Attacker.Valid && !_ownerLookup.HasComponent(hit.Source) ? hit.Attacker
+                    : AttackerSnapshot.Of(hit.Source, _ownerLookup, _connectionLookup, _traitsLookup, _abilityConfigLookup, _abilityLookup);
             if (hit.HasPoint && _transformLookup.TryGetComponent(victim, out var pose))
                 blow.LocalPoint = pose.InverseTransformPoint(hit.Point);
             return blow;

@@ -121,7 +121,8 @@ namespace Chopper.Presentation.Events
             foreach (var rpc in SystemAPI.Query<RefRO<MissileDetonatedRpc>>().WithAll<ReceiveRpcCommandRequest>())
                 events.Publish(new MissileDetonated(rpc.ValueRO.Position));
             foreach (var rpc in SystemAPI.Query<RefRO<WreckExplodedRpc>>().WithAll<ReceiveRpcCommandRequest>())
-                events.Publish(new WreckExploded(rpc.ValueRO.Position, rpc.ValueRO.Velocity, rpc.ValueRO.Style, rpc.ValueRO.OwnerNetworkId));
+                events.Publish(new WreckExploded(rpc.ValueRO.Position, rpc.ValueRO.Velocity, rpc.ValueRO.Style, rpc.ValueRO.OwnerNetworkId,
+                    rpc.ValueRO.PartSeed, rpc.ValueRO.Parts));
             foreach (var rpc in SystemAPI.Query<RefRO<ChopperHitRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
                 var hit = rpc.ValueRO;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Chopper.Presentation.Visuals;
 using Unity.Collections;
 using Unity.Entities;
+using Chopper.Simulation.Combat;
 using Unity.Physics;
 using UnityEngine;
 using Material = UnityEngine.Material;
@@ -145,8 +146,12 @@ namespace Chopper.Presentation.Effects
             return tracked;
         }
 
-        /// <summary>The wreck nearest the blast breaks up; its pieces start from where its parts were last seen.</summary>
-        public void Burst(Vector3 position, Vector3 velocity)
+        /// <summary>
+        /// The wreck nearest the blast breaks up; its pieces start from where its parts were last seen. The biggest
+        /// <paramref name="heavyParts"/> pieces fly as the server's heavy parts do (same seed, <see cref="WreckParts.Launch"/>),
+        /// so the piece you see is the one that hits.
+        /// </summary>
+        public void Burst(Vector3 position, Vector3 velocity, uint partSeed = 0, int heavyParts = 0)
         {
             Tracked best = null;
             var bestEntity = Entity.Null;
@@ -189,7 +194,7 @@ namespace Chopper.Presentation.Effects
             for (var i = 0; i < count; i++)
             {
                 while (_pieces.Count >= MaxLive) Remove(0);
-                _pieces.Add(Spawn(_burst[i], position, velocity, i));
+                _pieces.Add(Spawn(_burst[i], position, velocity, i, partSeed, i < heavyParts ? heavyParts : 0));
             }
             _burst.Clear();
         }
@@ -256,7 +261,7 @@ namespace Chopper.Presentation.Effects
             if (_root != null) Object.Destroy(_root.gameObject);
         }
 
-        private Piece Spawn(Part part, Vector3 blast, Vector3 velocity, int rank)
+        private Piece Spawn(Part part, Vector3 blast, Vector3 velocity, int rank, uint partSeed, int heavyParts)
         {
             var go = new GameObject("Debris");
             go.transform.SetParent(_root, false);
@@ -276,10 +281,18 @@ namespace Chopper.Presentation.Effects
             var centre = renderer.bounds.center;
             var outward = centre - blast;
             outward = outward.sqrMagnitude > 0.01f ? outward.normalized : Random.onUnitSphere;
+            var launch = DebrisMotion.Launch(velocity, outward, size, Random.value);
+            if (heavyParts > 0)
+            {
+                // A server part: its start point and velocity (hidden in the flash, the jump is under a few metres).
+                WreckParts.Launch(partSeed, rank, heavyParts, velocity, out var offset, out var partVelocity);
+                go.transform.position += blast + (Vector3)offset - centre;
+                launch = partVelocity;
+            }
             return new Piece
             {
                 Object = go,
-                Velocity = DebrisMotion.Launch(velocity, outward, size, Random.value),
+                Velocity = launch,
                 Spin = Random.onUnitSphere * DebrisMotion.SpinRate(size, Random.value),
                 Life = Random.Range(7f, 10f),
                 // The three biggest pieces burn longest.

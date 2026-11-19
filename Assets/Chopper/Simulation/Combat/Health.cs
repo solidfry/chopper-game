@@ -114,6 +114,9 @@ namespace Chopper.Simulation.Combat
         /// pilot's traits still count. Default (not <see cref="AttackerSnapshot.Valid"/>) for damage made on the spot.
         /// </summary>
         public AttackerSnapshot Attacker;
+        /// <summary>Blasts: the speed change (m/s, world) that throws the victim away from the centre
+        /// (<see cref="BlastPushSystem"/>). Zero for other hits. Applied even when friendly fire blocks the damage.</summary>
+        public float3 Push;
 
         public bool HasPoint => Kind is DamageKind.Bullet or DamageKind.Explosion or DamageKind.Impact or DamageKind.Landing;
     }

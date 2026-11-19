@@ -69,6 +69,7 @@ namespace Chopper.Simulation.Combat
                             Kind = DamageKind.Explosion,
                             Weapon = rocket.Weapon,
                             Attacker = rocket.Attacker,
+                            Push = -hit.SurfaceNormal * Explosions.PushSpeed(rocket.DirectDamage * 0.5f),
                         });
                     Explosions.Splash(world, ref _damageLookup, hit.Position, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, hit.Entity,
                         rocket.Weapon, rocket.Attacker);

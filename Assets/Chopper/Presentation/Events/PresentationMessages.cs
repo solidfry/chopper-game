@@ -145,13 +145,19 @@ namespace Chopper.Presentation.Events
         public readonly Simulation.Combat.DeathStyle Style;
         /// <summary>The player whose chopper it was.</summary>
         public readonly int OwnerNetworkId;
+        /// <summary>The server's heavy parts (Simulation.Combat.WreckParts.Launch): seed and count.</summary>
+        public readonly uint PartSeed;
+        public readonly int Parts;
 
-        public WreckExploded(Vector3 position, Vector3 velocity, Simulation.Combat.DeathStyle style, int owner)
+        public WreckExploded(Vector3 position, Vector3 velocity, Simulation.Combat.DeathStyle style, int owner,
+            uint partSeed = 0, int parts = 0)
         {
             Position = position;
             Velocity = velocity;
             Style = style;
             OwnerNetworkId = owner;
+            PartSeed = partSeed;
+            Parts = parts;
         }
     }
 

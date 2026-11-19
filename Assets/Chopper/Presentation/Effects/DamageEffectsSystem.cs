@@ -613,7 +613,7 @@ namespace Chopper.Presentation.Effects
         private void BreakUp(float deltaTime)
         {
             if (_debris == null) return;
-            foreach (var blast in _blasts) _debris.Burst(blast.Position, blast.Velocity);
+            foreach (var blast in _blasts) _debris.Burst(blast.Position, blast.Velocity, blast.PartSeed, blast.Parts);
             _blasts.Clear();
             var hasWorld = SystemAPI.TryGetSingleton<Unity.Physics.PhysicsWorldSingleton>(out var physics);
             // The client physics world is written by jobs: wait for them before the raycasts.

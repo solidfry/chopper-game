@@ -49,6 +49,10 @@ namespace Chopper.Simulation.Combat
         public bool HasPoint;
         /// <summary>Killing blow divided by the health it had left (1 = just enough).</summary>
         public float Overkill;
+        /// <summary>The killer, saved at death (its chopper may be gone or a wreck itself when this wreck lands). Not
+        /// <see cref="AttackerSnapshot.Valid"/> for a self kill or the environment. The wreck's blast and parts hurt
+        /// others in the killer's name (kill credit), as a gone shooter's round does.</summary>
+        public AttackerSnapshot Attacker;
     }
 
     /// <summary>Death style tuning (one per chopper; the same defaults for every chassis for now).</summary>
@@ -62,6 +66,13 @@ namespace Chopper.Simulation.Combat
         public float MaxSeconds;
         /// <summary>Velocity change (m/s in one tick) that counts as hitting something.</summary>
         public float ImpactChange;
+        /// <summary>The explosion's splash (m, damage at the centre), in the killer's name; it also pushes.</summary>
+        public float BlastRadius;
+        public float BlastDamage;
+        /// <summary>Heavy parts thrown out as server bodies (<see cref="WreckPart"/>): how many, and the damage of a hit
+        /// at <see cref="WreckParts.FullDamageSpeed"/> or faster.</summary>
+        public int Parts;
+        public float PartDamage;
 
         public static WreckConfig Default => new()
         {
@@ -69,6 +80,10 @@ namespace Chopper.Simulation.Combat
             LowAltitude = 8f,
             MaxSeconds = 6f,
             ImpactChange = 4f,
+            BlastRadius = 12f,
+            BlastDamage = 35f,
+            Parts = 3,
+            PartDamage = 30f,
         };
     }
 
@@ -138,5 +153,59 @@ namespace Chopper.Simulation.Combat
         public float3 Velocity;
         public DeathStyle Style;
         public int OwnerNetworkId;
+        /// <summary>Seed of the heavy parts' launch (<see cref="WreckParts.Launch"/>): clients throw their biggest pieces
+        /// the same way the server throws its parts.</summary>
+        public uint PartSeed;
+        public byte Parts;
+    }
+
+    /// <summary>
+    /// Server only (not a ghost): a heavy wreck part in flight (<see cref="WreckPartSystem"/>). Clients draw it as one of
+    /// the biggest break-up pieces, launched from the same seed. It hurts the first chopper it hits, in the killer's name.
+    /// </summary>
+    public struct WreckPart : IComponentData
+    {
+        public float3 Position;
+        public float3 Velocity;
+        public float Age;
+        public float Damage;
+        public AttackerSnapshot Attacker;
+    }
+
+    /// <summary>Launch and flight of the heavy wreck parts: pure maths shared by the server and the client pieces.</summary>
+    public static class WreckParts
+    {
+        /// <summary>Share of the wreck's velocity a part keeps (the client pieces use the same).</summary>
+        public const float Inherit = 0.75f;
+        /// <summary>A part this fast or faster does its full damage; slower, less.</summary>
+        public const float FullDamageSpeed = 25f;
+        /// <summary>Slower than this a part does no harm and is removed.</summary>
+        public const float HarmlessSpeed = 5f;
+        public const float MaxSeconds = 4f;
+        public const float Radius = 0.6f;
+
+        /// <summary>Part <paramref name="index"/> of a blast: start offset from the blast point and start velocity.</summary>
+        public static void Launch(uint seed, int index, int count, float3 wreckVelocity, out float3 offset, out float3 velocity)
+        {
+            var random = Random.CreateFromIndex(seed + (uint)index * 7919u);
+            // Spread round the circle (one part per sector), tipped up so they arc.
+            var angle = (index + random.NextFloat(0.15f, 0.85f)) * (math.PI * 2f / math.max(count, 1));
+            var direction = math.normalize(new float3(math.cos(angle), random.NextFloat(0.35f, 0.8f), math.sin(angle)));
+            offset = direction * 1.2f;
+            velocity = wreckVelocity * Inherit + direction * random.NextFloat(12f, 19f);
+        }
+
+        /// <summary>Damage of a hit at this speed (m/s).</summary>
+        public static float HitDamage(float fullDamage, float speed) =>
+            speed < HarmlessSpeed ? 0f : fullDamage * math.saturate(speed / FullDamageSpeed);
+
+        /// <summary>Bounce off a surface (as the client pieces do): a little rebound, friction along it.</summary>
+        public static float3 Bounce(float3 velocity, float3 normal)
+        {
+            var into = math.dot(velocity, normal);
+            if (into >= 0f) return velocity;
+            var along = velocity - normal * into;
+            return along * 0.55f - normal * (into * 0.3f);
+        }
     }
 }

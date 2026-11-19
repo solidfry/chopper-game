@@ -51,3 +51,16 @@ The wreck keeps its velocity. Spin direction comes from the hit side.
 3. Server physics parts and blast push: large parts (body sections, rotors) become short-lived server physics ghosts
    that hit other choppers (damage decided by the server; kill credit to the player who destroyed that chopper). The
    same blast maths pushes live choppers away from rocket, missile and wreck explosions (owner, 19 Nov).
+   Done 19 Nov:
+   - Blast push: `DamageEvent.Push` (speed change, m/s), set by `Explosions.Splash` (`PushSpeed`: 0.25 m/s per damage,
+     max 12) and by rocket and missile direct hits. `BlastPushSystem` (server, just before `ApplyDamageSystem`) adds
+     it to the velocity, plus a tumble from an off-centre hit. It also pushes wrecks, and it pushes when friendly fire
+     blocks the damage.
+   - Wreck blast: `WreckConfig.BlastRadius` 12 m, `BlastDamage` 35, in the killer's name (`DeathBlow.Attacker`, saved at
+     death; kill credit works as for a gone shooter's round).
+   - Heavy parts: `WreckConfig.Parts` 3, `PartDamage` 30 at 25 m/s or faster. They are server-only entities
+     (`WreckPart`, not ghosts), moved by `WreckPartSystem` (sphere sweep, bounce, max 4 s). The first live chopper a
+     part hits takes the damage and a push. The RPC carries the seed, so the client's 3 biggest pieces fly the same
+     way (`WreckParts.Launch`).
+   - Fix: a wreck that explodes at once now waits until `ChopperRespawnSystem` has started the respawn timer. Before,
+     a crash death could leave a player with no respawn.
