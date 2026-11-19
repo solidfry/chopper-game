@@ -111,7 +111,7 @@ Solved and removed from this table: Server Tick Batching warnings (29 Oct), Edge
    - Default: 9 kills, 10 deaths, 1 crash, 15 % accuracy, 27 flares.
    - Rookie: 9 kills, 15 deaths, 5 crashes, 16 % accuracy, 38 flares.
    - (Hits count burn ticks, so accuracy is approximate.) **Finding:** Ace is clearly stronger. Rookie and Default aim the same and kill the same; Rookie only dies more (mostly crashes). **Owner decides:** make Rookie aim worse (or Default better) so the three steps differ.
-4. **Second-client leave test.** A second client joins and a server bot must leave. Not tested yet.
+4. **Second-client leave test.** A second client joins and a server bot must leave. **Passed 19 Nov 22:45** (TrainingRange, editor): a thin client made by `ClientServerBootstrap.CreateThinClientWorld()`, connected to port 7979, with the `Gameplay` subscene loaded into its world (it needs `ChopperSpawner`), went in game as player 2; `[Bots] Bot 1002 leaves (2 player(s), 2 bot(s) wanted)`, bots 3 to 2. On its disconnect, `Bot 1002 (GLITCH) joins` again, bots back to 3. One exception came from the test setup only ("Connection to server already initiated": the thin world connected once by itself too). Not tested: match end with bots; a real second window.
 
 **Owner checks owed (play or listen):**
 - Moon, fog masks, crash feel, L key (lights), new cursor: not judged yet.
