@@ -131,11 +131,11 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(0f, 1f), Tooltip("Health share below which the smoke is thick and black.")]
         private float heavySmokeBelow = 0.4f;
         [SerializeField, Range(0f, 1f), Tooltip("Health share below which the hit points also burn.")]
-        private float fireBelow = 0.2f;
+        private float fireBelow = 0.35f;
         [SerializeField, Tooltip("Smoke puffs per second from one damage point at the lowest health.")]
-        private float smokeRate = 28f;
+        private float smokeRate = 40f;
         [SerializeField, Tooltip("Smoke puff size (m) when it leaves the hull; it grows as it drifts.")]
-        private float smokeSize = 1.4f;
+        private float smokeSize = 2f;
         [SerializeField] private Color lightSmokeColour = new(0.62f, 0.62f, 0.6f, 0.35f);
         [SerializeField] private Color heavySmokeColour = new(0.05f, 0.05f, 0.05f, 0.8f);
         [SerializeField, Tooltip("Dust puffs thrown up by a crash or a hard landing (downwash material and map dust colour).")]

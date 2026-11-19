@@ -34,7 +34,7 @@ namespace Chopper.Presentation.Effects
     {
         private const float CockpitClearance = 2.5f;
         /// <summary>Flame puffs per second at full fire (see <see cref="DamageLook.Fire"/>).</summary>
-        public const float FlameRate = 22f;
+        public const float FlameRate = 40f;
 
         private sealed class Damaged
         {
@@ -55,6 +55,7 @@ namespace Chopper.Presentation.Effects
         private readonly Dictionary<Entity, float> _statusCarry = new();
         /// <summary>Per chopper: ability particle carry and the last use count seen (a new use plays the start burst).</summary>
         private readonly Dictionary<Entity, (float Carry, uint Uses)> _abilityLooks = new();
+        private readonly List<(Vector3 Point, Vector3 Normal)> _emitPoints = new();
         private readonly List<(Vector3 Point, Vector3 Normal)> _centre = new() { (new Vector3(0f, 0.5f, 0f), Vector3.up) };
         private PresentationContext _context;
         private IDisposable _subscription;
@@ -131,7 +132,15 @@ namespace Chopper.Presentation.Effects
                 if (smoke <= 0f || (health.ValueRO.IsDead && !falling)) continue;
 
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
-                var points = state.Points.Count > 0 ? state.Points : _centre;
+                // Smoke and fire pour from the engines (owner, 20 Nov) and from the hit points; the hull centre only
+                // when the chassis has no engine socket and there are no hits.
+                _emitPoints.Clear();
+                if (SystemAPI.HasBuffer<Chopper.Simulation.Loadout.ChassisSocket>(entity))
+                    foreach (var socket in SystemAPI.GetBuffer<Chopper.Simulation.Loadout.ChassisSocket>(entity))
+                        if (socket.Slot == Chopper.Simulation.Loadout.SlotType.Engine)
+                            _emitPoints.Add(((Vector3)socket.LocalPosition + Vector3.up * 0.4f, Vector3.up));
+                _emitPoints.AddRange(state.Points);
+                var points = _emitPoints.Count > 0 ? _emitPoints : _centre;
                 var colour = DamageLook.SmokeColour(share, settings.SmokeBelow, settings.HeavySmokeBelow,
                     settings.LightSmokeColour, settings.HeavySmokeColour);
                 var fire = DamageLook.Fire(share, settings.FireBelow);

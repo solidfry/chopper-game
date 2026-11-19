@@ -95,13 +95,30 @@ namespace Chopper.Presentation.Effects
             var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
             for (var i = 0; i < count; i++)
             {
-                emit.position = point + Random.insideUnitSphere * 0.15f;
-                emit.velocity = velocity * 0.6f + normal * Random.Range(0.5f, 2f) + Vector3.up * Random.Range(1f, 2.5f);
-                emit.startLifetime = Random.Range(0.2f, 0.45f);
-                emit.startSize = Random.Range(0.5f, 1.1f) * (0.5f + 0.5f * strength);
+                // Longer, bigger tongues (owner, 20 Nov: "more visually appealing").
+                emit.position = point + Random.insideUnitSphere * 0.3f;
+                emit.velocity = velocity * 0.6f + normal * Random.Range(0.5f, 2f) + Vector3.up * Random.Range(1.5f, 3.5f);
+                emit.startLifetime = Random.Range(0.3f, 0.7f);
+                emit.startSize = Random.Range(1.5f, 3f) * (0.5f + 0.5f * strength);
                 emit.rotation = Random.Range(0f, 360f);
                 Flames.Emit(emit, 1);
+                // Some flames throw an ember that rises and drifts.
+                if (Random.value < 0.35f) EmitEmber(point, velocity);
             }
+        }
+
+        private void EmitEmber(Vector3 point, Vector3 velocity)
+        {
+            if (Sparks == null) return;
+            var emit = new ParticleSystem.EmitParams
+            {
+                applyShapeToPosition = false,
+                position = point + Random.insideUnitSphere * 0.4f,
+                velocity = velocity * 0.5f + Vector3.up * Random.Range(3f, 7f) + Random.insideUnitSphere * 2f,
+                startLifetime = Random.Range(0.8f, 1.6f),
+                startSize = Random.Range(0.04f, 0.09f),
+            };
+            Sparks.Emit(emit, 1);
         }
 
         /// <summary>Crash dust thrown out round <paramref name="point"/> in <paramref name="colour"/> (the map's sand or ash).</summary>

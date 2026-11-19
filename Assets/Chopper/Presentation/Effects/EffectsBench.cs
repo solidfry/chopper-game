@@ -31,6 +31,13 @@ namespace Chopper.Presentation.Effects
         private float circleRadius;
         [SerializeField, Tooltip("Speed round the circle, m/s.")] private float circleSpeed = 25f;
 
+        /// <summary>The gunship's engine socket (SOCKET_Engine_0, +0.4 m up, as the game) and one hit on the tail boom.</summary>
+        private static readonly (Vector3 Point, Vector3 Normal)[] HullPoints =
+        {
+            (new Vector3(0f, 1.5f, -1.85f), Vector3.up),
+            (new Vector3(-0.3f, 1.2f, -4f), new Vector3(-1f, 0.3f, 0f)),
+        };
+
         private CombatEffects _effects;
         private DamageParticles _damage;
         private readonly BlastSequence _sequence = new();
@@ -117,9 +124,15 @@ namespace Chopper.Presentation.Effects
             var flameCount = (int)_flameCarry;
             _smokeCarry -= smokeCount;
             _flameCarry -= flameCount;
-            var point = position + Vector3.up * 0.5f;
-            _damage.EmitSmoke(point, Vector3.up, velocity, colour, smoke, smokeCount);
-            _damage.EmitFlames(point, Vector3.up, velocity, fire, flameCount);
+            // Hit points on the hull (as in a match, where the damage comes from the hits): engine top and tail boom.
+            var pose = standIn != null ? standIn.localToWorldMatrix : Matrix4x4.Translate(position);
+            foreach (var (local, normal) in HullPoints)
+            {
+                var point = pose.MultiplyPoint3x4(local);
+                var outward = pose.MultiplyVector(normal).normalized;
+                _damage.EmitSmoke(point, outward, velocity, colour, smoke, smokeCount);
+                _damage.EmitFlames(point, outward, velocity, fire, flameCount);
+            }
         }
 
         /// <summary>A hit on the stand-in: sparks as for a heavy bullet hit.</summary>
