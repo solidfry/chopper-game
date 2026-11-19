@@ -42,10 +42,11 @@ namespace Chopper.Editor.Setup
                 Layer(SmallBlast, 3f, 0.12f, 0f, 3f, 1f, spread: 2.5f),
                 Layer(Embers, 3f, 0f, 0.8f, 6f, 0.5f),
                 Layer(Fireball, 6.5f, 0.25f, 1.2f, 10f, 0.5f, startScale: 2.5f, grow: 1f),
-                Layer(Flames, 4.5f, 0.35f, 2.5f, 7f, 0f, startScale: 2f, grow: 1f, material: EnsureWreckFlameMaterial(), lifeColour: FlameLifeColour),
+                Layer(Flames, 4.5f, 0.35f, 2.5f, 7f, 0f, startScale: 2f, grow: 1f, material: EnsureWreckFlameMaterial(), lifeColour: FlameLifeColour,
+                    ground: true),
                 Layer(SmallBlast, 2f, 0.6f, 0f, 3f, 1.5f, spread: 5f),
                 Layer(RocketImpact, 1.6f, 1f, 0f, 3f, 0.5f, spread: 6f),
-                Layer(Column, 4f, 0.7f, 6f, 22f, 2f, startScale: 1.5f, grow: 3f),
+                Layer(Column, 4f, 0.7f, 6f, 22f, 2f, startScale: 1.5f, grow: 3f, ground: true),
             };
             return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
         }
@@ -58,11 +59,13 @@ namespace Chopper.Editor.Setup
         private const string SmallBlast = SciFi + "/Explosions/Rockets/Impact v3/YellowFireRocketImpactV3.prefab";
 
         private static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
-            float startScale = 0f, float grow = 0f, float spread = 0f, Material material = null, Color lifeColour = default) => new()
+            float startScale = 0f, float grow = 0f, float spread = 0f, Material material = null, Color lifeColour = default,
+            bool ground = false) => new()
         {
             Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path),
             Scale = scale, Delay = delay, EmitSeconds = emit, LifeSeconds = life, Up = up,
             StartScale = startScale, GrowSeconds = grow, Spread = spread, Material = material, LifeColour = lifeColour,
+            Ground = ground,
         };
 
         private const string WreckFlameMaterialPath = "Assets/Chopper/Data/Effects/WreckFlames.mat";

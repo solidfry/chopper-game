@@ -31,5 +31,8 @@ namespace Chopper.Presentation.Effects
         public Material Material;
         [Tooltip("Peak colour over each particle's life (black, this, black). Alpha 0 = the prefab's own colours.")]
         public Color LifeColour;
+        [Tooltip("Burns on the ground (lasting flames, the smoke column). In a blast in the air it starts where the falling " +
+                 "wreck lands, not in the air; no ground under the fall = not shown.")]
+        public bool Ground;
     }
 }

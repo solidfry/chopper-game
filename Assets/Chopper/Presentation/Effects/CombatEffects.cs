@@ -59,7 +59,10 @@ namespace Chopper.Presentation.Effects
                 var side = Random.insideUnitCircle * layer.Spread;
                 offset += new Vector3(side.x, Random.Range(-0.3f, 0.6f) * layer.Spread, side.y);
             }
-            var instance = Object.Instantiate(layer.Prefab, position + offset, Random.rotation, _root);
+            // Upright, random heading only: the fire and smoke packs rise along the prefab's up axis, and their flame
+            // meshes are drawn upright. A full random rotation sent smoke sideways and turned flames upside down.
+            var heading = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            var instance = Object.Instantiate(layer.Prefab, position + offset, heading, _root);
             var grows = layer.GrowSeconds > 0f && layer.StartScale > 0f;
             instance.transform.localScale = Vector3.one * (grows ? layer.StartScale : layer.Scale);
             if (grows) _growing.Add((instance, _clock, layer.StartScale, layer.Scale, layer.GrowSeconds));
@@ -79,9 +82,16 @@ namespace Chopper.Presentation.Effects
                 }
             }
             _systemBuffer.Clear();
-            if (layer.Material != null)
-                foreach (var renderer in instance.GetComponentsInChildren<ParticleSystemRenderer>(true))
-                    renderer.sharedMaterial = layer.Material;
+            foreach (var renderer in instance.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            {
+                if (layer.Material != null) renderer.sharedMaterial = layer.Material;
+                // Stretched billboards with no speed or camera stretch (the NatureManufacture smoke) only turn each puff
+                // to face its own motion: puffs flying at the camera fold into long, bent strips. A billboard looks the same
+                // from the side and stays round from the front.
+                if (renderer.renderMode == ParticleSystemRenderMode.Stretch && renderer.velocityScale <= 0f &&
+                    renderer.cameraVelocityScale <= 0f)
+                    renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            }
             RouteAudio(instance, mute: false);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
             Object.Destroy(instance, layer.LifeSeconds);
