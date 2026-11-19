@@ -91,7 +91,7 @@ namespace Chopper.Presentation.Effects
                 if (renderer.renderMode == ParticleSystemRenderMode.Stretch && renderer.velocityScale <= 0f &&
                     renderer.cameraVelocityScale <= 0f)
                     renderer.renderMode = ParticleSystemRenderMode.Billboard;
-                else if (renderer.renderMode == ParticleSystemRenderMode.Mesh && IsQuad(renderer.mesh))
+                else if (renderer.renderMode == ParticleSystemRenderMode.Mesh && IsFlatCard(renderer.mesh))
                     FaceCamera(renderer);
                 // Vertical billboards turn round the up axis only: seen from a chopper above they are thin slivers.
                 else if (renderer.renderMode == ParticleSystemRenderMode.VerticalBillboard)
@@ -102,7 +102,15 @@ namespace Chopper.Presentation.Effects
             Object.Destroy(instance, layer.LifeSeconds);
         }
 
-        private static bool IsQuad(Mesh mesh) => mesh != null && mesh.vertexCount <= 4;
+        /// <summary>A flat card (the pack's "particle plane" is a quad split 8 x 8): no depth on one axis.</summary>
+        private static bool IsFlatCard(Mesh mesh)
+        {
+            if (mesh == null) return false;
+            var size = mesh.bounds.size;
+            var largest = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+            var smallest = Mathf.Min(size.x, Mathf.Min(size.y, size.z));
+            return largest > 0f && smallest <= largest * 0.01f;
+        }
 
         /// <summary>
         /// A flat card drawn as a mesh particle (the pack's big flames: a quad with "Facing" alignment). Unity turns mesh
