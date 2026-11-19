@@ -55,6 +55,9 @@ namespace Chopper.Editor.Setup
             var autocannon = Hitscan("Autocannon", rpm: 240f, damage: 25f, range: 700f, heatSeconds: 5f, coolSeconds: 4.5f);
             var laser = Hitscan("PulseLaser", rpm: 600f, damage: 10f, range: 500f, heatSeconds: 4f, coolSeconds: 3f);
             var rocketPod = Rockets("RocketPod");
+            // 3 m proximity fuse (owner, 19 Nov): bot test had 21 rockets pass within ~4 m of a chopper for no damage.
+            rocketPod.SetFuse(radius: 3f, Chopper.Simulation.Combat.TargetClass.Air);
+            EditorUtility.SetDirty(rocketPod);
 
             var modules = new List<ModuleDefinition>
             {
