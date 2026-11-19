@@ -200,6 +200,18 @@ namespace Chopper.Simulation.Session
             if (match.Phase != MatchPhase.InProgress)
             {
                 Field("winner", match.WinnerNetworkId);
+                // Team modes: the winning team (0 = draw) and each team's kills ([i] = team i + 1).
+                if (match.TeamScores.Length > 0)
+                {
+                    Field("winnerTeam", match.WinnerTeam);
+                    _line.Append(",\"teamScores\":[");
+                    for (var i = 0; i < match.TeamScores.Length; i++)
+                    {
+                        if (i > 0) _line.Append(',');
+                        _line.Append(match.TeamScores[i]);
+                    }
+                    _line.Append(']');
+                }
                 _line.Append(",\"scores\":[");
                 var first = true;
                 foreach (var (score, id) in SystemAPI.Query<RefRO<PlayerScore>, RefRO<PlayerId>>())
