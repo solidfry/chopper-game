@@ -122,7 +122,7 @@ Solved and removed from this table: Server Tick Batching warnings (29 Oct), Edge
 **Owner checks owed (play or listen):**
 - Moon, fog masks, crash feel, L key (lights), new cursor: not judged yet.
 - Lock warning, missile warning, flares and new SFX: listen in play.
-- Repair drone: try it in the hangar (fit it on a pylon). Tune `Weapon_RepairDrone` and the orbit in `CombatEffectsSettings`. Owner wants allies as targets (`RepairDrone.PickTarget`). TODO (owner): consider moving countermeasures to their own slot.
+- Repair drone: try it in the hangar (fit it on a pylon). Tune `Weapon_RepairDrone` and the orbit in `CombatEffectsSettings`. Allies as targets: done (`RepairDrone.PickTarget`: a hurt team mate under the reticle in team modes, else itself); not checked in play. TODO (owner): consider moving countermeasures to their own slot.
 - Gun bullet travel: human play test (lead ring shows, hits land, pulse laser still instant). With 2 clients, check that the ring leads a crossing player.
 - Online TDM: a full match in a build is not checked. Production allocator is still to do.
 
