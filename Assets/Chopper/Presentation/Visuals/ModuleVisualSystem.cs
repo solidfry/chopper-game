@@ -3,6 +3,7 @@ using Chopper.Presentation.Bridge;
 using Chopper.Presentation.Effects;
 using Chopper.Simulation.Flight;
 using Chopper.Simulation.Loadout;
+using Chopper.Simulation.Combat;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -33,6 +34,11 @@ namespace Chopper.Presentation.Visuals
             public float SpinTime;
             /// <summary>Spin in radians per second on the visual's local axes (zero for most modules).</summary>
             public readonly List<(GameObject Visual, float3 Position, quaternion Rotation, float3 Spin)> Parts = new();
+
+            public IEnumerable<GameObject> Visuals
+            {
+                get { foreach (var part in Parts) yield return part.Visual; }
+            }
         }
 
         /// <summary>Rotor speed change at full collective: +25 % climbing, -25 % sinking.</summary>
@@ -104,6 +110,9 @@ namespace Chopper.Presentation.Visuals
                     var turned = math.all(spin == float3.zero) ? rotation : math.mul(rotation, quaternion.EulerXYZ(spin * fitted.SpinTime));
                     visual.transform.SetPositionAndRotation(math.transform(world, position), math.mul(pose.ValueRO.Rotation, turned));
                 }
+                // A falling wreck: the break-up flies this art off when it blows up.
+                if (SystemAPI.HasComponent<Wreck>(entity) && SystemAPI.GetComponent<Wreck>(entity).Active && context.Effects != null)
+                    context.Effects.Debris.TrackVisuals(entity, (float)SystemAPI.Time.ElapsedTime, fitted.Visuals);
             }
 
             _gone.Clear();

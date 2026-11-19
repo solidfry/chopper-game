@@ -13,7 +13,7 @@ namespace Chopper.Presentation.Effects
     /// Client only. A wreck's explosion where the server says it blew up (<see cref="WreckExploded"/>,
     /// Docs/ChopperDeathDesign.md): the chopper explosion, or (none set) three layered missile blasts, the main one at
     /// the point and two smaller ones a little along its travel; a heat mark; and camera shake that falls off with
-    /// distance. The falling smoke and fire come from <see cref="DamageEffectsSystem"/>. The break-up is step 2.
+    /// distance. The falling smoke and fire come from <see cref="DamageEffectsSystem"/>. The break-up: <see cref="WreckDebris"/>.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]

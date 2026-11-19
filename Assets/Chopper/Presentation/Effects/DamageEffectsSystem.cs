@@ -22,6 +22,7 @@ namespace Chopper.Presentation.Effects
     /// <item>The last <see cref="DamageLook.MaxPoints"/> hit points stay on the hull (local space). As health runs
     /// low they smoke (light grey, then black) and at the end burn. Health is the replicated ghost field, so late
     /// joiners see the smoke too (from the hull centre until a new hit marks a point).</item>
+    /// <item>A wreck's blast breaks it up (<see cref="WreckDebris"/>): its parts fly off and trail these smoke and flames.</item>
     /// </list>
     /// Cosmetic only. Four shared world-space particle systems made in code (sparks, flames, smoke, dust); materials
     /// and numbers in <see cref="CombatEffectsSettings"/> ("Damage"). Own chopper in a cockpit view: nothing is drawn
@@ -58,6 +59,9 @@ namespace Chopper.Presentation.Effects
         private readonly List<(Vector3 Point, Vector3 Normal)> _centre = new() { (new Vector3(0f, 0.5f, 0f), Vector3.up) };
         private PresentationContext _context;
         private IDisposable _subscription;
+        private IDisposable _wreckSubscription;
+        private WreckDebris _debris;
+        private readonly List<WreckExploded> _blasts = new();
         private Transform _root;
         private ParticleSystem _sparks;
         private ParticleSystem _flames;
@@ -126,6 +130,7 @@ namespace Chopper.Presentation.Effects
                 state.HasPosition = true;
                 // Dead: only a falling wreck still smokes and burns (at full, its health is 0).
                 var falling = SystemAPI.HasComponent<Wreck>(entity) && SystemAPI.GetComponent<Wreck>(entity).Active;
+                if (falling) _debris?.Track(EntityManager, entity, (float)SystemAPI.Time.ElapsedTime);
                 if (smoke <= 0f || (health.ValueRO.IsDead && !falling)) continue;
 
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
@@ -150,6 +155,8 @@ namespace Chopper.Presentation.Effects
                     EmitFlames(point, normal, velocity, fire, flameCount);
                 }
             }
+
+            BreakUp(deltaTime);
 
             _gone.Clear();
             foreach (var entity in _damaged.Keys)
@@ -526,6 +533,9 @@ namespace Chopper.Presentation.Effects
             if (settings.DownwashMaterial != null)
                 _dust = Create("Crash Dust", settings.DownwashMaterial, 400, ParticleSystemRenderMode.Billboard, gravity: 0.05f,
                     Fade(Color.white, Color.white, 0.5f), grow: 2f, drag: 0.12f, sheet: true);
+            _debris = context.Effects.Debris;
+            _debris.SetTrails(DebrisSmoke, DebrisFlames, DebrisSparks);
+            _wreckSubscription = context.Events.Subscribe<WreckExploded>(_blasts.Add);
         }
 
         /// <summary>Colour over lifetime: <paramref name="start"/> to <paramref name="end"/>, alpha up fast, held, then out.</summary>
@@ -599,10 +609,42 @@ namespace Chopper.Presentation.Effects
             return system;
         }
 
+        /// <summary>This frame's wreck blasts break their wrecks up; the pieces fly, bounce and trail.</summary>
+        private void BreakUp(float deltaTime)
+        {
+            if (_debris == null) return;
+            foreach (var blast in _blasts) _debris.Burst(blast.Position, blast.Velocity);
+            _blasts.Clear();
+            var hasWorld = SystemAPI.TryGetSingleton<Unity.Physics.PhysicsWorldSingleton>(out var physics);
+            // The client physics world is written by jobs: wait for them before the raycasts.
+            if (hasWorld) CompleteDependency();
+            _debris.Tick(deltaTime, (float)SystemAPI.Time.ElapsedTime, hasWorld ? physics.CollisionWorld : default, hasWorld);
+        }
+
+        private void DebrisSmoke(Vector3 point, Vector3 velocity, float strength, int count)
+        {
+            var settings = _context.Effects.Settings;
+            EmitSmoke(settings, point, Vector3.up, velocity, settings.HeavySmokeColour, strength, count);
+        }
+
+        private void DebrisFlames(Vector3 point, Vector3 velocity, float strength, int count) =>
+            EmitFlames(point, Vector3.up, velocity, strength, count);
+
+        private void DebrisSparks(Vector3 point, Vector3 velocity, float strength, int count)
+        {
+            var normal = velocity.sqrMagnitude > 0.01f ? velocity.normalized : Vector3.up;
+            EmitSparks(_context.Effects.Settings, point, normal, Mathf.RoundToInt(count * strength));
+        }
+
         private void Clear()
         {
             _subscription?.Dispose();
             _subscription = null;
+            _wreckSubscription?.Dispose();
+            _wreckSubscription = null;
+            _blasts.Clear();
+            _debris?.SetTrails(null, null, null);
+            _debris = null;
             _damaged.Clear();
             _pending.Clear();
             if (_root != null) Object.Destroy(_root.gameObject);

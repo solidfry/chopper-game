@@ -21,7 +21,11 @@ namespace Chopper.Presentation.Effects
             _root = new GameObject("Combat Effects").transform;
             _root.SetParent(parent, false);
             _pool = new EffectPool(_root);
+            Debris = new WreckDebris(_root);
         }
+
+        /// <summary>The wreck break-up pieces (Docs/ChopperDeathDesign.md step 2).</summary>
+        public WreckDebris Debris { get; }
 
         /// <summary>Can be null (no effects configured): every spawn then does nothing.</summary>
         public CombatEffectsSettings Settings { get; }
@@ -51,6 +55,7 @@ namespace Chopper.Presentation.Effects
         public void Dispose()
         {
             _pool.Dispose();
+            Debris.Dispose();
             if (_root != null) Object.Destroy(_root.gameObject);
         }
 

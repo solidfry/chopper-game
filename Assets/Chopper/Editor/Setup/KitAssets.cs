@@ -354,6 +354,9 @@ namespace Chopper.Editor.Setup
                 if (importer.addCollider) { importer.addCollider = false; changed = true; }
                 // Tangents for the normal map: Unity's MikkTSpace matches the Blender bake.
                 if (importer.importTangents != ModelImporterTangents.CalculateMikk) { importer.importTangents = ModelImporterTangents.CalculateMikk; changed = true; }
+                // Chassis meshes stay readable: the wreck break-up cuts them into chunks at run time (MeshShatter).
+                var readable = System.IO.Path.GetFileName(part.file).StartsWith("Chassis_");
+                if (importer.isReadable != readable) { importer.isReadable = readable; changed = true; }
 
                 var source = new AssetImporter.SourceAssetIdentifier(typeof(Material), onPalette ? manifest.palette.material : set.material);
                 if (!importer.GetExternalObjectMap().TryGetValue(source, out var mapped) || mapped != material)
