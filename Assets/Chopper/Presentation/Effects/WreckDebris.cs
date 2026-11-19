@@ -304,7 +304,7 @@ namespace Chopper.Presentation.Effects
                 var target = linked.Value;
                 if (!IsRendered(entities, target)) continue;
                 var info = entities.GetComponentData<Unity.Rendering.MaterialMeshInfo>(target);
-                var array = entities.GetSharedComponentManaged<Unity.Rendering.RenderMeshArray>(target);
+                var array = entities.GetSharedComponent<Unity.Rendering.RenderMeshArray>(target);
                 var mesh = array.GetMesh(info);
                 var materials = array.GetMaterials(info);
                 var part = new Part { Mesh = mesh, Materials = materials?.ToArray() };

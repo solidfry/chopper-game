@@ -42,9 +42,9 @@ namespace Chopper.Editor.Setup
                 Layer(SmallBlast, 3f, 0.12f, 0f, 3f, 1f, spread: 2.5f),
                 Layer(Embers, 3f, 0f, 0.8f, 6f, 0.5f),
                 Layer(Fireball, 6.5f, 0.25f, 1.2f, 10f, 0.5f, startScale: 2.5f, grow: 1f),
-                Layer(Flames, 4.5f, 0.35f, 2.5f, 7f, 0f, startScale: 2f, grow: 1f),
+                Layer(Flames, 4.5f, 0.35f, 2.5f, 7f, 0f, startScale: 2f, grow: 1f, material: EnsureWreckFlameMaterial(), lifeColour: FlameLifeColour),
                 Layer(SmallBlast, 2f, 0.6f, 0f, 3f, 1.5f, spread: 5f),
-                Layer(SmallBlast, 1.6f, 1f, 0f, 3f, 0.5f, spread: 6f),
+                Layer(RocketImpact, 1.6f, 1f, 0f, 3f, 0.5f, spread: 6f),
                 Layer(Column, 4f, 0.7f, 6f, 22f, 2f, startScale: 1.5f, grow: 3f),
             };
             return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
@@ -54,15 +54,42 @@ namespace Chopper.Editor.Setup
         private const string Flames = FireAndSmoke + "/Other/Prefab_Fire_Huge_Flames_01.prefab";
         private const string Embers = FireAndSmoke + "/Other/Prefab_Fire_Embers_01.prefab";
         private const string Column = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Smoke_Normal_Based_Lit_3.prefab";
-        private const string SmallBlast = RocketImpact;
+        /// <summary>The yellow rocket impact: the red one made the whole blast too red (owner).</summary>
+        private const string SmallBlast = SciFi + "/Explosions/Rockets/Impact v3/YellowFireRocketImpactV3.prefab";
 
         private static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
-            float startScale = 0f, float grow = 0f, float spread = 0f) => new()
+            float startScale = 0f, float grow = 0f, float spread = 0f, Material material = null, Color lifeColour = default) => new()
         {
             Prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path),
             Scale = scale, Delay = delay, EmitSeconds = emit, LifeSeconds = life, Up = up,
-            StartScale = startScale, GrowSeconds = grow, Spread = spread,
+            StartScale = startScale, GrowSeconds = grow, Spread = spread, Material = material, LifeColour = lifeColour,
         };
+
+        private const string WreckFlameMaterialPath = "Assets/Chopper/Data/Effects/WreckFlames.mat";
+        private const string PackFlameMaterial = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Materials/Others/M_fire_flipbook_big_01.mat";
+        /// <summary>
+        /// HDR flame colour. The pack's grey (446) on its orange flipbook burns out to red-orange in the bloom (owner: "too
+        /// red"); more green and blue against red keeps the hot core yellow-orange.
+        /// </summary>
+        /// <summary>The flames' peak colour over life: the pack's is deep red (0.28, 0.07, 0); this is a hotter orange-yellow.</summary>
+        private static readonly Color FlameLifeColour = new(0.34f, 0.2f, 0.04f, 1f);
+        private static readonly Color WreckFlameColour = new(260f, 380f, 700f, 0f);
+
+        /// <summary>The pack's big flipbook flame, recoloured warmer-yellow (a copy: the pack is not changed).</summary>
+        private static Material EnsureWreckFlameMaterial()
+        {
+            var source = AssetDatabase.LoadAssetAtPath<Material>(PackFlameMaterial);
+            if (source == null) return null;
+            var material = AssetDatabase.LoadAssetAtPath<Material>(WreckFlameMaterialPath);
+            if (material == null)
+            {
+                material = new Material(source);
+                AssetDatabase.CreateAsset(material, WreckFlameMaterialPath);
+            }
+            material.SetColor("_Emission_Color", WreckFlameColour);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
 
         /// <summary>Tools: put the default explosion layers back (after tuning them in code).</summary>
         [MenuItem("Chopper/Tools/Reset Chopper Explosion Layers")]

@@ -27,5 +27,9 @@ namespace Chopper.Presentation.Effects
         [Min(0f)] public float GrowSeconds;
         [Tooltip("Random offset round the blast point (m, mostly sideways): secondary blasts scatter.")]
         [Min(0f)] public float Spread;
+        [Tooltip("Material for all its particle renderers (a recoloured copy of the pack's). Empty = the prefab's own.")]
+        public Material Material;
+        [Tooltip("Peak colour over each particle's life (black, this, black). Alpha 0 = the prefab's own colours.")]
+        public Color LifeColour;
     }
 }

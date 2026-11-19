@@ -68,8 +68,20 @@ namespace Chopper.Presentation.Effects
             {
                 var main = system.main;
                 main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                if (layer.LifeColour.a > 0f && system.colorOverLifetime.enabled)
+                {
+                    var colour = system.colorOverLifetime;
+                    var gradient = new Gradient();
+                    gradient.SetKeys(
+                        new[] { new GradientColorKey(Color.black, 0f), new GradientColorKey(layer.LifeColour, 0.5f), new GradientColorKey(Color.black, 1f) },
+                        new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+                    colour.color = gradient;
+                }
             }
             _systemBuffer.Clear();
+            if (layer.Material != null)
+                foreach (var renderer in instance.GetComponentsInChildren<ParticleSystemRenderer>(true))
+                    renderer.sharedMaterial = layer.Material;
             RouteAudio(instance, mute: false);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
             Object.Destroy(instance, layer.LifeSeconds);
