@@ -90,9 +90,9 @@ namespace Chopper.Simulation.Flight
         [Tooltip("Vertical touchdown speed (m/s) on the ground or a roof that does no damage.")]
         public float SafeLandingSpeed = 7f;
         [Tooltip("Impact speed (m/s) that takes all the health in one hit.")]
-        public float LethalImpactSpeed = 45f;
+        public float LethalImpactSpeed = 32f;
         [Tooltip("Damage curve between safe and lethal speed: 1 = straight line; above 1 = bumps are mild, big crashes hard.")]
-        public float Curve = 1.5f;
+        public float Curve = 1.7f;
         [Tooltip("Toppled when the up axis points up less than this (0.5 = tilted past 60 degrees): on its side, roof, nose or tail.")]
         public float ToppleUpY = 0.5f;
         [Tooltip("Toppled only below this speed (m/s): resting, not flying a roll.")]
@@ -101,6 +101,16 @@ namespace Chopper.Simulation.Flight
         public float ToppleGrace = 1.5f;
         [Tooltip("Share of max health lost per second while toppled after the grace (0.2 = dead in 5 s).")]
         public float ToppleDamagePerSecond = 0.2f;
+        [Tooltip("Upside down when the up axis points up less than this (-0.3 = past about 107 degrees).")]
+        public float InvertedUpY = -0.3f;
+        [Tooltip("Seconds resting upside down before the damage starts.")]
+        public float InvertedGrace = 0.5f;
+        [Tooltip("Share of max health lost per second while resting upside down (0.5 = dead in 2 s).")]
+        public float InvertedDamagePerSecond = 0.5f;
+        [Tooltip("A hit on the rotor side takes at least this share of max health.")]
+        public float RotorStrikeShare = 0.2f;
+        [Tooltip("Share of max health lost per second while something touches the rotors from above.")]
+        public float RotorScrapeDamagePerSecond = 0.35f;
 
         public Combat.CrashDamageConfig ToConfig() => new()
         {
@@ -112,6 +122,11 @@ namespace Chopper.Simulation.Flight
             ToppleMaxSpeed = ToppleMaxSpeed,
             ToppleGrace = ToppleGrace,
             ToppleDamagePerSecond = ToppleDamagePerSecond,
+            InvertedUpY = InvertedUpY,
+            InvertedGrace = InvertedGrace,
+            InvertedDamagePerSecond = InvertedDamagePerSecond,
+            RotorStrikeShare = RotorStrikeShare,
+            RotorScrapeDamagePerSecond = RotorScrapeDamagePerSecond,
         };
     }
 

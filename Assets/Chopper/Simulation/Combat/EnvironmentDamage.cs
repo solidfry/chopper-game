@@ -28,17 +28,32 @@ namespace Chopper.Simulation.Combat
         public float ToppleGrace;
         /// <summary>Share of max health lost per second while toppled after the grace.</summary>
         public float ToppleDamagePerSecond;
+        /// <summary>Upside down when the up axis points up less than this (-0.3 = past about 107°): rotors in the ground.</summary>
+        public float InvertedUpY;
+        /// <summary>Seconds resting upside down before the damage starts (shorter than <see cref="ToppleGrace"/>).</summary>
+        public float InvertedGrace;
+        /// <summary>Share of max health lost per second while resting upside down after the grace.</summary>
+        public float InvertedDamagePerSecond;
+        /// <summary>A hit on the rotor side (pushed against the chopper's up axis) takes at least this share of max health.</summary>
+        public float RotorStrikeShare;
+        /// <summary>Share of max health lost per second while something touches the rotors from above.</summary>
+        public float RotorScrapeDamagePerSecond;
 
         public static CrashDamageConfig Default => new()
         {
             SafeImpactSpeed = 5f,
             SafeLandingSpeed = 7f,
-            LethalImpactSpeed = 45f,
-            Curve = 1.5f,
+            LethalImpactSpeed = 32f,
+            Curve = 1.7f,
             ToppleUpY = 0.5f,
             ToppleMaxSpeed = 4f,
             ToppleGrace = 1.5f,
             ToppleDamagePerSecond = 0.2f,
+            InvertedUpY = -0.3f,
+            InvertedGrace = 0.5f,
+            InvertedDamagePerSecond = 0.5f,
+            RotorStrikeShare = 0.2f,
+            RotorScrapeDamagePerSecond = 0.35f,
         };
     }
 
@@ -128,18 +143,33 @@ namespace Chopper.Simulation.Combat
         /// it loses <see cref="CrashDamageConfig.ToppleDamagePerSecond"/> of max health per second until it is upright
         /// or dead. Returns this tick's damage. Upright (or flying) resets the count.
         /// </summary>
-        public static float Topple(ref float toppledTime, bool toppled, float deltaTime, in CrashDamageConfig config, float maxHealth)
+        public static float Topple(ref float toppledTime, bool toppled, float deltaTime, in CrashDamageConfig config, float maxHealth,
+            bool inverted = false)
         {
             if (!toppled)
             {
                 toppledTime = 0f;
                 return 0f;
             }
+            // Upside down: rotors in the ground, so a short grace and fast damage (owner, 19 Nov 2026).
+            var grace = inverted ? math.min(config.InvertedGrace, config.ToppleGrace) : config.ToppleGrace;
+            var rate = inverted ? math.max(config.InvertedDamagePerSecond, config.ToppleDamagePerSecond) : config.ToppleDamagePerSecond;
             var before = toppledTime;
             toppledTime += deltaTime;
-            var hurting = toppledTime - math.max(before, config.ToppleGrace);
-            return hurting > 0f ? hurting * config.ToppleDamagePerSecond * maxHealth : 0f;
+            var hurting = toppledTime - math.max(before, grace);
+            return hurting > 0f ? hurting * rate * maxHealth : 0f;
         }
+
+        /// <summary>Up axis points down past <see cref="CrashDamageConfig.InvertedUpY"/>.</summary>
+        public static bool IsInverted(in CrashDamageConfig config, float3 up) => up.y < config.InvertedUpY;
+
+        /// <summary>The push came against the chopper's up axis: the hit was on the rotor side (a ceiling, an overhang,
+        /// the ground when upside down). <paramref name="normal"/> = push direction.</summary>
+        public static bool IsRotorSide(float3 normal, float3 up) => math.dot(normal, up) < -0.5f;
+
+        /// <summary>Impact damage, raised to at least <see cref="CrashDamageConfig.RotorStrikeShare"/> for a rotor-side hit.</summary>
+        public static float WithRotorStrike(in CrashDamageConfig config, float impactDamage, bool rotorSide, float maxHealth) =>
+            rotorSide ? math.max(impactDamage, config.RotorStrikeShare * maxHealth) : impactDamage;
 
         /// <summary>Damage for one impact: 0 at the safe speed, <paramref name="maxHealth"/> at the lethal speed.</summary>
         public static float Damage(in CrashDamageConfig config, float impactSpeed, bool landing, float maxHealth)

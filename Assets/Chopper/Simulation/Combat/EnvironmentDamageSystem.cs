@@ -92,7 +92,14 @@ namespace Chopper.Simulation.Combat
                     var change = velocity.ValueRO.Linear - sensor.VelocityBefore;
                     var contact = CrashDamage.Track(ref sensor, change, deltaTime, out var speed, out var added, out var normal);
                     var landing = CrashDamage.IsLanding(normal);
-                    var amount = contact ? CrashDamage.Damage(config.ValueRO, speed, landing, health.ValueRO.Max) - sensor.ContactDealt : 0f;
+                    var up = math.mul(transform.ValueRO.Rotation, new float3(0f, 1f, 0f));
+                    // A hit on the rotor side always hurts (owner, 19 Nov 2026: rotors touching something above).
+                    var rotorSide = CrashDamage.IsRotorSide(normal, up);
+                    if (rotorSide) landing = false;
+                    var amount = contact
+                        ? CrashDamage.WithRotorStrike(config.ValueRO, CrashDamage.Damage(config.ValueRO, speed, landing, health.ValueRO.Max),
+                            rotorSide, health.ValueRO.Max) - sensor.ContactDealt
+                        : 0f;
                     if (amount > 0f)
                     {
                         sensor.ContactDealt += amount;
@@ -116,14 +123,26 @@ namespace Chopper.Simulation.Combat
                     }
 
                     // Resting on its side, roof, nose or tail: damage over time until upright (owner, 19 Nov 2026).
-                    var up = math.mul(transform.ValueRO.Rotation, new float3(0f, 1f, 0f));
                     var toppled = CrashDamage.IsTilted(config.ValueRO, up, math.length(velocity.ValueRO.Linear)) &&
                                   Touching(world, chopper, position, SystemAPI.HasComponent<PhysicsCollider>(chopper)
                                       ? Radius(SystemAPI.GetComponent<PhysicsCollider>(chopper))
                                       : FallbackRadius);
-                    var toppleDamage = CrashDamage.Topple(ref sensor.ToppledTime, toppled, deltaTime, config.ValueRO, health.ValueRO.Max);
+                    var toppleDamage = CrashDamage.Topple(ref sensor.ToppledTime, toppled, deltaTime, config.ValueRO, health.ValueRO.Max,
+                        CrashDamage.IsInverted(config.ValueRO, up));
                     if (toppleDamage > 0f)
                         damage.Add(new DamageEvent { Amount = toppleDamage, Source = Entity.Null, Kind = DamageKind.Toppled });
+
+                    // Something rests on the rotor disc (an overhang, a ceiling): damage over time while it touches.
+                    if (config.ValueRO.RotorScrapeDamagePerSecond > 0f && SystemAPI.HasComponent<PhysicsCollider>(chopper) &&
+                        RotorTouching(world, chopper, transform.ValueRO, SystemAPI.GetComponent<PhysicsCollider>(chopper), out var rotorPoint))
+                        damage.Add(new DamageEvent
+                        {
+                            Amount = config.ValueRO.RotorScrapeDamagePerSecond * health.ValueRO.Max * deltaTime,
+                            Source = Entity.Null,
+                            Point = rotorPoint,
+                            Normal = -up,
+                            Kind = DamageKind.Impact,
+                        });
                     _sensors[chopper] = sensor;
                 }
 
@@ -167,6 +186,21 @@ namespace Chopper.Simulation.Combat
         }
 
         /// <summary>True when something other than the chopper itself is within its sphere (it rests on it).</summary>
+        /// <summary>
+        /// Another body overlaps a thin sphere on top of the collider (where the rotor disc spins). The sphere sits
+        /// at the collider's top, as wide as a third of its smaller flat side.
+        /// </summary>
+        private static bool RotorTouching(in CollisionWorld world, Entity self, in LocalTransform pose, in PhysicsCollider collider, out float3 point)
+        {
+            point = pose.Position;
+            if (!collider.Value.IsCreated) return false;
+            var box = collider.Value.Value.CalculateAabb();
+            var radius = math.max(0.5f, math.min(box.Extents.x, box.Extents.z) * 0.33f);
+            var top = new float3(box.Center.x, box.Max.y + radius * 0.5f, box.Center.z);
+            point = pose.TransformPoint(top);
+            return Touching(world, self, point, radius - 0.5f);
+        }
+
         private static bool Touching(in CollisionWorld world, Entity self, float3 centre, float radius)
         {
             var hits = new NativeList<DistanceHit>(8, Allocator.Temp);
