@@ -104,6 +104,14 @@ namespace Chopper.Editor.Setup
                 // Name the scene: without it the model can land in the scene that was open before the build.
                 standIn = (GameObject)PrefabUtility.InstantiatePrefab(model, UnityEngine.SceneManagement.SceneManager.GetActiveScene());
                 standIn.name = "Chopper Stand-in";
+                // The standard engine module on the engine socket: the boost jets come from its cylinders.
+                var engine = AssetDatabase.LoadAssetAtPath<GameObject>(EngineModel);
+                if (engine != null)
+                {
+                    var module = (GameObject)PrefabUtility.InstantiatePrefab(engine, standIn.scene);
+                    module.transform.SetParent(standIn.transform, false);
+                    module.transform.localPosition = new Vector3(0f, 1.1f, -1.85f);
+                }
             }
             else
             {
@@ -116,7 +124,8 @@ namespace Chopper.Editor.Setup
             return standIn.transform;
         }
 
-        private const string StandInModel = KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Chassis_Gunship.fbx";
+        private const string EngineModel = KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Engine_Standard.fbx";
+        private const string StandInModel =KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Chassis_Gunship.fbx";
 
         private static void Block(string name, Vector3 position, Vector3 size)
         {

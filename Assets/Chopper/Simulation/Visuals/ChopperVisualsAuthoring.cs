@@ -33,11 +33,11 @@ namespace Chopper.Simulation.Visuals
         public float3 LocalDirection;
 
         /// <summary>
-        /// One engine socket: the twin glowing nozzles of the chassis model, measured on the Kit02 gunship (nozzle
-        /// faces at +-0.51, 0.72, -2.18 with the engine socket at 0, 1.1, -1.85). They face straight back. Owner, 20 Nov:
-        /// the boost should look like a jet from these points. The effects bench uses the same points.
+        /// One engine socket: the rear ends of the engine module's twin cylinders (Kit02 Engine_Standard and
+        /// Engine_Boost: +-0.28, 0, -0.45 from the socket). Owner, 20 Nov: the boost jets come from these. They face
+        /// straight back. The effects bench uses the same points.
         /// </summary>
-        public static float3 Offset(float side) => new(0.51f * side, -0.38f, -0.36f);
+        public static float3 Offset(float side) => new(0.28f * side, 0f, -0.5f);
         public static float3 Direction(float side) => new(0f, 0f, -1f);
     }
 
