@@ -43,11 +43,15 @@ namespace Chopper.Editor.Setup
         /// <summary>Slow to react, poor aim, forgets gadgets.</summary>
         private static BotProfile EnsureRookie() => EnsureProfile(RookiePath, skill =>
         {
-            skill.ReactionSeconds = 0.5f;
-            skill.AimErrorDegrees = 6f;
-            skill.AimSettleSeconds = 2.2f;
+            // 19 Nov: aim error 6 degrees alone hit as often as Default (16 % vs 15 %), so the Rookie also sees less,
+            // reacts later, settles its aim slower and runs its gun hotter (more overheats).
+            skill.ReactionSeconds = 0.7f;
+            skill.AimErrorDegrees = 10f;
+            skill.AimSettleSeconds = 3.5f;
             skill.FlareTimingScale = 1.4f;
             skill.MistakeChance = 0.3f;
+            skill.VisionRange = 650f;
+            skill.GunHeatRelease = 0.95f;
         });
 
         /// <summary>Fast, steady aim, few mistakes.</summary>
