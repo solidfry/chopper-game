@@ -57,6 +57,39 @@ namespace Chopper.Simulation.Session
             }
             var respawnRule = rules.Respawn(mode);
 
+            // Capture the Nuke, new round: every chopper leaves and its player spawns again on the team's base grid,
+            // all at the same moment (Match.NukeBaseSpawn.RoundStartDelay).
+            if (!SystemAPI.QueryBuilder().WithAll<Match.NukeRoundStart>().Build().IsEmpty)
+            {
+                foreach (var (_, start) in SystemAPI.Query<RefRO<Match.NukeRoundStart>>().WithEntityAccess()) ecb.DestroyEntity(start);
+                foreach (var (owner, chopper) in SystemAPI.Query<RefRO<ConnectionOwner>>().WithAll<Health>().WithEntityAccess())
+                {
+                    var connection = owner.ValueRO.Value;
+                    if (SystemAPI.HasBuffer<LinkedEntityGroup>(connection))
+                    {
+                        var group = SystemAPI.GetBuffer<LinkedEntityGroup>(connection);
+                        for (var i = group.Length - 1; i >= 0; i--)
+                            if (group[i].Value == chopper) group.RemoveAt(i);
+                    }
+                    ecb.DestroyEntity(chopper);
+                }
+                foreach (var (_, player) in SystemAPI.Query<RefRO<PlayerId>>().WithAll<Match.Team>().WithEntityAccess())
+                {
+                    var timer = new RespawnTimer { Remaining = Match.NukeBaseSpawn.RoundStartDelay };
+                    if (SystemAPI.HasComponent<RespawnTimer>(player)) SystemAPI.SetComponent(player, timer);
+                    else ecb.AddComponent(player, timer);
+                    if (SystemAPI.HasComponent<NetworkId>(player))
+                    {
+                        var rpc = ecb.CreateEntity();
+                        ecb.AddComponent(rpc, new Match.RespawnTimeRpc { Seconds = timer.Remaining });
+                        ecb.AddComponent(rpc, new SendRpcCommandRequest { TargetConnection = player });
+                    }
+                }
+                ecb.Playback(state.EntityManager);
+                ecb.Dispose();
+                return;
+            }
+
             foreach (var (health, owner, chopper) in SystemAPI.Query<RefRO<Health>, RefRO<ConnectionOwner>>().WithEntityAccess())
             {
                 if (!health.ValueRO.IsDead) continue;
@@ -119,7 +152,9 @@ namespace Chopper.Simulation.Session
                 var position = ChopperSpawning.FallbackPosition(spawner, Bots.BotIds.IsBot(id) ? 9 + Bots.BotIds.Slot(id) : id);
                 var rotation = spawner.Rotation;
                 var team = SystemAPI.HasComponent<Match.Team>(connection) ? SystemAPI.GetComponent<Match.Team>(connection).Value : Match.TeamRules.None;
-                var pick = placement.Choose(ref position, ref rotation, team);
+                var pick = mode == Match.MatchMode.CaptureTheNuke && placement.AtBase(ref position, ref rotation, team)
+                    ? SpawnPick.Safe
+                    : placement.Choose(ref position, ref rotation, team);
                 if (pick == SpawnPick.None && placement.Points.Length > 0)
                     UnityEngine.Debug.LogWarning($"[Spawn] Player {id}: no spawn point can be used; the spawner's own point is used.");
                 else if (pick == SpawnPick.Relaxed)
@@ -167,7 +202,10 @@ namespace Chopper.Simulation.Session
                 Candidates = new NativeList<SpawnCandidate>(16, Allocator.Temp),
                 Used = new NativeList<bool>(16, Allocator.Temp),
                 Threats = new NativeList<SpawnThreat>(16, Allocator.Temp),
+                Bases = new NativeList<Match.NukeBase>(2, Allocator.Temp),
+                PadPosition = SystemAPI.TryGetSingleton<Match.NukePad>(out var pad) ? pad.Position : float3.zero,
             };
+            foreach (var zone in SystemAPI.Query<RefRO<Match.NukeBase>>()) placement.Bases.Add(zone.ValueRO);
 
             foreach (var (point, use, entity) in SystemAPI.Query<RefRO<SpawnPoint>, RefRO<SpawnPointUse>>().WithEntityAccess())
             {
@@ -201,6 +239,30 @@ namespace Chopper.Simulation.Session
             public NativeList<SpawnCandidate> Candidates;
             public NativeList<bool> Used;
             public NativeList<SpawnThreat> Threats;
+            /// <summary>Capture the Nuke: the base zones (team spawns) and the pad they face.</summary>
+            public NativeList<Match.NukeBase> Bases;
+            public float3 PadPosition;
+
+            /// <summary>
+            /// Capture the Nuke: the first free slot of the team's base grid (<see cref="Match.NukeBaseSpawn"/>). False when
+            /// the team has no base (then the normal spawn points are used).
+            /// </summary>
+            public bool AtBase(ref float3 position, ref quaternion rotation, byte team)
+            {
+                for (var b = 0; b < Bases.Length; b++)
+                {
+                    if (Bases[b].Team != team) continue;
+                    var home = Bases[b].Position;
+                    var occupied = new NativeArray<float3>(Threats.Length, Allocator.Temp);
+                    for (var i = 0; i < Threats.Length; i++) occupied[i] = Threats[i].Position;
+                    var slot = Match.NukeBaseSpawn.FreeSlot(home, PadPosition - home, occupied);
+                    occupied.Dispose();
+                    Match.NukeBaseSpawn.Slot(home, PadPosition - home, slot, out position, out rotation);
+                    Threats.Add(new SpawnThreat { Position = position, Enemy = true, Team = team });
+                    return true;
+                }
+                return false;
+            }
 
             /// <summary>
             /// Sets the place of the best point (no change when none can be used). The chosen point counts as a chopper
@@ -241,6 +303,7 @@ namespace Chopper.Simulation.Session
                 Candidates.Dispose();
                 Used.Dispose();
                 Threats.Dispose();
+                Bases.Dispose();
             }
         }
     }

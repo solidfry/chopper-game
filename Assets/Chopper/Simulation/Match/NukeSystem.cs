@@ -111,6 +111,7 @@ namespace Chopper.Simulation.Match
                     case NukeEvent.Detonated:
                         var won = ecb.CreateEntity();
                         ecb.AddComponent(won, new NukeRoundWon { Team = s.DetonatedBy });
+                        ecb.AddComponent<NukeRoundStart>(ecb.CreateEntity());
                         UnityEngine.Debug.Log($"[Nuke] Team {s.DetonatedBy} set off the nuke in team {zoneTeam}'s base: round won.");
                         // Next round: a new nuke on the pad.
                         s = NukeRules.AtSpawn;

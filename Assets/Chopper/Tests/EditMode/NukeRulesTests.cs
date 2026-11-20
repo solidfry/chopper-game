@@ -161,5 +161,26 @@ namespace Chopper.Tests
             Assert.That(winch.CarrySpeed, Is.GreaterThan(plain.CarrySpeed));
             Assert.That(NukeHookConfig.From(0f, 0f, 0f).Seconds, Is.EqualTo(10f), "0 = an old asset: no change.");
         }
+
+        [Test]
+        public void BaseSpawn_GridFacesThePad_SlotsAreSpacedAndFreeSlotSkipsTaken()
+        {
+            var home = new Unity.Mathematics.float3(-350, 0, 150);
+            var towardsPad = new Unity.Mathematics.float3(350, 0, -530);
+            NukeBaseSpawn.Slot(home, towardsPad, 0, out var a, out var rotation);
+            NukeBaseSpawn.Slot(home, towardsPad, 1, out var b, out _);
+            NukeBaseSpawn.Slot(home, towardsPad, 3, out var backRow, out _);
+            Assert.That(Unity.Mathematics.math.distance(a, b), Is.EqualTo(NukeBaseSpawn.Spacing).Within(0.01f));
+            Assert.That(a.y, Is.EqualTo(NukeBaseSpawn.Height));
+            var forward = Unity.Mathematics.math.mul(rotation, new Unity.Mathematics.float3(0, 0, 1));
+            Assert.That(Unity.Mathematics.math.dot(forward, Unity.Mathematics.math.normalize(towardsPad)), Is.GreaterThan(0.99f), "Faces the pad.");
+            Assert.That(Unity.Mathematics.math.dot(backRow - a, forward), Is.LessThan(0f), "The second row is behind.");
+
+            var occupied = new NativeArray<Unity.Mathematics.float3>(2, Allocator.Temp);
+            occupied[0] = a;
+            occupied[1] = b;
+            Assert.That(NukeBaseSpawn.FreeSlot(home, towardsPad, occupied), Is.EqualTo(2));
+            occupied.Dispose();
+        }
     }
 }
