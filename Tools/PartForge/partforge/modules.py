@@ -9,7 +9,7 @@ game reads the barrel tip (the model's largest z) as the muzzle, and the audit c
 """
 import math
 
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from .geo import Builder, rot_x, rot_y, rot_z
 from .parts import C, Part
@@ -607,6 +607,72 @@ def nuke():
     return Part("Prop_Nuke", "module", b, slot="Prop")
 
 
+def team_base(name, accent):
+    """Capture the Nuke team base (owner, 20 Nov: "the bases should look good"). Origin = the base centre on the
+    ground; +z faces the nuke pad. The apron holds the 3 x 4 spawn grid (NukeBaseSpawn: 16 m apart, row 0 at the
+    origin, back rows towards -z), each slot a marked pad with team lights; a control tower, a hangar, fuel tanks and
+    light masts frame it. accent: the team glow swatch."""
+    b = Builder()
+    con, dark, haz, steel, a = C("concrete"), C("hull_dark"), C("hazard"), C("steel"), C(accent)
+    spacing, cols, rows = 16.0, 3, 4
+    # Apron: one slab, the grid plus room around it; a darker taxi band in front (the side the team flies out).
+    width, front, back = 64.0, 14.0, -(rows - 1) * spacing - 14.0
+    depth = front - back
+    b.box((0, 0.15, (front + back) / 2), (width, 0.3, depth), con)
+    # Ground plinth under the whole site: the tower, hangar, tanks and masts stand on it (one connected model).
+    b.box((0, 0.08, (front + back - 27.0) / 2), (width + 26.0, 0.16, depth + 27.0), dark)
+    b.box((0, 0.31, front - 3.0), (width - 4.0, 0.02, 4.0), dark)
+    # Team edge lights round the apron, and chevrons pointing at the pad.
+    for x in (-width / 2 + 0.4, width / 2 - 0.4):
+        b.box((x, 0.36, (front + back) / 2), (0.25, 0.1, depth - 2.0), a)
+    for z in (front - 0.4, back + 0.4):
+        b.box((0, 0.36, z), (width - 2.0, 0.1, 0.25), a)
+    for i, x in enumerate((-12.0, 0.0, 12.0)):
+        for k in range(3):
+            z = front - 1.5 - k * 1.6
+            for side in (-1, 1):
+                b.box((x + side * 1.1, 0.33, z), (2.4, 0.03, 0.45), a, rotation=Matrix.Rotation(math.radians(side * 35), 3, 'Y'))
+    # Spawn pads: a dark disc, a hazard ring, a team light at four points.
+    for r in range(rows):
+        for c in range(cols):
+            x, z = (c - (cols - 1) / 2) * spacing, -r * spacing
+            b.cylinder((x, 0.3, z), (x, 0.36, z), 6.2, haz, segments=24)
+            b.cylinder((x, 0.36, z), (x, 0.4, z), 5.6, dark, segments=24)
+            b.box((x - 1.4, 0.42, z), (0.5, 0.03, 3.6), haz)
+            b.box((x + 1.4, 0.42, z), (0.5, 0.03, 3.6), haz)
+            b.box((x, 0.42, z), (2.3, 0.03, 0.5), haz)
+            for ang in range(4):
+                dx, dz = [(0, 1), (1, 0), (0, -1), (-1, 0)][ang]
+                b.box((x + dx * 6.4, 0.36, z + dz * 6.4), (0.4, 0.12, 0.4), a)
+    # Control tower (left of the grid): shaft, glass cab, a team band, mast and beacon.
+    tx, tz = -width / 2 - 7.0, -spacing
+    b.box((tx, 7.5, tz), (6.0, 15.0, 6.0), con)
+    b.box((tx, 15.2, tz), (8.0, 0.4, 8.0), dark)
+    b.box((tx, 17.0, tz), (7.4, 3.2, 7.4), C("glass"))
+    b.box((tx, 18.8, tz), (8.2, 0.5, 8.2), dark)
+    b.box((tx, 14.2, tz), (6.1, 0.6, 6.1), a)
+    b.cylinder((tx, 18.9, tz), (tx, 25.0, tz), 0.15, steel, segments=6, cap_end=C("warning"))
+    # Hangar behind the grid: a long shed with a dark door and team strip.
+    hz = back - 9.0
+    b.box((0, 6.0, hz), (40.0, 12.0, 16.0), C("hull"))
+    b.box((0, 12.6, hz), (41.0, 1.2, 17.0), dark)
+    b.box((0, 4.5, hz + 8.05), (24.0, 9.0, 0.2), dark)
+    b.box((0, 9.1, hz + 8.05), (24.0, 0.4, 0.3), a)
+    # Fuel tanks (right of the grid) with hazard bands.
+    for i, z in enumerate((-4.0, -16.0, -28.0)):
+        fx = width / 2 + 7.0
+        b.cylinder((fx, 0.0, z), (fx, 7.0, z), 3.6, C("hull_light"), segments=20, cap_end=C("hull_light"))
+        b.cylinder((fx, 3.6, z), (fx, 4.4, z), 3.65, haz, segments=20)
+    # Light masts at the four apron corners, sodium lamps facing in.
+    for x in (-width / 2 - 1.5, width / 2 + 1.5):
+        for z in (front - 1.0, back - 1.5):
+            b.cylinder((x, 0.0, z), (x, 14.0, z), 0.25, steel, segments=8)
+            hx = x - math.copysign(0.6, x)
+            b.box((hx, 14.2, z), (1.6, 0.6, 1.0), dark)
+            b.box((hx, 13.85, z), (1.3, 0.1, 0.8), C("sodium"))
+    return Part(name, "module", b, slot="Prop")
+
+
 def all_modules():
     return [
         minigun(), autocannon(), pulse_laser(),
@@ -629,4 +695,5 @@ def all_modules():
         engine("Engine_Boost", [162], 2, "neon_pink", 0.15),
         engine("Engine_Turbine", [163], 1, "exhaust", 0.22),
         turret_base(), turret_head(), turret_guns(), nuke(),
+        team_base("Prop_Base_Team1", "neon_cyan"), team_base("Prop_Base_Team2", "warning"),
     ]

@@ -189,17 +189,29 @@ namespace Chopper.Editor.Setup
         private static int EnsureNukePad(Scene scene)
         {
             var pad = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukePadAuthoring>(true)).FirstOrDefault();
+            var basePositions = DefaultBasePositions;
             if (pad == null)
             {
+                // A new map: look for good sites (open, flat, clear sky; bases out of turret reach).
+                var padPosition = DefaultPadPosition;
+                var bounds = UnityEngine.Object.FindAnyObjectByType<ArenaBoundsAuthoring>();
+                if (bounds != null && NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, out var sites))
+                {
+                    padPosition = sites.Pad;
+                    basePositions = new[] { sites.Base1, sites.Base2 };
+                    Debug.Log($"[Setup] Capture the Nuke sites for {scene.name}: pad {sites.Pad}, bases {sites.Base1} and {sites.Base2}.");
+                }
+                else Debug.LogWarning($"[Setup] No Capture the Nuke sites found for {scene.name}: default spots used; check them.");
                 var go = new GameObject("NukePad");
                 SceneManager.MoveGameObjectToScene(go, scene);
-                go.transform.position = DefaultPadPosition;
+                go.transform.position = padPosition;
                 pad = go.AddComponent<NukePadAuthoring>();
                 Undo.RegisterCreatedObjectUndo(go, "Add nuke pad");
             }
 
             EnsureNuke(scene, pad.transform.position);
-            EnsureBases(scene);
+            EnsureBases(scene, basePositions);
+            EnsureBaseLooks(scene, pad.transform.position);
 
             // Turrets already placed: move them onto the ring (owner 20 Nov: too tight).
             var placed = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TurretAuthoring>(true)).ToArray();
@@ -249,14 +261,50 @@ namespace Chopper.Editor.Setup
             nuke.transform.position = (Vector3)NukeZones.Resting(padPosition);
         }
 
-        private static void EnsureBases(Scene scene)
+        /// <summary>
+        /// The team base model (PartForge Prop_Base_Team1 / Team2: apron with the 12 spawn pads, tower, hangar, tanks,
+        /// light masts) under each base, facing the pad, with mesh colliders so the buildings are solid. Kept if present.
+        /// </summary>
+        private static void EnsureBaseLooks(Scene scene, Vector3 padPosition)
+        {
+            foreach (var zone in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukeBaseAuthoring>(true)))
+            {
+                if (zone.transform.Find("Look") != null) continue;
+                var modelPath = $"{KitAssets.KitsFolder}/Kit02/Models/Prop_Base_Team{zone.Team}.fbx";
+                // Mesh colliders bake from the mesh data: the model must stay readable.
+                if (AssetImporter.GetAtPath(modelPath) is ModelImporter importer && !importer.isReadable)
+                {
+                    importer.isReadable = true;
+                    importer.SaveAndReimport();
+                }
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+                if (model == null)
+                {
+                    Debug.LogWarning($"Setup: Prop_Base_Team{zone.Team} model missing. Export the kit from PartForge.");
+                    continue;
+                }
+                var look = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
+                look.name = "Look";
+                look.transform.SetParent(zone.transform, false);
+                var toPad = padPosition - zone.transform.position;
+                toPad.y = 0f;
+                look.transform.rotation = toPad.sqrMagnitude > 1f ? Quaternion.LookRotation(toPad.normalized) : Quaternion.identity;
+                look.transform.localPosition = Vector3.zero;
+                foreach (var filter in look.GetComponentsInChildren<MeshFilter>(true))
+                    filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
+                Undo.RegisterCreatedObjectUndo(look, "Add base look");
+                EditorSceneManager.MarkSceneDirty(scene);
+            }
+        }
+
+        private static void EnsureBases(Scene scene, Vector3[] positions)
         {
             if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<NukeBaseAuthoring>(true) != null)) return;
-            for (var i = 0; i < DefaultBasePositions.Length; i++)
+            for (var i = 0; i < positions.Length; i++)
             {
                 var go = new GameObject($"NukeBase_Team{i + 1}");
                 SceneManager.MoveGameObjectToScene(go, scene);
-                go.transform.position = DefaultBasePositions[i];
+                go.transform.position = positions[i];
                 go.AddComponent<NukeBaseAuthoring>().Team = (byte)(i + 1);
                 Undo.RegisterCreatedObjectUndo(go, "Add nuke base");
             }
