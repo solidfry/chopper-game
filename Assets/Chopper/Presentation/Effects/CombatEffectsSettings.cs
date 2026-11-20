@@ -60,6 +60,11 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("BulletRed has an explosion sound per bullet. Off: the gun fire sound comes from the Sound Library instead.")]
         private bool gunBulletAudio;
 
+        [Header("Capture the Nuke pick-up zone")]
+        [SerializeField, Tooltip("Chopper/ZoneDome material for the dome round a free nuke (radius = your own hook range). " +
+                                 "Empty: no dome.")]
+        private Material nukeZoneMaterial;
+
         [Header("Rotor downwash (dust blown up under low choppers)")]
         [SerializeField, Tooltip("Particle material for the dust (URP Particles Unlit, transparent, soft round texture). " +
                                  "Empty: no downwash.")]
@@ -214,6 +219,7 @@ namespace Chopper.Presentation.Effects
         public float FlareInterval => flareInterval;
         public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
         public bool GunBulletAudio => gunBulletAudio;
+        public Material NukeZoneMaterial => nukeZoneMaterial;
         public Material DownwashMaterial => downwashMaterial;
         public float DownwashHeight => downwashHeight;
         public Vector2 DownwashRadius => downwashRadius;

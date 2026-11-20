@@ -62,7 +62,10 @@ namespace Chopper.Presentation.Hud
                 var selfTeam = SystemAPI.HasComponent<Simulation.Match.Team>(self) ? SystemAPI.GetComponent<Simulation.Match.Team>(self).Value : (byte)0;
                 // Objectives first: they always fit and always show.
                 if (context.Match.Mode == Simulation.Match.MatchMode.CaptureTheNuke)
-                    AddObjectives(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, selfTeam);
+                    AddObjectives(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, selfTeam,
+                        SystemAPI.HasComponent<Simulation.Match.NukeHookConfig>(self)
+                            ? SystemAPI.GetComponent<Simulation.Match.NukeHookConfig>(self).Range
+                            : Simulation.Match.NukeHookConfig.Base.Range);
                 AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping, selfTeam);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
                 UpdateGunLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO);
@@ -119,7 +122,8 @@ namespace Chopper.Presentation.Hud
         /// <summary>
         /// Capture the Nuke: the nuke (any range; bar = hook, then arm, then defuse progress) and both base zones.
         /// </summary>
-        private void AddObjectives(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, byte selfTeam)
+        private void AddObjectives(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, byte selfTeam,
+            float hookRange)
         {
             var heading = math.atan2(forward.x, forward.z);
             foreach (var (nuke, pose) in SystemAPI.Query<RefRO<Simulation.Match.NukeState>, RefRO<LocalToWorld>>())
@@ -130,7 +134,10 @@ namespace Chopper.Presentation.Hud
                     : s.ArmedBy != 0 ? (s.DefuseProgress > 0f ? 1f - s.DefuseProgress : 1f)
                     : s.ArmProgress > 0f ? s.ArmProgress
                     : -1f;
-                model.Add(Objective(WorldMarkerKind.Nuke, camera, pose.ValueRO.Position, position, heading, bar));
+                var marker = Objective(WorldMarkerKind.Nuke, camera, pose.ValueRO.Position, position, heading, bar);
+                marker.InRange = s.Phase is Simulation.Match.NukePhase.AtSpawn or Simulation.Match.NukePhase.Dropped &&
+                                 math.distance(pose.ValueRO.Position, position) <= hookRange;
+                model.Add(marker);
             }
             foreach (var zone in SystemAPI.Query<RefRO<Simulation.Match.NukeBase>>())
             {

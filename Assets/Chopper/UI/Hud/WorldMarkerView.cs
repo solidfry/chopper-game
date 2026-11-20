@@ -136,10 +136,13 @@ namespace Chopper.UI.Hud
             if (!marker.OnScreen) slot.Arrow.style.rotate = new Rotate(Angle.Degrees(marker.EdgeAngleDegrees));
             if (marker.HealthFraction >= 0f) slot.HealthFill.style.width = Length.Percent(marker.HealthFraction * 100f);
 
-            // Text only when it changes: no string per marker per frame.
-            if (slot.ShownDistance == marker.Distance) return;
-            slot.ShownDistance = marker.Distance;
-            slot.Distance.text = TabularText.Wrap(marker.Distance.ToString());
+            // Text only when it changes: no string per marker per frame. The nuke says what it is, and when you can hook it.
+            var key = marker.Kind != WorldMarkerKind.Nuke ? marker.Distance : marker.InRange ? -2 : -3 - marker.Distance;
+            if (slot.ShownDistance == key) return;
+            slot.ShownDistance = key;
+            slot.Distance.text = marker.Kind != WorldMarkerKind.Nuke ? TabularText.Wrap(marker.Distance.ToString())
+                : marker.InRange ? "IN RANGE · HOLD"
+                : "NUKE " + TabularText.Wrap(marker.Distance.ToString());
         }
     }
 }

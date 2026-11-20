@@ -38,6 +38,8 @@ namespace Chopper.Presentation.Hud
         public bool IsLockTarget;
         /// <summary>Shown by the own pilot's Ping (OVERWATCH): beyond the usual range, health at any range.</summary>
         public bool Pinged;
+        /// <summary>Capture the Nuke: the local chopper is inside its own hook range of this nuke (it can hook).</summary>
+        public bool InRange;
     }
 
     /// <summary>
