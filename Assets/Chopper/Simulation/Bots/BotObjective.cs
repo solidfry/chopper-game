@@ -20,6 +20,17 @@ namespace Chopper.Simulation.Bots
         public float3 Base2;
     }
 
+    /// <summary>A live gun turret, as the bots see it (a ground target).</summary>
+    public struct BotTurretInfo
+    {
+        public Entity Entity;
+        /// <summary>Aim point (the gun head).</summary>
+        public float3 Position;
+        public float Health01;
+        /// <summary><see cref="Combat.TurretConfig.Team"/> (0 = shoots everyone).</summary>
+        public byte Team;
+    }
+
     /// <summary>
     /// Pure objective choice for a bot (Capture the Nuke, plan section 7 step 5): where to fly when no fight needs it.
     /// Carrier: home base until armed, then the enemy base. Nuke free: hover over it to hook it. Team mate carries:
@@ -37,6 +48,11 @@ namespace Chopper.Simulation.Bots
         public const float FocusRange = 250f;
         /// <summary>This close to a free nuke, a bot keeps hooking even in a fight, metres.</summary>
         public const float HookCommitRange = 60f;
+        /// <summary>
+        /// Target score cost of a turret against a chopper, metres: an enemy chopper this much further away is still
+        /// picked first (owner, 20 Nov: "prioritise the turrets or nearby enemies").
+        /// </summary>
+        public const float TurretScorePenalty = 150f;
         /// <summary>Escorts fly this far above the carrier.</summary>
         public const float EscortHeight = 15f;
 

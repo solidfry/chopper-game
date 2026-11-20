@@ -25,6 +25,8 @@ namespace Chopper.Simulation.Bots
         public bool Hold;
         /// <summary>Capture the Nuke: the nuke and the bases (not active in other modes).</summary>
         public BotObjectiveInfo Objective;
+        /// <summary>Live turrets (bots shoot hostile ones; empty when there are none).</summary>
+        public NativeArray<BotTurretInfo> Turrets;
     }
 
     /// <summary>A live chopper, as the bots see it.</summary>
@@ -187,7 +189,7 @@ namespace Chopper.Simulation.Bots
             }
             else
             {
-                var contacts = Contacts(chopper, ownerId, sense.Position, choppers, frame.World, handling);
+                var contacts = Contacts(chopper, ownerId, sense.Position, choppers, frame.Turrets, frame.World, handling);
                 var situation = Situation(chopper, transform, velocity, missiles);
                 brain.Think(situation, contacts.AsArray(), handling, frame.Now, frame.DeltaTime, ref order, out var intent);
                 contacts.Dispose();
@@ -200,7 +202,11 @@ namespace Chopper.Simulation.Bots
                     if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
                 var objective = BotObjective.Choose(frame.Objective, chopper, selfTeam, out var objectiveGoal, out var objectiveRadius);
                 var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
-                var farFight = brain.Mode == BotMode.Attack &&
+                // A turret target is part of the objective (it guards the pad): keep shooting it.
+                var turretTarget = false;
+                for (var i = 0; i < frame.Turrets.Length; i++)
+                    if (frame.Turrets[i].Entity == brain.Target) turretTarget = true;
+                var farFight = brain.Mode == BotMode.Attack && !turretTarget &&
                                (math.distancesq(brain.TargetPosition, sense.Position) > BotObjective.FocusRange * BotObjective.FocusRange ||
                                 (objective == BotObjective.Kind.Hook && math.distancesq(objectiveGoal, sense.Position) < BotObjective.HookCommitRange * BotObjective.HookCommitRange));
                 if (objective != BotObjective.Kind.None && (intent.Wander || farFight || (carrying && brain.Mode != BotMode.Evade)))
@@ -248,7 +254,7 @@ namespace Chopper.Simulation.Bots
 
         /// <summary>Enemy choppers (all others in free for all; the other team in team modes) with distance and line of sight.</summary>
         private static NativeList<BotContact> Contacts(Entity self, int ownerId, float3 position, in NativeArray<BotChopperInfo> choppers,
-            in CollisionWorld world, in BotHandling handling)
+            in NativeArray<BotTurretInfo> turrets, in CollisionWorld world, in BotHandling handling)
         {
             var contacts = new NativeList<BotContact>(math.max(choppers.Length, 1), Allocator.Temp);
             var selfTeam = Match.TeamRules.None;
@@ -266,6 +272,22 @@ namespace Chopper.Simulation.Bots
                     Health01 = other.Health01,
                     Distance = distance,
                     InSight = distance < handling.VisionRange && BotSensing.InSight(world, position, other.Position),
+                });
+            }
+            for (var i = 0; i < turrets.Length; i++)
+            {
+                var turret = turrets[i];
+                if (!Combat.TurretRules.IsEnemy(turret.Team, selfTeam)) continue;
+                var distance = math.distance(position, turret.Position);
+                if (distance > handling.VisionRange) continue;
+                contacts.Add(new BotContact
+                {
+                    Entity = turret.Entity,
+                    Position = turret.Position,
+                    Health01 = turret.Health01,
+                    Distance = distance,
+                    InSight = BotSensing.InSight(world, position, turret.Position),
+                    Ground = true,
                 });
             }
             return contacts;

@@ -64,6 +64,21 @@ namespace Chopper.Simulation.Bots
                 PlansLeft = PlansPerTick,
                 Hold = hold,
             };
+            // Live turrets: ground targets for the bots.
+            var turrets = new NativeList<BotTurretInfo>(4, Allocator.Temp);
+            foreach (var (turret, config, health, pose, entity) in SystemAPI
+                         .Query<RefRO<TurretState>, RefRO<TurretConfig>, RefRO<Health>, RefRO<LocalTransform>>().WithEntityAccess())
+            {
+                if (turret.ValueRO.Down || health.ValueRO.IsDead) continue;
+                turrets.Add(new BotTurretInfo
+                {
+                    Entity = entity,
+                    Position = pose.ValueRO.Position + math.mul(pose.ValueRO.Rotation, new float3(0f, 2f, 0f)),
+                    Health01 = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f,
+                    Team = config.ValueRO.Team,
+                });
+            }
+            frame.Turrets = turrets.AsArray();
             // Capture the Nuke: the objective for the bots.
             if (SystemAPI.TryGetSingleton<MatchState>(out var mode) && mode.Mode == MatchMode.CaptureTheNuke)
             {
@@ -132,6 +147,7 @@ namespace Chopper.Simulation.Bots
             choppers.Dispose();
             owned.Dispose();
             missiles.Dispose();
+            turrets.Dispose();
         }
     }
 }

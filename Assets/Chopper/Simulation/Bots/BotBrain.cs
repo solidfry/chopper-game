@@ -29,6 +29,8 @@ namespace Chopper.Simulation.Bots
         public float Distance;
         /// <summary>A clear line from the bot (within vision range).</summary>
         public bool InSight;
+        /// <summary>A ground target (a turret): scored below a chopper at the same distance.</summary>
+        public bool Ground;
     }
 
     /// <summary>What the bot knows about itself and the threats on it this tick (gathered by <see cref="BotPilotSystem"/>).</summary>
@@ -263,7 +265,8 @@ namespace Chopper.Simulation.Bots
                 var c = contacts[i];
                 if (!c.InSight && c.Distance > h.HearingRange) continue;
                 var ahead = math.dot(s.Forward, math.normalizesafe(c.Position - s.Position));
-                var score = -c.Distance + (1f - c.Health01) * 150f + ahead * 120f + (c.Entity == Target ? 200f : 0f) + (c.InSight ? 100f : 0f);
+                var score = -c.Distance + (1f - c.Health01) * 150f + ahead * 120f + (c.Entity == Target ? 200f : 0f) + (c.InSight ? 100f : 0f) -
+                            (c.Ground ? BotObjective.TurretScorePenalty : 0f);
                 if (score <= bestScore) continue;
                 bestScore = score;
                 best = c.Entity;
