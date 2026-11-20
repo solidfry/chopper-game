@@ -53,6 +53,14 @@ namespace Chopper.Simulation.Bots
         /// picked first (owner, 20 Nov: "prioritise the turrets or nearby enemies").
         /// </summary>
         public const float TurretScorePenalty = 150f;
+        /// <summary>
+        /// Group assault (owner, 20 Nov): with live turrets on the pad, a bot waits this far from the pad (on its home side,
+        /// outside turret range) until a team mate is within <see cref="GroupRadius"/>, then both go in.
+        /// </summary>
+        public const float StagingDistance = 330f;
+        public const float GroupRadius = 90f;
+        /// <summary>A bot already this close to the pad keeps going (no turning back to wait).</summary>
+        public const float CommittedDistance = 200f;
         /// <summary>Escorts fly this far above the carrier.</summary>
         public const float EscortHeight = 15f;
 
@@ -64,6 +72,20 @@ namespace Chopper.Simulation.Bots
             Deliver,
             Escort,
             Chase,
+        }
+
+        /// <summary>
+        /// Group assault: true (and the staging point) when the bot should hold for a team mate before the pad.
+        /// <paramref name="mateNear"/>: a live team mate within <see cref="GroupRadius"/>; <paramref name="hasMates"/>: any live team mate.
+        /// </summary>
+        public static bool Stage(in BotObjectiveInfo info, byte team, float3 position, bool turretsUp, bool hasMates, bool mateNear,
+            out float3 staging)
+        {
+            var home = team == 1 ? info.Base1 : info.Base2;
+            var toHome = math.normalizesafe(new float3(home.x - info.NukePosition.x, 0f, home.z - info.NukePosition.z));
+            staging = info.NukePosition + toHome * StagingDistance + new float3(0f, BaseHeight, 0f);
+            if (!turretsUp || !hasMates || mateNear) return false;
+            return math.distance(position.xz, info.NukePosition.xz) > CommittedDistance;
         }
 
         public static Kind Choose(in BotObjectiveInfo info, Entity self, byte team, out float3 goal, out float arriveRadius)

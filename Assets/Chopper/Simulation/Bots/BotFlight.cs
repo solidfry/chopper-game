@@ -202,6 +202,24 @@ namespace Chopper.Simulation.Bots
                     if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
                 var objective = BotObjective.Choose(frame.Objective, chopper, selfTeam, out var objectiveGoal, out var objectiveRadius);
                 var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
+                if (objective == BotObjective.Kind.Hook)
+                {
+                    var turretsUp = false;
+                    for (var i = 0; i < frame.Turrets.Length; i++)
+                        if (Combat.TurretRules.IsEnemy(frame.Turrets[i].Team, selfTeam)) turretsUp = true;
+                    bool hasMates = false, mateNear = false;
+                    for (var i = 0; i < choppers.Length; i++)
+                    {
+                        if (choppers[i].Entity == chopper || choppers[i].Team != selfTeam || selfTeam == Match.TeamRules.None) continue;
+                        hasMates = true;
+                        if (math.distancesq(choppers[i].Position, sense.Position) < BotObjective.GroupRadius * BotObjective.GroupRadius) mateNear = true;
+                    }
+                    if (BotObjective.Stage(frame.Objective, selfTeam, sense.Position, turretsUp, hasMates, mateNear, out var staging))
+                    {
+                        objectiveGoal = staging;
+                        objectiveRadius = 15f;
+                    }
+                }
                 // A turret target is part of the objective (it guards the pad): keep shooting it.
                 var turretTarget = false;
                 for (var i = 0; i < frame.Turrets.Length; i++)

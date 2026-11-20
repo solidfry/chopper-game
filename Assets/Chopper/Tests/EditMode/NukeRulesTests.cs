@@ -216,5 +216,23 @@ namespace Chopper.Tests
             info.Active = false;
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.None));
         }
+
+        [Test]
+        public void BotObjective_Stage_HoldsForAMateOnlyWhileTurretsAreUp()
+        {
+            var info = new Chopper.Simulation.Bots.BotObjectiveInfo
+            {
+                Active = true, NukePosition = new Unity.Mathematics.float3(0, 1, -380),
+                Base1 = new Unity.Mathematics.float3(-350, 0, 150), Base2 = new Unity.Mathematics.float3(350, 0, 150),
+            };
+            var far = new Unity.Mathematics.float3(-300, 30, 100);
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, true, false, out var staging), Is.True);
+            Assert.That(Unity.Mathematics.math.distance(staging.xz, info.NukePosition.xz), Is.EqualTo(330f).Within(0.1f));
+            Assert.That(staging.x, Is.LessThan(0f), "On the home side.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, true, true, out _), Is.False, "Mate near: go.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, false, true, false, out _), Is.False, "No turrets: go.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, false, false, out _), Is.False, "Alone: go.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, new Unity.Mathematics.float3(0, 20, -250), true, true, false, out _), Is.False, "Committed.");
+        }
     }
 }
