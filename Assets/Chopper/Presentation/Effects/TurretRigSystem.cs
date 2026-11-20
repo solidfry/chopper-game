@@ -10,12 +10,10 @@ namespace Chopper.Presentation.Effects
     /// Client only. Turns each turret's head (yaw) and guns (pitch) to the replicated <see cref="TurretState.Aim"/>;
     /// a destroyed turret droops its guns. The children keep their baked positions; only their rotation is set.
     /// </summary>
-    [BurstCompile]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial struct TurretRigSystem : ISystem
     {
-        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var transforms = SystemAPI.GetComponentLookup<LocalTransform>();
