@@ -32,6 +32,8 @@ namespace Chopper.Simulation.Loadout
         public CountermeasureConfig Countermeasure;
         /// <summary>No steps = no optics module.</summary>
         public OpticsConfig Optics;
+        /// <summary>Capture the Nuke: hook time, reach and carry speed (the winch makes them better).</summary>
+        public Match.NukeHookConfig NukeHook = Match.NukeHookConfig.Base;
     }
 
     /// <summary>
@@ -84,6 +86,7 @@ namespace Chopper.Simulation.Loadout
                 BoostStartEnergy = flight.BoostStartEnergy,
             };
             built.Health = stats.Health;
+            built.NukeHook = Match.NukeHookConfig.From(stats.HookTimeMultiplier, stats.HookRangeMultiplier, stats.CarrySpeedMultiplier);
             built.Crash = crash.ToConfig();
             built.Repair = chassis != null ? chassis.Repair.ToConfig() : RepairConfig.Default;
 

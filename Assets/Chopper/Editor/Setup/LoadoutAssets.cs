@@ -36,6 +36,7 @@ namespace Chopper.Editor.Setup
             if (existing != null)
             {
                 EnsureClasses(existing);
+                EnsureWinchStats();
                 return existing;
             }
             System.IO.Directory.CreateDirectory(Folder);
@@ -80,7 +81,8 @@ namespace Chopper.Editor.Setup
                 Module(134, "EMP", "Stops nearby enemy weapons for a short time.", SlotType.Utility, Stats(weight: 10f), 9),
                 Module(135, "Shield", "Blocks damage from the front.", SlotType.Utility, Stats(weight: 12f), 14),
                 // Winch (Lifter only)
-                Module(141, "Heavy Winch", "Carries the nuke faster.", SlotType.Winch, Stats(weight: 10f), 0, null, lifter),
+                Module(141, "Heavy Winch", "Hooks the nuke in half the time, from further away, and carries it faster.", SlotType.Winch,
+                    WinchStats(), 0, null, lifter),
                 // Rotor
                 Module(151, "Standard Rotor", "Balanced.", SlotType.Rotor, Stats(weight: 10f), 0),
                 Module(152, "Agile Rotor", "Turns faster; less lift and top speed.", SlotType.Rotor,
@@ -252,6 +254,30 @@ namespace Chopper.Editor.Setup
             asset.SetWeapon(weapon);
             AssetDatabase.CreateAsset(asset, $"{Folder}/{slot}_{name.Replace(" ", "")}.asset");
             return asset;
+        }
+
+        /// <summary>Catalogs made before the hook stats (20 Nov): give the Heavy Winch its hook and carry stats.</summary>
+        private static void EnsureWinchStats()
+        {
+            var winch = AssetDatabase.LoadAssetAtPath<ModuleDefinition>($"{Folder}/Winch_HeavyWinch.asset");
+            if (winch == null || Mathf.Approximately(winch.Stats.HookTimeMultiplier, WinchStats().HookTimeMultiplier)) return;
+            var stats = winch.Stats;
+            var wanted = WinchStats();
+            stats.HookTimeMultiplier = wanted.HookTimeMultiplier;
+            stats.HookRangeMultiplier = wanted.HookRangeMultiplier;
+            stats.CarrySpeedMultiplier = wanted.CarrySpeedMultiplier;
+            winch.SetStats(stats);
+            EditorUtility.SetDirty(winch);
+        }
+
+        /// <summary>The Heavy Winch: hook in half the time (5 s), 1.5x the reach, carry speed 0.75 -> 0.95.</summary>
+        public static ModuleStats WinchStats()
+        {
+            var stats = Stats(weight: 10f);
+            stats.HookTimeMultiplier = 0.5f;
+            stats.HookRangeMultiplier = 1.5f;
+            stats.CarrySpeedMultiplier = 1.27f;
+            return stats;
         }
 
         private static ModuleStats Stats(float weight, float health = 0f, float lift = 1f, float turn = 1f, float boost = 1f,

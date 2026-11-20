@@ -101,6 +101,9 @@ namespace Chopper.Simulation.Loadout
             if (EntityManager.HasComponent<RepairConfig>(entity)) EntityManager.SetComponentData(entity, built.Repair);
             EntityManager.SetComponentData(entity, built.Gun);
             EntityManager.SetComponentData(entity, built.Countermeasure);
+            // Added here, not baked, so old chopper prefabs need no re-bake.
+            if (EntityManager.HasComponent<Match.NukeHookConfig>(entity)) EntityManager.SetComponentData(entity, built.NukeHook);
+            else EntityManager.AddComponentData(entity, built.NukeHook);
             // Older baked prefabs do not have it yet: zoom then stays off until the subscene bakes again.
             if (EntityManager.HasComponent<OpticsConfig>(entity)) EntityManager.SetComponentData(entity, built.Optics);
             if (EntityManager.HasComponent<PilotTraits>(entity)) EntityManager.SetComponentData(entity, built.Traits);

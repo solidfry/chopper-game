@@ -140,6 +140,7 @@ namespace Chopper.Editor.Setup
         {
             foreach (var path in ManifestPaths()) Ensure(path);
             TurretAssets.EnsurePrefab();
+            TurretAssets.EnsureNukePrefab();
             AssetDatabase.SaveAssets();
         }
 

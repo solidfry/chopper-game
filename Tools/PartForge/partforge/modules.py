@@ -583,6 +583,30 @@ def turret_guns():
     return Part("Prop_Turret_Guns", "module", b, slot="Prop")
 
 
+def nuke():
+    """Capture the Nuke warhead: a fat finned bomb on a carry cradle. Origin = the hook eye on top (a chopper's rope
+    clips on here); the body hangs below, nose +z. About 3.6 m long."""
+    b = Builder()
+    g, s = C("gunmetal"), C("steel")
+    y = -0.75
+    # Body: blunt nose, warhead section with hazard bands, tail cone; turned along +z.
+    _turned(b, 0, y, [(-1.9, 0.08), (-1.75, 0.3), (-1.4, 0.5, C("hull_dark")), (-0.9, 0.55), (-0.9, 0.57, C("hazard")),
+                      (-0.75, 0.57), (-0.75, 0.55, C("warhead")), (0.9, 0.55), (0.9, 0.57, C("hazard")), (1.05, 0.57),
+                      (1.05, 0.55, C("warhead")), (1.4, 0.5), (1.65, 0.36), (1.75, 0.2), (1.78, 0.0)], C("warhead"),
+            segments=16)
+    _fins(b, 0, y, -1.85, 0.6, 0.42, 0.2, 0.32, 0.03, C("hull_dark"))
+    # Carry cradle: two straps round the body, a spreader bar and the hook eye.
+    for z in (-0.6, 0.6):
+        _turned(b, 0, y, [(z - 0.05, 0.585), (z + 0.05, 0.585)], g, segments=16)
+        b.cylinder((0, y + 0.58, z), (0, -0.12, z * 0.4), 0.035, s, segments=6)
+    b.box((0, -0.12, 0), (0.12, 0.1, 0.7), g)
+    _turned(b, 0, -0.06, [(-0.05, 0.1), (0.05, 0.1)], s, segments=10)
+    # Arming panel with a glowing status light (reads from far away).
+    b.box((0.4, y + 0.3, 0.2), (0.06, 0.3, 0.45), C("hull_dark"))
+    b.cylinder((0.43, y + 0.3, 0.2), (0.47, y + 0.3, 0.2), 0.07, g, segments=8, cap_end=C("neon_pink"))
+    return Part("Prop_Nuke", "module", b, slot="Prop")
+
+
 def all_modules():
     return [
         minigun(), autocannon(), pulse_laser(),
@@ -604,5 +628,5 @@ def all_modules():
         engine("Engine_Standard", [161], 2, "exhaust", 0.13),
         engine("Engine_Boost", [162], 2, "neon_pink", 0.15),
         engine("Engine_Turbine", [163], 1, "exhaust", 0.22),
-        turret_base(), turret_head(), turret_guns(),
+        turret_base(), turret_head(), turret_guns(), nuke(),
     ]

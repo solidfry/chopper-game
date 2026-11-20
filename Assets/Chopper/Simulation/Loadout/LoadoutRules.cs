@@ -13,13 +13,20 @@ namespace Chopper.Simulation.Loadout
         public float BoostRechargeMultiplier { get; }
         public float SpeedMultiplier { get; }
         public float BoostPowerMultiplier { get; }
+        /// <summary>Capture the Nuke hook and carry (the winch). 1 = no change.</summary>
+        public float HookTimeMultiplier { get; }
+        public float HookRangeMultiplier { get; }
+        public float CarrySpeedMultiplier { get; }
 
         /// <summary>0 = empty, 1 = full budget.</summary>
         public float WeightFraction => WeightBudget > 0f ? Weight / WeightBudget : 0f;
 
         public LoadoutStats(float health, float weight, float weightBudget, float lift, float turnRate, float boostRecharge,
-            float speed = 1f, float boostPower = 1f)
+            float speed = 1f, float boostPower = 1f, float hookTime = 1f, float hookRange = 1f, float carrySpeed = 1f)
         {
+            HookTimeMultiplier = hookTime;
+            HookRangeMultiplier = hookRange;
+            CarrySpeedMultiplier = carrySpeed;
             Health = health;
             Weight = weight;
             WeightBudget = weightBudget;
@@ -89,6 +96,9 @@ namespace Chopper.Simulation.Loadout
             var boostRecharge = 1f;
             var speed = 1f;
             var boostPower = 1f;
+            var hookTime = 1f;
+            var hookRange = 1f;
+            var carrySpeed = 1f;
 
             foreach (var moduleId in selection.Modules)
             {
@@ -102,6 +112,9 @@ namespace Chopper.Simulation.Loadout
                 // 0 = a module saved before these stats existed: no change.
                 speed *= stats.SpeedMultiplier > 0f ? stats.SpeedMultiplier : 1f;
                 boostPower *= stats.BoostPowerMultiplier > 0f ? stats.BoostPowerMultiplier : 1f;
+                hookTime *= stats.HookTimeMultiplier > 0f ? stats.HookTimeMultiplier : 1f;
+                hookRange *= stats.HookRangeMultiplier > 0f ? stats.HookRangeMultiplier : 1f;
+                carrySpeed *= stats.CarrySpeedMultiplier > 0f ? stats.CarrySpeedMultiplier : 1f;
             }
 
             // Weight makes every choice cost something: heavier = slower to turn and climb.
@@ -110,7 +123,8 @@ namespace Chopper.Simulation.Loadout
             lift *= 1f - FullWeightLiftPenalty * weightFraction;
             speed *= 1f - FullWeightSpeedPenalty * weightFraction;
 
-            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, boostRecharge, speed, boostPower);
+            return new LoadoutStats(health, weight, chassis.WeightBudget, lift, turnRate, boostRecharge, speed, boostPower, hookTime, hookRange,
+                carrySpeed);
         }
     }
 }

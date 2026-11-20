@@ -103,5 +103,63 @@ namespace Chopper.Tests
             wins[1] = 2;
             Assert.That(NukeRounds.Winner(wins), Is.EqualTo(2));
         }
+
+        [Test]
+        public void CaptureTheNuke_KillsGiveNoTeamScore()
+        {
+            Assert.That(TeamRules.ScoresForTeam(MatchMode.CaptureTheNuke, 1, 2), Is.False);
+            Assert.That(TeamRules.ScoresForTeam(MatchMode.TeamDeathmatch, 1, 2), Is.True);
+        }
+
+        [Test]
+        public void Zones_FindTheBaseByHorizontalDistance_AnyHeight()
+        {
+            var bases = new NativeArray<NukeBase>(2, Allocator.Temp);
+            bases[0] = new NukeBase { Team = 1, Radius = 45f, Position = new Unity.Mathematics.float3(-300, 0, 0) };
+            bases[1] = new NukeBase { Team = 2, Radius = 45f, Position = new Unity.Mathematics.float3(300, 0, 0) };
+            Assert.That(NukeZones.ZoneOf(new Unity.Mathematics.float3(-280, 120, 20), bases), Is.EqualTo(1));
+            Assert.That(NukeZones.ZoneOf(new Unity.Mathematics.float3(300, 5, 40), bases), Is.EqualTo(2));
+            Assert.That(NukeZones.ZoneOf(new Unity.Mathematics.float3(0, 0, 0), bases), Is.EqualTo(0));
+            bases.Dispose();
+        }
+
+        [Test]
+        public void HangPoint_IsUnderTheCarrier()
+        {
+            var p = NukeZones.HangPoint(new Unity.Mathematics.float3(1, 50, 2));
+            Assert.That(p.y, Is.EqualTo(50 - NukeZones.HangBelow));
+            Assert.That(p.x, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Hook_NeedsTheFullTimeInReach_AndRestartsForAnotherChopper()
+        {
+            var a = new Unity.Entities.Entity { Index = 1, Version = 1 };
+            var b = new Unity.Entities.Entity { Index = 2, Version = 1 };
+            var progress = 0f;
+            var hooker = Unity.Entities.Entity.Null;
+            for (var i = 0; i < 9; i++) Assert.That(NukeRules.TickHook(ref progress, ref hooker, a, 10f, 1f), Is.False);
+            Assert.That(progress, Is.EqualTo(0.9f).Within(1e-4f));
+            Assert.That(NukeRules.TickHook(ref progress, ref hooker, b, 10f, 1f), Is.False, "Another chopper starts again.");
+            Assert.That(progress, Is.EqualTo(0.1f).Within(1e-4f));
+            NukeRules.TickHook(ref progress, ref hooker, Unity.Entities.Entity.Null, 10f, 1f);
+            Assert.That(progress, Is.EqualTo(0f), "Nobody in reach clears it.");
+            var hooked = false;
+            for (var i = 0; i < 10 && !hooked; i++) hooked = NukeRules.TickHook(ref progress, ref hooker, a, 10f, 1f);
+            Assert.That(hooked, Is.True);
+            Assert.That(hooker, Is.EqualTo(a));
+        }
+
+        [Test]
+        public void HookConfig_WinchHalvesTheTimeAndReachesFurther()
+        {
+            var plain = NukeHookConfig.Base;
+            var winch = NukeHookConfig.From(0.5f, 1.5f, 1.27f);
+            Assert.That(plain.Seconds, Is.EqualTo(10f));
+            Assert.That(winch.Seconds, Is.EqualTo(5f));
+            Assert.That(winch.Range, Is.EqualTo(plain.Range * 1.5f).Within(1e-4f));
+            Assert.That(winch.CarrySpeed, Is.GreaterThan(plain.CarrySpeed));
+            Assert.That(NukeHookConfig.From(0f, 0f, 0f).Seconds, Is.EqualTo(10f), "0 = an old asset: no change.");
+        }
     }
 }

@@ -98,6 +98,9 @@ namespace Chopper.Simulation.Loadout
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetWeapon(WeaponDefinition definition) => weapon = definition;
 
+        /// <summary>Editor setup: new stats on an existing module (a stat added after the asset was made).</summary>
+        public void SetStats(ModuleStats moduleStats) => stats = moduleStats;
+
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetVisual(GameObject prefab) => visual = prefab;
 

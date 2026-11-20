@@ -1,5 +1,6 @@
 using System.Linq;
 using Chopper.Simulation.Combat;
+using Chopper.Simulation.Match;
 using UnityEditor;
 using UnityEngine;
 
@@ -69,6 +70,44 @@ namespace Chopper.Editor.Setup
 
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefabPath));
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+
+        public const string NukePrefabPath = "Assets/Chopper/Prefabs/Nuke.prefab";
+
+        /// <summary>
+        /// The Capture the Nuke nuke: the kit's Prop_Nuke model (origin = hook eye, body below) and a
+        /// pre-spawned ghost the server moves (interpolated, dynamic).
+        /// </summary>
+        public static GameObject EnsureNukePrefab()
+        {
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{KitAssets.KitsFolder}/{Kit}/Models/Prop_Nuke.fbx");
+            if (model == null)
+            {
+                Debug.LogWarning("Setup: Prop_Nuke model missing. Export the kit from PartForge.");
+                return null;
+            }
+            var ghostType = TypeCache.GetTypesDerivedFrom<MonoBehaviour>().FirstOrDefault(t => t.Name == "GhostAuthoringComponent");
+            if (ghostType == null) return null;
+
+            var root = new GameObject("Nuke");
+            try
+            {
+                Model(model, root.transform, Vector3.zero);
+                // No collider: hooking is by distance, and a moved static collider would rebuild the broadphase.
+                root.AddComponent<NukeAuthoring>();
+                var ghost = new SerializedObject(root.AddComponent(ghostType));
+                SetInt(ghost, "DefaultGhostMode", 0);
+                SetInt(ghost, "SupportedGhostModes", 1);
+                SetInt(ghost, "OptimizationMode", 0);
+                ghost.ApplyModifiedPropertiesWithoutUndo();
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(NukePrefabPath));
+                return PrefabUtility.SaveAsPrefabAsset(root, NukePrefabPath);
             }
             finally
             {

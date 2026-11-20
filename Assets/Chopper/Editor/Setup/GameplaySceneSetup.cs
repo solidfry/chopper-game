@@ -196,6 +196,9 @@ namespace Chopper.Editor.Setup
                 Undo.RegisterCreatedObjectUndo(go, "Add nuke pad");
             }
 
+            EnsureNuke(scene, pad.transform.position);
+            EnsureBases(scene);
+
             if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<TurretAuthoring>(true) != null)) return 0;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TurretAssets.PrefabPath) ?? TurretAssets.EnsurePrefab();
             if (prefab == null) return 0;
@@ -211,6 +214,35 @@ namespace Chopper.Editor.Setup
                 turret.transform.SetPositionAndRotation(centre + outward * pad.Radius, Quaternion.LookRotation(outward));
             }
             return PadTurretCount;
+        }
+
+
+        /// <summary>Default base zones (team 1, team 2) for a map that has none: both ends of the arena, far from the pad.</summary>
+        private static readonly Vector3[] DefaultBasePositions = { new(-350f, 0f, 150f), new(350f, 0f, 150f) };
+
+        private static void EnsureNuke(Scene scene, Vector3 padPosition)
+        {
+            if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<NukeAuthoring>(true) != null)) return;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TurretAssets.NukePrefabPath) ?? TurretAssets.EnsureNukePrefab();
+            if (prefab == null) return;
+            var nuke = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+            Undo.RegisterCreatedObjectUndo(nuke, "Add nuke");
+            nuke.name = "Nuke";
+            // The origin is the hook eye: lift it so the body rests on the pad.
+            nuke.transform.position = (Vector3)NukeZones.Resting(padPosition);
+        }
+
+        private static void EnsureBases(Scene scene)
+        {
+            if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<NukeBaseAuthoring>(true) != null)) return;
+            for (var i = 0; i < DefaultBasePositions.Length; i++)
+            {
+                var go = new GameObject($"NukeBase_Team{i + 1}");
+                SceneManager.MoveGameObjectToScene(go, scene);
+                go.transform.position = DefaultBasePositions[i];
+                go.AddComponent<NukeBaseAuthoring>().Team = (byte)(i + 1);
+                Undo.RegisterCreatedObjectUndo(go, "Add nuke base");
+            }
         }
 
         private static void EnsureSpawner(Scene scene)

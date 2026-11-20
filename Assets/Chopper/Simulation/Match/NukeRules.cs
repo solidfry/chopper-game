@@ -37,6 +37,10 @@ namespace Chopper.Simulation.Match
         [GhostField(Quantization = 10)] public float DroppedFor;
         /// <summary>The team that set it off in the enemy base (the round winner). 0 = none.</summary>
         [GhostField] public byte DetonatedBy;
+        /// <summary>0..1 hook progress of the chopper hovering over a free nuke (HUD bar).</summary>
+        [GhostField(Quantization = 100)] public float HookProgress;
+        /// <summary>Team of that chopper (0 = nobody is hooking).</summary>
+        [GhostField] public byte HookTeam;
     }
 
     /// <summary>Tuning numbers. Default values are the plan's (section 7).</summary>
@@ -157,6 +161,30 @@ namespace Chopper.Simulation.Match
             }
 
             return pickUpOrDrop;
+        }
+
+        /// <summary>
+        /// The hook timer on a free nuke: <paramref name="candidate"/> (the chopper in reach now, or Entity.Null) must stay
+        /// in reach for <paramref name="seconds"/>. A different chopper starts again from 0; nobody in reach clears it.
+        /// True on the tick the hook takes (then <paramref name="hooker"/> holds it).
+        /// </summary>
+        public static bool TickHook(ref float progress, ref Entity hooker, Entity candidate, float seconds, float deltaTime)
+        {
+            if (candidate == Entity.Null)
+            {
+                progress = 0f;
+                hooker = Entity.Null;
+                return false;
+            }
+            if (candidate != hooker)
+            {
+                hooker = candidate;
+                progress = 0f;
+            }
+            progress = math.saturate(progress + deltaTime / math.max(seconds, 0.01f));
+            if (progress < Done) return false;
+            progress = 0f;
+            return true;
         }
 
         /// <summary>Pick up and drop. A new team that hooks the nuke does not keep the other team's arm progress.</summary>

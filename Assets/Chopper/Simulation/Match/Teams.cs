@@ -80,9 +80,12 @@ namespace Chopper.Simulation.Match
             return list;
         }
 
-        /// <summary>A kill counts for the killer's team when it is a team mode and the victim is an enemy.</summary>
+        /// <summary>
+        /// A kill counts for the killer's team in Team Deathmatch when the victim is an enemy. Capture the Nuke counts
+        /// rounds instead (<see cref="NukeRoundWon"/>), not kills.
+        /// </summary>
         public static bool ScoresForTeam(MatchMode mode, byte killer, byte victim) =>
-            IsTeamMode(mode) && killer != None && killer != victim;
+            mode == MatchMode.TeamDeathmatch && killer != None && killer != victim;
 
         /// <summary>"tdm" / "teamdeathmatch", "ctn" / "capturethenuke" (case ignored); everything else is Free For All.</summary>
         public static MatchMode ParseMode(string text)

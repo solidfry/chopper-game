@@ -31,6 +31,12 @@ namespace Chopper.Simulation.Loadout
         public float SpeedMultiplier;
         /// <summary>Boost push and kick multiplier.</summary>
         public float BoostPowerMultiplier;
+        /// <summary>Capture the Nuke: time to hook the nuke multiplier (below 1 = faster; the winch). 0 = 1.</summary>
+        public float HookTimeMultiplier;
+        /// <summary>Capture the Nuke: hook reach multiplier (above 1 = from further away). 0 = 1.</summary>
+        public float HookRangeMultiplier;
+        /// <summary>Capture the Nuke: top speed while carrying, multiplier on the carry penalty's speed. 0 = 1.</summary>
+        public float CarrySpeedMultiplier;
 
         public static ModuleStats None => new()
         {
@@ -39,6 +45,9 @@ namespace Chopper.Simulation.Loadout
             BoostRechargeMultiplier = 1f,
             SpeedMultiplier = 1f,
             BoostPowerMultiplier = 1f,
+            HookTimeMultiplier = 1f,
+            HookRangeMultiplier = 1f,
+            CarrySpeedMultiplier = 1f,
         };
     }
 

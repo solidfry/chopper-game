@@ -91,6 +91,17 @@ namespace Chopper.Simulation.Match
                 }
             }
 
+            // Capture the Nuke: a round won is a team point; first to NukeRounds.RoundsToWin wins the match.
+            foreach (var (won, wonEntity) in SystemAPI.Query<RefRO<NukeRoundWon>>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(wonEntity);
+                var team = won.ValueRO.Team;
+                if (match.Phase != MatchPhase.InProgress || team == TeamRules.None || team > match.TeamScores.Length) continue;
+                var rounds = ++match.TeamScores[team - 1];
+                Broadcast(ecb, new TeamScoreRpc { Team = team, Score = rounds });
+                if (NukeRounds.Winner(match.TeamScores) != TeamRules.None) EndMatch(ref match, rules, 0, team);
+            }
+
             match.TimeRemaining -= SystemAPI.Time.DeltaTime;
             if (match.TimeRemaining <= 0f)
             {
