@@ -73,7 +73,7 @@ namespace Chopper.Simulation.Combat
                 if (s.Down) continue;
 
                 s.Cooldown -= deltaTime;
-                var muzzle = math.transform(pose.ValueRO.Value, gun.MuzzleOffset);
+                var pivot = math.transform(pose.ValueRO.Value, gun.MuzzleOffset);
 
                 // Nearest enemy in range with a clear line from the muzzle.
                 var best = -1;
@@ -82,9 +82,9 @@ namespace Chopper.Simulation.Combat
                 {
                     var c = candidates[i];
                     if (!TurretRules.IsEnemy(config.ValueRO.Team, c.Team)) continue;
-                    var distance = math.distance(muzzle, c.Position);
+                    var distance = math.distance(pivot, c.Position);
                     if (distance >= bestDistance) continue;
-                    if (Explosions.TryRaycast(world, entity, muzzle, c.Position, out var block) && block.Entity != c.Entity) continue;
+                    if (Explosions.TryRaycast(world, entity, pivot, c.Position, out var block) && block.Entity != c.Entity) continue;
                     best = i;
                     bestDistance = distance;
                 }
@@ -98,9 +98,9 @@ namespace Chopper.Simulation.Combat
                 s.Target = target.Entity;
                 var aimPoint = target.Position;
                 if (!Ballistics.IsInstant(gun.BulletSpeed))
-                    Ballistics.LeadPoint(muzzle, float3.zero, target.Position, target.Velocity, gun.BulletSpeed,
+                    Ballistics.LeadPoint(pivot, float3.zero, target.Position, target.Velocity, gun.BulletSpeed,
                         Ballistics.FlightTime(gun.Range, gun.BulletSpeed), out aimPoint, out _);
-                var wanted = math.normalizesafe(aimPoint - muzzle, s.Aim);
+                var wanted = math.normalizesafe(aimPoint - pivot, s.Aim);
                 s.Aim = TurretRules.Slew(s.Aim, wanted, config.ValueRO.TurnRate * deltaTime);
 
                 if (!TurretRules.CanFire(s.Cooldown, s.Aim, wanted, config.ValueRO.FireCone)) continue;
@@ -109,7 +109,7 @@ namespace Chopper.Simulation.Combat
                 var direction = TurretRules.Scatter(s.Aim, config.ValueRO.Spread, ref s.Random);
                 Ballistics.AddCapped(bullets, new ActiveBullet
                 {
-                    Position = muzzle,
+                    Position = TurretRules.Muzzle(pose.ValueRO.Value, config.ValueRO, s.Aim),
                     Velocity = Ballistics.LaunchVelocity(float3.zero, direction, gun.BulletSpeed),
                     TimeLeft = Ballistics.FlightTime(gun.Range, gun.BulletSpeed),
                     Shooter = entity,

@@ -13,6 +13,8 @@ namespace Chopper.Simulation.Combat
     {
         /// <summary>The gun: fire rate, damage, range, falloff, bullet speed, muzzle (turret space), name.</summary>
         public HitscanWeaponConfig Gun;
+        /// <summary>Trunnion to barrel tip, metres: rounds start here along the aim (server and tracers).</summary>
+        public float BarrelLength;
         /// <summary>How fast the barrel turns, radians per second.</summary>
         public float TurnRate;
         /// <summary>Fires only when the barrel is within this angle of the lead point, radians.</summary>
@@ -39,12 +41,37 @@ namespace Chopper.Simulation.Combat
         public Random Random;
     }
 
+    /// <summary>The model's moving parts (children): head turns about its up axis, guns tilt about their right axis.</summary>
+    public struct TurretRig : IComponentData
+    {
+        public Entity Head;
+        public Entity Guns;
+    }
+
     /// <summary>Pure turret rules, shared by the server system and EditMode tests.</summary>
     public static class TurretRules
     {
         /// <summary>A neutral turret (team 0) shoots everyone; a team turret shoots only other teams.</summary>
         public static bool IsEnemy(byte turretTeam, byte targetTeam) =>
             turretTeam == 0 || targetTeam != turretTeam;
+
+        /// <summary>
+        /// The rig angles for a world aim, in the turret's frame: yaw about its up axis (0 = its forward), pitch up from
+        /// level (radians). A destroyed turret droops its guns (<paramref name="down"/>).
+        /// </summary>
+        public static void RigAngles(in float4x4 turretToWorld, float3 aim, bool down, out float yaw, out float pitch)
+        {
+            var local = math.mul(math.inverse(new float3x3(turretToWorld)), aim);
+            yaw = math.atan2(local.x, local.z);
+            pitch = down ? -DroopAngle : math.atan2(local.y, math.length(local.xz));
+        }
+
+        /// <summary>Gun tilt of a destroyed turret, radians below level.</summary>
+        public const float DroopAngle = 0.35f;
+
+        /// <summary>World muzzle: the gun's offset (the trunnion, turret space) plus the barrel along the aim.</summary>
+        public static float3 Muzzle(in float4x4 turretToWorld, in TurretConfig config, float3 aim) =>
+            math.transform(turretToWorld, config.Gun.MuzzleOffset) + aim * config.BarrelLength;
 
         /// <summary>Turns <paramref name="current"/> toward <paramref name="wanted"/> by at most <paramref name="maxAngle"/>.</summary>
         public static float3 Slew(float3 current, float3 wanted, float maxAngle)

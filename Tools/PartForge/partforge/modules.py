@@ -516,6 +516,73 @@ def engine(name, ids, nozzles, glow, radius):
     return Part(name, "module", b, slot="Engine", module_ids=ids, sockets=sockets)
 
 
+# -- ground props (not chopper modules: no slot type, no module ids) --------------------------------------------------
+# The Capture the Nuke pad turret is three parts so the game can turn them: the base (origin on the ground), the head
+# (origin = yaw pivot, on top of the base ring: TURRET_YAW_HEIGHT) and the guns (origin = pitch pivot, the trunnions:
+# TURRET_PITCH_HEIGHT above the yaw pivot; barrels along +z). Muzzle height above the ground = the two added
+# (TurretAuthoring's muzzle offset, 2.5 m).
+TURRET_YAW_HEIGHT = 1.2
+TURRET_PITCH_HEIGHT = 1.3
+
+
+def turret_base():
+    b = Builder()
+    g, s, d = C("gunmetal"), C("steel"), C("hull_dark")
+    UP = (0.0, 1.0, 0.0)
+    # Octagonal armoured plinth with a sloped skirt, a bolt ring and the slew bearing on top.
+    b.lathe((0, 0, 0), UP, [(0.0, 1.75), (0.18, 1.75), (0.3, 1.55, d), (0.85, 1.4), (0.85, 1.1, g), (0.95, 1.1),
+                            (0.95, 0.95, s), (1.1, 0.95), (1.1, 0.88, g), (TURRET_YAW_HEIGHT, 0.88)], C("hull"),
+            segments=8, phase=math.pi / 8, cap_end=g)
+    for x, z in _circle(16, 1.0):
+        b.cylinder((x, 0.95, z), (x, 0.99, z), 0.035, s, segments=6)
+    # Hazard bands on four faces, ammo bins and a cable run to the pad.
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        c, n = math.cos(a), math.sin(a)
+        b.box((c * 1.5, 0.45, n * 1.5), (0.9, 0.12, 0.05), C("hazard"), rotation=rot_y(-math.degrees(a) + 90))
+    for side in (1, -1):
+        b.box((side * 1.2, 0.35, -0.9), (0.5, 0.5, 0.7), d)
+        b.box((side * 1.2, 0.62, -0.9), (0.54, 0.05, 0.74), g)
+    b.tube([(0, 0.15, -1.7), (0, 0.15, -2.2), (0.2, 0.05, -2.6)], 0.07, C("rubber"), segments=6)
+    return Part("Prop_Turret_Base", "module", b, slot="Prop")
+
+
+def turret_head():
+    b = Builder()
+    g, s, d = C("gunmetal"), C("steel"), C("hull_dark")
+    # Turntable, then an angular armoured housing that carries the gun cradle; sensor mast with a glowing eye.
+    b.lathe((0, 0, 0), (0.0, 1.0, 0.0), [(0.0, 0.85), (0.12, 0.85), (0.12, 0.7, s), (0.2, 0.7)], g, segments=16,
+            cap_end=d)
+    b.box((0, 0.65, -0.15), (1.5, 0.9, 1.7), C("hull"))
+    b.box((0, 1.15, -0.25), (1.2, 0.12, 1.3), d)
+    for side in (1, -1):
+        b.box((side * 0.62, TURRET_PITCH_HEIGHT, 0.2), (0.2, 0.75, 0.9), d)  # cradle cheeks
+        b.box((side * 0.78, 0.6, -0.2), (0.08, 0.7, 1.4), g)                   # side armour
+        b.box((side * 0.83, 0.85, -0.2), (0.01, 0.08, 1.2), C("hazard"))
+    b.box((0, 0.5, -1.05), (1.1, 0.6, 0.3), g)                                 # rear counterweight
+    b.cylinder((0.5, 1.2, -0.7), (0.5, 1.9, -0.7), 0.05, s, segments=6)         # sensor mast
+    b.box((0.5, 1.95, -0.7), (0.22, 0.14, 0.18), d)
+    b.cylinder((0.5, 1.95, -0.6), (0.5, 1.95, -0.58), 0.045, g, segments=8, cap_end=C("neon_pink"))
+    return Part("Prop_Turret_Head", "module", b, slot="Prop")
+
+
+def turret_guns():
+    b = Builder()
+    g, s = C("gunmetal"), C("steel")
+    # Trunnion axle, a breech block, twin barrels with cooling jackets and muzzle brakes; barrels along +z.
+    b.cylinder((-0.55, 0, 0), (0.55, 0, 0), 0.11, s, segments=10)
+    b.box((0, 0, -0.05), (0.8, 0.5, 0.9), C("hull_dark"))
+    b.box((0, 0.27, -0.05), (0.6, 0.05, 0.7), g)
+    for x in (-0.2, 0.2):
+        _turned(b, x, 0, [(0.4, 0.11, g), (0.75, 0.11), (0.75, 0.085, s), (1.1, 0.085), (1.1, 0.1, g), (1.3, 0.1),
+                          (1.3, 0.06, s), (2.1, 0.055), (2.1, 0.085, g), (2.35, 0.085), (2.37, 0.07), (2.37, 0.035),
+                          (2.3, 0.035)], s, segments=10, cap_end=C("rubber"))
+        for z in (1.45, 1.75):
+            _turned(b, x, 0, [(z, 0.07), (z + 0.04, 0.07)], g, segments=10)
+    b.box((0, -0.3, 0.1), (0.3, 0.15, 0.5), C("hull_dark"))  # feed housing under the guns
+    return Part("Prop_Turret_Guns", "module", b, slot="Prop")
+
+
 def all_modules():
     return [
         minigun(), autocannon(), pulse_laser(),
@@ -537,4 +604,5 @@ def all_modules():
         engine("Engine_Standard", [161], 2, "exhaust", 0.13),
         engine("Engine_Boost", [162], 2, "neon_pink", 0.15),
         engine("Engine_Turbine", [163], 1, "exhaust", 0.22),
+        turret_base(), turret_head(), turret_guns(),
     ]

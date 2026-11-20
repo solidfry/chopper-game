@@ -139,6 +139,7 @@ namespace Chopper.Editor.Setup
         public static void EnsureAll()
         {
             foreach (var path in ManifestPaths()) Ensure(path);
+            TurretAssets.EnsurePrefab();
             AssetDatabase.SaveAssets();
         }
 

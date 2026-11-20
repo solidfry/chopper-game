@@ -26,6 +26,12 @@ namespace Chopper.Simulation.Combat
         [SerializeField, Range(0f, 1f)] private float falloffFloor = 0.5f;
         [SerializeField, Tooltip("Gun position in turret space.")] private Vector3 muzzleOffset = new Vector3(0f, 2.5f, 0f);
 
+        [SerializeField, Tooltip("Trunnion to barrel tip, metres: rounds and tracers start here.")] private float barrelLength = 2.4f;
+
+        [Header("Rig (optional: turned on clients from the replicated aim)")]
+        [SerializeField, Tooltip("Turns left and right (yaw). Child of this object.")] private Transform head;
+        [SerializeField, Tooltip("Tilts up and down (pitch). Child of the head.")] private Transform guns;
+
         [Header("Aim")]
         [SerializeField, Tooltip("Degrees per second.")] private float turnRate = 70f;
         [SerializeField, Tooltip("Fires when the barrel is this close to the lead point, degrees.")] private float fireCone = 4f;
@@ -54,6 +60,7 @@ namespace Chopper.Simulation.Combat
                         BulletSpeed = math.max(a.bulletSpeed, 1f),
                         Name = "TURRET",
                     },
+                    BarrelLength = a.barrelLength,
                     TurnRate = math.radians(a.turnRate),
                     FireCone = math.radians(a.fireCone),
                     Spread = math.radians(a.spread),
@@ -61,6 +68,12 @@ namespace Chopper.Simulation.Combat
                     Team = a.team,
                 });
                 AddComponent(entity, new TurretState { Aim = a.transform.forward });
+                if (a.head != null && a.guns != null)
+                    AddComponent(entity, new TurretRig
+                    {
+                        Head = GetEntity(a.head, TransformUsageFlags.Dynamic),
+                        Guns = GetEntity(a.guns, TransformUsageFlags.Dynamic),
+                    });
             }
         }
     }

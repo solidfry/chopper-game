@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chopper.Presentation.Audio;
 using Chopper.Presentation.Bridge;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Visuals;
@@ -90,59 +91,76 @@ namespace Chopper.Presentation.Effects
                          .Query<RefRO<HitscanWeaponState>, RefRO<HitscanWeaponConfig>, RefRO<LocalToWorld>>()
                          .WithEntityAccess())
             {
-                var count = weapon.ValueRO.ShotCount;
-                _seen[entity] = count;
-                // First sight of this chopper: remember its count, draw nothing.
-                if (!_lastShotCount.TryGetValue(entity, out var last) || count <= last) continue;
-
-                var muzzle = math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset);
-                var forward = pose.ValueRO.Forward;
-                var rotation = quaternion.LookRotationSafe(forward, pose.ValueRO.Up);
                 // Own gun from the cockpit: no muzzle flash (the pilot sits right above it), bullets start ahead.
                 var fromCockpit = cockpitView && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&
                                   SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+                var velocity = Ballistics.IsInstant(config.ValueRO.BulletSpeed)
+                    ? float3.zero
+                    : ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
+                DrawShots(settings, audio, gunSound, world, now, entity, weapon.ValueRO.ShotCount, config.ValueRO,
+                    math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset), pose.ValueRO.Forward, pose.ValueRO.Up,
+                    velocity, fromCockpit);
+            }
 
-                if (!fromCockpit &&
-                    (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval))
-                {
-                    _effects.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
-                    _lastFlashTime[entity] = now;
-                }
-
-                audio.Play(gunSound, muzzle);
-
-                var shots = math.min(count - last, MaxShotsPerFrame);
-                var bulletSpeed = config.ValueRO.BulletSpeed;
-                if (Ballistics.IsInstant(bulletSpeed))
-                {
-                    // Instant gun: the hit is decided now, the visual flies at the settings' speed.
-                    var hit = RayCast(world, _surfaces, entity, muzzle, forward, config.ValueRO.Range, out var distance, out var surface);
-                    var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
-                    for (var i = 0u; i < shots; i++)
-                        Fire(settings, muzzle + forward * start, forward, rotation, distance - start, settings.GunBulletSpeed, hit, surface,
-                            castEachFrame: false, entity);
-                }
-                else
-                {
-                    // Round with travel time: flies as the server's round does (chopper velocity + nose × speed, for the
-                    // gun's flight time) and stops on whatever is in its path when it gets there.
-                    var chopperVelocity = ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
-                    var launch = Ballistics.LaunchVelocity(chopperVelocity, forward, bulletSpeed);
-                    var speed = math.length(launch);
-                    var direction = math.normalizesafe(launch, forward);
-                    var flight = speed * Ballistics.FlightTime(config.ValueRO.Range, bulletSpeed);
-                    var start = fromCockpit ? math.min(CockpitBulletStart, flight) : 0f;
-                    var flightRotation = quaternion.LookRotationSafe(direction, pose.ValueRO.Up);
-                    for (var i = 0u; i < shots; i++)
-                        Fire(settings, muzzle + direction * start, direction, flightRotation, flight - start, speed, false, SurfaceKind.Concrete,
-                            castEachFrame: true, entity);
-                }
+            // Ground turrets: the same shots, along the replicated barrel aim (the turret does not move).
+            foreach (var (turret, config, pose, entity) in SystemAPI
+                         .Query<RefRO<TurretState>, RefRO<TurretConfig>, RefRO<LocalToWorld>>().WithEntityAccess())
+            {
+                var aim = math.normalizesafe(turret.ValueRO.Aim, pose.ValueRO.Forward);
+                DrawShots(settings, audio, gunSound, world, now, entity, turret.ValueRO.ShotCount, config.ValueRO.Gun,
+                    TurretRules.Muzzle(pose.ValueRO.Value, config.ValueRO, aim), aim,
+                    math.up(), float3.zero, fromCockpit: false);
             }
 
             // Swap, so despawned choppers drop out.
             _lastShotCount.Clear();
             foreach (var (entity, count) in _seen) _lastShotCount[entity] = count;
             if (_lastFlashTime.Count > _seen.Count) PruneFlashTimes();
+        }
+
+        private void DrawShots(CombatEffectsSettings settings, IAudioService audio, SoundCue gunSound, CollisionWorld world, float now,
+            Entity entity, uint count, in HitscanWeaponConfig config, float3 muzzle, float3 forward, float3 up, float3 shooterVelocity,
+            bool fromCockpit)
+        {
+            _seen[entity] = count;
+            // First sight of this shooter: remember its count, draw nothing.
+            if (!_lastShotCount.TryGetValue(entity, out var last) || count <= last) return;
+
+            var rotation = quaternion.LookRotationSafe(forward, up);
+            if (!fromCockpit &&
+                (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval))
+            {
+                _effects.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
+                _lastFlashTime[entity] = now;
+            }
+
+            audio.Play(gunSound, muzzle);
+
+            var shots = math.min(count - last, MaxShotsPerFrame);
+            var bulletSpeed = config.BulletSpeed;
+            if (Ballistics.IsInstant(bulletSpeed))
+            {
+                // Instant gun: the hit is decided now, the visual flies at the settings' speed.
+                var hit = RayCast(world, _surfaces, entity, muzzle, forward, config.Range, out var distance, out var surface);
+                var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
+                for (var i = 0u; i < shots; i++)
+                    Fire(settings, muzzle + forward * start, forward, rotation, distance - start, settings.GunBulletSpeed, hit, surface,
+                        castEachFrame: false, entity);
+            }
+            else
+            {
+                // Round with travel time: flies as the server's round does (shooter velocity + aim × speed, for the
+                // gun's flight time) and stops on whatever is in its path when it gets there.
+                var launch = Ballistics.LaunchVelocity(shooterVelocity, forward, bulletSpeed);
+                var speed = math.length(launch);
+                var direction = math.normalizesafe(launch, forward);
+                var flight = speed * Ballistics.FlightTime(config.Range, bulletSpeed);
+                var start = fromCockpit ? math.min(CockpitBulletStart, flight) : 0f;
+                var flightRotation = quaternion.LookRotationSafe(direction, up);
+                for (var i = 0u; i < shots; i++)
+                    Fire(settings, muzzle + direction * start, direction, flightRotation, flight - start, speed, false, SurfaceKind.Concrete,
+                        castEachFrame: true, entity);
+            }
         }
 
         private void PruneFlashTimes()
