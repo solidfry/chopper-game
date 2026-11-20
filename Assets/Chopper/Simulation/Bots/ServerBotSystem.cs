@@ -64,6 +64,24 @@ namespace Chopper.Simulation.Bots
                 PlansLeft = PlansPerTick,
                 Hold = hold,
             };
+            // Capture the Nuke: the objective for the bots.
+            if (SystemAPI.TryGetSingleton<MatchState>(out var mode) && mode.Mode == MatchMode.CaptureTheNuke)
+            {
+                foreach (var (nuke, carrier, pose) in SystemAPI.Query<RefRO<NukeState>, RefRO<NukeCarrier>, RefRO<LocalTransform>>())
+                {
+                    frame.Objective.Active = true;
+                    frame.Objective.NukePosition = pose.ValueRO.Position;
+                    frame.Objective.Phase = nuke.ValueRO.Phase;
+                    frame.Objective.Carrier = carrier.ValueRO.Chopper;
+                    frame.Objective.CarrierTeam = nuke.ValueRO.CarrierTeam;
+                    frame.Objective.ArmedBy = nuke.ValueRO.ArmedBy;
+                }
+                foreach (var zone in SystemAPI.Query<RefRO<NukeBase>>())
+                {
+                    if (zone.ValueRO.Team == 1) frame.Objective.Base1 = zone.ValueRO.Position;
+                    else if (zone.ValueRO.Team == 2) frame.Objective.Base2 = zone.ValueRO.Position;
+                }
+            }
 
             // Live choppers: what the bots see, and which one each player entity owns.
             var choppers = new NativeList<BotChopperInfo>(16, Allocator.Temp);

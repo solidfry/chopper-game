@@ -23,6 +23,8 @@ namespace Chopper.Simulation.Bots
         public int PlansLeft;
         /// <summary>Match over: hover, no weapons, no gadgets.</summary>
         public bool Hold;
+        /// <summary>Capture the Nuke: the nuke and the bases (not active in other modes).</summary>
+        public BotObjectiveInfo Objective;
     }
 
     /// <summary>A live chopper, as the bots see it.</summary>
@@ -190,6 +192,27 @@ namespace Chopper.Simulation.Bots
                 brain.Think(situation, contacts.AsArray(), handling, frame.Now, frame.DeltaTime, ref order, out var intent);
                 contacts.Dispose();
                 actions = intent.Actions;
+
+                // The match objective (Capture the Nuke): replaces the patrol; the carrier keeps to it in a fight too
+                // (it cannot fire pylons and must bring the nuke home), only a missile breaks it off.
+                var selfTeam = Match.TeamRules.None;
+                for (var i = 0; i < choppers.Length; i++)
+                    if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
+                var objective = BotObjective.Choose(frame.Objective, chopper, selfTeam, out var objectiveGoal, out var objectiveRadius);
+                var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
+                var farFight = brain.Mode == BotMode.Attack &&
+                               (math.distancesq(brain.TargetPosition, sense.Position) > BotObjective.FocusRange * BotObjective.FocusRange ||
+                                (objective == BotObjective.Kind.Hook && math.distancesq(objectiveGoal, sense.Position) < BotObjective.HookCommitRange * BotObjective.HookCommitRange));
+                if (objective != BotObjective.Kind.None && (intent.Wander || farFight || (carrying && brain.Mode != BotMode.Evade)))
+                {
+                    intent.Wander = false;
+                    intent.UsePath = true;
+                    intent.Goal = objectiveGoal;
+                    order.ArriveRadius = objectiveRadius;
+                    order.Aim = false;
+                    order.Face = false;
+                    order.AllowBoost = objective != BotObjective.Kind.Hook;
+                }
 
                 var goal = intent.Goal;
                 if (intent.Wander)

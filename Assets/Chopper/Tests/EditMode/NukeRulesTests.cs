@@ -190,5 +190,31 @@ namespace Chopper.Tests
             Assert.That(NukeCarry.DragScale(new NukeCarry { Carrying = true, SpeedScale = 0.5f }), Is.EqualTo(4f).Within(1e-4f));
             Assert.That(NukeCarry.DragScale(new NukeCarry { Carrying = true, SpeedScale = 0f }), Is.EqualTo(1f), "Unset: no change.");
         }
+
+        [Test]
+        public void BotObjective_HookThenArmThenDeliver_ChaseAndEscort()
+        {
+            var self = new Unity.Entities.Entity { Index = 5, Version = 1 };
+            var other = new Unity.Entities.Entity { Index = 6, Version = 1 };
+            var info = new Chopper.Simulation.Bots.BotObjectiveInfo
+            {
+                Active = true, NukePosition = new Unity.Mathematics.float3(0, 1, -380), Phase = NukePhase.AtSpawn,
+                Base1 = new Unity.Mathematics.float3(-350, 0, 150), Base2 = new Unity.Mathematics.float3(350, 0, 150),
+            };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out var goal, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Hook));
+            Assert.That(goal.y, Is.EqualTo(9f).Within(1e-4f));
+
+            info.Carrier = self; info.CarrierTeam = 1; info.Phase = NukePhase.Carried;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out goal, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.ArmAtHome));
+            Assert.That(goal.x, Is.EqualTo(-350f));
+            info.ArmedBy = 1;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out goal, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Deliver));
+            Assert.That(goal.x, Is.EqualTo(350f));
+
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, other, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Escort));
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, other, 2, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Chase));
+            info.Active = false;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.None));
+        }
     }
 }
