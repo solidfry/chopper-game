@@ -188,6 +188,9 @@ namespace Chopper.Simulation.Visuals
         [SerializeField, Tooltip("HeatHaze material for the shimmer over the lava.")] private Material haze;
         [SerializeField, HideInInspector] private List<LavaData> lava = new();
 
+        /// <summary>The lava lines (centre points and width): Setup keeps Capture the Nuke sites off them.</summary>
+        public IReadOnlyList<LavaData> Lava => lava;
+
         public int PathCount => paths.Count;
 
         /// <summary>Editor only: used by the setup tool (CityForge import).</summary>

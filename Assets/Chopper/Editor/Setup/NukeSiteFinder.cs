@@ -79,8 +79,8 @@ namespace Chopper.Editor.Setup
                 {
                     var target1 = centre + axis * (reach * share);
                     var target2 = centre - axis * (reach * share);
-                    if (!BestNear(target1, 220f, 40f, BaseRadius, top, out var base1)) continue;
-                    if (!BestNear(target2, 220f, 40f, BaseRadius, top, out var base2)) continue;
+                    if (!BestNear(target1, 260f, 30f, BaseRadius, top, out var base1, pad)) continue;
+                    if (!BestNear(target2, 260f, 30f, BaseRadius, top, out var base2, pad)) continue;
                     var d1 = Flat(base1 - pad).magnitude;
                     var d2 = Flat(base2 - pad).magnitude;
                     if (d1 < MinBaseToPad || d2 < MinBaseToPad) continue;
@@ -96,7 +96,8 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>The usable site closest to <paramref name="target"/> on a grid within <paramref name="search"/> metres.</summary>
-        private static bool BestNear(Vector3 target, float search, float step, float radius, float top, out Vector3 site)
+        private static bool BestNear(Vector3 target, float search, float step, float radius, float top, out Vector3 site,
+            Vector3? facePad = null)
         {
             site = default;
             var best = float.MaxValue;
@@ -107,7 +108,13 @@ namespace Chopper.Editor.Setup
                 if (offset.sqrMagnitude > search * search) continue;
                 var at = target + offset;
                 if (Mathf.Abs(at.x - _centre.x) > _inner.x || Mathf.Abs(at.z - _centre.z) > _inner.y) continue;
+                if (NearLava(target + offset, radius)) continue;
                 if (!Usable(target + offset, radius, top, out var ground)) continue;
+                if (facePad.HasValue)
+                {
+                    if (!Footprint(ground, facePad.Value - ground, top, out var height)) continue;
+                    ground.y = height;
+                }
                 var distance = offset.sqrMagnitude;
                 if (distance >= best) continue;
                 best = distance;
@@ -147,6 +154,68 @@ namespace Chopper.Editor.Setup
                     QueryTriggerInteraction.Ignore)) return false;
             if (info.normal.y < 0.95f) return false;
             hit = info.point;
+            return true;
+        }
+
+
+        /// <summary>The base model's footprint around its origin (PartForge team_base: plinth), metres: x half width,
+        /// z from the front edge (towards the pad) to the back edge.</summary>
+        public const float FootHalfWidth = 46f, FootFront = 15f, FootBack = -92f;
+        /// <summary>Highest step allowed under the base model, metres (the apron is 0.3 m thick).</summary>
+        private const float FootStep = 1f;
+        /// <summary>Sites stay this far from the edge of any lava line, metres.</summary>
+        private const float LavaClearance = 40f;
+        private static readonly System.Collections.Generic.List<(Vector3 A, Vector3 B, float Keep)> Lava = new();
+
+        /// <summary>Lava lines to stay off: segments with the half width plus <see cref="LavaClearance"/>.</summary>
+        public static void SetLava(System.Collections.Generic.IEnumerable<(Vector3[] Points, float Width)> lines)
+        {
+            Lava.Clear();
+            if (lines == null) return;
+            foreach (var (points, width) in lines)
+                for (var i = 0; i + 1 < points.Length; i++)
+                    Lava.Add((points[i], points[i + 1], width * 0.5f + LavaClearance));
+        }
+
+        private static bool NearLava(Vector3 p, float pad)
+        {
+            foreach (var (a, b, keep) in Lava)
+            {
+                var ab = new Vector2(b.x - a.x, b.z - a.z);
+                var ap = new Vector2(p.x - a.x, p.z - a.z);
+                var t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(ap, ab) / ab.sqrMagnitude) : 0f;
+                if ((ap - ab * t).magnitude < keep + pad) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The whole base model fits here facing <paramref name="towardsPad"/>: ground within <see cref="FootStep"/>, no
+        /// lava, clear air. <paramref name="height"/> = the highest ground under it (the model sits there).
+        /// </summary>
+        public static bool Footprint(Vector3 origin, Vector3 towardsPad, float top, out float height)
+        {
+            height = 0f;
+            var forward = new Vector3(towardsPad.x, 0f, towardsPad.z).normalized;
+            if (forward == Vector3.zero) forward = Vector3.forward;
+            var right = Vector3.Cross(Vector3.up, forward);
+            float low = float.MaxValue, high = float.MinValue;
+            for (var x = -FootHalfWidth; x <= FootHalfWidth + 0.1f; x += FootHalfWidth / 4f)
+            for (var z = FootBack; z <= FootFront + 0.1f; z += (FootFront - FootBack) / 8f)
+            {
+                var p = origin + right * x + forward * z;
+                if (NearLava(p, 0f)) return false;
+                if (!Ground(p, top, out var g)) return false;
+                if (Mathf.Abs(g.y - _floor) > FloorTolerance) return false;
+                low = Mathf.Min(low, g.y);
+                high = Mathf.Max(high, g.y);
+            }
+            if (high - low > FootStep) return false;
+            var centre = origin + forward * ((FootFront + FootBack) * 0.5f);
+            var half = new Vector3(FootHalfWidth, ClearHeight * 0.5f, (FootFront - FootBack) * 0.5f);
+            if (Physics.CheckBox(new Vector3(centre.x, high + 1.5f + ClearHeight * 0.5f, centre.z), half,
+                    Quaternion.LookRotation(forward), Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) return false;
+            height = high;
             return true;
         }
 

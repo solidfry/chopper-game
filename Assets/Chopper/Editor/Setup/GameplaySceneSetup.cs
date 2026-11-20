@@ -195,6 +195,9 @@ namespace Chopper.Editor.Setup
                 // A new map: look for good sites (open, flat, clear sky; bases out of turret reach).
                 var padPosition = DefaultPadPosition;
                 var bounds = UnityEngine.Object.FindAnyObjectByType<ArenaBoundsAuthoring>();
+                // Lava lines (City04): no site on or next to them.
+                NukeSiteFinder.SetLava(UnityEngine.Object.FindObjectsByType<Chopper.Simulation.Visuals.CityTrafficAuthoring>()
+                    .SelectMany(t => t.Lava).Where(l => l?.points != null).Select(l => (l.points, l.width)));
                 if (bounds != null && NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, out var sites))
                 {
                     padPosition = sites.Pad;
