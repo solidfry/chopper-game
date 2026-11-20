@@ -60,6 +60,9 @@ namespace Chopper.Presentation.Hud
                 var ping = SystemAPI.HasComponent<AbilityConfig>(self) && SystemAPI.HasComponent<AbilityState>(self) &&
                            Abilities.ShowsAllEnemies(SystemAPI.GetComponent<AbilityConfig>(self), SystemAPI.GetComponent<AbilityState>(self));
                 var selfTeam = SystemAPI.HasComponent<Simulation.Match.Team>(self) ? SystemAPI.GetComponent<Simulation.Match.Team>(self).Value : (byte)0;
+                // Objectives first: they always fit and always show.
+                if (context.Match.Mode == Simulation.Match.MatchMode.CaptureTheNuke)
+                    AddObjectives(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, selfTeam);
                 AddMarkers(model, camera, pose.ValueRO.Position, pose.ValueRO.Forward, targetLock.ValueRO.Target, ping, selfTeam);
                 UpdateLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO, selection.ValueRO);
                 UpdateGunLead(model, camera, self, pose.ValueRO, velocity.ValueRO.Linear, targetLock.ValueRO);
@@ -108,6 +111,48 @@ namespace Chopper.Presentation.Hud
             _candidates.Sort((a, b) => a.DistanceSq.CompareTo(b.DistanceSq));
             foreach (var candidate in _candidates)
                 if (!model.Add(candidate.Marker)) break;
+        }
+
+        /// <summary>Base markers float this high over the zone centre, metres.</summary>
+        private const float BaseMarkerHeight = 30f;
+
+        /// <summary>
+        /// Capture the Nuke: the nuke (any range; bar = hook, then arm, then defuse progress) and both base zones.
+        /// </summary>
+        private void AddObjectives(WorldMarkerModel model, UnityEngine.Camera camera, float3 position, float3 forward, byte selfTeam)
+        {
+            var heading = math.atan2(forward.x, forward.z);
+            foreach (var (nuke, pose) in SystemAPI.Query<RefRO<Simulation.Match.NukeState>, RefRO<LocalToWorld>>())
+            {
+                var s = nuke.ValueRO;
+                if (s.Phase == Simulation.Match.NukePhase.Detonated) continue;
+                var bar = s.HookTeam != 0 ? s.HookProgress
+                    : s.ArmedBy != 0 ? (s.DefuseProgress > 0f ? 1f - s.DefuseProgress : 1f)
+                    : s.ArmProgress > 0f ? s.ArmProgress
+                    : -1f;
+                model.Add(Objective(WorldMarkerKind.Nuke, camera, pose.ValueRO.Position, position, heading, bar));
+            }
+            foreach (var zone in SystemAPI.Query<RefRO<Simulation.Match.NukeBase>>())
+            {
+                var at = zone.ValueRO.Position + new float3(0f, BaseMarkerHeight, 0f);
+                var kind = zone.ValueRO.Team == selfTeam ? WorldMarkerKind.HomeBase : WorldMarkerKind.EnemyBase;
+                model.Add(Objective(kind, camera, at, position, heading, -1f));
+            }
+        }
+
+        private static WorldMarker Objective(WorldMarkerKind kind, UnityEngine.Camera camera, float3 at, float3 self, float heading, float bar)
+        {
+            var onScreen = WorldMarkerModel.Place(camera.WorldToViewportPoint(at), out var viewport, out var angle);
+            return new WorldMarker
+            {
+                Kind = kind,
+                Viewport = viewport,
+                OnScreen = onScreen,
+                EdgeAngleDegrees = angle,
+                BearingDegrees = Bearing(at - self, heading),
+                Distance = (int)math.round(math.distance(at, self) / WorldMarkerModel.DistanceStep) * WorldMarkerModel.DistanceStep,
+                HealthFraction = bar,
+            };
         }
 
         /// <summary>Clockwise from the nose in the horizontal plane, degrees -180..180.</summary>

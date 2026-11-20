@@ -11,6 +11,12 @@ namespace Chopper.Presentation.Hud
         Ground = 1,
         /// <summary>A team mate's chopper (team modes): always with health, for the repair drone.</summary>
         Ally = 2,
+        /// <summary>Capture the Nuke: the nuke, at any range. The bar is the hook, arm or defuse progress.</summary>
+        Nuke = 3,
+        /// <summary>Capture the Nuke: your team's base zone (arm the nuke here).</summary>
+        HomeBase = 4,
+        /// <summary>Capture the Nuke: the enemy base zone (set the armed nuke off here).</summary>
+        EnemyBase = 5,
     }
 
     /// <summary>One screen marker. Positions are viewport space: (0,0) bottom left to (1,1) top right.</summary>

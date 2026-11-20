@@ -73,6 +73,7 @@ namespace Chopper.Presentation.Hud
         public static string TeamName(byte team) => team < TeamNames.Length ? TeamNames[team] : $"TEAM {team}";
 
         public bool IsTeamMode => TeamRules.IsTeamMode(_mode);
+        public MatchMode Mode => _mode;
         public byte LocalTeam => _teams.TryGetValue(_localNetworkId, out var team) ? team : TeamRules.None;
         public int TeamScore(byte team) => team < _teamScores.Length ? _teamScores[team] : 0;
 
@@ -566,7 +567,7 @@ namespace Chopper.Presentation.Hud
                 _rows[i] = new ScoreboardRow(row.NetworkId, place, row.Name, row.Chassis, row.Kills, row.Deaths, row.IsLocal, row.Team);
             }
 
-            var mode = IsTeamMode ? "TEAM DEATHMATCH" : "FREE FOR ALL";
+            var mode = _mode == MatchMode.CaptureTheNuke ? "CAPTURE THE NUKE" : IsTeamMode ? "TEAM DEATHMATCH" : "FREE FOR ALL";
             ScoreboardTitle = _rows.Count == 1 ? $"{mode} // 1 PILOT" : $"{mode} // {_rows.Count} PILOTS";
             ScoreboardChanged?.Invoke();
         }

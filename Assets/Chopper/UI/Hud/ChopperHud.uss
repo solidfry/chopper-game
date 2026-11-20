@@ -1054,6 +1054,49 @@
   border-bottom-color: var(--chopper-blue);
 }
 
+/* Capture the Nuke: the nuke (a big pink diamond, its bar = hook / arm / defuse progress) and the base zones. */
+.hud-marker--nuke .hud-marker__icon {
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+  border-color: var(--chopper-pink);
+  background-color: rgba(255, 60, 170, 0.25);
+}
+
+.hud-marker--nuke .hud-marker__arrow {
+  border-bottom-color: var(--chopper-pink);
+}
+
+.hud-marker--nuke .hud-marker__health {
+  top: -16px;
+  width: 44px;
+  height: 4px;
+}
+
+.hud-marker--nuke .hud-marker__health-fill {
+  background-color: var(--chopper-pink);
+}
+
+.hud-marker--home-base .hud-marker__icon,
+.hud-marker--enemy-base .hud-marker__icon {
+  rotate: 0deg;
+  width: 26px;
+  height: 14px;
+  border-radius: 0;
+}
+
+.hud-marker--home-base .hud-marker__icon {
+  border-color: var(--chopper-blue);
+}
+
+.hud-marker--home-base .hud-marker__arrow {
+  border-bottom-color: var(--chopper-blue);
+}
+
+.hud-marker--enemy-base .hud-marker__icon {
+  border-color: var(--chopper-red);
+}
+
 /* Rocket lead indicator */
 .hud-lead {
   position: absolute;
