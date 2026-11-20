@@ -75,6 +75,12 @@ namespace Chopper.Editor.Setup
         /// </summary>
         /// <summary>Matchmaker queue of Team Deathmatch (the "name" in <c>Matchmaker/Tdm.mmq</c>).</summary>
         private const string TdmQueue = "tdm";
+        /// <summary>Matchmaker queue of Capture the Nuke (<c>Matchmaker/Ctn.mmq</c>; the allocator sets MATCH_MODE=ctn).</summary>
+        private const string CtnQueue = "ctn";
+
+        private const string CtnDescription =
+            "Hover over the nuke to hook it (the Lifter's winch is twice as fast), arm it in your base, then fly it into the enemy base. Turrets guard the pad. Shoot down the carrier to drop it.";
+        private static readonly string CtnRules = Lines("Hook 10 s, winch 5 s", "Arm for 20 s in your base", "First to 2 rounds");
 
         private static GameModeCatalog EnsureModes()
         {
@@ -116,10 +122,20 @@ namespace Chopper.Editor.Setup
             catalog.Add(new GameModeCatalog.ModeEntry
             {
                 Id = "ctn", DisplayName = "Capture the Nuke", Tagline = "Winch it. Arm it. Drop it.",
-                Description = "Hook the nuke with your winch, arm it in your base, then fly it to the enemy base and drop it. Shoot down the carrier to stop it.",
-                Rules = Lines("Two bases", "Arm for 20 s", "Drop it in their zone"), Players = "2 teams", Accent = ModeAccent.Pink,
-                Available = false,
+                Description = CtnDescription,
+                Rules = CtnRules, Players = "2 teams of 1-4", Accent = ModeAccent.Pink,
+                // OFFLINE until the ctn queue and the allocator are deployed (owner step) and the city maps have a pad.
+                Available = false, Queue = CtnQueue,
             });
+            // Repair (20 Nov 2026, CTN built): the queue and the rules as built.
+            var ctn = catalog.Find("ctn");
+            if (ctn != null && string.IsNullOrWhiteSpace(ctn.Queue))
+            {
+                ctn.Queue = CtnQueue;
+                ctn.Description = CtnDescription;
+                ctn.Rules = CtnRules;
+                ctn.Players = "2 teams of 1-4";
+            }
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssetIfDirty(catalog);
             return catalog;
