@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Chopper.Simulation.Combat;
+using Chopper.Simulation.Match;
 using Chopper.Simulation.Session;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -105,9 +106,10 @@ namespace Chopper.Editor.Setup
             var targets = EnsureTrainingTargets(scene);
             EnsureSpawner(scene);
             var points = SpawnAssets.EnsurePoints(scene);
+            var turrets = EnsureNukePad(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log($"Setup: gameplay subscene '{scene.name}' ready ({targets} training target(s) added, {points} spawn point(s) added).");
+            Debug.Log($"Setup: gameplay subscene '{scene.name}' ready ({targets} training target(s) added, {points} spawn point(s) added, {turrets} pad turret(s) added).");
         }
 
         private static GameObject FindOrCreateSettingsObject(Scene scene)
@@ -172,6 +174,45 @@ namespace Chopper.Editor.Setup
         /// The spawner needs the loadout catalog (per-player loadouts, chassis prefabs), the missile ghost, the bot
         /// profile, the spawn settings and the bot settings (server bots).
         /// </summary>
+
+        /// <summary>Default pad position for a map that has none: on the ground, away from the training targets.</summary>
+        private static readonly Vector3 DefaultPadPosition = new(0f, 0f, -380f);
+        private const int PadTurretCount = 4;
+
+        /// <summary>
+        /// Capture the Nuke: one <see cref="NukePadAuthoring"/> (added at <see cref="DefaultPadPosition"/> if missing), ringed
+        /// by <see cref="PadTurretCount"/> pad turrets (pre-spawned ghosts of <see cref="TurretAssets.PrefabPath"/>), each
+        /// facing out. Turrets already in the scene are kept. Returns the number of turrets added.
+        /// </summary>
+        private static int EnsureNukePad(Scene scene)
+        {
+            var pad = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukePadAuthoring>(true)).FirstOrDefault();
+            if (pad == null)
+            {
+                var go = new GameObject("NukePad");
+                SceneManager.MoveGameObjectToScene(go, scene);
+                go.transform.position = DefaultPadPosition;
+                pad = go.AddComponent<NukePadAuthoring>();
+                Undo.RegisterCreatedObjectUndo(go, "Add nuke pad");
+            }
+
+            if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<TurretAuthoring>(true) != null)) return 0;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TurretAssets.PrefabPath) ?? TurretAssets.EnsurePrefab();
+            if (prefab == null) return 0;
+
+            var centre = pad.transform.position;
+            for (var i = 0; i < PadTurretCount; i++)
+            {
+                var angle = (i + 0.5f) * Mathf.PI * 2f / PadTurretCount;
+                var outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                var turret = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+                Undo.RegisterCreatedObjectUndo(turret, "Add pad turret");
+                turret.name = $"PadTurret_{i}";
+                turret.transform.SetPositionAndRotation(centre + outward * pad.Radius, Quaternion.LookRotation(outward));
+            }
+            return PadTurretCount;
+        }
+
         private static void EnsureSpawner(Scene scene)
         {
             var config = ConfigAssets.Load();
