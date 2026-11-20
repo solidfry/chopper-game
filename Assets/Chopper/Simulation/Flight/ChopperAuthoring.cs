@@ -77,6 +77,7 @@ namespace Chopper.Simulation.Flight
                 AddComponent<LastAttacker>(entity);
                 // Team Deathmatch side, set at spawn (ChopperSpawning); a ghost field, so clients colour markers.
                 AddComponent<Match.Team>(entity);
+                AddComponent<Match.NukeCarry>(entity);
                 AddComponent(entity, built.Crash);
                 AddComponent<CrashSensor>(entity);
                 // Death: the killing blow picks how the wreck goes down (WreckSystem, Docs/ChopperDeathDesign.md).

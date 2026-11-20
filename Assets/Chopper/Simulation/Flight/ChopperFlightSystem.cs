@@ -45,6 +45,7 @@ namespace Chopper.Simulation.Flight
                 AbilityConfigs = SystemAPI.GetComponentLookup<Combat.AbilityConfig>(isReadOnly: true),
                 AbilityStates = SystemAPI.GetComponentLookup<Combat.AbilityState>(isReadOnly: true),
                 Repairs = SystemAPI.GetComponentLookup<Combat.ChopperRepair>(isReadOnly: true),
+                Carries = SystemAPI.GetComponentLookup<Match.NukeCarry>(isReadOnly: true),
                 Wrecks = SystemAPI.GetComponentLookup<Combat.Wreck>(isReadOnly: true),
             }.ScheduleParallel(state.Dependency);
         }
@@ -65,6 +66,7 @@ namespace Chopper.Simulation.Flight
             [ReadOnly] public ComponentLookup<Combat.AbilityState> AbilityStates;
             /// <summary>No boost while repairing.</summary>
             [ReadOnly] public ComponentLookup<Combat.ChopperRepair> Repairs;
+            [ReadOnly] public ComponentLookup<Match.NukeCarry> Carries;
             /// <summary>A wreck has no engine: WreckFlightSystem flies it.</summary>
             [ReadOnly] public ComponentLookup<Combat.Wreck> Wrecks;
 
@@ -138,6 +140,8 @@ namespace Chopper.Simulation.Flight
                 // forward drag: a higher top speed while the tank lasts.
                 var quadraticDrag = config.QuadraticDrag;
                 if (state.Boosting) quadraticDrag.z *= config.BoostDragScale;
+                // Carrying the nuke: a lower top speed (the Lifter's winch keeps more).
+                if (Carries.TryGetComponent(entity, out var carry)) quadraticDrag.z *= Match.NukeCarry.DragScale(carry);
                 var heading = quaternion.LookRotationSafe(flatNose, worldUp);
                 var localVelocity = math.mul(math.inverse(heading), velocity.Linear);
                 var dragAcceleration = -(quadraticDrag * localVelocity * math.abs(localVelocity) + config.LinearDrag * localVelocity);

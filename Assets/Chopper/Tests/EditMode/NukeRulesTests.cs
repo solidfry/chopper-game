@@ -182,5 +182,13 @@ namespace Chopper.Tests
             Assert.That(NukeBaseSpawn.FreeSlot(home, towardsPad, occupied), Is.EqualTo(2));
             occupied.Dispose();
         }
+
+        [Test]
+        public void Carry_ScalesTopSpeedThroughDrag_OnlyWhileCarrying()
+        {
+            Assert.That(NukeCarry.DragScale(new NukeCarry { Carrying = false, SpeedScale = 0.5f }), Is.EqualTo(1f));
+            Assert.That(NukeCarry.DragScale(new NukeCarry { Carrying = true, SpeedScale = 0.5f }), Is.EqualTo(4f).Within(1e-4f));
+            Assert.That(NukeCarry.DragScale(new NukeCarry { Carrying = true, SpeedScale = 0f }), Is.EqualTo(1f), "Unset: no change.");
+        }
     }
 }

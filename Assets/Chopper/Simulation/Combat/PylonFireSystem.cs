@@ -137,6 +137,8 @@ namespace Chopper.Simulation.Combat
                 if (selected >= weapons.Length) selected = 0;
 
                 if (!input.ValueRO.FireSecondary || selected >= cooldowns.Length || cooldowns[selected].CooldownRemaining > 0f) continue;
+                // Carrying the nuke: no pylon weapons (plan section 7).
+                if (SystemAPI.HasComponent<Match.NukeCarry>(shooter) && SystemAPI.GetComponent<Match.NukeCarry>(shooter).Carrying) continue;
 
                 var weapon = weapons[selected];
                 if (weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock && lockTarget == Entity.Null) continue;

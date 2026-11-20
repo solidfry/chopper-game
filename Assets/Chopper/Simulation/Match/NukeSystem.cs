@@ -128,6 +128,19 @@ namespace Chopper.Simulation.Match
                 transform.ValueRW.Position = position;
             }
 
+            // The carry flag: on the holder only (the owner's prediction reads it).
+            var holderNow = Entity.Null;
+            foreach (var c in SystemAPI.Query<RefRO<NukeCarrier>>()) holderNow = c.ValueRO.Chopper;
+            foreach (var (carry, chopper) in SystemAPI.Query<RefRW<NukeCarry>>().WithEntityAccess())
+            {
+                var carrying = chopper == holderNow;
+                var scale = carrying && SystemAPI.HasComponent<NukeHookConfig>(chopper)
+                    ? SystemAPI.GetComponent<NukeHookConfig>(chopper).CarrySpeed
+                    : carrying ? NukeHookConfig.Base.CarrySpeed : 1f;
+                if (carry.ValueRO.Carrying != carrying || carry.ValueRO.SpeedScale != scale)
+                    carry.ValueRW = new NukeCarry { Carrying = carrying, SpeedScale = scale };
+            }
+
             ecb.Playback(state.EntityManager);
             bases.Dispose();
         }

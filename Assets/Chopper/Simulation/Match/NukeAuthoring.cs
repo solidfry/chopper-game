@@ -40,6 +40,22 @@ namespace Chopper.Simulation.Match
         };
     }
 
+    /// <summary>
+    /// On every chopper (baked): set by the server while it carries the nuke. A ghost field, so the owner's predicted
+    /// flight and pylons agree with the server: the carrier is slower (<see cref="SpeedScale"/>, from its
+    /// <see cref="NukeHookConfig.CarrySpeed"/>: the winch keeps more speed) and cannot fire pylon weapons.
+    /// </summary>
+    public struct NukeCarry : IComponentData
+    {
+        [Unity.NetCode.GhostField] public bool Carrying;
+        /// <summary>Top speed scale while carrying (1 = no change).</summary>
+        [Unity.NetCode.GhostField(Quantization = 1000)] public float SpeedScale;
+
+        /// <summary>Forward drag scale for <see cref="SpeedScale"/>: top speed goes with 1 / sqrt(quadratic drag).</summary>
+        public static float DragScale(in NukeCarry carry) =>
+            carry.Carrying && carry.SpeedScale > 0.05f ? 1f / (carry.SpeedScale * carry.SpeedScale) : 1f;
+    }
+
     /// <summary>A team's base zone (a vertical cylinder): arm the nuke in your own, set it off in the enemy's.</summary>
     public struct NukeBase : IComponentData
     {
