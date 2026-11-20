@@ -60,6 +60,16 @@ namespace Chopper.Simulation.Combat
                 });
             }
 
+            // Pilots in the bigger team (all players when there are no teams): the turret health scale.
+            int team1 = 0, team2 = 0, players = 0;
+            foreach (var team in SystemAPI.Query<RefRO<Match.Team>>().WithAll<Session.PlayerId>())
+            {
+                players++;
+                if (team.ValueRO.Value == 1) team1++;
+                else if (team.ValueRO.Value == 2) team2++;
+            }
+            var pilots = team1 + team2 > 0 ? math.max(team1, team2) : players;
+
             foreach (var (config, turret, health, pose, entity) in
                      SystemAPI.Query<RefRO<TurretConfig>, RefRW<TurretState>, RefRW<Health>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
@@ -67,6 +77,14 @@ namespace Chopper.Simulation.Combat
                 var gun = config.ValueRO.Gun;
                 if (s.Random.state == 0) s.Random = Random.CreateFromIndex((uint)entity.Index + 1u);
                 if (math.lengthsq(s.Aim) < 1e-6f) s.Aim = pose.ValueRO.Forward;
+
+                var max = TurretRules.HealthFor(config.ValueRO, pilots);
+                if (max > 0f && math.abs(health.ValueRO.Max - max) > 0.5f)
+                {
+                    var share = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f;
+                    health.ValueRW.Max = max;
+                    if (!health.ValueRO.IsDead) health.ValueRW.Current = math.max(share * max, 1f);
+                }
 
                 if (TurretRules.TickRespawn(ref s, health.ValueRO.IsDead, config.ValueRO.RespawnSeconds, deltaTime))
                     health.ValueRW.Current = health.ValueRO.Max;

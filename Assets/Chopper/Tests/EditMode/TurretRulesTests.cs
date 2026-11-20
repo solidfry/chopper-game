@@ -69,5 +69,16 @@ namespace Chopper.Tests
             Assert.That(s.Down, Is.False);
             Assert.That(TurretRules.TickRespawn(ref s, dead: false, 45f, 0.5f), Is.False, "A live turret does not count down.");
         }
+
+        [Test]
+        public void HealthFor_ScalesWithTheBiggerTeam_WithinFloorAndCap()
+        {
+            var config = new TurretConfig { HealthPerPilot = 60f, MinHealth = 80f, MaxHealth = 240f };
+            Assert.That(TurretRules.HealthFor(config, 1), Is.EqualTo(80f));
+            Assert.That(TurretRules.HealthFor(config, 2), Is.EqualTo(120f));
+            Assert.That(TurretRules.HealthFor(config, 4), Is.EqualTo(240f));
+            Assert.That(TurretRules.HealthFor(config, 8), Is.EqualTo(240f));
+            Assert.That(TurretRules.HealthFor(new TurretConfig { MaxHealth = 300f }, 2), Is.EqualTo(300f), "No scale: always max.");
+        }
     }
 }

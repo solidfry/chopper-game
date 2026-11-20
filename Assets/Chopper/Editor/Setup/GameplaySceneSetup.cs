@@ -178,6 +178,8 @@ namespace Chopper.Editor.Setup
         /// <summary>Default pad position for a map that has none: on the ground, away from the training targets.</summary>
         private static readonly Vector3 DefaultPadPosition = new(0f, 0f, -380f);
         private const int PadTurretCount = 4;
+        /// <summary>Turret ring radius as a share of the pad radius: spread out, so they can be taken one by one.</summary>
+        private const float TurretRingScale = 2f;
 
         /// <summary>
         /// Capture the Nuke: one <see cref="NukePadAuthoring"/> (added at <see cref="DefaultPadPosition"/> if missing), ringed
@@ -199,7 +201,22 @@ namespace Chopper.Editor.Setup
             EnsureNuke(scene, pad.transform.position);
             EnsureBases(scene);
 
-            if (scene.GetRootGameObjects().Any(r => r.GetComponentInChildren<TurretAuthoring>(true) != null)) return 0;
+            // Turrets already placed: move them onto the ring (owner 20 Nov: too tight).
+            var placed = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TurretAuthoring>(true)).ToArray();
+            if (placed.Length > 0)
+            {
+                for (var i = 0; i < placed.Length; i++)
+                {
+                    var angle = (i + 0.5f) * Mathf.PI * 2f / placed.Length;
+                    var outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                    var position = pad.transform.position + outward * (pad.Radius * TurretRingScale);
+                    if ((placed[i].transform.position - position).sqrMagnitude < 0.01f) continue;
+                    Undo.RecordObject(placed[i].transform, "Move pad turret");
+                    placed[i].transform.SetPositionAndRotation(position, Quaternion.LookRotation(outward));
+                    EditorSceneManager.MarkSceneDirty(scene);
+                }
+                return 0;
+            }
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TurretAssets.PrefabPath) ?? TurretAssets.EnsurePrefab();
             if (prefab == null) return 0;
 
@@ -211,7 +228,7 @@ namespace Chopper.Editor.Setup
                 var turret = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 Undo.RegisterCreatedObjectUndo(turret, "Add pad turret");
                 turret.name = $"PadTurret_{i}";
-                turret.transform.SetPositionAndRotation(centre + outward * pad.Radius, Quaternion.LookRotation(outward));
+                turret.transform.SetPositionAndRotation(centre + outward * (pad.Radius * TurretRingScale), Quaternion.LookRotation(outward));
             }
             return PadTurretCount;
         }

@@ -24,6 +24,13 @@ namespace Chopper.Simulation.Combat
         public float RespawnSeconds;
         /// <summary>Team it belongs to. 0 = neutral: shoots every chopper.</summary>
         public byte Team;
+        /// <summary>
+        /// Health scales with the bigger team (owner, 20 Nov: "turret toughness should scale to the size of the teams"):
+        /// this much per pilot, never below <see cref="MinHealth"/> nor above <see cref="MaxHealth"/>. 0 = always max.
+        /// </summary>
+        public float HealthPerPilot;
+        public float MinHealth;
+        public float MaxHealth;
     }
 
     /// <summary>Replicated so clients can turn the barrel, draw tracers and hide a destroyed turret.</summary>
@@ -106,6 +113,13 @@ namespace Chopper.Simulation.Combat
         }
 
         /// <summary>Counts the down time. True on the tick it comes back.</summary>
+        /// <summary>Max health for <paramref name="pilots"/> in the bigger team (see <see cref="TurretConfig.HealthPerPilot"/>).</summary>
+        public static float HealthFor(in TurretConfig config, int pilots)
+        {
+            if (config.HealthPerPilot <= 0f || pilots <= 0) return config.MaxHealth;
+            return math.clamp(config.HealthPerPilot * pilots, config.MinHealth, config.MaxHealth);
+        }
+
         public static bool TickRespawn(ref TurretState state, bool dead, float respawnSeconds, float deltaTime)
         {
             if (!dead) return false;
