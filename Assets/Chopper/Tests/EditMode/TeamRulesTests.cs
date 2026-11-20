@@ -84,7 +84,7 @@ namespace Chopper.Tests
         [TestCase("ffa", MatchMode.FreeForAll)]
         [TestCase("", MatchMode.FreeForAll)]
         [TestCase(null, MatchMode.FreeForAll)]
-        [TestCase("ctn", MatchMode.FreeForAll)]
+        [TestCase("ctn", MatchMode.CaptureTheNuke)]
         public void ParseMode_ReadsTheQueueOrArgumentName(string text, MatchMode expected)
         {
             Assert.That(TeamRules.ParseMode(text), Is.EqualTo(expected));

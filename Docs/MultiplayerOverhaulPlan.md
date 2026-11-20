@@ -774,6 +774,12 @@ Shared: server `MatchStateMachine` (port `GameLogic/NetworkMatchStateMachine.cs`
   - **Attack:** armed nuke must be flown to the enemy base and dropped in their zone. Enemy can shoot it down (drops it) or defuse it in their zone (hold 10 s).
   - Best of 3 rounds. Score bonus for carry/arm/defuse feeds progression.
   - ECS: `NukeState` ghost component (server-owned), trigger zones via Unity Physics triggers, HUD markers on all clients.
+  - **Build steps (20 Nov, Claude; owner: "Capture the nuke sounds good").** Same pattern as TDM: one mode value, no second code path. Defaults picked (owner can change): one nuke on a pad in the map centre; any chopper can hook it (Lifter faster, later); armed nuke stays armed when dropped; first to 2 round wins.
+    1. **Rules (done 20 Nov).** `MatchMode.CaptureTheNuke` (`-mode ctn`, queue name `ctn`), a team mode. Pure `NukeRules.Tick` (`Simulation/Match/NukeRules.cs`): AtSpawn → Carried → Dropped (30 s, then reset) → armed in own zone (20 s, paused when contested, decays out of zone) → detonate in enemy zone; defuse in own zone (10 s, paused when contested). `NukeRounds.Winner` (first to 2). `NukeState` ghost component. 8 EditMode tests (`NukeRulesTests`).
+    2. **ECS core.** Nuke ghost prefab and pad, a base zone per team (map authoring + Setup step), `NukeSystem` (server) gathers carrier, zone and contest each tick and runs `NukeRules`; kills give no team score in CTN; round end, reset of nuke and spawns, match end on `NukeRounds.Winner`.
+    3. **Carry.** Hook: hover slow and low over the nuke; a simple rope (spring) under the chopper first, slung-load physics later. Carrier is slower and cannot fire pylons. Shot down = drop where it falls.
+    4. **Presentation.** Nuke and zone markers, arm and defuse bars, round banner, nuke blast effect (bench first), sounds; scoreboard shows rounds.
+    5. **Bots and services.** Bot needs: hook, escort, defend, defuse. `Matchmaker/Ctn.mmq`, `GameModeCatalog` ctn Available.
 
 ## 7a. Bots and AI units (owner TODO, 29 Oct — design not started)
 

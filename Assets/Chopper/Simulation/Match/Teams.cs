@@ -12,6 +12,8 @@ namespace Chopper.Simulation.Match
     {
         FreeForAll = 0,
         TeamDeathmatch = 1,
+        /// <summary>Two teams, one nuke: carry it home, arm it, fly it into the enemy base (plan section 7).</summary>
+        CaptureTheNuke = 2,
     }
 
     /// <summary>
@@ -34,7 +36,7 @@ namespace Chopper.Simulation.Match
         /// <summary>The team count a match uses: 2 to <see cref="MaxTeams"/>.</summary>
         public static int ClampTeamCount(int count) => math.clamp(count, 2, MaxTeams);
 
-        public static bool IsTeamMode(MatchMode mode) => mode == MatchMode.TeamDeathmatch;
+        public static bool IsTeamMode(MatchMode mode) => mode != MatchMode.FreeForAll;
 
         /// <summary>Same non-zero team. Free For All (team 0) has no allies.</summary>
         public static bool AreAllies(byte a, byte b) => a != None && a == b;
@@ -82,15 +84,18 @@ namespace Chopper.Simulation.Match
         public static bool ScoresForTeam(MatchMode mode, byte killer, byte victim) =>
             IsTeamMode(mode) && killer != None && killer != victim;
 
-        /// <summary>"tdm", "teamdeathmatch" or "TeamDeathmatch" (case ignored); everything else is Free For All.</summary>
+        /// <summary>"tdm" / "teamdeathmatch", "ctn" / "capturethenuke" (case ignored); everything else is Free For All.</summary>
         public static MatchMode ParseMode(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return MatchMode.FreeForAll;
             var value = text.Trim();
-            return value.Equals("tdm", StringComparison.OrdinalIgnoreCase) ||
-                   value.Equals("teamdeathmatch", StringComparison.OrdinalIgnoreCase)
-                ? MatchMode.TeamDeathmatch
-                : MatchMode.FreeForAll;
+            if (value.Equals("tdm", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("teamdeathmatch", StringComparison.OrdinalIgnoreCase))
+                return MatchMode.TeamDeathmatch;
+            if (value.Equals("ctn", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("capturethenuke", StringComparison.OrdinalIgnoreCase))
+                return MatchMode.CaptureTheNuke;
+            return MatchMode.FreeForAll;
         }
     }
 
