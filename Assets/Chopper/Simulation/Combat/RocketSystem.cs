@@ -80,9 +80,27 @@ namespace Chopper.Simulation.Combat
                     continue;
                 }
 
-                if (rocket.ProximityFuse > 0f && TryFuse(fuseTargets, rocket, end, out var burst))
+                if (rocket.ProximityFuse > 0f && TryFuse(fuseTargets, rocket, end, out var burst, out var fused))
                 {
-                    Explosions.Splash(world, ref _damageLookup, burst, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, Entity.Null,
+                    // The target that set off the fuse is inside the fuse range: it takes the full splash, no falloff.
+                    // Without this a fused burst did less damage than the contact hit it replaced (bot test 19 Nov:
+                    // hits 19% -> 37%, but kills 4 -> 0).
+                    if (_damageLookup.TryGetBuffer(fused.Entity, out var near))
+                    {
+                        var normal = math.normalizesafe(burst - fused.Position, math.up());
+                        near.Add(new DamageEvent
+                        {
+                            Amount = rocket.SplashDamage,
+                            Source = rocket.Shooter,
+                            Point = fused.Position + normal,
+                            Normal = normal,
+                            Kind = DamageKind.Explosion,
+                            Weapon = rocket.Weapon,
+                            Attacker = rocket.Attacker,
+                            Push = -normal * Explosions.PushSpeed(rocket.SplashDamage),
+                        });
+                    }
+                    Explosions.Splash(world, ref _damageLookup, burst, rocket.SplashRadius, rocket.SplashDamage, rocket.Shooter, fused.Entity,
                         rocket.Weapon, rocket.Attacker);
                     if (TryFind(fuseTargets, rocket.Threat, out var fusedAt) && RocketEvade.BurstMissed(burst, fusedAt, rocket.SplashRadius))
                         Evaded(ref rocket, owners, hasLog, log, now, fusedAt);
@@ -164,14 +182,17 @@ namespace Chopper.Simulation.Combat
             public TargetClass Class;
         }
 
-        private static bool TryFuse(in NativeList<FuseTarget> targets, in Rocket rocket, float3 end, out float3 burst)
+        private static bool TryFuse(in NativeList<FuseTarget> targets, in Rocket rocket, float3 end, out float3 burst, out FuseTarget fused)
         {
             burst = end;
+            fused = default;
             for (var i = 0; i < targets.Length; i++)
             {
                 var target = targets[i];
                 if (target.Entity == rocket.Shooter || (target.Class & rocket.FuseTargets) == 0) continue;
-                if (RocketFlight.FuseHit(rocket.Position, end, target.Position, rocket.ProximityFuse, out burst)) return true;
+                if (!RocketFlight.FuseHit(rocket.Position, end, target.Position, rocket.ProximityFuse, out burst)) continue;
+                fused = target;
+                return true;
             }
             return false;
         }
