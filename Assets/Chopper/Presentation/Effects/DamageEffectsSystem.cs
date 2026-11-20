@@ -213,6 +213,12 @@ namespace Chopper.Presentation.Effects
 
                 // Dust stays on the ground outside the canopy, so the pilot sees it even when the contact is right below.
                 if (hit.Kind is DamageKind.Impact or DamageKind.Landing) EmitDust(settings, point, settings.ImpactDust);
+                // Rounds on the hull: the metal hit sound at the server's hit point. The drawn tracers come from the
+                // shooter's interpolated aim and often pass behind a predicted chopper, so their own impact sound is not
+                // enough (owner, 20 Nov: "turret bullets dont seem to cause an effect when hitting the player. no sound?").
+                // The cue's cooldown and voice limit keep a hit that the tracer also showed from doubling up.
+                if (hit.Kind == DamageKind.Bullet && _context.Sounds != null)
+                    _context.Audio.Play(_context.Sounds.SurfaceHit(SurfaceKind.Metal), point);
                 var own = cockpit && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
                 if (own && (point - eye).sqrMagnitude < CockpitClearance * CockpitClearance) continue;
                 EmitSparks(settings, point, normal, DamageLook.Sparks(hit.Amount, hit.Kind, settings.SparksPerDamage, settings.SparkCount));
