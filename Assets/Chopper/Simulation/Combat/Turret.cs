@@ -1,0 +1,100 @@
+using Unity.Entities;
+using Unity.Mathematics;
+using Unity.NetCode;
+
+namespace Chopper.Simulation.Combat
+{
+    /// <summary>
+    /// A ground gun turret (first use: guards for the Capture the Nuke pad). Server-run. It shoots the same server rounds
+    /// as chopper guns (<see cref="ActiveBullet"/>), so hits, damage, falloff and the match log need no new path.
+    /// When destroyed it is down for <see cref="RespawnSeconds"/>, then comes back at full health.
+    /// </summary>
+    public struct TurretConfig : IComponentData
+    {
+        /// <summary>The gun: fire rate, damage, range, falloff, bullet speed, muzzle (turret space), name.</summary>
+        public HitscanWeaponConfig Gun;
+        /// <summary>How fast the barrel turns, radians per second.</summary>
+        public float TurnRate;
+        /// <summary>Fires only when the barrel is within this angle of the lead point, radians.</summary>
+        public float FireCone;
+        /// <summary>Random aim error per shot, radians (so a turret is a threat, not a laser).</summary>
+        public float Spread;
+        public float RespawnSeconds;
+        /// <summary>Team it belongs to. 0 = neutral: shoots every chopper.</summary>
+        public byte Team;
+    }
+
+    /// <summary>Replicated so clients can turn the barrel, draw tracers and hide a destroyed turret.</summary>
+    public struct TurretState : IComponentData
+    {
+        /// <summary>World direction of the barrel.</summary>
+        [GhostField(Quantization = 1000)] public float3 Aim;
+        /// <summary>Shots fired so far; clients draw a tracer each time it goes up (as <see cref="HitscanWeaponState"/>).</summary>
+        [GhostField] public uint ShotCount;
+        [GhostField] public bool Down;
+        /// <summary>Seconds until it comes back (server).</summary>
+        public float RespawnRemaining;
+        public float Cooldown;
+        public Entity Target;
+        public Random Random;
+    }
+
+    /// <summary>Pure turret rules, shared by the server system and EditMode tests.</summary>
+    public static class TurretRules
+    {
+        /// <summary>A neutral turret (team 0) shoots everyone; a team turret shoots only other teams.</summary>
+        public static bool IsEnemy(byte turretTeam, byte targetTeam) =>
+            turretTeam == 0 || targetTeam != turretTeam;
+
+        /// <summary>Turns <paramref name="current"/> toward <paramref name="wanted"/> by at most <paramref name="maxAngle"/>.</summary>
+        public static float3 Slew(float3 current, float3 wanted, float maxAngle)
+        {
+            current = math.normalizesafe(current, wanted);
+            wanted = math.normalizesafe(wanted, current);
+            var angle = Angle(current, wanted);
+            if (angle <= maxAngle || angle < 1e-5f) return wanted;
+            var axis = math.cross(current, wanted);
+            if (math.lengthsq(axis) < 1e-10f)
+                axis = math.abs(current.y) < 0.99f ? math.cross(current, math.up()) : math.cross(current, math.right());
+            return math.normalize(math.rotate(quaternion.AxisAngle(math.normalize(axis), maxAngle), current));
+        }
+
+        public static float Angle(float3 a, float3 b) =>
+            math.acos(math.clamp(math.dot(math.normalizesafe(a), math.normalizesafe(b)), -1f, 1f));
+
+        /// <summary>Ready to fire: not cooling down and the barrel is inside the fire cone.</summary>
+        public static bool CanFire(float cooldown, float3 aim, float3 wanted, float fireCone) =>
+            cooldown <= 0f && Angle(aim, wanted) <= fireCone;
+
+        /// <summary>The aim with a random error of up to <paramref name="spread"/> radians.</summary>
+        public static float3 Scatter(float3 aim, float spread, ref Random random)
+        {
+            if (spread <= 0f) return aim;
+            var side = math.normalizesafe(math.cross(aim, math.up()), math.right());
+            var up = math.cross(side, aim);
+            var angle = random.NextFloat(0f, spread);
+            var turn = random.NextFloat(0f, 2f * math.PI);
+            var offset = (side * math.cos(turn) + up * math.sin(turn)) * math.tan(angle);
+            return math.normalize(aim + offset);
+        }
+
+        /// <summary>Counts the down time. True on the tick it comes back.</summary>
+        public static bool TickRespawn(ref TurretState state, bool dead, float respawnSeconds, float deltaTime)
+        {
+            if (!dead) return false;
+            if (!state.Down)
+            {
+                state.Down = true;
+                state.RespawnRemaining = respawnSeconds;
+                state.Target = Entity.Null;
+                return false;
+            }
+            state.RespawnRemaining -= deltaTime;
+            if (state.RespawnRemaining > 0f) return false;
+            state.Down = false;
+            state.RespawnRemaining = 0f;
+            state.Cooldown = 0f;
+            return true;
+        }
+    }
+}
