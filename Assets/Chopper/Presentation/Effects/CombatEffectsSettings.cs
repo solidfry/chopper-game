@@ -100,7 +100,7 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Lens flare on the blast's lights (Editor/Setup/LensFlareAssets). Empty: none.")]
         private UnityEngine.Rendering.LensFlareDataSRP nukeFlare;
         [SerializeField, Min(0f), Tooltip("Lens flare strength at the flash; the fire in the cap keeps a share of it.")]
-        private float nukeFlareIntensity = 3f;
+        private float nukeFlareIntensity = 6f;
         [SerializeField, Tooltip("Extra pack layers with the blast (ground fires). Ground layers start on the ground under it.")]
         private BlastLayer[] nukeBlastLayers = Array.Empty<BlastLayer>();
         [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]

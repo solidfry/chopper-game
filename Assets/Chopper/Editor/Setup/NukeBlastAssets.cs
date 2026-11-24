@@ -130,6 +130,7 @@ namespace Chopper.Editor.Setup
                 Debris(root.transform, debris, puffMesh);
                 RisingSparks(root.transform, sparks);
                 BaseSurge(root.transform, smoke);
+                BaseClouds(root.transform, smoke, flame);
                 var baseRim = RimSmoke(root.transform, smoke, "BaseRimSmoke", 95f, 26f, 0.9f, new Color(0.6f, 0.5f, 0.42f), new Color(0.48f, 0.4f, 0.34f));
                 if (baseRim != null) baseRim.transform.localPosition = new Vector3(0f, 12f, 0f);
 
@@ -286,6 +287,73 @@ namespace Chopper.Editor.Setup
             SmokeSheet.Apply(system);
             renderer.maxParticleSize = 3f;
             return system;
+        }
+
+        /// <summary>
+        /// 0.3-25 s: the ground cloud as soft volume (owner: "the clouds on the ground still seem like a shell"): dense,
+        /// lit smoke billows on the ring of puffs, hot orange at first, that keep rolling outwards and up, plus fire glowing
+        /// inside them for the first seconds. The solid puffs stay inside as ragged, glowing cores.
+        /// </summary>
+        private static void BaseClouds(Transform parent, Material smoke, Material flame)
+        {
+            if (smoke == null) return;
+            var system = Make(parent, "BaseClouds", smoke, ParticleSystemSimulationSpace.World, out var renderer);
+            system.transform.localPosition = new Vector3(0f, 10f, 0f);
+            var main = system.main;
+            main.duration = 12f;
+            main.startDelay = 0.3f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(13f, 19f);
+            main.startSize = new ParticleSystem.MinMaxCurve(32f, 62f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 5f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.66f, 0.55f, 0.46f), new Color(0.52f, 0.44f, 0.38f));
+            main.maxParticles = 700;
+            Burst(system, 0f, 170);
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(22f, Curve((0f, 1f), (0.6f, 0.6f), (1f, 0f)));
+            var shape = Shape(system, ParticleSystemShapeType.Donut, 85f);
+            shape.donutRadius = 38f;
+            shape.rotation = new Vector3(90f, 0f, 0f);
+            // Keep rolling out and up for the whole blast (owner: "keep expanding outwards").
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(1f, 3.5f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.radial = new ParticleSystem.MinMaxCurve(3f, 7f);
+            Size(system, Curve((0f, 0.45f), (0.25f, 1f), (1f, 1.7f)));
+            Colour(system, Gradient(
+                new[] { (0f, new Color(1f, 0.62f, 0.38f)), (0.15f, new Color(1f, 0.85f, 0.7f)), (0.4f, Color.white), (1f, new Color(0.85f, 0.85f, 0.88f)) },
+                new[] { (0f, 0f), (0.06f, 0.92f), (0.65f, 0.75f), (1f, 0f) }));
+            Noise(system, 3.5f, 0.1f);
+            Spin(system, 0.12f);
+            SmokeSheet.Apply(system);
+            renderer.maxParticleSize = 3f;
+
+            if (flame == null) return;
+            var fire = Make(parent, "BaseCloudFire", flame, ParticleSystemSimulationSpace.World, out var fireRenderer);
+            fire.transform.localPosition = new Vector3(0f, 8f, 0f);
+            var fireMain = fire.main;
+            fireMain.duration = 5f;
+            fireMain.startDelay = 0.3f;
+            fireMain.startLifetime = new ParticleSystem.MinMaxCurve(1.5f, 2.8f);
+            fireMain.startSize = new ParticleSystem.MinMaxCurve(26f, 46f);
+            fireMain.startSpeed = new ParticleSystem.MinMaxCurve(1f, 4f);
+            fireMain.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            fireMain.maxParticles = 300;
+            var fireEmission = fire.emission;
+            fireEmission.rateOverTime = new ParticleSystem.MinMaxCurve(60f, Curve((0f, 1f), (1f, 0f)));
+            var fireShape = Shape(fire, ParticleSystemShapeType.Donut, 80f);
+            fireShape.donutRadius = 30f;
+            fireShape.rotation = new Vector3(90f, 0f, 0f);
+            Size(fire, Curve((0f, 0.5f), (1f, 1.2f)));
+            Colour(fire, Gradient(
+                new[] { (0f, new Color(1f, 0.75f, 0.4f)), (0.5f, new Color(1f, 0.4f, 0.1f)), (1f, new Color(0.4f, 0.08f, 0.02f)) },
+                new[] { (0f, 0f), (0.15f, 0.7f), (1f, 0f) }));
+            Noise(fire, 4f, 0.2f);
+            FlameSheet(fire);
+            fireRenderer.maxParticleSize = 3f;
         }
 
         /// <summary>Screen-plane spin only (smoke cards stay upright).</summary>

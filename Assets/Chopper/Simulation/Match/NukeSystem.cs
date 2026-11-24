@@ -115,6 +115,8 @@ namespace Chopper.Simulation.Match
                         var blast = ecb.CreateEntity();
                         ecb.AddComponent(blast, new NukeDetonatedRpc { Position = position, Team = s.DetonatedBy });
                         ecb.AddComponent<Unity.NetCode.SendRpcCommandRequest>(blast);
+                        // The shock front throws choppers as it passes them (NukeShockSystem).
+                        ecb.AddComponent(ecb.CreateEntity(), new NukeShockwave { Origin = position, Start = SystemAPI.Time.ElapsedTime });
                         UnityEngine.Debug.Log($"[Nuke] Team {s.DetonatedBy} set off the nuke in team {zoneTeam}'s base: round won.");
                         // Next round: a new nuke on the pad.
                         s = NukeRules.AtSpawn;

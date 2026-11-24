@@ -20,13 +20,18 @@ namespace Chopper.Presentation.Effects
         /// <summary>Fire light inside the cap, as a share of the flash light.</summary>
         private const float FireLightShare = 0.12f;
         /// <summary>Lens flare of the fire in the cap, as a share of the flash's flare.</summary>
-        private const float FireFlareShare = 0.3f;
+        private const float FireFlareShare = 0.45f;
         /// <summary>How fast the chromatic split of the shock front fades (s).</summary>
         private const float ShockPulseSeconds = 0.35f;
 
         private static readonly int HeatId = Shader.PropertyToID("_Heat");
         private static readonly int FadeId = Shader.PropertyToID("_Fade");
         private static readonly int SeedId = Shader.PropertyToID("_Seed");
+        private static readonly int WispId = Shader.PropertyToID("_Wisp");
+        private static readonly int WispPowerId = Shader.PropertyToID("_WispPower");
+        /// <summary>Ground puffs: much more ragged edges than the cap, so they read as cores inside the smoke.</summary>
+        private const float PuffWisp = 1.45f, PuffWispPower = 1.6f, PuffScale = 0.75f;
+        private const float PuffDissolveStart = 3f, PuffDissolveSeconds = 4f;
         private static readonly int BaseColourId = Shader.PropertyToID("_BaseColor");
 
         /// <summary>One blast in progress.</summary>
@@ -82,7 +87,14 @@ namespace Chopper.Presentation.Effects
                 Seed(blast.CapRenderer, seed);
                 Seed(blast.StemRenderer, seed + 3f);
                 Seed(blast.ScorchRenderer, seed);
-                for (var i = 0; i < blast.PuffRenderers.Length; i++) Seed(blast.PuffRenderers[i], seed + 10f + i * 1.7f);
+                for (var i = 0; i < blast.PuffRenderers.Length; i++)
+                {
+                    Seed(blast.PuffRenderers[i], seed + 10f + i * 1.7f);
+                    blast.PuffRenderers[i].GetPropertyBlock(Block);
+                    Block.SetFloat(WispId, PuffWisp);
+                    Block.SetFloat(WispPowerId, PuffWispPower);
+                    blast.PuffRenderers[i].SetPropertyBlock(Block);
+                }
                 for (var i = 0; i < blast.RingRenderers.Length; i++) Seed(blast.RingRenderers[i], seed + 40f + i * 2.3f);
                 for (var i = 0; i < blast.SwirlRenderers.Length; i++) Seed(blast.SwirlRenderers[i], seed + 60f + i * 3.1f);
                 Animate(blast, settings, 0f);
@@ -180,11 +192,13 @@ namespace Chopper.Presentation.Effects
             for (var i = 0; i < blast.Puffs.Length; i++)
             {
                 NukeBlastTimeline.Puff(i, t, out var distance, out var size, out var heat);
+                size *= PuffScale;
                 var angle = NukeBlastTimeline.PuffAngle(i) * Mathf.Deg2Rad;
                 blast.Puffs[i].localPosition = new Vector3(Mathf.Cos(angle) * distance, size * 0.25f, Mathf.Sin(angle) * distance);
                 blast.Puffs[i].localScale = new Vector3(Mathf.Max(size, 0.01f), Mathf.Max(size * 0.85f, 0.01f), Mathf.Max(size, 0.01f));
                 blast.PuffRenderers[i].enabled = size > 0.01f;
-                Set(blast.PuffRenderers[i], heat, fade);
+                // The solid cores show while hot, then dissolve into the smoke billows round them (owner: "shell").
+                Set(blast.PuffRenderers[i], heat, Mathf.Max(fade, NukeBlastTimeline.Fade(t, PuffDissolveStart, PuffDissolveSeconds)));
             }
 
             if (blast.Scorch != null)
