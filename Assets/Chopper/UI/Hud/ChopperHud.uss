@@ -326,6 +326,56 @@
   -unity-text-align: middle-center;
 }
 
+/* Capture the Nuke objective line under the reticle (MatchHudModel.ObjectiveText). Tone classes set the colour. */
+.hud-objective {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60%;
+  align-items: center;
+  --objective-colour: var(--chopper-text);
+}
+
+.hud-objective--hidden {
+  display: none;
+}
+
+.hud-objective--good { --objective-colour: var(--chopper-green); }
+.hud-objective--alert { --objective-colour: var(--chopper-red); }
+
+.hud-objective__text {
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: var(--objective-colour);
+  padding: 3px 14px;
+  background-color: rgba(4, 12, 6, 0.6);
+  -unity-text-align: middle-center;
+}
+
+/* A new flash (hooked, armed, defused ...) punches in bigger for a moment. */
+.hud-objective--flash .hud-objective__text {
+  font-size: 26px;
+  border-width: 2px;
+  border-color: var(--objective-colour);
+}
+
+.hud-objective__bar {
+  width: 220px;
+  height: 4px;
+  margin-top: 4px;
+  background-color: rgba(4, 12, 6, 0.7);
+}
+
+.hud-objective__bar--hidden {
+  visibility: hidden;
+}
+
+.hud-objective__fill {
+  height: 100%;
+  width: 0;
+  background-color: var(--objective-colour);
+}
+
 /* Countdown under the death message (MatchHudModel.RespawnText) */
 .hud-death-alert__respawn {
   margin-top: 10px;

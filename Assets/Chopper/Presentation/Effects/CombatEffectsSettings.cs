@@ -66,8 +66,9 @@ namespace Chopper.Presentation.Effects
         private GameObject nukeZone;
         [SerializeField, Min(0.01f), Tooltip("The zone prefab's radius in metres at scale 1 (Sci-Fi Arsenal shields: 4).")]
         private float nukeZoneRadius = 4f;
-        [SerializeField, Min(1f), Tooltip("Zone colour scale while your chopper is in hook range.")]
-        private float nukeZoneInRangeBoost = 2.2f;
+        [SerializeField, Range(0f, 3f), Tooltip("Zone colour scale while your chopper is in hook range. Below 1: from inside, " +
+                                                 "a brighter shell filled the whole view pink (24 Nov); the HUD line says you can hook.")]
+        private float nukeZoneInRangeScale = 0.25f;
         [SerializeField, Tooltip("Looping light beam on a free nuke, seen from far away (Sci-Fi Arsenal Loot Rays). Pooled. " +
                                  "Empty: no beacon.")]
         private GameObject nukeBeacon;
@@ -231,7 +232,7 @@ namespace Chopper.Presentation.Effects
         public bool GunBulletAudio => gunBulletAudio;
         public GameObject NukeZone => nukeZone;
         public float NukeZoneRadius => nukeZoneRadius;
-        public float NukeZoneInRangeBoost => nukeZoneInRangeBoost;
+        public float NukeZoneInRangeScale => nukeZoneInRangeScale;
         public GameObject NukeBeacon => nukeBeacon;
         public Vector3 NukeBeaconScale => nukeBeaconScale;
         public Material DownwashMaterial => downwashMaterial;

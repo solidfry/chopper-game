@@ -13,7 +13,8 @@ namespace Chopper.Presentation.Effects
     /// Client only. Capture the Nuke pick-up zone (owner, 20 Nov: "an area indicator for pick up ... each player should see
     /// their own pick up zone size"): a looping shell round the nuke while nobody holds it, its radius the local chopper's
     /// own hook range (<see cref="NukeHookConfig.Range"/>: 12 m, the Heavy Winch 18 m), the same 3D distance the server
-    /// tests, so the ground cuts it to a dome. Brighter while the local chopper is inside it. A light beam on the nuke
+    /// tests, so the ground cuts it to a dome. Dimmer while the local chopper is inside it (a bright shell seen from inside
+    /// fills the view; the HUD line reads HOLD POSITION TO HOOK). A light beam on the nuke
     /// shows where it is from far away. Both are pooled prefabs from <see cref="CombatEffectsSettings"/> (picked in the
     /// effects bench, 24 Nov: Sci-Fi Arsenal Hex Shield and Loot Rays).
     /// </summary>
@@ -31,6 +32,8 @@ namespace Chopper.Presentation.Effects
             public Renderer[] Renderers;
             public Color[] Colours;
             public bool Boosted;
+            public Renderer[] BeaconRenderers;
+            public bool BeaconHidden;
         }
 
         private readonly Dictionary<Entity, Visual> _visuals = new();
@@ -79,9 +82,15 @@ namespace Chopper.Presentation.Effects
                     {
                         visual.Zone.transform.position = centre;
                         visual.Zone.transform.localScale = Vector3.one * (range / settings.NukeZoneRadius);
-                        Boost(visual, hasSelf && math.distance(self, pose.ValueRO.Position) <= range ? settings.NukeZoneInRangeBoost : 1f);
                     }
-                    if (visual.Beacon != null) visual.Beacon.transform.position = centre;
+                    var inside = hasSelf && math.distance(self, pose.ValueRO.Position) <= range;
+                    if (visual.Zone != null) Boost(visual, inside ? settings.NukeZoneInRangeScale : 1f);
+                    if (visual.Beacon != null)
+                    {
+                        visual.Beacon.transform.position = centre;
+                        // The beam is for finding the nuke from far away; up close its core is a glare in the middle of the view.
+                        HideBeacon(visual, inside);
+                    }
                 }
             }
 
@@ -103,6 +112,7 @@ namespace Chopper.Presentation.Effects
                 Zone = Pooled(effects, settings.NukeZone, centre, Vector3.one),
                 Beacon = Pooled(effects, settings.NukeBeacon, centre, settings.NukeBeaconScale),
             };
+            if (visual.Beacon != null) visual.BeaconRenderers = visual.Beacon.GetComponentsInChildren<Renderer>(true);
             if (visual.Zone != null)
             {
                 visual.Renderers = visual.Zone.GetComponentsInChildren<ParticleSystemRenderer>(true);
@@ -138,7 +148,7 @@ namespace Chopper.Presentation.Effects
 
         private void Boost(Visual visual, float boost)
         {
-            var boosted = boost > 1f;
+            var boosted = !Mathf.Approximately(boost, 1f);
             if (visual.Renderers == null || boosted == visual.Boosted) return;
             visual.Boosted = boosted;
             _block ??= new MaterialPropertyBlock();
@@ -158,8 +168,17 @@ namespace Chopper.Presentation.Effects
             }
         }
 
+        private static void HideBeacon(Visual visual, bool hidden)
+        {
+            if (visual.BeaconRenderers == null || hidden == visual.BeaconHidden) return;
+            visual.BeaconHidden = hidden;
+            foreach (var renderer in visual.BeaconRenderers)
+                if (renderer != null) renderer.enabled = !hidden;
+        }
+
         private void Release(CombatEffects effects, Visual visual)
         {
+            HideBeacon(visual, false);
             if (visual.Zone != null)
             {
                 Boost(visual, 1f);

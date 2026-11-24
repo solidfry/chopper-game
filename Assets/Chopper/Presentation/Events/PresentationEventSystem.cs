@@ -35,6 +35,8 @@ namespace Chopper.Presentation.Events
         private EntityQuery _wreckExplosions;
         private EntityQuery _disconnects;
         private int _localNetworkId;
+        private NukeState _nuke;
+        private bool _hasNuke;
 
         protected override void OnCreate()
         {
@@ -87,8 +89,28 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_wreckExplosions);
         }
 
+        /// <summary>Capture the Nuke: compares the replicated nuke with last frame's and publishes what changed.</summary>
+        private void PublishNuke(PresentationEvents events)
+        {
+            var seen = false;
+            foreach (var nuke in SystemAPI.Query<RefRO<NukeState>>())
+            {
+                var now = nuke.ValueRO;
+                if (_hasNuke)
+                {
+                    var change = Hud.NukeCallout.Diff(_nuke, now, out var team);
+                    if (change != Hud.NukeChange.None) events.Publish(new NukeChanged(change, team));
+                }
+                _nuke = now;
+                seen = true;
+                break;
+            }
+            _hasNuke = seen;
+        }
+
         private void Publish(PresentationEvents events)
         {
+            PublishNuke(events);
             var localId = SystemAPI.TryGetSingleton<NetworkId>(out var id) ? id.Value : 0;
             if (localId != _localNetworkId)
             {

@@ -96,6 +96,10 @@ namespace Chopper.UI.Hud
         private bool _wasOutOfBounds;
         private string _warningText = "";
         private VisualElement _xpPopup;
+        private VisualElement _objective;
+        private Label _objectiveText;
+        private VisualElement _objectiveBar;
+        private VisualElement _objectiveFill;
         private VisualElement _pilot;
         private VisualElement _pilotPicture;
         private const string PilotHiddenClass = "hud-pilot--hidden";
@@ -222,6 +226,10 @@ namespace Chopper.UI.Hud
             var deathText = match.Q<Label>("death-alert-text");
             _deathReveal = new TerminalReveal(deathText, deathText, "#FF4246");
             Bind(match.Q<Label>("death-alert-respawn"), "text", nameof(MatchHudModel.RespawnText));
+            _objective = match.Q("objective");
+            _objectiveText = match.Q<Label>("objective-text");
+            _objectiveBar = match.Q("objective-bar");
+            _objectiveFill = match.Q("objective-fill");
             _xpPopup = match.Q("xp-popup");
             Bind(match.Q<Label>("xp-title"), "text", nameof(MatchHudModel.XpTitle));
             Bind(match.Q<Label>("xp-name"), "text", nameof(MatchHudModel.XpName));
@@ -258,6 +266,7 @@ namespace Chopper.UI.Hud
             RefreshAbility();
             RefreshBanner();
             RefreshDeathAlert();
+            RefreshObjective();
             RefreshXp();
         }
 
@@ -500,6 +509,9 @@ namespace Chopper.UI.Hud
                 RefreshXp();
             else if (args.propertyName == nameof(MatchHudModel.XpPulse))
                 PunchXp();
+            else if (args.propertyName == nameof(MatchHudModel.ObjectiveText) || args.propertyName == nameof(MatchHudModel.ObjectiveProgress) ||
+                     args.propertyName == nameof(MatchHudModel.ObjectiveTone))
+                RefreshObjective(args.propertyName == nameof(MatchHudModel.ObjectiveText));
         }
 
         private void RefreshXp()
@@ -516,6 +528,21 @@ namespace Chopper.UI.Hud
             RefreshXp();
             _xpPopup.AddToClassList("hud-xp--punch");
             _xpPopup.schedule.Execute(() => _xpPopup?.RemoveFromClassList("hud-xp--punch")).StartingIn(30);
+        }
+
+        /// <summary>Capture the Nuke line: text, tone colour, bar. A flash (hooked, armed ...) punches in bigger.</summary>
+        private void RefreshObjective(bool newText = false)
+        {
+            if (_objective == null) return;
+            var text = _match.ObjectiveText;
+            _objective.EnableInClassList("hud-objective--hidden", string.IsNullOrEmpty(text));
+            _objective.EnableInClassList("hud-objective--good", _match.ObjectiveTone == CalloutTone.Good);
+            _objective.EnableInClassList("hud-objective--alert", _match.ObjectiveTone == CalloutTone.Alert);
+            if (_objectiveText != null) _objectiveText.text = text;
+            var progress = _match.ObjectiveProgress;
+            _objectiveBar?.EnableInClassList("hud-objective__bar--hidden", progress < 0f);
+            if (_objectiveFill != null) _objectiveFill.style.width = Length.Percent(Mathf.Clamp01(progress) * 100f);
+            if (newText) _objective.EnableInClassList("hud-objective--flash", _match.ObjectiveFlashing);
         }
 
         private void RefreshBanner()

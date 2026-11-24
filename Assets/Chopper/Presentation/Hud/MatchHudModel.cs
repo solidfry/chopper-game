@@ -88,6 +88,12 @@ namespace Chopper.Presentation.Hud
         private string _respawnText = "";
         /// <summary>Seconds until the next chopper; below 0 = no countdown known.</summary>
         private float _respawnLeft = -1f;
+        private Callout _objectiveStatus = Callout.Empty;
+        private Callout _objectiveFlash = Callout.Empty;
+        private float _flashLeft;
+        private string _objectiveText = "";
+        private float _objectiveProgress = -1f;
+        private CalloutTone _objectiveTone;
 
         public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
 
@@ -192,6 +198,58 @@ namespace Chopper.Presentation.Hud
         {
             get => _bannerVisible;
             private set => Set(ref _bannerVisible, value, nameof(BannerVisible));
+        }
+
+        /// <summary>Seconds a nuke change flash (<see cref="FlashObjective"/>) replaces the standing line.</summary>
+        public const float ObjectiveFlashSeconds = 2.5f;
+
+        /// <summary>Capture the Nuke centre line under the reticle (<see cref="NukeCallout"/>). Empty = hidden.</summary>
+        [CreateProperty]
+        public string ObjectiveText
+        {
+            get => _objectiveText;
+            private set => Set(ref _objectiveText, value, nameof(ObjectiveText));
+        }
+
+        /// <summary>0..1 bar under the objective line; negative = no bar.</summary>
+        [CreateProperty]
+        public float ObjectiveProgress
+        {
+            get => _objectiveProgress;
+            private set => Set(ref _objectiveProgress, value, nameof(ObjectiveProgress));
+        }
+
+        /// <summary>The line is a nuke change flash now (the view draws it bigger).</summary>
+        public bool ObjectiveFlashing => _flashLeft > 0f;
+
+        public CalloutTone ObjectiveTone
+        {
+            get => _objectiveTone;
+            private set => Set(ref _objectiveTone, value, nameof(ObjectiveTone));
+        }
+
+        /// <summary>The standing line, every frame (an equal line changes nothing).</summary>
+        public void SetObjective(in Callout status)
+        {
+            _objectiveStatus = status;
+            RefreshObjective();
+        }
+
+        /// <summary>A short line for a nuke change; the standing line comes back after <see cref="ObjectiveFlashSeconds"/>.</summary>
+        public void FlashObjective(in Callout flash)
+        {
+            if (string.IsNullOrEmpty(flash.Text)) return;
+            _objectiveFlash = flash;
+            _flashLeft = ObjectiveFlashSeconds;
+            RefreshObjective();
+        }
+
+        private void RefreshObjective()
+        {
+            var line = _flashLeft > 0f ? _objectiveFlash : _objectiveStatus;
+            ObjectiveText = line.Text ?? "";
+            ObjectiveProgress = _flashLeft > 0f ? -1f : line.Progress;
+            ObjectiveTone = line.Tone;
         }
 
         /// <summary>"YOU CRASHED" or "SHOT DOWN BY ...": from your death until you respawn. With a red tint on the screen.</summary>
@@ -427,6 +485,11 @@ namespace Chopper.Presentation.Hud
             _timeRemaining = MathF.Max(0f, _timeRemaining - deltaTime);
             RefreshTimer();
             TickXp(deltaTime);
+            if (_flashLeft > 0f)
+            {
+                _flashLeft = MathF.Max(0f, _flashLeft - deltaTime);
+                if (_flashLeft <= 0f) RefreshObjective();
+            }
             if (_respawnLeft > 0f)
             {
                 _respawnLeft = MathF.Max(0f, _respawnLeft - deltaTime);

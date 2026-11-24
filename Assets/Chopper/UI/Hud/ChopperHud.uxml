@@ -28,6 +28,13 @@
         <ui:Label name="death-alert-text" text="" class="hud-death-alert__text chopper-title" />
         <ui:Label name="death-alert-respawn" text="" class="hud-death-alert__respawn chopper-title" />
       </ui:VisualElement>
+      <!-- Capture the Nuke: what to do now, under the reticle (NukeCalloutSystem); green = good for us, red = threat -->
+      <ui:VisualElement name="objective" class="hud-objective hud-objective--hidden" picking-mode="Ignore">
+        <ui:Label name="objective-text" text="" class="hud-objective__text chopper-title" picking-mode="Ignore" />
+        <ui:VisualElement name="objective-bar" class="hud-objective__bar" picking-mode="Ignore">
+          <ui:VisualElement name="objective-fill" class="hud-objective__fill" picking-mode="Ignore" />
+        </ui:VisualElement>
+      </ui:VisualElement>
       <!-- XP popup (Battlefield style): MatchHudModel.AddXp; punch on each award, fades after the combo -->
       <ui:VisualElement name="xp-popup" class="hud-xp hud-xp--hidden" picking-mode="Ignore">
         <ui:Label name="xp-title" text="" class="hud-xp__title chopper-title" picking-mode="Ignore" />

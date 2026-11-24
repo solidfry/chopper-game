@@ -212,6 +212,21 @@ namespace Chopper.Presentation.Events
         }
     }
 
+    /// <summary>
+    /// Capture the Nuke: the nuke changed hands or state (seen in its replicated <see cref="NukeState"/>). <see cref="Team"/>
+    /// did it (0 = nobody, e.g. a reset). HUD flash; sounds can listen too.
+    /// </summary>
+    public readonly struct NukeChanged
+    {
+        public readonly Hud.NukeChange Change;
+        public readonly byte Team;
+        public NukeChanged(Hud.NukeChange change, byte team)
+        {
+            Change = change;
+            Team = team;
+        }
+    }
+
     /// <summary>The server gave the local player XP just now (the Battlefield-style popup).</summary>
     public readonly struct XpAwarded
     {
