@@ -239,7 +239,8 @@ namespace Chopper.Editor.Setup
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.maxParticles = 300;
             var emission = system.emission;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(45f, Curve((0f, 1f), (0.5f, 0.7f), (1f, 0.1f)));
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(30f,  // perf 2: was 45
+                Curve((0f, 1f), (0.5f, 0.7f), (1f, 0.1f)));
             var shape = Shape(system, ParticleSystemShapeType.Sphere, 50f);
             shape.scale = new Vector3(1.2f, 0.7f, 1.2f);
             shape.radiusThickness = 0.3f;
@@ -271,7 +272,8 @@ namespace Chopper.Editor.Setup
             main.startColor = new ParticleSystem.MinMaxGradient(colourA, colourB);
             main.maxParticles = 400;
             var emission = system.emission;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(28f, Curve((0f, 1f), (0.7f, 0.8f), (1f, 0.2f)));
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(18f,  // perf 2: was 28
+                Curve((0f, 1f), (0.7f, 0.8f), (1f, 0.2f)));
             var shape = Shape(system, ParticleSystemShapeType.Donut, radius);
             shape.donutRadius = thickness;
             shape.rotation = new Vector3(90f, 0f, 0f);
@@ -312,9 +314,10 @@ namespace Chopper.Editor.Setup
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.66f, 0.55f, 0.46f), new Color(0.52f, 0.44f, 0.38f));
             main.maxParticles = 700;
-            Burst(system, 0f, 170);
+            Burst(system, 0f, 110);  // perf 2: was 170
             var emission = system.emission;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(22f, Curve((0f, 1f), (0.6f, 0.6f), (1f, 0f)));
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(13f,  // perf 2: was 22
+                Curve((0f, 1f), (0.6f, 0.6f), (1f, 0f)));
             var shape = Shape(system, ParticleSystemShapeType.Donut, 105f);
             shape.donutRadius = 50f;
             shape.scale = new Vector3(1f, 1f, 0.3f);  // a flat ring: the dark cloud stays low (owner)
@@ -349,7 +352,8 @@ namespace Chopper.Editor.Setup
             fireMain.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             fireMain.maxParticles = 300;
             var fireEmission = fire.emission;
-            fireEmission.rateOverTime = new ParticleSystem.MinMaxCurve(60f, Curve((0f, 1f), (1f, 0f)));
+            fireEmission.rateOverTime = new ParticleSystem.MinMaxCurve(38f,  // perf 2: was 60
+                Curve((0f, 1f), (1f, 0f)));
             var fireShape = Shape(fire, ParticleSystemShapeType.Donut, 80f);
             fireShape.donutRadius = 30f;
             fireShape.rotation = new Vector3(90f, 0f, 0f);

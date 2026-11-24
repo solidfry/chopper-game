@@ -21,6 +21,8 @@ namespace Chopper.Presentation.Effects
         private const float FireLightShare = 0.12f;
         /// <summary>Lens flare of the fire in the cap, as a share of the flash's flare.</summary>
         private const float FireFlareShare = 0.45f;
+        /// <summary>Below this heat the fire light is switched off (perf 6).</summary>
+        private const float FireLightOff = 0.33f;
         /// <summary>How fast the chromatic split of the shock front fades (s).</summary>
         private const float ShockPulseSeconds = 0.35f;
 
@@ -56,9 +58,22 @@ namespace Chopper.Presentation.Effects
             public Light FireLight;
             public UnityEngine.Rendering.LensFlareComponentSRP FlashFlare, FireFlare;
             public NukeScreenFx Screen;
+            /// <summary>Every particle system in the prefab, with its emission as built (distance detail scales it).</summary>
+            public ParticleSystem[] Systems = Array.Empty<ParticleSystem>();
+            public float[] RateBase = Array.Empty<float>();
+            public ParticleSystem.Burst[][] BurstBase = Array.Empty<ParticleSystem.Burst[]>();
         }
 
         private readonly List<Blast> _blasts = new();
+        /// <summary>Built, hidden blasts ready to go (perf 1: no Instantiate of ~40 systems in the detonation frame).</summary>
+        private readonly List<Blast> _spare = new();
+        /// <summary>Inactive parent of the spare blasts: under it nothing plays or renders.</summary>
+        private GameObject _pool;
+        /// <summary>One screen volume for all blasts, made once (perf 1).</summary>
+        private NukeScreenFx _screen;
+        /// <summary>Past this distance (m) the blast emits <see cref="FarDetail"/> of its particles (perf 3).</summary>
+        private const float FarDistance = 800f;
+        private const float FarDetail = 0.5f;
         private MaterialPropertyBlock _blockStore;
         /// <summary>Made on first use: Unity does not allow it while a MonoBehaviour that owns this player is built.</summary>
         private MaterialPropertyBlock Block => _blockStore ??= new MaterialPropertyBlock();
@@ -80,9 +95,18 @@ namespace Chopper.Presentation.Effects
             };
             if (settings.NukeBlast != null)
             {
-                blast.Root = Object.Instantiate(settings.NukeBlast, ground, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+                var shell = TakeSpare(settings);
+                blast.Root = shell.Root;
+                CopyParts(shell, blast);
+                blast.Root.transform.SetParent(null, false);
+                blast.Root.transform.SetPositionAndRotation(ground, Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
                 blast.Root.transform.localScale = Vector3.one * scale;
-                Find(blast);
+                Detail(blast, distance > FarDistance ? FarDetail : 1f);
+                foreach (var system in blast.Systems)
+                {
+                    system.Clear(true);
+                    system.Play(false);
+                }
                 var seed = UnityEngine.Random.Range(0f, 100f);
                 Seed(blast.CapRenderer, seed);
                 Seed(blast.StemRenderer, seed + 3f);
@@ -111,10 +135,8 @@ namespace Chopper.Presentation.Effects
             if (camera != null)
             {
                 blast.HeatShare = 1f - Mathf.Clamp01(distance / FlashFarDistance);
-                if (blast.HeatShare > 0.01f) blast.Screen = new NukeScreenFx();
+                if (blast.HeatShare > 0.01f) blast.Screen = _screen ??= new NukeScreenFx();
             }
-            if (blast.Rise != null) blast.FireLight = MakeFireLight(settings, blast.Rise);
-            if (blast.FireLight != null) blast.FireFlare = AddFlare(settings, blast.FireLight.gameObject, 45f);
             _blasts.Add(blast);
         }
 
@@ -140,10 +162,92 @@ namespace Chopper.Presentation.Effects
             }
         }
 
+        /// <summary>
+        /// Builds one hidden blast and the screen volume ahead of time (perf 1), so the detonation frame only moves and
+        /// starts them. Call when a Capture the Nuke match (or the bench) starts; safe to call again.
+        /// </summary>
+        public void Prewarm(CombatEffectsSettings settings)
+        {
+            if (settings == null || settings.NukeBlast == null) return;
+            if (_spare.Count == 0 && _blasts.Count == 0) _spare.Add(Build(settings));
+            _screen ??= new NukeScreenFx();
+        }
+
         public void Clear()
         {
             foreach (var blast in _blasts) End(blast);
             _blasts.Clear();
+            foreach (var spare in _spare)
+                if (spare.Root != null) Object.Destroy(spare.Root);
+            _spare.Clear();
+            if (_pool != null) Object.Destroy(_pool);
+            _pool = null;
+            _screen?.Dispose();
+            _screen = null;
+        }
+
+        private Blast TakeSpare(CombatEffectsSettings settings)
+        {
+            for (var i = _spare.Count - 1; i >= 0; i--)
+            {
+                var spare = _spare[i];
+                _spare.RemoveAt(i);
+                if (spare.Root != null) return spare;
+            }
+            return Build(settings);
+        }
+
+        /// <summary>One blast instance under the inactive pool, with its fire light, flare and particle list.</summary>
+        private Blast Build(CombatEffectsSettings settings)
+        {
+            if (_pool == null)
+            {
+                _pool = new GameObject("Nuke Blast Pool");
+                _pool.SetActive(false);
+            }
+            var blast = new Blast { Root = Object.Instantiate(settings.NukeBlast, _pool.transform) };
+            Find(blast);
+            if (blast.Rise != null) blast.FireLight = MakeFireLight(settings, blast.Rise);
+            if (blast.FireLight != null) blast.FireFlare = AddFlare(settings, blast.FireLight.gameObject, 45f);
+            blast.Systems = blast.Root.GetComponentsInChildren<ParticleSystem>(true);
+            blast.RateBase = new float[blast.Systems.Length];
+            blast.BurstBase = new ParticleSystem.Burst[blast.Systems.Length][];
+            for (var i = 0; i < blast.Systems.Length; i++)
+            {
+                var emission = blast.Systems[i].emission;
+                blast.RateBase[i] = emission.rateOverTimeMultiplier;
+                blast.BurstBase[i] = new ParticleSystem.Burst[emission.burstCount];
+                emission.GetBursts(blast.BurstBase[i]);
+            }
+            return blast;
+        }
+
+        private static void CopyParts(Blast from, Blast to)
+        {
+            to.Rise = from.Rise; to.Cap = from.Cap; to.Stem = from.Stem; to.Scorch = from.Scorch;
+            to.Rings = from.Rings; to.Puffs = from.Puffs; to.Swirls = from.Swirls;
+            to.CapRenderer = from.CapRenderer; to.StemRenderer = from.StemRenderer; to.ScorchRenderer = from.ScorchRenderer;
+            to.RingRenderers = from.RingRenderers; to.PuffRenderers = from.PuffRenderers; to.SwirlRenderers = from.SwirlRenderers;
+            to.FireLight = from.FireLight; to.FireFlare = from.FireFlare;
+            to.Systems = from.Systems; to.RateBase = from.RateBase; to.BurstBase = from.BurstBase;
+        }
+
+        /// <summary>Scales every system's emission (rate and bursts) to <paramref name="share"/> of the built amount (perf 3).</summary>
+        private static void Detail(Blast blast, float share)
+        {
+            for (var i = 0; i < blast.Systems.Length; i++)
+            {
+                var emission = blast.Systems[i].emission;
+                emission.rateOverTimeMultiplier = blast.RateBase[i] * share;
+                var bursts = (ParticleSystem.Burst[])blast.BurstBase[i].Clone();
+                for (var b = 0; b < bursts.Length; b++)
+                {
+                    var count = bursts[b].count;
+                    count.constant = Mathf.Max(1f, Mathf.Round(count.constant * share));
+                    bursts[b].count = count;
+                }
+                emission.SetBursts(bursts);
+            }
         }
 
         private void Animate(Blast blast, CombatEffectsSettings settings, float t)
@@ -196,9 +300,11 @@ namespace Chopper.Presentation.Effects
                 var angle = NukeBlastTimeline.PuffAngle(i) * Mathf.Deg2Rad;
                 blast.Puffs[i].localPosition = new Vector3(Mathf.Cos(angle) * distance, size * 0.25f, Mathf.Sin(angle) * distance);
                 blast.Puffs[i].localScale = new Vector3(Mathf.Max(size, 0.01f), Mathf.Max(size * 0.85f, 0.01f), Mathf.Max(size, 0.01f));
-                blast.PuffRenderers[i].enabled = size > 0.01f;
+                var dissolve = NukeBlastTimeline.Fade(t, PuffDissolveStart, PuffDissolveSeconds);
+                // Off once dissolved: no cost for invisible pixels (perf 4, part).
+                blast.PuffRenderers[i].enabled = size > 0.01f && dissolve < 1f;
                 // The solid cores show while hot, then dissolve into the smoke billows round them (owner: "shell").
-                Set(blast.PuffRenderers[i], heat, Mathf.Max(fade, NukeBlastTimeline.Fade(t, PuffDissolveStart, PuffDissolveSeconds)));
+                Set(blast.PuffRenderers[i], heat, Mathf.Max(fade, dissolve));
             }
 
             if (blast.Scorch != null)
@@ -230,7 +336,12 @@ namespace Chopper.Presentation.Effects
             }
             var heat = NukeBlastTimeline.CapHeat(t) * (1f - NukeBlastTimeline.Fade(t, settings.NukeBlastSeconds, settings.NukeFadeSeconds));
             // The fire inside the cap lights the ground and the stem for as long as it burns.
-            if (blast.FireLight != null) blast.FireLight.intensity = settings.NukeFlashIntensity * FireLightShare * heat;
+            if (blast.FireLight != null)
+            {
+                // Off once the fire has cooled: a point light costs on every object it reaches (perf 6).
+                blast.FireLight.enabled = heat > FireLightOff;
+                blast.FireLight.intensity = settings.NukeFlashIntensity * FireLightShare * heat;
+            }
             if (blast.FireFlare != null) blast.FireFlare.intensity = settings.NukeFlareIntensity * FireFlareShare * heat;
             if (blast.Screen != null)
             {
@@ -339,12 +450,25 @@ namespace Chopper.Presentation.Effects
             blast.FlashRenderer = renderer;
         }
 
-        private static void End(Blast blast)
+        /// <summary>Lights and the screen flash go; the blast itself goes back to the pool, stopped and cleared (perf 1).</summary>
+        private void End(Blast blast)
         {
-            if (blast.Root != null) Object.Destroy(blast.Root);
             if (blast.Light != null) Object.Destroy(blast.Light.gameObject);
             if (blast.Flash != null) Object.Destroy(blast.Flash);
-            blast.Screen?.Dispose();
+            blast.Screen?.Tick(0f, 0f, 0f);
+            if (blast.Root == null || _pool == null)
+            {
+                if (blast.Root != null) Object.Destroy(blast.Root);
+                return;
+            }
+            foreach (var system in blast.Systems)
+                if (system != null) system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (blast.FireLight != null) blast.FireLight.intensity = 0f;
+            if (blast.FireFlare != null) blast.FireFlare.intensity = 0f;
+            blast.Root.transform.SetParent(_pool.transform, false);
+            var spare = new Blast { Root = blast.Root };
+            CopyParts(blast, spare);
+            _spare.Add(spare);
         }
 
         /// <summary>The nuke lens flare on a light (not blocked: the fireball is the light).</summary>
@@ -371,7 +495,7 @@ namespace Chopper.Presentation.Effects
             go.transform.localPosition = Vector3.down * 20f;
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
-            light.range = settings.NukeFlashRange * 0.7f;
+            light.range = settings.NukeFlashRange * 0.45f;  // perf 6: was 0.7 (630 m)
             light.color = new Color(1f, 0.5f, 0.18f);
             light.intensity = 0f;
             light.shadows = LightShadows.None;

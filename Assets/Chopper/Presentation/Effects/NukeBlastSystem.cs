@@ -33,6 +33,7 @@ namespace Chopper.Presentation.Effects
         private PresentationContext _context;
         private IDisposable _subscription;
         private Action<Vector3> _shake;
+        private bool _prewarmed;
 
         protected override void OnCreate()
         {
@@ -54,6 +55,12 @@ namespace Chopper.Presentation.Effects
             var settings = effects.Settings;
             if (settings == null) return;
             var now = UnityEngine.Time.time;
+            // Build the blast ahead of time in a Capture the Nuke match (perf 1).
+            if (!_prewarmed && SystemAPI.HasSingleton<Chopper.Simulation.Match.NukeState>())
+            {
+                _player.Prewarm(settings);
+                _prewarmed = true;
+            }
 
             foreach (var detonation in _incoming) Begin(context, settings, detonation, now);
             _incoming.Clear();
@@ -128,6 +135,7 @@ namespace Chopper.Presentation.Effects
             _incoming.Clear();
             _pending.Clear();
             _player.Clear();
+            _prewarmed = false;
             _context = context;
             _shake = centre =>
             {

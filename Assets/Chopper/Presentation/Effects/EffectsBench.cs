@@ -89,6 +89,7 @@ namespace Chopper.Presentation.Effects
         private void Awake()
         {
             Create();
+            _nuke.Prewarm(settings);
             _lens = new Chopper.Presentation.Camera.LensLook(cameraSettings, UnityEngine.Camera.main);
         }
 
