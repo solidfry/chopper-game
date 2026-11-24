@@ -44,6 +44,7 @@ namespace Chopper.Presentation.Effects
         private CombatEffects _effects;
         private DamageParticles _damage;
         private readonly BlastSequence _sequence = new();
+        private readonly NukeBlastPlayer _nuke = new();
         private float _smokeCarry;
         private float _flameCarry;
         private float _angle;
@@ -87,6 +88,7 @@ namespace Chopper.Presentation.Effects
             _effects?.Dispose();
             _damage?.Dispose();
             _boost.Clear();
+            _nuke.Clear();
             Time.timeScale = 1f;
         }
 
@@ -96,6 +98,7 @@ namespace Chopper.Presentation.Effects
             Keys();
             _effects.Tick(Time.deltaTime);
             _sequence.Tick(_effects, Time.time);
+            _nuke.Tick(settings, Time.time);
             _effects.Debris.Tick(Time.deltaTime, Time.time, Ray);
             _flares.Tick(_effects, Time.deltaTime, StandInPose);
             BoostFlame(Time.deltaTime);
@@ -255,6 +258,12 @@ namespace Chopper.Presentation.Effects
 
         public void GroundBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * 1.5f, Vector3.zero, Time.time, Cast));
         public void AirBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * airHeight, airVelocity, Time.time, Cast));
+        /// <summary>The Capture the Nuke blast (same player as the game), bursting <see cref="NukeBurstHeight"/> m up.
+        /// F5 is the far view for it.</summary>
+        public void Nuke() => Run(() => _nuke.Start(settings, Point + Vector3.up * NukeBurstHeight, Point, UnityEngine.Camera.main, Time.time));
+
+        private const float NukeBurstHeight = 35f;
+
         public void MissileImpact() => Run(() => _effects.SpawnOneShot(settings.MissileImpact, Point + Vector3.up, Quaternion.identity));
         public void RocketImpact() => Run(() => _effects.SpawnOneShot(settings.RocketImpact, Point + Vector3.up, Quaternion.identity));
         public void GunImpact() => Run(() => _effects.SpawnOneShot(settings.GunImpact, Point + Vector3.up * 0.2f, Quaternion.LookRotation(Vector3.up)));
@@ -274,6 +283,7 @@ namespace Chopper.Presentation.Effects
         public void Clear()
         {
             _sequence.Clear();
+            _nuke.Clear();
             _flares.Clear();
             _boost.Clear();
             _effects?.Dispose();
@@ -306,6 +316,7 @@ namespace Chopper.Presentation.Effects
             if (keys.digit8Key.wasPressedThisFrame) CrashDust();
             if (keys.digit9Key.wasPressedThisFrame) Wreck();
             if (keys.digit0Key.wasPressedThisFrame) Flares();
+            if (keys.nKey.wasPressedThisFrame) Nuke();
             if (keys.bKey.wasPressedThisFrame) Boost();
             if (keys.eKey.wasPressedThisFrame) NextEngine();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;

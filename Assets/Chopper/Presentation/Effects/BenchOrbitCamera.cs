@@ -32,9 +32,9 @@ namespace Chopper.Presentation.Effects
                     yaw += delta.x * TurnSpeed;
                     pitch = Mathf.Clamp(pitch - delta.y * TurnSpeed, -10f, 85f);
                 }
-                if (mouse.middleButton.isPressed) lookHeight = Mathf.Clamp(lookHeight + delta.y * 0.05f, 0f, 80f);
+                if (mouse.middleButton.isPressed) lookHeight = Mathf.Clamp(lookHeight + delta.y * 0.05f, 0f, 300f);
                 var scroll = mouse.scroll.ReadValue().y;
-                if (Mathf.Abs(scroll) > 0.01f) distance = Mathf.Clamp(distance * (1f - Mathf.Sign(scroll) * ZoomStep), 5f, 400f);
+                if (Mathf.Abs(scroll) > 0.01f) distance = Mathf.Clamp(distance * (1f - Mathf.Sign(scroll) * ZoomStep), 5f, 1500f);
             }
             var keys = Keyboard.current;
             if (keys != null)
@@ -43,11 +43,20 @@ namespace Chopper.Presentation.Effects
                 if (keys.f2Key.wasPressedThisFrame) View(90f, 30f, 45f, 8f);
                 if (keys.f3Key.wasPressedThisFrame) View(35f, 30f, 3f, 6f);
                 if (keys.f4Key.wasPressedThisFrame) View(20f, 30f, 12f, 4f);
+                if (keys.f5Key.wasPressedThisFrame) FarView();
             }
 
             var centre = (target != null ? target.position : Vector3.zero) + Vector3.up * lookHeight;
             var rotation = Quaternion.Euler(pitch, yaw, 0f);
             transform.SetPositionAndRotation(centre - rotation * Vector3.forward * distance, rotation);
+        }
+
+        /// <summary>F5: the nuke blast, from 650 m at chopper height.</summary>
+        public void FarView()
+        {
+            View(650f, 30f, 2f, 110f);
+            var view = GetComponent<UnityEngine.Camera>();
+            if (view != null) view.farClipPlane = Mathf.Max(view.farClipPlane, 5000f);
         }
 
         private void View(float viewDistance, float viewYaw, float viewPitch, float viewHeight)
