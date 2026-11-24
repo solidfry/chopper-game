@@ -128,6 +128,7 @@ Solved and removed from this table: Server Tick Batching warnings (29 Oct), Edge
 **Owner checks owed (play or listen):**
 - Moon, fog masks, crash feel, L key (lights), new cursor: not judged yet.
 - Lock warning, missile warning, flares and new SFX: listen in play.
+- New music (24 Nov): Neon God and The Butterfly Effect albums (20 tracks) are in the match playlist (42 tracks, shuffled). Listen in a match; drop tracks that do not fit from `Data/Audio/MusicLibrary.asset`. Unity was closed when they were added: metas were written by hand (streaming, like the other music); check the import once.
 - Repair drone: try it in the hangar (fit it on a pylon). Tune `Weapon_RepairDrone` and the orbit in `CombatEffectsSettings`. Allies as targets: done (`RepairDrone.PickTarget`: a hurt team mate under the reticle in team modes, else itself); not checked in play. TODO (owner): consider moving countermeasures to their own slot.
 - Gun bullet travel: human play test (lead ring shows, hits land, pulse laser still instant). With 2 clients, check that the ring leads a crossing player.
 - Online TDM: a full match in a build is not checked. Production allocator is still to do.
@@ -184,6 +185,7 @@ Older note (29 Oct): owner TODOs for the damage model and death break-up are in 
 | City buildings | `Tools/CityForge` (Blender: `generate.py`, `cityforge/specs.py`, `kit.py`, `buildings.py`, `audit.py`); output `Assets/Chopper/Art/City/City01`; Unity import `Editor/Setup/CityAssets.cs` (step 8) |
 | Tests | `Tests/EditMode/*` (HUD models, HUD look, markers, cluster, health, loadout rules, loadout code, guidance, audio, hangar model, wireframe, saved choice, damage model, weapon limits, spawn scoring, bot fill) |
 | Audio tool | `Editor/AudioEffects/*` (`CyberpunkAudioProcessorWindow`, `AudioEffectProcessor`, `AudioEffectChain`, `EditorAudioPreview`, `EditorTransportIcons`); window **Tools > Audio > Cyberpunk Audio Processor**; docs `Docs/AudioProcessorTool.md` |
+| Sound libraries | `E:\Sounds` (32 GB, not in the repo): `Docs/Sounds/ESoundsManifest.md` (all packs, fit notes), `Docs/Sounds/ESoundsFiles.csv` (every file, length, format), `Docs/KhronSoundsManifest.md` (Khron detail). |
 
 **CTN sites and bases (owner 20 Nov):** `NukeSiteFinder` (Editor) picks the pad near the middle and two bases on open, flat, clear street-level ground (physics rays on the open map + subscenes; street level = the most common ground height), bases >= 500 m from the pad. City01: pad (250,0,-20), bases about 780 m away; City04: pad (70,0,580), bases 1021 / 1095 m. Base model: PartForge `team_base` (Prop_Base_Team1 cyan / Team2 red: apron with the 12 spawn pads, chevrons to the pad, tower, hangar, tanks, masts), placed by Setup as `Look` under each base, facing the pad, mesh colliders (model set readable). Turret down time 120 s (owner: strong turrets, long cooldown). Fix: `NukeBaseAuthoring` moved to its own file (scenes lost it on reload: a MonoBehaviour must be in a file of its name). Not played on the city maps yet.
 

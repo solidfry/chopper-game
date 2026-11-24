@@ -1,6 +1,6 @@
 # Khron Studio sound packs — manifest
 
-Source: `C:\Users\User\Downloads\Khron Sounds` (owner purchase, 19 Nov 2026). 1,535 WAV files, 8.7 GB, 5 packs. Not in the repo.
+Source: `E:\Sounds\Khron Sounds` (owner purchase, 19 Nov 2026; moved from Downloads, see `Sounds/ESoundsManifest.md`). 1,535 WAV files, 8.7 GB, 5 packs. Not in the repo.
 Pack sections were written by the local model (qwen3.8-27b) from file names and lengths only. Nobody has listened to them yet.
 The category counts in the Interface pack are estimates. The real file count is in the list below.
 
