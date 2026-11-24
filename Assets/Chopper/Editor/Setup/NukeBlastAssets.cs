@@ -257,8 +257,8 @@ namespace Chopper.Editor.Setup
             main.maxParticles = 1200;
             var emission = system.emission;
             emission.rateOverTime = new ParticleSystem.MinMaxCurve(110f, Curve((0f, 1f), (0.6f, 0.7f), (1f, 0f)));
-            var shape = Shape(system, ParticleSystemShapeType.Cone, 22f);
-            shape.angle = 6f;
+            // A half dome: sparks fly out up and to every side (owner: "a semicircle", not one way).
+            var shape = Shape(system, ParticleSystemShapeType.Hemisphere, 22f);
             shape.rotation = new Vector3(-90f, 0f, 0f);
             var velocity = system.velocityOverLifetime;
             velocity.enabled = true;
@@ -268,8 +268,8 @@ namespace Chopper.Editor.Setup
             velocity.z = 0f;
             // Every orbital axis in the same curve mode (Unity rejects mixed modes).
             velocity.orbitalX = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.orbitalY = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.orbitalZ = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+            velocity.orbitalY = new ParticleSystem.MinMaxCurve(0.25f, 0.6f);  // swirl round the stem, same on every side
+            velocity.orbitalZ = new ParticleSystem.MinMaxCurve(0f, 0f);
             Colour(system, Gradient(new[] { (0f, Color.white), (1f, new Color(1f, 0.4f, 0.1f)) },
                 new[] { (0f, 0f), (0.1f, 1f), (0.8f, 0.8f), (1f, 0f) }));
             Noise(system, 10f, 0.25f);
