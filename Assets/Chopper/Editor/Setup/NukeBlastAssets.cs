@@ -121,6 +121,7 @@ namespace Chopper.Editor.Setup
                 Condensation(rise, condensation, sphere);
                 Embers(rise, sparks);
                 CapFire(rise, flame);
+                StemRing(rise, smoke);
                 RimSmoke(rise, smoke, "CapRimSmoke", 62f, 22f, 0.4f, new Color(0.62f, 0.5f, 0.46f), new Color(0.5f, 0.42f, 0.4f));
                 var puffs = new GameObject("Puffs").transform;
                 puffs.SetParent(root.transform, false);
@@ -300,12 +301,12 @@ namespace Chopper.Editor.Setup
         {
             if (smoke == null) return;
             var system = Make(parent, "BaseClouds", smoke, ParticleSystemSimulationSpace.World, out var renderer);
-            system.transform.localPosition = new Vector3(0f, 10f, 0f);
+            system.transform.localPosition = new Vector3(0f, 6f, 0f);
             var main = system.main;
             main.duration = 12f;
             main.startDelay = 0.3f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(13f, 19f);
-            main.startSize = new ParticleSystem.MinMaxCurve(40f, 75f);
+            main.startSize = new ParticleSystem.MinMaxCurve(32f, 58f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 5f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.66f, 0.55f, 0.46f), new Color(0.52f, 0.44f, 0.38f));
@@ -315,17 +316,18 @@ namespace Chopper.Editor.Setup
             emission.rateOverTime = new ParticleSystem.MinMaxCurve(22f, Curve((0f, 1f), (0.6f, 0.6f), (1f, 0f)));
             var shape = Shape(system, ParticleSystemShapeType.Donut, 105f);
             shape.donutRadius = 50f;
+            shape.scale = new Vector3(1f, 1f, 0.3f);  // a flat ring: the dark cloud stays low (owner)
             shape.rotation = new Vector3(90f, 0f, 0f);
             // Keep rolling out and up for the whole blast (owner: "keep expanding outwards").
             var velocity = system.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.Local;
             velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.y = new ParticleSystem.MinMaxCurve(0.5f, 2f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-0.3f, 0.5f);
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             // Fast out at first, then a steady spread (owner: "wider and faster, more space horizontally").
             velocity.radial = new ParticleSystem.MinMaxCurve(40f, Curve((0f, 1f), (0.12f, 0.45f), (0.35f, 0.2f), (1f, 0.12f)));
-            Size(system, Curve((0f, 0.5f), (0.2f, 1f), (1f, 2f)));
+            Size(system, Curve((0f, 0.5f), (0.2f, 1f), (1f, 1.6f)));
             Colour(system, Gradient(
                 new[] { (0f, new Color(1f, 0.62f, 0.38f)), (0.15f, new Color(1f, 0.85f, 0.7f)), (0.4f, Color.white), (1f, new Color(0.85f, 0.85f, 0.88f)) },
                 new[] { (0f, 0f), (0.06f, 0.92f), (0.65f, 0.75f), (1f, 0f) }));
@@ -357,6 +359,47 @@ namespace Chopper.Editor.Setup
             Noise(fire, 4f, 0.2f);
             FlameSheet(fire);
             fireRenderer.maxParticleSize = 3f;
+        }
+
+        /// <summary>
+        /// 1.5-20 s: the collar round the stem under the cap (owner: "a ring around the stem that expands"): a thin ring of
+        /// pale lit smoke that rises with the cap and keeps spreading outwards.
+        /// </summary>
+        private static void StemRing(Transform rise, Material material)
+        {
+            if (material == null) return;
+            var system = Make(rise, "StemRing", material, ParticleSystemSimulationSpace.Local, out var renderer);
+            system.transform.localPosition = new Vector3(0f, -95f, 0f);
+            var main = system.main;
+            main.duration = 6f;
+            main.startDelay = 1.5f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(10f, 14f);
+            main.startSize = new ParticleSystem.MinMaxCurve(16f, 28f);
+            main.startSpeed = 0f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 0.8f, 0.75f), new Color(0.7f, 0.66f, 0.62f));
+            main.maxParticles = 400;
+            Burst(system, 0f, 140);
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(25f, Curve((0f, 1f), (1f, 0f)));
+            var shape = Shape(system, ParticleSystemShapeType.Donut, 30f);
+            shape.donutRadius = 5f;
+            shape.rotation = new Vector3(90f, 0f, 0f);
+            shape.radiusThickness = 0.3f;
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.radial = new ParticleSystem.MinMaxCurve(18f, Curve((0f, 1f), (0.3f, 0.45f), (1f, 0.25f)));
+            Size(system, Curve((0f, 0.5f), (0.3f, 1f), (1f, 1.5f)));
+            Colour(system, Gradient(new[] { (0f, Color.white), (1f, Color.white) },
+                new[] { (0f, 0f), (0.1f, 0.85f), (0.7f, 0.6f), (1f, 0f) }));
+            Noise(system, 2f, 0.15f);
+            Spin(system, 0.1f);
+            SmokeLook(system, renderer);
+            renderer.maxParticleSize = 3f;
         }
 
         /// <summary>The pack's normal-mapped lit smoke (8 x 8 flipbook, emission mask), copied so the nuke can tune it.</summary>
