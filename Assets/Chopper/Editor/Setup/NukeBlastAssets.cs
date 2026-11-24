@@ -133,7 +133,7 @@ namespace Chopper.Editor.Setup
                 RisingSparks(root.transform, sparks);
                 BaseSurge(root.transform, smoke);
                 BaseClouds(root.transform, smoke, flame);
-                var baseRim = RimSmoke(root.transform, smoke, "BaseRimSmoke", 95f, 26f, 0.9f, new Color(0.6f, 0.5f, 0.42f), new Color(0.48f, 0.4f, 0.34f));
+                var baseRim = RimSmoke(root.transform, smoke, "BaseRimSmoke", 120f, 34f, 0.9f, new Color(0.6f, 0.5f, 0.42f), new Color(0.48f, 0.4f, 0.34f));
                 if (baseRim != null) baseRim.transform.localPosition = new Vector3(0f, 12f, 0f);
 
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefabPath));
@@ -305,7 +305,7 @@ namespace Chopper.Editor.Setup
             main.duration = 12f;
             main.startDelay = 0.3f;
             main.startLifetime = new ParticleSystem.MinMaxCurve(13f, 19f);
-            main.startSize = new ParticleSystem.MinMaxCurve(32f, 62f);
+            main.startSize = new ParticleSystem.MinMaxCurve(40f, 75f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 5f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.66f, 0.55f, 0.46f), new Color(0.52f, 0.44f, 0.38f));
@@ -313,18 +313,19 @@ namespace Chopper.Editor.Setup
             Burst(system, 0f, 170);
             var emission = system.emission;
             emission.rateOverTime = new ParticleSystem.MinMaxCurve(22f, Curve((0f, 1f), (0.6f, 0.6f), (1f, 0f)));
-            var shape = Shape(system, ParticleSystemShapeType.Donut, 85f);
-            shape.donutRadius = 38f;
+            var shape = Shape(system, ParticleSystemShapeType.Donut, 105f);
+            shape.donutRadius = 50f;
             shape.rotation = new Vector3(90f, 0f, 0f);
             // Keep rolling out and up for the whole blast (owner: "keep expanding outwards").
             var velocity = system.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.Local;
             velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.y = new ParticleSystem.MinMaxCurve(1f, 3.5f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.5f, 2f);
             velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.radial = new ParticleSystem.MinMaxCurve(3f, 7f);
-            Size(system, Curve((0f, 0.45f), (0.25f, 1f), (1f, 1.7f)));
+            // Fast out at first, then a steady spread (owner: "wider and faster, more space horizontally").
+            velocity.radial = new ParticleSystem.MinMaxCurve(40f, Curve((0f, 1f), (0.12f, 0.45f), (0.35f, 0.2f), (1f, 0.12f)));
+            Size(system, Curve((0f, 0.5f), (0.2f, 1f), (1f, 2f)));
             Colour(system, Gradient(
                 new[] { (0f, new Color(1f, 0.62f, 0.38f)), (0.15f, new Color(1f, 0.85f, 0.7f)), (0.4f, Color.white), (1f, new Color(0.85f, 0.85f, 0.88f)) },
                 new[] { (0f, 0f), (0.06f, 0.92f), (0.65f, 0.75f), (1f, 0f) }));
