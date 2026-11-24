@@ -77,8 +77,27 @@ namespace Chopper.Presentation.Effects
         private Vector3 nukeBeaconScale = new(4f, 4f, 10f);
 
         [Header("Capture the Nuke blast (NukeBlastSystem)")]
-        [SerializeField, Tooltip("The nuke going off in a base: layers in time order (flash, fireball, rising head, stem, " +
-                                 "shockwave, ground fire). Ground layers start on the ground under the blast. Empty: no blast.")]
+        [SerializeField, Tooltip("The blast prefab (Editor/Setup/NukeBlastAssets; menu Chopper > Tools > Rebuild Nuke Blast): " +
+                                 "mushroom cap and stem, shock rings, dust puffs, burn mark, wind strokes, flash core, " +
+                                 "condensation shell, shock bubble, embers, debris. Empty: only the layers below.")]
+        private GameObject nukeBlast;
+        [SerializeField, Min(5f), Tooltip("Mushroom cap radius (m); the whole blast scales with it.")]
+        private float nukeBlastRadius = 55f;
+        [SerializeField, Min(10f), Tooltip("Height the cap rises to (m, at the default radius).")]
+        private float nukeRiseHeight = 230f;
+        [SerializeField, Min(0.5f), Tooltip("Seconds for most of the rise.")]
+        private float nukeRiseSeconds = 9f;
+        [SerializeField, Min(1f), Tooltip("Seconds the mushroom stands before it dissolves.")]
+        private float nukeBlastSeconds = 22f;
+        [SerializeField, Min(0.1f), Tooltip("Seconds of the dissolve.")]
+        private float nukeFadeSeconds = 5f;
+        [SerializeField, Min(10f), Tooltip("Shock front speed (m/s): the shake comes when it reaches you, not at the flash.")]
+        private float nukeShockSpeed = 340f;
+        [SerializeField, Min(0f), Tooltip("EMP: HUDs glitch within this distance (m) at the flash. 0 = off.")]
+        private float nukeEmpRadius = 900f;
+        [SerializeField, Tooltip("White additive material for the screen flash (a quad in front of the camera). Empty: none.")]
+        private Material nukeScreenFlash;
+        [SerializeField, Tooltip("Extra pack layers with the blast (ground fires). Ground layers start on the ground under it.")]
         private BlastLayer[] nukeBlastLayers = Array.Empty<BlastLayer>();
         [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]
         private float nukeBlastShake = 1f;
@@ -230,6 +249,15 @@ namespace Chopper.Presentation.Effects
         }
 
         public IReadOnlyList<BlastLayer> NukeBlastLayers => nukeBlastLayers ?? Array.Empty<BlastLayer>();
+        public GameObject NukeBlast => nukeBlast;
+        public float NukeBlastRadius => nukeBlastRadius;
+        public float NukeRiseHeight => nukeRiseHeight;
+        public float NukeRiseSeconds => nukeRiseSeconds;
+        public float NukeBlastSeconds => nukeBlastSeconds;
+        public float NukeFadeSeconds => nukeFadeSeconds;
+        public float NukeShockSpeed => nukeShockSpeed;
+        public float NukeEmpRadius => nukeEmpRadius;
+        public Material NukeScreenFlash => nukeScreenFlash;
         public float NukeBlastShake => nukeBlastShake;
         public float NukeBlastShakeRange => nukeBlastShakeRange;
         public Color NukeFlashColour => nukeFlashColour;
@@ -238,9 +266,11 @@ namespace Chopper.Presentation.Effects
         public float NukeFlashSeconds => nukeFlashSeconds;
 
         /// <summary>Editor only: fills the nuke blast layers if empty (or always, with <paramref name="replace"/>).</summary>
-        public void FillNukeBlast(BlastLayer[] layers, bool replace = false)
+        public void FillNukeBlast(BlastLayer[] layers, GameObject blast, Material screenFlash, bool replace = false)
         {
             if (nukeBlastLayers == null || nukeBlastLayers.Length == 0 || replace) nukeBlastLayers = layers;
+            if (nukeBlast == null || replace) nukeBlast = blast;
+            if (nukeScreenFlash == null || replace) nukeScreenFlash = screenFlash;
         }
 
         public IReadOnlyList<BlastLayer> ChopperExplosionLayers => chopperExplosionLayers ?? Array.Empty<BlastLayer>();
