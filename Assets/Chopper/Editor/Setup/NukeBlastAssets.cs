@@ -89,7 +89,9 @@ namespace Chopper.Editor.Setup
             });
             var flame = EffectsAssets.EnsureFlameMaterial();
             var core = FlameCopy(flame, Folder + "/NukeCore.mat", new Color(14f, 11f, 8f, 1f), fresh);
-            var smoke = EffectsAssets.EnsureSmokeMaterial();
+            // Lit smoke from the Fire and Smoke pack (owner: "a lit texture like the smoke from the fire and smoke
+            // package"); the game's own smoke when the pack is not there (it is git-ignored).
+            var smoke = PackSmoke(fresh) ?? EffectsAssets.EnsureSmokeMaterial();
             var sparks = EffectsAssets.EnsureSparkMaterial();
             if (cloud == null || ringGlow == null || scorch == null || shock == null || flame == null || sparks == null)
             {
@@ -284,7 +286,7 @@ namespace Chopper.Editor.Setup
                 new[] { (0f, 0f), (0.2f, 0.75f), (0.7f, 0.55f), (1f, 0f) }));
             Noise(system, 3f, 0.12f);
             Spin(system, 0.15f);
-            SmokeSheet.Apply(system);
+            SmokeLook(system, renderer);
             renderer.maxParticleSize = 3f;
             return system;
         }
@@ -328,7 +330,7 @@ namespace Chopper.Editor.Setup
                 new[] { (0f, 0f), (0.06f, 0.92f), (0.65f, 0.75f), (1f, 0f) }));
             Noise(system, 3.5f, 0.1f);
             Spin(system, 0.12f);
-            SmokeSheet.Apply(system);
+            SmokeLook(system, renderer);
             renderer.maxParticleSize = 3f;
 
             if (flame == null) return;
@@ -354,6 +356,56 @@ namespace Chopper.Editor.Setup
             Noise(fire, 4f, 0.2f);
             FlameSheet(fire);
             fireRenderer.maxParticleSize = 3f;
+        }
+
+        /// <summary>The pack's normal-mapped lit smoke (8 x 8 flipbook, emission mask), copied so the nuke can tune it.</summary>
+        private const string PackSmokePath = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Materials/Lit_Normal/M_Smoke_Normal_Based_Lit 3.mat";
+        private const string NukeSmokePath = Folder + "/NukeSmoke.mat";
+
+        private static Material PackSmoke(bool fresh)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(NukeSmokePath);
+            var pack = AssetDatabase.LoadAssetAtPath<Material>(PackSmokePath);
+            if (pack == null) return existing != null && existing.shader.isSupported ? existing : null;
+            if (existing != null && !fresh) return existing;
+            var material = existing != null ? existing : new Material(pack) { name = "NukeSmoke" };
+            if (existing != null) material.CopyPropertiesFromMaterial(pack);
+            // Tuned in the bench (24 Nov): the pack's red glow (HDR 181) lit the whole ring for most of each card's
+            // life; now orange, weaker, and gone early in the card's life, so hot spots show through, then plain smoke.
+            material.SetColor("_Emission_Color", new Color(6f, 2.2f, 0.5f, 0f));
+            material.SetFloat("_Emission_Gradient_Contrast", 3.2f);
+            if (existing == null) AssetDatabase.CreateAsset(material, NukeSmokePath);
+            else EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>
+        /// Flipbook and vertex data for a smoke system: the pack shader needs its 8 x 8 sheet once over each card's life and
+        /// the streams it reads (age for the emission over time, centre and size, tangents for the normal map); the game's
+        /// own smoke uses its 4 x 4 sheet.
+        /// </summary>
+        private static void SmokeLook(ParticleSystem system, ParticleSystemRenderer renderer)
+        {
+            var material = renderer.sharedMaterial;
+            if (material == null || !material.shader.name.StartsWith("NatureManufacture"))
+            {
+                SmokeSheet.Apply(system);
+                return;
+            }
+            var sheet = system.textureSheetAnimation;
+            sheet.enabled = true;
+            sheet.mode = ParticleSystemAnimationMode.Grid;
+            sheet.numTilesX = 8;
+            sheet.numTilesY = 8;
+            sheet.animation = ParticleSystemAnimationType.WholeSheet;
+            sheet.frameOverTime = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            sheet.cycleCount = 1;
+            renderer.SetActiveVertexStreams(new System.Collections.Generic.List<ParticleSystemVertexStream>
+            {
+                ParticleSystemVertexStream.Position, ParticleSystemVertexStream.Tangent, ParticleSystemVertexStream.Normal,
+                ParticleSystemVertexStream.Color, ParticleSystemVertexStream.UV, ParticleSystemVertexStream.AgePercent,
+                ParticleSystemVertexStream.Center, ParticleSystemVertexStream.SizeXY,
+            });
         }
 
         /// <summary>Screen-plane spin only (smoke cards stay upright).</summary>
@@ -426,7 +478,7 @@ namespace Chopper.Editor.Setup
             Colour(system, Gradient(new[] { (0f, new Color(1f, 0.75f, 0.55f)), (0.3f, Color.white), (1f, Color.white) },
                 new[] { (0f, 0f), (0.08f, 0.8f), (0.6f, 0.45f), (1f, 0f) }));
             Noise(system, 2f, 0.15f);
-            SmokeSheet.Apply(system);
+            SmokeLook(system, renderer);
             renderer.maxParticleSize = 3f;
         }
 
