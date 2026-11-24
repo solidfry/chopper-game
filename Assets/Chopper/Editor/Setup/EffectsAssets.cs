@@ -23,6 +23,10 @@ namespace Chopper.Editor.Setup
 
         private const string Missile = SciFi + "/Missiles/Rockets/RedRocketMissile.prefab";
         private const string Flare = SciFi + "/Missiles/Sparkler/YellowSparklerMissile.prefab";
+        // Capture the Nuke (owner, 20 Nov: "look in our packages for effects"): picked in the effects bench, 24 Nov. Purple
+        // reads close to the nuke's pink HUD marker and is neither team's colour.
+        private const string NukeZone = SciFi + "/Shield/HexShield/HexShieldPurple.prefab";
+        private const string NukeBeacon = "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Prefabs/Interactive/Loot/LootRays/T5PurpleLootItem.prefab";
 
         private const string FireAndSmoke = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Prefabs";
 
@@ -119,6 +123,7 @@ namespace Chopper.Editor.Setup
             {
                 // Repair: fill slots added after the asset was made (guided missiles, flares).
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
+                settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 settings.FillExplosionLayers(ExplosionLayers());
@@ -136,6 +141,7 @@ namespace Chopper.Editor.Setup
             settings = ScriptableObject.CreateInstance<CombatEffectsSettings>();
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
+            settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             settings.FillExplosionLayers(ExplosionLayers());

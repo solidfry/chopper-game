@@ -61,9 +61,19 @@ namespace Chopper.Presentation.Effects
         private bool gunBulletAudio;
 
         [Header("Capture the Nuke pick-up zone")]
-        [SerializeField, Tooltip("Chopper/ZoneDome material for the dome round a free nuke (radius = your own hook range). " +
-                                 "Empty: no dome.")]
-        private Material nukeZoneMaterial;
+        [SerializeField, Tooltip("Looping shell round a free nuke (Sci-Fi Arsenal Hex Shield), scaled so its radius is your own " +
+                                 "hook range. Pooled. Empty: no zone.")]
+        private GameObject nukeZone;
+        [SerializeField, Min(0.01f), Tooltip("The zone prefab's radius in metres at scale 1 (Sci-Fi Arsenal shields: 4).")]
+        private float nukeZoneRadius = 4f;
+        [SerializeField, Min(1f), Tooltip("Zone colour scale while your chopper is in hook range.")]
+        private float nukeZoneInRangeBoost = 2.2f;
+        [SerializeField, Tooltip("Looping light beam on a free nuke, seen from far away (Sci-Fi Arsenal Loot Rays). Pooled. " +
+                                 "Empty: no beacon.")]
+        private GameObject nukeBeacon;
+        [SerializeField, Tooltip("Beacon scale in the prefab's own axes. Loot Rays is built lying down: Z is the beam's height " +
+                                 "(about 8 m at 1). 4 x 4 x 10 reads from 200 m away (24 Nov).")]
+        private Vector3 nukeBeaconScale = new(4f, 4f, 10f);
 
         [Header("Rotor downwash (dust blown up under low choppers)")]
         [SerializeField, Tooltip("Particle material for the dust (URP Particles Unlit, transparent, soft round texture). " +
@@ -219,7 +229,11 @@ namespace Chopper.Presentation.Effects
         public float FlareInterval => flareInterval;
         public AudioMixerGroup EffectsMixerGroup => effectsMixerGroup;
         public bool GunBulletAudio => gunBulletAudio;
-        public Material NukeZoneMaterial => nukeZoneMaterial;
+        public GameObject NukeZone => nukeZone;
+        public float NukeZoneRadius => nukeZoneRadius;
+        public float NukeZoneInRangeBoost => nukeZoneInRangeBoost;
+        public GameObject NukeBeacon => nukeBeacon;
+        public Vector3 NukeBeaconScale => nukeBeaconScale;
         public Material DownwashMaterial => downwashMaterial;
         public float DownwashHeight => downwashHeight;
         public Vector2 DownwashRadius => downwashRadius;
@@ -281,6 +295,7 @@ namespace Chopper.Presentation.Effects
             if (rocketImpact == null) problems.Add($"{name}: no rocket impact prefab.");
             if (missile == null) problems.Add($"{name}: no missile prefab (rockets' visual is used).");
             if (flare == null) problems.Add($"{name}: no flare prefab, so flares are invisible.");
+            if (nukeZone == null) problems.Add($"{name}: no nuke zone prefab, so Capture the Nuke shows no pick-up range.");
             if (downwashMaterial == null) problems.Add($"{name}: no downwash material, so low choppers blow up no dust.");
             if (damageSparkMaterial == null) problems.Add($"{name}: no damage spark material, so hits show no sparks and damaged choppers no fire.");
             if (damageSmokeMaterial == null) problems.Add($"{name}: no damage smoke material, so damaged choppers do not smoke.");
@@ -300,6 +315,13 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: fills empty guided-missile and flare slots.</summary>
+        /// <summary>Editor only: fills empty Capture the Nuke zone and beacon slots.</summary>
+        public void FillNukeZone(GameObject zone, GameObject beacon)
+        {
+            if (nukeZone == null) nukeZone = zone;
+            if (nukeBeacon == null) nukeBeacon = beacon;
+        }
+
         public void FillGuidedSlots(GameObject missileVisual, GameObject missileHit, GameObject flareVisual)
         {
             if (missile == null) missile = missileVisual;
