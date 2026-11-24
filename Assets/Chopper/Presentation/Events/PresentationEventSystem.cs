@@ -34,6 +34,7 @@ namespace Chopper.Presentation.Events
         private EntityQuery _chopperHits;
         private EntityQuery _wreckExplosions;
         private EntityQuery _disconnects;
+        private EntityQuery _nukeDetonations;
         private int _localNetworkId;
         private NukeState _nuke;
         private bool _hasNuke;
@@ -58,6 +59,7 @@ namespace Chopper.Presentation.Events
             _chopperHits = Rpc<ChopperHitRpc>();
             _wreckExplosions = Rpc<WreckExplodedRpc>();
             _disconnects = GetEntityQuery(ComponentType.ReadOnly<ClientDisconnect>());
+            _nukeDetonations = Rpc<NukeDetonatedRpc>();
         }
 
         protected override void OnUpdate()
@@ -87,6 +89,7 @@ namespace Chopper.Presentation.Events
             EntityManager.DestroyEntity(_clusterSplits);
             EntityManager.DestroyEntity(_chopperHits);
             EntityManager.DestroyEntity(_wreckExplosions);
+            EntityManager.DestroyEntity(_nukeDetonations);
         }
 
         /// <summary>Capture the Nuke: compares the replicated nuke with last frame's and publishes what changed.</summary>
@@ -106,6 +109,13 @@ namespace Chopper.Presentation.Events
                 break;
             }
             _hasNuke = seen;
+
+            // The server resets the nuke in the detonation tick, so the blast comes as its own message.
+            foreach (var rpc in SystemAPI.Query<RefRO<NukeDetonatedRpc>>().WithAll<ReceiveRpcCommandRequest>())
+            {
+                events.Publish(new NukeDetonated(rpc.ValueRO.Position, rpc.ValueRO.Team));
+                events.Publish(new NukeChanged(Hud.NukeChange.Detonated, rpc.ValueRO.Team));
+            }
         }
 
         private void Publish(PresentationEvents events)

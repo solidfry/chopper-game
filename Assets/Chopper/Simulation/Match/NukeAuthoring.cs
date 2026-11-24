@@ -72,6 +72,16 @@ namespace Chopper.Simulation.Match
     {
     }
 
+    /// <summary>
+    /// Server to all clients: the nuke went off here (the nuke blast, the round flash). Needed because the server puts a
+    /// new nuke on the pad in the same tick, so clients never see the Detonated phase in <see cref="NukeState"/>.
+    /// </summary>
+    public struct NukeDetonatedRpc : Unity.NetCode.IRpcCommand
+    {
+        public float3 Position;
+        public byte Team;
+    }
+
     /// <summary>Server only, one entity per round win. Made by <see cref="NukeSystem"/>, used by <see cref="MatchScoreSystem"/>.</summary>
     public struct NukeRoundWon : IComponentData
     {

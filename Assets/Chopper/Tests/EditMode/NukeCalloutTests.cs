@@ -124,7 +124,9 @@ namespace Chopper.Tests
             Assert.AreEqual(CalloutTone.Good, NukeCallout.Flash(NukeChange.Armed, Us, Us).Tone);
             Assert.AreEqual("ENEMY ARMED THE NUKE", NukeCallout.Flash(NukeChange.Armed, Them, Us).Text);
             Assert.AreEqual(CalloutTone.Good, NukeCallout.Flash(NukeChange.Dropped, Them, Us).Tone);
-            Assert.AreEqual("", NukeCallout.Flash(NukeChange.Detonated, Us, Us).Text);
+            Assert.AreEqual("ENEMY BASE DESTROYED · ROUND WON", NukeCallout.Flash(NukeChange.Detonated, Us, Us).Text);
+            Assert.AreEqual(CalloutTone.Alert, NukeCallout.Flash(NukeChange.Detonated, Them, Us).Tone);
+            Assert.AreEqual("", NukeCallout.Flash(NukeChange.None, Us, Us).Text);
         }
 
         [Test]

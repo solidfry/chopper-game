@@ -56,6 +56,44 @@ namespace Chopper.Editor.Setup
             return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
         }
 
+        /// <summary>
+        /// The nuke going off in a base (Capture the Nuke): a white-hot flash and a ground shockwave ring, a huge fireball
+        /// that swells, a second fireball that rises into the mushroom head, a dark stem from the ground, embers, and
+        /// ground fire that burns on. Same pack parts as the wreck blast, at about fifteen times the size.
+        /// </summary>
+        private static BlastLayer[] NukeBlastLayers()
+        {
+            // Sizes tuned in play 24 Nov (seen from 500 m): x5 the first pass read as a ~40 m blast. The two fireballs use the
+            // wreck flame material (fire flipbook, HDR) so the blast glows instead of reading as black smoke.
+            var flame = EnsureWreckFlameMaterial();
+            var layers = new[]
+            {
+                Layer(SmallBlast, 48f, 0f, 0f, 4f, 0f),
+                Layer(Shockwave, 27f, 0.05f, 0f, 5f, 0f, ground: true),
+                Layer(SmallBlast, 30f, 0.15f, 0f, 4f, 15f, spread: 35f),
+                Layer(Fireball, 84f, 0.2f, 1.6f, 14f, 5f, startScale: 30f, grow: 1.5f, material: flame, lifeColour: FlameLifeColour),
+                Layer(Embers, 42f, 0.2f, 1.5f, 10f, 10f),
+                Layer(Fireball, 102f, 1.2f, 2.5f, 18f, 137f, startScale: 42f, grow: 3f, material: flame, lifeColour: FlameLifeColour),
+                Layer(Column, 42f, 0.8f, 10f, 45f, 0f, startScale: 15f, grow: 6f, ground: true, tint: ColumnTint),
+                Layer(Flames, 42f, 0.6f, 8f, 14f, 0f, startScale: 18f, grow: 2f, material: flame, lifeColour: FlameLifeColour,
+                    ground: true, spread: 45f),
+            };
+            return System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
+        }
+
+        /// <summary>Tools: put the default nuke blast layers back (after tuning them in code).</summary>
+        [MenuItem("Chopper/Tools/Reset Nuke Blast Layers")]
+        private static void ResetNukeBlastLayers()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<CombatEffectsSettings>(SettingsPath);
+            if (settings == null) return;
+            settings.FillNukeBlast(NukeBlastLayers(), replace: true);
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>A yellow ring that runs out along the ground.</summary>
+        private const string Shockwave = SciFi + "/UltimateNova/YellowUltimateNova.prefab";
         private const string Fireball = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Explosion_Normal_Based_Lit.prefab";
         private const string Flames = FireAndSmoke + "/Other/Prefab_Fire_Huge_Flames_01.prefab";
         private const string Embers = FireAndSmoke + "/Other/Prefab_Fire_Embers_01.prefab";
@@ -126,7 +164,7 @@ namespace Chopper.Editor.Setup
                 settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-                settings.FillExplosionLayers(ExplosionLayers());
+                settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers());
                 DressExhaustSmoke();
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
@@ -144,7 +182,7 @@ namespace Chopper.Editor.Setup
             settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-            settings.FillExplosionLayers(ExplosionLayers());
+            settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));

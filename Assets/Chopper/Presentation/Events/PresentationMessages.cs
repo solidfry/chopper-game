@@ -227,6 +227,18 @@ namespace Chopper.Presentation.Events
         }
     }
 
+    /// <summary>Capture the Nuke: the nuke went off at <see cref="Position"/>; <see cref="Team"/> won the round.</summary>
+    public readonly struct NukeDetonated
+    {
+        public readonly Vector3 Position;
+        public readonly byte Team;
+        public NukeDetonated(Vector3 position, byte team)
+        {
+            Position = position;
+            Team = team;
+        }
+    }
+
     /// <summary>The server gave the local player XP just now (the Battlefield-style popup).</summary>
     public readonly struct XpAwarded
     {

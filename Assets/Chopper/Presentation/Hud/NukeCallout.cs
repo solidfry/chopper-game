@@ -142,7 +142,9 @@ namespace Chopper.Presentation.Hud
                 NukeChange.Armed => ours ? new Callout("NUKE ARMED", CalloutTone.Good) : new Callout("ENEMY ARMED THE NUKE", CalloutTone.Alert),
                 NukeChange.Defused => ours ? new Callout("NUKE DEFUSED", CalloutTone.Good) : new Callout("ENEMY DEFUSED YOUR NUKE", CalloutTone.Alert),
                 NukeChange.Reset => new Callout("NUKE BACK ON THE PAD", CalloutTone.Neutral),
-                _ => Callout.Empty,  // a detonation has its own banner and blast
+                NukeChange.Detonated => ours ? new Callout("ENEMY BASE DESTROYED · ROUND WON", CalloutTone.Good)
+                    : new Callout("BASE DESTROYED · ROUND LOST", CalloutTone.Alert),
+                _ => Callout.Empty,
             };
         }
 

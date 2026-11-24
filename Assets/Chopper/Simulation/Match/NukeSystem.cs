@@ -112,6 +112,9 @@ namespace Chopper.Simulation.Match
                         var won = ecb.CreateEntity();
                         ecb.AddComponent(won, new NukeRoundWon { Team = s.DetonatedBy });
                         ecb.AddComponent<NukeRoundStart>(ecb.CreateEntity());
+                        var blast = ecb.CreateEntity();
+                        ecb.AddComponent(blast, new NukeDetonatedRpc { Position = position, Team = s.DetonatedBy });
+                        ecb.AddComponent<Unity.NetCode.SendRpcCommandRequest>(blast);
                         UnityEngine.Debug.Log($"[Nuke] Team {s.DetonatedBy} set off the nuke in team {zoneTeam}'s base: round won.");
                         // Next round: a new nuke on the pad.
                         s = NukeRules.AtSpawn;

@@ -76,6 +76,20 @@ namespace Chopper.Presentation.Effects
                                  "(about 8 m at 1). 4 x 4 x 10 reads from 200 m away (24 Nov).")]
         private Vector3 nukeBeaconScale = new(4f, 4f, 10f);
 
+        [Header("Capture the Nuke blast (NukeBlastSystem)")]
+        [SerializeField, Tooltip("The nuke going off in a base: layers in time order (flash, fireball, rising head, stem, " +
+                                 "shockwave, ground fire). Ground layers start on the ground under the blast. Empty: no blast.")]
+        private BlastLayer[] nukeBlastLayers = Array.Empty<BlastLayer>();
+        [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]
+        private float nukeBlastShake = 1f;
+        [SerializeField, Min(1f), Tooltip("No shake beyond this distance (m).")]
+        private float nukeBlastShakeRange = 1200f;
+        [SerializeField, ColorUsage(false, true), Tooltip("The flash: a point light at the blast that fades out.")]
+        private Color nukeFlashColour = new(1f, 0.82f, 0.6f, 1f);
+        [SerializeField, Min(0f)] private float nukeFlashIntensity = 60f;
+        [SerializeField, Min(1f), Tooltip("Flash light range (m).")] private float nukeFlashRange = 900f;
+        [SerializeField, Min(0.05f), Tooltip("Seconds the flash takes to fade.")] private float nukeFlashSeconds = 3f;
+
         [Header("Rotor downwash (dust blown up under low choppers)")]
         [SerializeField, Tooltip("Particle material for the dust (URP Particles Unlit, transparent, soft round texture). " +
                                  "Empty: no downwash.")]
@@ -213,6 +227,20 @@ namespace Chopper.Presentation.Effects
         public void FillExplosionLayers(BlastLayer[] layers, bool replace = false)
         {
             if (chopperExplosionLayers == null || chopperExplosionLayers.Length == 0 || replace) chopperExplosionLayers = layers;
+        }
+
+        public IReadOnlyList<BlastLayer> NukeBlastLayers => nukeBlastLayers ?? Array.Empty<BlastLayer>();
+        public float NukeBlastShake => nukeBlastShake;
+        public float NukeBlastShakeRange => nukeBlastShakeRange;
+        public Color NukeFlashColour => nukeFlashColour;
+        public float NukeFlashIntensity => nukeFlashIntensity;
+        public float NukeFlashRange => nukeFlashRange;
+        public float NukeFlashSeconds => nukeFlashSeconds;
+
+        /// <summary>Editor only: fills the nuke blast layers if empty (or always, with <paramref name="replace"/>).</summary>
+        public void FillNukeBlast(BlastLayer[] layers, bool replace = false)
+        {
+            if (nukeBlastLayers == null || nukeBlastLayers.Length == 0 || replace) nukeBlastLayers = layers;
         }
 
         public IReadOnlyList<BlastLayer> ChopperExplosionLayers => chopperExplosionLayers ?? Array.Empty<BlastLayer>();
