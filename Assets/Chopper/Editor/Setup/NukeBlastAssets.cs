@@ -122,6 +122,7 @@ namespace Chopper.Editor.Setup
                 Embers(rise, sparks);
                 CapFire(rise, flame);
                 StemRing(rise, smoke);
+                StemFireRing(rise, flame);
                 RimSmoke(rise, smoke, "CapRimSmoke", 62f, 22f, 0.4f, new Color(0.62f, 0.5f, 0.46f), new Color(0.5f, 0.42f, 0.4f));
                 var puffs = new GameObject("Puffs").transform;
                 puffs.SetParent(root.transform, false);
@@ -359,6 +360,48 @@ namespace Chopper.Editor.Setup
             Noise(fire, 4f, 0.2f);
             FlameSheet(fire);
             fireRenderer.maxParticleSize = 3f;
+        }
+
+        /// <summary>
+        /// 1.5-14 s: fire in the stem ring (owner: "the ring should be fiery"): flame cards on the same ring and spread as
+        /// <see cref="StemRing"/>, the fireball flipbook looping, cooling from yellow to orange and deep red as it spreads.
+        /// </summary>
+        private static void StemFireRing(Transform rise, Material material)
+        {
+            if (material == null) return;
+            var system = Make(rise, "StemFireRing", material, ParticleSystemSimulationSpace.Local, out var renderer);
+            system.transform.localPosition = new Vector3(0f, -95f, 0f);
+            var main = system.main;
+            main.duration = 6f;
+            main.startDelay = 1.4f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 9f);
+            main.startSize = new ParticleSystem.MinMaxCurve(14f, 24f);
+            main.startSpeed = 0f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.maxParticles = 400;
+            Burst(system, 0f, 160);
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(30f, Curve((0f, 1f), (1f, 0f)));
+            var shape = Shape(system, ParticleSystemShapeType.Donut, 30f);
+            shape.donutRadius = 4f;
+            shape.rotation = new Vector3(90f, 0f, 0f);
+            shape.radiusThickness = 0.3f;
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.radial = new ParticleSystem.MinMaxCurve(18f, Curve((0f, 1f), (0.3f, 0.45f), (1f, 0.25f)));
+            Size(system, Curve((0f, 0.5f), (0.25f, 1f), (1f, 1.3f)));
+            Colour(system, Gradient(
+                new[] { (0f, new Color(1f, 0.9f, 0.55f)), (0.3f, new Color(1f, 0.55f, 0.15f)), (0.7f, new Color(0.85f, 0.2f, 0.05f)), (1f, new Color(0.3f, 0.05f, 0.02f)) },
+                new[] { (0f, 0f), (0.08f, 0.95f), (0.6f, 0.7f), (1f, 0f) }));
+            Noise(system, 3f, 0.2f);
+            FlameSheet(system);
+            var sheet = system.textureSheetAnimation;
+            sheet.cycleCount = 4;  // a long life: keep the flames flickering, not one slow play
+            renderer.maxParticleSize = 3f;
         }
 
         /// <summary>
