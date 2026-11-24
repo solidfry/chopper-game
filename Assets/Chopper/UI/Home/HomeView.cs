@@ -492,7 +492,13 @@ namespace Chopper.UI.Home
         private void ShowProfile()
         {
             var pilot = _model.SelectedPilot;
-            if (_profileName != null) _profileName.text = _model.OperatorName;
+            if (_profileName != null)
+            {
+                // No known name: hide the line (its old fallback "OPERATOR" repeated the "// OPERATOR" title above).
+                var name = _model.OperatorName;
+                _profileName.text = name.ToUpperInvariant();
+                _profileName.style.display = string.IsNullOrWhiteSpace(name) ? DisplayStyle.None : DisplayStyle.Flex;
+            }
             if (_profileLevel != null) _profileLevel.text = TabularText.Wrap($"LVL {_model.Level:00}");
             if (_profileXp != null) _profileXp.value = _model.LevelProgress;
             if (pilot == null)

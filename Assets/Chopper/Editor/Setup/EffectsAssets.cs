@@ -155,7 +155,7 @@ namespace Chopper.Editor.Setup
                 settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-                settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash());
+                settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
                 DressExhaustSmoke();
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
@@ -173,7 +173,7 @@ namespace Chopper.Editor.Setup
             settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-            settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash());
+            settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));

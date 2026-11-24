@@ -89,6 +89,7 @@ namespace Chopper.Editor.Setup
             });
             var flame = EffectsAssets.EnsureFlameMaterial();
             var core = FlameCopy(flame, Folder + "/NukeCore.mat", new Color(14f, 11f, 8f, 1f), fresh);
+            var smoke = EffectsAssets.EnsureSmokeMaterial();
             var sparks = EffectsAssets.EnsureSparkMaterial();
             if (cloud == null || ringGlow == null || scorch == null || shock == null || flame == null || sparks == null)
             {
@@ -118,6 +119,7 @@ namespace Chopper.Editor.Setup
                 Condensation(rise, condensation, sphere);
                 Embers(rise, sparks);
                 CapFire(rise, flame);
+                RimSmoke(rise, smoke, "CapRimSmoke", 62f, 22f, 0.4f, new Color(0.62f, 0.5f, 0.46f), new Color(0.5f, 0.42f, 0.4f));
                 var puffs = new GameObject("Puffs").transform;
                 puffs.SetParent(root.transform, false);
                 for (var i = 0; i < NukeBlastTimeline.PuffCount; i++) Part(puffs, $"Puff{i}", puffMesh, cloud);
@@ -127,7 +129,9 @@ namespace Chopper.Editor.Setup
                 Shock(root.transform, shock, sphere);
                 Debris(root.transform, debris, puffMesh);
                 RisingSparks(root.transform, sparks);
-                BaseSurge(root.transform, EffectsAssets.EnsureSmokeMaterial());
+                BaseSurge(root.transform, smoke);
+                var baseRim = RimSmoke(root.transform, smoke, "BaseRimSmoke", 95f, 26f, 0.9f, new Color(0.6f, 0.5f, 0.42f), new Color(0.48f, 0.4f, 0.34f));
+                if (baseRim != null) baseRim.transform.localPosition = new Vector3(0f, 12f, 0f);
 
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefabPath));
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -241,6 +245,55 @@ namespace Chopper.Editor.Setup
             Noise(system, 5f, 0.2f);
             FlameSheet(system);
             renderer.maxParticleSize = 4f;
+        }
+
+        /// <summary>
+        /// Soft smoke round a rim (the cap's edge, the ring of base puffs): lit smoke cards on a flat ring that drift out
+        /// and keep spreading, so the solid cloud's outline reads as volume (owner: "more volumetric on the outer rim").
+        /// </summary>
+        private static ParticleSystem RimSmoke(Transform parent, Material material, string name, float radius, float thickness,
+            float delay, Color colourA, Color colourB)
+        {
+            if (material == null) return null;
+            var system = Make(parent, name, material, ParticleSystemSimulationSpace.Local, out var renderer);
+            var main = system.main;
+            main.duration = 15f;
+            main.startDelay = delay;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 8f);
+            main.startSize = new ParticleSystem.MinMaxCurve(30f, 55f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 4f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(colourA, colourB);
+            main.maxParticles = 400;
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(28f, Curve((0f, 1f), (0.7f, 0.8f), (1f, 0.2f)));
+            var shape = Shape(system, ParticleSystemShapeType.Donut, radius);
+            shape.donutRadius = thickness;
+            shape.rotation = new Vector3(90f, 0f, 0f);
+            // Out from the middle all the time: the rim keeps spreading (owner: "keep expanding outwards").
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.5f, 2f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.radial = new ParticleSystem.MinMaxCurve(4f, 9f);
+            Size(system, Curve((0f, 0.5f), (0.4f, 1f), (1f, 1.5f)));
+            Colour(system, Gradient(new[] { (0f, new Color(1f, 0.8f, 0.6f)), (0.3f, Color.white), (1f, Color.white) },
+                new[] { (0f, 0f), (0.2f, 0.75f), (0.7f, 0.55f), (1f, 0f) }));
+            Noise(system, 3f, 0.12f);
+            Spin(system, 0.15f);
+            SmokeSheet.Apply(system);
+            renderer.maxParticleSize = 3f;
+            return system;
+        }
+
+        /// <summary>Screen-plane spin only (smoke cards stay upright).</summary>
+        private static void Spin(ParticleSystem system, float radiansPerSecond)
+        {
+            var rotation = system.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-radiansPerSecond, radiansPerSecond);
         }
 
         /// <summary>0.5-14 s: hot sparks drawn up the stem into the cap, swirling.</summary>

@@ -24,6 +24,8 @@ Shader "Chopper/NukeCloud"
         [HDR] _InnerGlow ("Inner glow (fire inside the cloud)", Color) = (4.5, 1.5, 0.3, 1)
         _InnerGlowPower ("Inner glow tightness", Range(0.5, 6)) = 1.8
         _InnerGlowCool ("Inner glow left when cool", Range(0, 1)) = 0.3
+        _Wisp ("Edge wisps (soft, broken outline)", Range(0, 1.5)) = 1
+        _WispPower ("Edge wisp width (higher = thinner)", Range(1, 8)) = 3.5
     }
     SubShader
     {
@@ -57,6 +59,8 @@ Shader "Chopper/NukeCloud"
                 float4 _InnerGlow;
                 float _InnerGlowPower;
                 float _InnerGlowCool;
+                float _Wisp;
+                float _WispPower;
             CBUFFER_END
 
             struct Attributes
@@ -121,6 +125,9 @@ Shader "Chopper/NukeCloud"
 
                 float3 n = normalize(input.normalWS);
                 float3 v = normalize(input.viewWS);
+                // Edge wisps: where the surface turns away from the view, moving noise eats the outline into smoke,
+                // so the cloud reads as volume, not a hard shell.
+                clip(Fbm(p * 4.0 + float3(t, -t * 1.3, t * 0.6)) + 0.12 - pow(1.0 - saturate(dot(n, v)), _WispPower) * _Wisp);
                 Light sun = GetMainLight();
                 float wrap = saturate((dot(n, sun.direction) + 0.45) / 1.45);
                 float rim = pow(1.0 - saturate(dot(n, v)), 3.0);
@@ -178,6 +185,8 @@ Shader "Chopper/NukeCloud"
                 float4 _InnerGlow;
                 float _InnerGlowPower;
                 float _InnerGlowCool;
+                float _Wisp;
+                float _WispPower;
             CBUFFER_END
 
             float Hash(float3 p)
@@ -204,7 +213,13 @@ Shader "Chopper/NukeCloud"
             }
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 positionOS : TEXCOORD0; };
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 positionOS : TEXCOORD0;
+                float3 normalWS : TEXCOORD1;
+                float3 viewWS : TEXCOORD2;
+            };
 
             Varyings DepthVert(Attributes input)
             {
@@ -212,14 +227,21 @@ Shader "Chopper/NukeCloud"
                 float t = _Time.y * _BoilSpeed;
                 float3 p = input.positionOS.xyz;
                 p += input.normalOS * (Fbm(p * 2.2 + float3(_Seed, t, -t * 0.7)) - 0.5) * 2.0 * _Boil;
-                output.positionCS = TransformObjectToHClip(p);
+                float3 world = TransformObjectToWorld(p);
+                output.positionCS = TransformWorldToHClip(world);
                 output.positionOS = input.positionOS.xyz;
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.viewWS = GetWorldSpaceViewDir(world);
                 return output;
             }
 
             half DepthFrag(Varyings input) : SV_Target
             {
-                clip(Fbm((input.positionOS + _Seed) * 1.7 + 11.0) - _Fade * 1.05);
+                float3 p = input.positionOS + _Seed;
+                float t = _Time.y * _BoilSpeed * 0.35;
+                clip(Fbm(p * 1.7 + 11.0) - _Fade * 1.05);
+                float facing = saturate(dot(normalize(input.normalWS), normalize(input.viewWS)));
+                clip(Fbm(p * 4.0 + float3(t, -t * 1.3, t * 0.6)) + 0.12 - pow(1.0 - facing, _WispPower) * _Wisp);
                 return 0;
             }
             ENDHLSL

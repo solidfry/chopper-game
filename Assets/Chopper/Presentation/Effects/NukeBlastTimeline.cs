@@ -28,7 +28,11 @@ namespace Chopper.Presentation.Effects
         public static float CapRadius(float t) => BaseRadius * (0.45f + 0.55f * (1f - Mathf.Exp(-Mathf.Max(0f, t) / 0.3f)));
 
         /// <summary>Extra width of the cap (x and z) as it rises and flattens into the mushroom head.</summary>
-        public static float CapSpread(float t) => 1f + 0.45f * (1f - Mathf.Exp(-Mathf.Max(0f, t) / 1.5f));
+        public static float CapSpread(float t) => 1f + 0.45f * (1f - Mathf.Exp(-Mathf.Max(0f, t) / 1.5f)) + CreepPerSecond * Mathf.Max(0f, t);
+
+        /// <summary>After the first burst the cloud keeps spreading out slowly (owner: "keep expanding outwards"), as a
+        /// share of its size per second.</summary>
+        public const float CreepPerSecond = 0.018f;
 
         /// <summary>Height of the stem: always up to the underside of the cap, so the two stay joined.</summary>
         public static float StemHeight(float capHeight, float capRadius) => Mathf.Max(0.01f, capHeight - capRadius * 0.4f);
@@ -73,8 +77,9 @@ namespace Chopper.Presentation.Effects
         {
             var age = Mathf.Max(0f, t - 0.25f);
             var reach = BaseRadius * (1.5f + 0.7f * Hash(index));
-            distance = 15f + (reach - 15f) * EaseOut(Mathf.Clamp01(age / 3f));
-            size = BaseRadius * (0.3f + 0.25f * Hash(index + 31)) * Smooth(age / 0.8f);
+            var creep = 1f + CreepPerSecond * age;
+            distance = (15f + (reach - 15f) * EaseOut(Mathf.Clamp01(age / 3f))) * creep;
+            size = BaseRadius * (0.3f + 0.25f * Hash(index + 31)) * Smooth(age / 0.8f) * creep;
             heat = 0.05f + 0.85f * Mathf.Exp(-age / 2f);
         }
 

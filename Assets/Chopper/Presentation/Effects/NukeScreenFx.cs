@@ -24,6 +24,9 @@ namespace Chopper.Presentation.Effects
         private readonly ColorAdjustments _colour;
         private readonly ChromaticAberration _chromatic;
         private readonly Vignette _vignette;
+        private readonly Bloom _bloom;
+        /// <summary>Lens dirt strength at the height of the blast (the camera's own dirt texture, lit much harder).</summary>
+        private const float DirtBoost = 4f;
 
         public NukeScreenFx()
         {
@@ -33,6 +36,9 @@ namespace Chopper.Presentation.Effects
             _colour = _profile.Add<ColorAdjustments>(true);
             _chromatic = _profile.Add<ChromaticAberration>(true);
             _vignette = _profile.Add<Vignette>(true);
+            // Only the dirt strength: threshold, texture and the rest stay as the camera volume sets them.
+            _bloom = _profile.Add<Bloom>();
+            _bloom.active = true;
             _vignette.color.Override(Ember);
             _vignette.smoothness.Override(0.6f);
             _volume = _volumeObject.AddComponent<Volume>();
@@ -58,6 +64,7 @@ namespace Chopper.Presentation.Effects
             _colour.contrast.Override(15f * heat * k);
             _chromatic.intensity.Override(Mathf.Clamp01((0.9f * shock + 0.35f * flash) * k));
             _vignette.intensity.Override(Mathf.Clamp01(0.4f * heat * k));
+            _bloom.dirtIntensity.Override(DirtBoost * Mathf.Max(flash, heat) * k);
         }
 
         public void Dispose()

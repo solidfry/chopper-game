@@ -100,7 +100,8 @@ namespace Chopper.Presentation.Menu
         }
 
         /// <summary>Player name on the profile card. Steam names later (plan: progression, Steam).</summary>
-        public string OperatorName => _identity != null ? _identity.DisplayName : "OPERATOR";
+        /// <summary>The player's name; empty when not known (the card then shows only the call sign, not "OPERATOR" twice).</summary>
+        public string OperatorName => _identity != null ? _identity.DisplayName ?? "" : "";
         /// <summary>The player's lifetime record (null in tests without one).</summary>
         public ProfileService Profile => _profile;
 

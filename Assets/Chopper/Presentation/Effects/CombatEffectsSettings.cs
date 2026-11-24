@@ -97,6 +97,10 @@ namespace Chopper.Presentation.Effects
         private float nukeEmpRadius = 900f;
         [SerializeField, Tooltip("White additive material for the screen flash (a quad in front of the camera). Empty: none.")]
         private Material nukeScreenFlash;
+        [SerializeField, Tooltip("Lens flare on the blast's lights (Editor/Setup/LensFlareAssets). Empty: none.")]
+        private UnityEngine.Rendering.LensFlareDataSRP nukeFlare;
+        [SerializeField, Min(0f), Tooltip("Lens flare strength at the flash; the fire in the cap keeps a share of it.")]
+        private float nukeFlareIntensity = 3f;
         [SerializeField, Tooltip("Extra pack layers with the blast (ground fires). Ground layers start on the ground under it.")]
         private BlastLayer[] nukeBlastLayers = Array.Empty<BlastLayer>();
         [SerializeField, Range(0f, 1f), Tooltip("Camera shake (trauma) at the blast; less with distance.")]
@@ -258,6 +262,14 @@ namespace Chopper.Presentation.Effects
         public float NukeShockSpeed => nukeShockSpeed;
         public float NukeEmpRadius => nukeEmpRadius;
         public Material NukeScreenFlash => nukeScreenFlash;
+        public UnityEngine.Rendering.LensFlareDataSRP NukeFlare => nukeFlare;
+        public float NukeFlareIntensity => nukeFlareIntensity;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void FillNukeFlare(UnityEngine.Rendering.LensFlareDataSRP flare)
+        {
+            if (nukeFlare == null) nukeFlare = flare;
+        }
         public float NukeBlastShake => nukeBlastShake;
         public float NukeBlastShakeRange => nukeBlastShakeRange;
         public Color NukeFlashColour => nukeFlashColour;

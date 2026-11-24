@@ -19,6 +19,8 @@ namespace Chopper.Presentation.Effects
         private const float FlashFarDistance = 3000f;
         /// <summary>Fire light inside the cap, as a share of the flash light.</summary>
         private const float FireLightShare = 0.12f;
+        /// <summary>Lens flare of the fire in the cap, as a share of the flash's flare.</summary>
+        private const float FireFlareShare = 0.3f;
         /// <summary>How fast the chromatic split of the shock front fades (s).</summary>
         private const float ShockPulseSeconds = 0.35f;
 
@@ -47,6 +49,7 @@ namespace Chopper.Presentation.Effects
             /// <summary>0..1 how much of the heat and shock reach the camera (by distance).</summary>
             public float HeatShare;
             public Light FireLight;
+            public UnityEngine.Rendering.LensFlareComponentSRP FlashFlare, FireFlare;
             public NukeScreenFx Screen;
         }
 
@@ -85,6 +88,7 @@ namespace Chopper.Presentation.Effects
                 Animate(blast, settings, 0f);
             }
             blast.Light = MakeLight(settings, burst);
+            if (blast.Light != null) blast.FlashFlare = AddFlare(settings, blast.Light.gameObject, 40f);
             if (camera != null && settings.NukeScreenFlash != null)
             {
                 var toBlast = (burst - camera.transform.position).normalized;
@@ -98,6 +102,7 @@ namespace Chopper.Presentation.Effects
                 if (blast.HeatShare > 0.01f) blast.Screen = new NukeScreenFx();
             }
             if (blast.Rise != null) blast.FireLight = MakeFireLight(settings, blast.Rise);
+            if (blast.FireLight != null) blast.FireFlare = AddFlare(settings, blast.FireLight.gameObject, 45f);
             _blasts.Add(blast);
         }
 
@@ -205,12 +210,14 @@ namespace Chopper.Presentation.Effects
                 else
                 {
                     blast.Light.intensity = settings.NukeFlashIntensity * (1f - k) * (1f - k);
+                    if (blast.FlashFlare != null) blast.FlashFlare.intensity = settings.NukeFlareIntensity * (1f - k) * (1f - k);
                     blast.Light.color = Color.Lerp(settings.NukeFlashColour, new Color(1f, 0.45f, 0.15f), k);
                 }
             }
             var heat = NukeBlastTimeline.CapHeat(t) * (1f - NukeBlastTimeline.Fade(t, settings.NukeBlastSeconds, settings.NukeFadeSeconds));
             // The fire inside the cap lights the ground and the stem for as long as it burns.
             if (blast.FireLight != null) blast.FireLight.intensity = settings.NukeFlashIntensity * FireLightShare * heat;
+            if (blast.FireFlare != null) blast.FireFlare.intensity = settings.NukeFlareIntensity * FireFlareShare * heat;
             if (blast.Screen != null)
             {
                 var shock = t >= blast.ShockAt ? Mathf.Exp(-(t - blast.ShockAt) / ShockPulseSeconds) : 0f;
@@ -324,6 +331,20 @@ namespace Chopper.Presentation.Effects
             if (blast.Light != null) Object.Destroy(blast.Light.gameObject);
             if (blast.Flash != null) Object.Destroy(blast.Flash);
             blast.Screen?.Dispose();
+        }
+
+        /// <summary>The nuke lens flare on a light; blocked by whatever is in front (the cloud, buildings).</summary>
+        private static UnityEngine.Rendering.LensFlareComponentSRP AddFlare(CombatEffectsSettings settings, GameObject light, float occlusionRadius)
+        {
+            if (settings.NukeFlare == null) return null;
+            var flare = light.AddComponent<UnityEngine.Rendering.LensFlareComponentSRP>();
+            flare.lensFlareData = settings.NukeFlare;
+            flare.intensity = 0f;
+            flare.useOcclusion = true;
+            flare.occlusionRadius = occlusionRadius;
+            flare.maxAttenuationDistance = 5000f;
+            flare.allowOffScreen = false;
+            return flare;
         }
 
         /// <summary>An orange light inside the cap; it rises with it and dims as the fire cools.</summary>

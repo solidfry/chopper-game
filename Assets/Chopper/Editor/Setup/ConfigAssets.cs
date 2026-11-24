@@ -100,6 +100,16 @@ namespace Chopper.Editor.Setup
                 settings.SetSpeedLineShader(AssetDatabase.LoadAssetAtPath<Shader>(SpeedLineShaderPath));
                 EditorUtility.SetDirty(settings);
             }
+            if (settings.SunFlare == null)
+            {
+                settings.SetSunFlare(LensFlareAssets.EnsureSun());
+                EditorUtility.SetDirty(settings);
+            }
+            if (settings.LensDirt == null)
+            {
+                settings.SetLensDirt(LensDirtTexture.Ensure());
+                EditorUtility.SetDirty(settings);
+            }
             if (settings.VisionGlowShader == null)
             {
                 settings.SetVisionGlowShader(AssetDatabase.LoadAssetAtPath<Shader>(VisionGlowShaderPath));

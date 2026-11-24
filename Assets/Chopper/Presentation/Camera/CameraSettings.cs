@@ -164,6 +164,14 @@ namespace Chopper.Presentation.Camera
         [SerializeField] private float bloomThreshold = 0.95f;
         [SerializeField, Tooltip("Brightest value that goes into bloom. Stops one very bright pixel from flashing the whole screen.")]
         private float bloomClamp = 20f;
+        [SerializeField, Tooltip("Lens dirt on the bloom: shows only where bright light falls (sun, blasts, the nuke). " +
+                                 "Made by Setup (Editor/Setup/LensDirtTexture). Empty: clean glass.")]
+        private Texture2D lensDirt;
+        [SerializeField, Min(0f), Tooltip("Lens dirt strength (URP bloom dirt intensity). Subtle: 0.3-1.")]
+        private float lensDirtIntensity = 0.6f;
+        [SerializeField, Tooltip("Lens flare put on the scene's sun at runtime (Editor/Setup/LensFlareAssets). Empty: none.")]
+        private UnityEngine.Rendering.LensFlareDataSRP sunFlare;
+        [SerializeField, Min(0f)] private float sunFlareIntensity = 1f;
         [SerializeField, Range(0f, 1f), Tooltip("Chromatic aberration at full speed / extra at full boost.")]
         private float speedChromatic = 0.12f;
         [SerializeField, Range(0f, 1f)] private float boostChromatic = 0.55f;
@@ -228,6 +236,10 @@ namespace Chopper.Presentation.Camera
         public float BloomIntensity => bloomIntensity;
         public float BloomThreshold => bloomThreshold;
         public float BloomClamp => bloomClamp;
+        public Texture2D LensDirt => lensDirt;
+        public float LensDirtIntensity => lensDirtIntensity;
+        public UnityEngine.Rendering.LensFlareDataSRP SunFlare => sunFlare;
+        public float SunFlareIntensity => sunFlareIntensity;
         public float SpeedChromatic => speedChromatic;
         public float BoostChromatic => boostChromatic;
         public float BoostVignette => boostVignette;
@@ -271,6 +283,12 @@ namespace Chopper.Presentation.Camera
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetSpeedLineShader(Shader shader) => speedLineShader = shader;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetLensDirt(Texture2D texture) => lensDirt = texture;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetSunFlare(UnityEngine.Rendering.LensFlareDataSRP flare) => sunFlare = flare;
 
         public void CollectProblems(List<string> problems)
         {
