@@ -44,7 +44,7 @@ namespace Chopper.Tests.EditMode
         public void Cloud_CoolsAndFades()
         {
             Assert.AreEqual(1f, NukeBlastTimeline.CapHeat(0.2f));
-            Assert.Less(NukeBlastTimeline.CapHeat(15f), 0.3f);
+            Assert.Less(NukeBlastTimeline.CapHeat(25f), 0.35f);
             Assert.AreEqual(0f, NukeBlastTimeline.Fade(10f, 22f, 5f));
             Assert.AreEqual(1f, NukeBlastTimeline.Fade(30f, 22f, 5f));
         }

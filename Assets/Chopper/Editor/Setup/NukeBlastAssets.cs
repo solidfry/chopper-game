@@ -117,6 +117,7 @@ namespace Chopper.Editor.Setup
                 Core(rise, core);
                 Condensation(rise, condensation, sphere);
                 Embers(rise, sparks);
+                CapFire(rise, flame);
                 var puffs = new GameObject("Puffs").transform;
                 puffs.SetParent(root.transform, false);
                 for (var i = 0; i < NukeBlastTimeline.PuffCount; i++) Part(puffs, $"Puff{i}", puffMesh, cloud);
@@ -125,6 +126,8 @@ namespace Chopper.Editor.Setup
                 for (var i = 0; i < NukeBlastTimeline.SwirlCount; i++) Part(swirls, $"Swirl{i}", ringMesh, ringWind);
                 Shock(root.transform, shock, sphere);
                 Debris(root.transform, debris, puffMesh);
+                RisingSparks(root.transform, sparks);
+                BaseSurge(root.transform, EffectsAssets.EnsureSmokeMaterial());
 
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefabPath));
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -213,6 +216,97 @@ namespace Chopper.Editor.Setup
                 new[] { (0f, 1f), (0.8f, 0.9f), (1f, 0f) }));
             Noise(system, 6f, 0.3f);
             renderer.maxParticleSize = 0.2f;
+        }
+
+        /// <summary>0-12 s: fire boiling inside the cap, showing through and round its edge (owner: "hot").</summary>
+        private static void CapFire(Transform parent, Material material)
+        {
+            var system = Make(parent, "CapFire", material, ParticleSystemSimulationSpace.Local, out var renderer);
+            var main = system.main;
+            main.duration = 11f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.8f, 3f);
+            main.startSize = new ParticleSystem.MinMaxCurve(28f, 48f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2f, 8f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.maxParticles = 300;
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(45f, Curve((0f, 1f), (0.5f, 0.7f), (1f, 0.1f)));
+            var shape = Shape(system, ParticleSystemShapeType.Sphere, 50f);
+            shape.scale = new Vector3(1.2f, 0.7f, 1.2f);
+            shape.radiusThickness = 0.3f;
+            Size(system, Curve((0f, 0.5f), (0.4f, 1f), (1f, 1.3f)));
+            Colour(system, Gradient(
+                new[] { (0f, new Color(1f, 0.85f, 0.5f)), (0.4f, new Color(1f, 0.5f, 0.15f)), (1f, new Color(0.5f, 0.1f, 0.03f)) },
+                new[] { (0f, 0f), (0.15f, 0.85f), (0.7f, 0.5f), (1f, 0f) }));
+            Noise(system, 5f, 0.2f);
+            FlameSheet(system);
+            renderer.maxParticleSize = 4f;
+        }
+
+        /// <summary>0.5-14 s: hot sparks drawn up the stem into the cap, swirling.</summary>
+        private static void RisingSparks(Transform parent, Material material)
+        {
+            var system = Make(parent, "RisingSparks", material, ParticleSystemSimulationSpace.World, out var renderer);
+            var main = system.main;
+            main.duration = 13f;
+            main.startDelay = 0.5f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.8f, 2.2f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(30f, 65f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.85f, 0.5f), new Color(1f, 0.45f, 0.12f));
+            main.maxParticles = 1200;
+            var emission = system.emission;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(110f, Curve((0f, 1f), (0.6f, 0.7f), (1f, 0f)));
+            var shape = Shape(system, ParticleSystemShapeType.Cone, 22f);
+            shape.angle = 6f;
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+            var velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = 0f;
+            velocity.y = 0f;
+            velocity.z = 0f;
+            // Every orbital axis in the same curve mode (Unity rejects mixed modes).
+            velocity.orbitalX = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.orbitalY = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.orbitalZ = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+            Colour(system, Gradient(new[] { (0f, Color.white), (1f, new Color(1f, 0.4f, 0.1f)) },
+                new[] { (0f, 0f), (0.1f, 1f), (0.8f, 0.8f), (1f, 0f) }));
+            Noise(system, 10f, 0.25f);
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.velocityScale = 0.06f;
+            renderer.lengthScale = 2f;
+            renderer.maxParticleSize = 0.2f;
+        }
+
+        /// <summary>0.3-12 s: the base surge, a ring of dust driven out along the ground under the puffs.</summary>
+        private static void BaseSurge(Transform parent, Material material)
+        {
+            if (material == null) return;
+            var system = Make(parent, "BaseSurge", material, ParticleSystemSimulationSpace.World, out var renderer);
+            var main = system.main;
+            main.duration = 2f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 10f);
+            main.startSize = new ParticleSystem.MinMaxCurve(18f, 34f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(70f, 120f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new Color(0.6f, 0.5f, 0.42f, 1f);
+            main.maxParticles = 500;
+            Burst(system, 0.3f, 220);
+            Burst(system, 0.55f, 140);
+            var shape = Shape(system, ParticleSystemShapeType.Circle, 30f);
+            shape.rotation = new Vector3(90f, 0f, 0f);
+            shape.radiusThickness = 0f;
+            var limit = system.limitVelocityOverLifetime;
+            limit.enabled = true;
+            limit.limit = 4f;
+            limit.dampen = 0.06f;
+            Size(system, Curve((0f, 0.5f), (1f, 2.2f)));
+            Colour(system, Gradient(new[] { (0f, new Color(1f, 0.75f, 0.55f)), (0.3f, Color.white), (1f, Color.white) },
+                new[] { (0f, 0f), (0.08f, 0.8f), (0.6f, 0.45f), (1f, 0f) }));
+            Noise(system, 2f, 0.15f);
+            SmokeSheet.Apply(system);
+            renderer.maxParticleSize = 3f;
         }
 
         /// <summary>0.15-7 s: dark chunks thrown up and out, falling back.</summary>

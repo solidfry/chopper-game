@@ -34,7 +34,7 @@ namespace Chopper.Presentation.Effects
         public static float StemHeight(float capHeight, float capRadius) => Mathf.Max(0.01f, capHeight - capRadius * 0.4f);
 
         /// <summary>0..1: white-hot for the first moment, then the cracks cool and narrow.</summary>
-        public static float CapHeat(float t) => t < 0.8f ? 1f : 0.18f + 0.82f * Mathf.Exp(-(t - 0.8f) / 5f);
+        public static float CapHeat(float t) => t < 0.8f ? 1f : 0.25f + 0.75f * Mathf.Exp(-(t - 0.8f) / 8f);
 
         /// <summary>0..1: the stem draws up under the rising cap.</summary>
         public static float StemGrow(float t) => 0.25f + 0.75f * Smooth((t - 0.1f) / 1.5f);

@@ -17,6 +17,10 @@ namespace Chopper.Presentation.Effects
         /// <summary>Lowest and highest burst height used for the fireball (m, prefab units).</summary>
         private const float MinBurst = 18f, MaxBurst = 120f;
         private const float FlashFarDistance = 3000f;
+        /// <summary>Fire light inside the cap, as a share of the flash light.</summary>
+        private const float FireLightShare = 0.12f;
+        /// <summary>How fast the chromatic split of the shock front fades (s).</summary>
+        private const float ShockPulseSeconds = 0.35f;
 
         private static readonly int HeatId = Shader.PropertyToID("_Heat");
         private static readonly int FadeId = Shader.PropertyToID("_Fade");
@@ -40,6 +44,10 @@ namespace Chopper.Presentation.Effects
             public GameObject Flash;
             public Renderer FlashRenderer;
             public float FlashShare;
+            /// <summary>0..1 how much of the heat and shock reach the camera (by distance).</summary>
+            public float HeatShare;
+            public Light FireLight;
+            public NukeScreenFx Screen;
         }
 
         private readonly List<Blast> _blasts = new();
@@ -84,6 +92,12 @@ namespace Chopper.Presentation.Effects
                 blast.FlashShare = (1f - Mathf.Clamp01(distance / FlashFarDistance)) * (0.35f + 0.65f * facing);
                 MakeFlash(blast, settings, camera);
             }
+            if (camera != null)
+            {
+                blast.HeatShare = 1f - Mathf.Clamp01(distance / FlashFarDistance);
+                if (blast.HeatShare > 0.01f) blast.Screen = new NukeScreenFx();
+            }
+            if (blast.Rise != null) blast.FireLight = MakeFireLight(settings, blast.Rise);
             _blasts.Add(blast);
         }
 
@@ -194,6 +208,15 @@ namespace Chopper.Presentation.Effects
                     blast.Light.color = Color.Lerp(settings.NukeFlashColour, new Color(1f, 0.45f, 0.15f), k);
                 }
             }
+            var heat = NukeBlastTimeline.CapHeat(t) * (1f - NukeBlastTimeline.Fade(t, settings.NukeBlastSeconds, settings.NukeFadeSeconds));
+            // The fire inside the cap lights the ground and the stem for as long as it burns.
+            if (blast.FireLight != null) blast.FireLight.intensity = settings.NukeFlashIntensity * FireLightShare * heat;
+            if (blast.Screen != null)
+            {
+                var shock = t >= blast.ShockAt ? Mathf.Exp(-(t - blast.ShockAt) / ShockPulseSeconds) : 0f;
+                blast.Screen.Tick(NukeBlastTimeline.ScreenFlash(t) * blast.FlashShare, blast.HeatShare * heat * heat * 0.9f,
+                    blast.HeatShare * shock);
+            }
             if (blast.Flash != null)
             {
                 if (t > 2.5f)
@@ -300,6 +323,23 @@ namespace Chopper.Presentation.Effects
             if (blast.Root != null) Object.Destroy(blast.Root);
             if (blast.Light != null) Object.Destroy(blast.Light.gameObject);
             if (blast.Flash != null) Object.Destroy(blast.Flash);
+            blast.Screen?.Dispose();
+        }
+
+        /// <summary>An orange light inside the cap; it rises with it and dims as the fire cools.</summary>
+        private static Light MakeFireLight(CombatEffectsSettings settings, Transform rise)
+        {
+            if (settings.NukeFlashIntensity <= 0f) return null;
+            var go = new GameObject("NukeFireLight");
+            go.transform.SetParent(rise, false);
+            go.transform.localPosition = Vector3.down * 20f;
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = settings.NukeFlashRange * 0.7f;
+            light.color = new Color(1f, 0.5f, 0.18f);
+            light.intensity = 0f;
+            light.shadows = LightShadows.None;
+            return light;
         }
     }
 }

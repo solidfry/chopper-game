@@ -21,6 +21,9 @@ Shader "Chopper/NukeCloud"
         _Fade ("Dissolve 0..1", Range(0, 1)) = 0
         _Seed ("Seed", Float) = 0
         _Ambient ("Ambient", Range(0, 1)) = 0.35
+        [HDR] _InnerGlow ("Inner glow (fire inside the cloud)", Color) = (4.5, 1.5, 0.3, 1)
+        _InnerGlowPower ("Inner glow tightness", Range(0.5, 6)) = 1.8
+        _InnerGlowCool ("Inner glow left when cool", Range(0, 1)) = 0.3
     }
     SubShader
     {
@@ -51,6 +54,9 @@ Shader "Chopper/NukeCloud"
                 float _Fade;
                 float _Seed;
                 float _Ambient;
+                float4 _InnerGlow;
+                float _InnerGlowPower;
+                float _InnerGlowCool;
             CBUFFER_END
 
             struct Attributes
@@ -132,6 +138,12 @@ Shader "Chopper/NukeCloud"
                 float3 colour = lit + crack * glow * (0.6 + under);
                 // Fresh fire glows through the whole body while it is very hot.
                 colour += _Crack.rgb * 0.25 * saturate(_Heat - 0.6) * 2.5;
+                // Inner glow: fire seen through the cloud, strongest where the surface faces the viewer (the thick
+                // middle), patchy by a slow noise; it stays on a little after the cracks have cooled.
+                float facing = pow(saturate(dot(n, v)), _InnerGlowPower);
+                float patches = 0.55 + 0.9 * Fbm(p * 1.3 + float3(t * 0.4, -t * 0.6, 0));
+                float inner = facing * patches * lerp(_InnerGlowCool, 1.0, _Heat) * (1.0 - _Fade);
+                colour += _InnerGlow.rgb * inner;
                 return half4(colour, 1);
             }
             ENDHLSL
@@ -163,6 +175,9 @@ Shader "Chopper/NukeCloud"
                 float _Fade;
                 float _Seed;
                 float _Ambient;
+                float4 _InnerGlow;
+                float _InnerGlowPower;
+                float _InnerGlowCool;
             CBUFFER_END
 
             float Hash(float3 p)
