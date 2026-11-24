@@ -333,14 +333,15 @@ namespace Chopper.Presentation.Effects
             blast.Screen?.Dispose();
         }
 
-        /// <summary>The nuke lens flare on a light; blocked by whatever is in front (the cloud, buildings).</summary>
+        /// <summary>The nuke lens flare on a light (not blocked: the fireball is the light).</summary>
         private static UnityEngine.Rendering.LensFlareComponentSRP AddFlare(CombatEffectsSettings settings, GameObject light, float occlusionRadius)
         {
             if (settings.NukeFlare == null) return null;
             var flare = light.AddComponent<UnityEngine.Rendering.LensFlareComponentSRP>();
             flare.lensFlareData = settings.NukeFlare;
             flare.intensity = 0f;
-            flare.useOcclusion = true;
+            // The lights sit inside the fireball: depth blocking would hide the flare behind its own cloud.
+            flare.useOcclusion = false;
             flare.occlusionRadius = occlusionRadius;
             flare.maxAttenuationDistance = 5000f;
             flare.allowOffScreen = false;

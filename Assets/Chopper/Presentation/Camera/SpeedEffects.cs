@@ -41,7 +41,7 @@ namespace Chopper.Presentation.Camera
         private readonly ParticleSystem _lines;
         private readonly Material _lineMaterial;
         private float _flash;
-        private readonly LensFlareComponentSRP _sunFlare;
+        private readonly LensLook _lens;
 
         public SpeedEffects(Transform cameraTransform, UnityEngine.Camera camera, CameraSettings settings)
         {
@@ -67,7 +67,7 @@ namespace Chopper.Presentation.Camera
             _volume.isGlobal = true;
             _volume.priority = 100f;
             _volume.sharedProfile = _profile;
-            _sunFlare = AddSunFlare(settings);
+            _lens = new LensLook(settings, camera);
 
             if (settings.SpeedLineShader != null)
             {
@@ -96,9 +96,6 @@ namespace Chopper.Presentation.Camera
             // Clamp: a near-infinite pixel (smooth surface catching the sun) overflows the bloom chain and blacks out or
             // whites out the whole frame. Stop NaN does not catch it: the pixel is not NaN.
             _bloom.clamp.Override(settings.BloomClamp);
-            // Lens dirt: lit only by bright light through the bloom.
-            _bloom.dirtTexture.Override(settings.LensDirt);
-            _bloom.dirtIntensity.Override(settings.LensDirt != null ? settings.LensDirtIntensity : 0f);
             _chromatic.intensity.Override(Mathf.Clamp01((settings.SpeedChromatic * speed01 + settings.BoostChromatic * boost) * share));
             _vignette.intensity.Override(Mathf.Clamp01(settings.BoostVignette * boost * share));
             _colour.postExposure.Override(settings.BoostFlash * _flash * share);
@@ -133,25 +130,7 @@ namespace Chopper.Presentation.Camera
             if (_profile != null) UnityEngine.Object.Destroy(_profile);
             if (_lines != null) UnityEngine.Object.Destroy(_lines.gameObject);
             if (_lineMaterial != null) UnityEngine.Object.Destroy(_lineMaterial);
-            if (_sunFlare != null) UnityEngine.Object.Destroy(_sunFlare);
-        }
-
-        /// <summary>The sun's lens flare (camera settings), on the scene's sun; none when the sun has its own.</summary>
-        private static LensFlareComponentSRP AddSunFlare(CameraSettings settings)
-        {
-            if (settings.SunFlare == null) return null;
-            var sun = RenderSettings.sun;
-            if (sun == null)
-                foreach (var light in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
-                    if (light.type == LightType.Directional) { sun = light; break; }
-            if (sun == null || sun.GetComponent<LensFlareComponentSRP>() != null) return null;
-            var flare = sun.gameObject.AddComponent<LensFlareComponentSRP>();
-            flare.lensFlareData = settings.SunFlare;
-            flare.intensity = settings.SunFlareIntensity;
-            flare.useOcclusion = true;
-            flare.occlusionRadius = 0.1f;
-            flare.allowOffScreen = false;
-            return flare;
+            _lens.Dispose();
         }
 
         private T Add<T>() where T : VolumeComponent

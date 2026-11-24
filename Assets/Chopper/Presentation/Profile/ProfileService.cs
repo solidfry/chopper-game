@@ -205,7 +205,8 @@ namespace Chopper.Presentation.Profile
 
     public sealed class LocalIdentity : IPlayerIdentity
     {
-        public string DisplayName => "OPERATOR";
+        /// <summary>No name known locally (Steam gives one later); screens show the call sign or "OPERATOR".</summary>
+        public string DisplayName => "";
         public Texture2D Avatar => null;
         public string Source => "LOCAL";
         public event Action Changed { add { } remove { } }

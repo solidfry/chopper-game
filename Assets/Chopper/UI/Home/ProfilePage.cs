@@ -83,7 +83,7 @@ namespace Chopper.UI.Home
             var p = service != null ? service.Profile : new PlayerProfile();
             var hasAvatar = identity != null && identity.Avatar != null;
             _source.text = identity != null ? $"ID // {identity.Source}" : "ID // LOCAL";
-            _name.text = identity != null ? identity.DisplayName : "OPERATOR";
+            _name.text = identity != null && !string.IsNullOrWhiteSpace(identity.DisplayName) ? identity.DisplayName : "OPERATOR";
             _pilot.text = string.IsNullOrEmpty(pilotCallSign) ? "NO PILOT" : $"FLYING {pilotCallSign}";
             _pilot.style.color = pilotAccent;
             // A Steam avatar is square; the pilot portrait is 2:3.

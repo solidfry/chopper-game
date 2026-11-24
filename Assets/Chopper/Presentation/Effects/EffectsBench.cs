@@ -14,6 +14,8 @@ namespace Chopper.Presentation.Effects
     public sealed class EffectsBench : MonoBehaviour
     {
         [SerializeField] private CombatEffectsSettings settings;
+        [SerializeField, Tooltip("Lens dirt and sun flare, as on the game camera.")]
+        private Chopper.Presentation.Camera.CameraSettings cameraSettings;
         [SerializeField, Tooltip("Where blasts go off (the ground point).")] private Transform target;
         [SerializeField, Tooltip("Height of the air blast above the target, m.")] private float airHeight = 30f;
         [SerializeField, Tooltip("The wreck's speed at an air blast, m/s (the fall drifts this way).")]
@@ -73,15 +75,22 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>Editor only: the scene builder links the settings, the target and the stand-in chopper.</summary>
         public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null,
-            Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null)
+            Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null, Chopper.Presentation.Camera.CameraSettings lens = null)
         {
+            cameraSettings = lens;
             engines = engineModules ?? System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
             settings = effectSettings;
             target = blastPoint;
             standIn = chopperStandIn;
         }
 
-        private void Awake() => Create();
+        private Chopper.Presentation.Camera.LensLook _lens;
+
+        private void Awake()
+        {
+            Create();
+            _lens = new Chopper.Presentation.Camera.LensLook(cameraSettings, UnityEngine.Camera.main);
+        }
 
         private void OnDestroy()
         {
@@ -89,6 +98,7 @@ namespace Chopper.Presentation.Effects
             _damage?.Dispose();
             _boost.Clear();
             _nuke.Clear();
+            _lens?.Dispose();
             Time.timeScale = 1f;
         }
 
