@@ -175,7 +175,9 @@ namespace Chopper.Presentation.Effects
 
         public void Clear()
         {
-            foreach (var blast in _blasts) End(blast);
+            // Shutdown or scene change: destroy, do not move objects back under the pool (moving them while Unity tears
+            // the scene down raised "Assertion failed on expression: 't.GetParent() == nullptr'").
+            foreach (var blast in _blasts) End(blast, recycle: false);
             _blasts.Clear();
             foreach (var spare in _spare)
                 if (spare.Root != null) Object.Destroy(spare.Root);
@@ -451,12 +453,12 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Lights and the screen flash go; the blast itself goes back to the pool, stopped and cleared (perf 1).</summary>
-        private void End(Blast blast)
+        private void End(Blast blast, bool recycle = true)
         {
             if (blast.Light != null) Object.Destroy(blast.Light.gameObject);
             if (blast.Flash != null) Object.Destroy(blast.Flash);
             blast.Screen?.Tick(0f, 0f, 0f);
-            if (blast.Root == null || _pool == null)
+            if (!recycle || blast.Root == null || _pool == null)
             {
                 if (blast.Root != null) Object.Destroy(blast.Root);
                 return;
