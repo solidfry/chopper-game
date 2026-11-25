@@ -28,6 +28,16 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Range(0f, 100f), Tooltip("Smoothness of the tail (%). Low = grainy, separate echoes.")] private float diffusion = 50f;
         [SerializeField, Range(0f, 100f), Tooltip("Thickness of the tail (%).")] private float density = 100f;
 
+        [Header("Street echo (walls close round the listener)")]
+        [SerializeField, Range(-10000, 1000), Tooltip("First echoes when closed in (mB). Higher = sharper slap off the walls.")]
+        private int enclosedReflections = -400;
+        [SerializeField, Range(-10000, 2000), Tooltip("Tail level when closed in (mB).")] private int enclosedReverb = -500;
+        [SerializeField, Range(0.1f, 20f), Tooltip("Tail length when closed in (s).")] private float enclosedDecayTime = 2.6f;
+
+        [Header("Building in the way")]
+        [SerializeField, Range(200f, 22000f), Tooltip("Low-pass on a sound behind a building (Hz). Lower = more muffled.")]
+        private float occludedCutoff = 900f;
+
         [Header("Distance")]
         [SerializeField, Min(1f), Tooltip("Closer than this (m), a sound is clear and mostly direct.")] private float nearDistance = 40f;
         [SerializeField, Min(2f), Tooltip("From this distance (m), a sound is at its dullest and wettest.")] private float farDistance = 1200f;
@@ -40,19 +50,24 @@ namespace Chopper.Presentation.Audio
         public float FarCutoff => farCutoff;
         public float NearReverbMix => nearReverbMix;
         public float FarReverbMix => farReverbMix;
+        public float OccludedCutoff => occludedCutoff;
 
-        /// <summary>Puts this place's reverb on the zone.</summary>
-        public void Apply(AudioReverbZone zone)
+        /// <summary>
+        /// Puts this place's reverb on the zone. <paramref name="enclosure"/> (0..1) blends toward the street echo, and
+        /// the first echoes come later the further the walls are (<paramref name="wallDistance"/>, there and back).
+        /// </summary>
+        public void Apply(AudioReverbZone zone, float enclosure = 0f, float wallDistance = 50f)
         {
+            var e = Mathf.Clamp01(enclosure);
             zone.reverbPreset = AudioReverbPreset.User;
             zone.room = room;
             zone.roomHF = roomHF;
             zone.roomLF = 0;
-            zone.decayTime = decayTime;
+            zone.decayTime = Mathf.Lerp(decayTime, enclosedDecayTime, e);
             zone.decayHFRatio = decayHFRatio;
-            zone.reflections = reflections;
-            zone.reflectionsDelay = reflectionsDelay;
-            zone.reverb = reverb;
+            zone.reflections = Mathf.RoundToInt(Mathf.Lerp(reflections, enclosedReflections, e));
+            zone.reflectionsDelay = Mathf.Lerp(reflectionsDelay, AudioDistance.EchoDelay(wallDistance), e);
+            zone.reverb = Mathf.RoundToInt(Mathf.Lerp(reverb, enclosedReverb, e));
             zone.reverbDelay = reverbDelay;
             zone.diffusion = diffusion;
             zone.density = density;
@@ -67,8 +82,13 @@ namespace Chopper.Presentation.Audio
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void Initialise(int level, int highs, float decay, float highsDecay, int echoes, float echoDelay, int tail, float tailDelay,
-            float smooth, float far, float cutoff, float nearMix, float farMix)
+            float smooth, float far, float cutoff, float nearMix, float farMix, int streetEchoes, int streetTail, float streetDecay,
+            float hiddenCutoff)
         {
+            enclosedReflections = streetEchoes;
+            enclosedReverb = streetTail;
+            enclosedDecayTime = streetDecay;
+            occludedCutoff = hiddenCutoff;
             room = level;
             roomHF = highs;
             decayTime = decay;
@@ -102,6 +122,32 @@ namespace Chopper.Presentation.Audio
             var k = Share(distance, near, far);
             return Mathf.Exp(Mathf.Lerp(Mathf.Log(AudioService.OpenCutoff), Mathf.Log(Mathf.Max(farCutoff, 10f)), k));
         }
+
+        /// <summary>Speed of sound (m/s), for echo delays.</summary>
+        public const float SoundSpeed = 343f;
+
+        /// <summary>Time for an echo off a wall this far away (there and back), within the reverb's limit (0.3 s).</summary>
+        public static float EchoDelay(float wallDistance) => Mathf.Clamp(2f * wallDistance / SoundSpeed, 0f, 0.3f);
+
+        /// <summary>
+        /// How closed in the listener is, from rays cast round it: each ray's hit fraction (0..1 of its length), or a
+        /// negative number for a miss. A near wall counts more than a far one. 0 = open, 1 = close walls all round.
+        /// </summary>
+        public static float Enclosure(IReadOnlyList<float> hitFractions)
+        {
+            if (hitFractions.Count == 0) return 0f;
+            var sum = 0f;
+            foreach (var f in hitFractions)
+                if (f >= 0f) sum += 1f - 0.6f * Mathf.Clamp01(f);
+            return Mathf.Clamp01(sum / hitFractions.Count);
+        }
+
+        /// <summary>Volume share of a sound behind a building: half (-6 dB) when fully hidden.</summary>
+        public static float OcclusionGain(float occlusion) => Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(occlusion));
+
+        /// <summary>Low-pass (Hz) for a sound this hidden: open when clear, <paramref name="occludedCutoff"/> when hidden.</summary>
+        public static float OccludedCutoff(float occlusion, float occludedCutoff) =>
+            Mathf.Exp(Mathf.Lerp(Mathf.Log(AudioService.OpenCutoff), Mathf.Log(Mathf.Max(occludedCutoff, 10f)), Mathf.Clamp01(occlusion)));
 
         public static float ReverbMix(float distance, float near, float far, float nearMix, float farMix) =>
             Mathf.Lerp(nearMix, farMix, Share(distance, near, far));

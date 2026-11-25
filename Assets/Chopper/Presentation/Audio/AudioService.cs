@@ -11,7 +11,7 @@ namespace Chopper.Presentation.Audio
     /// scene flow's (they live across scenes, see <see cref="UseShared"/>), else this service's own.
     /// Call <see cref="Tick"/> once per frame.
     /// </summary>
-    public sealed class AudioService : IAudioService, IDisposable
+    public sealed class AudioService : IAudioService, IAudioPlace, IDisposable
     {
         private sealed class Voice
         {
@@ -19,6 +19,9 @@ namespace Chopper.Presentation.Audio
             public SoundCue Cue;
             public float StartTime;
             public AudioLowPassFilter Filter;
+            public float BaseVolume;
+            public float Occlusion;
+            public bool Occluded;
         }
 
         /// <summary>A low-pass at this frequency (Hz) changes nothing that can be heard.</summary>
@@ -40,6 +43,12 @@ namespace Chopper.Presentation.Audio
         private AudioReverbZone _zone;
         private AudioListener _listener;
         private float _nextListenerSearch;
+        private float _enclosure;
+        private float _enclosureTarget;
+        private float _wallDistance = 50f;
+        private float _appliedEnclosure = -1f;
+        /// <summary>How fast occlusion and street echo change (1/s).</summary>
+        private const float PlaceSpeed = 4f;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -128,6 +137,8 @@ namespace Chopper.Presentation.Audio
             loop.BaseVolume = cue.PickVolume();
             loop.BasePitch = cue.PickPitch();
             loop.Muffle = cue.Muffle;
+            loop.Occlusion = 0f;
+            loop.Occluded = false;
             loop.Set(position);
             Shape(source, ref loop.Filter, cue.Muffle, ListenerPosition());
             // Start at a random point, so many choppers do not play the same loop in step.
@@ -197,7 +208,8 @@ namespace Chopper.Presentation.Audio
                 _zone.minDistance = 100000f;
                 _zone.maxDistance = 100001f;
             }
-            space.Apply(_zone);
+            space.Apply(_zone, _enclosure, _wallDistance);
+            _appliedEnclosure = _enclosure;
             _zone.enabled = true;
         }
 
@@ -209,12 +221,65 @@ namespace Chopper.Presentation.Audio
         {
             if (_ownsMusic) _music.Tick(deltaTime);
             var listener = ListenerPosition();
-            if (_zone != null) _zone.transform.position = listener;
-            // Sounds move and so does the listener: distance treatment and cockpit muffling on every playing sound.
+            var step = 1f - Mathf.Exp(-PlaceSpeed * deltaTime);
+            _enclosure = Mathf.Lerp(_enclosure, _enclosureTarget, step);
+            if (_zone != null)
+            {
+                _zone.transform.position = listener;
+                // Street echo (step 3): the zone follows how closed in the listener is.
+                if (_space != null && Mathf.Abs(_enclosure - _appliedEnclosure) > 0.01f)
+                {
+                    _space.Apply(_zone, _enclosure, _wallDistance);
+                    _appliedEnclosure = _enclosure;
+                }
+            }
+            // Sounds move and so does the listener: distance, occlusion and cockpit muffling on every playing sound.
             foreach (var voice in _voices)
-                if (voice.Cue != null && voice.Source.isPlaying) Shape(voice.Source, ref voice.Filter, voice.Cue.Muffle, listener);
+            {
+                if (voice.Cue == null || !voice.Source.isPlaying) continue;
+                voice.Occlusion = Mathf.Lerp(voice.Occlusion, voice.Occluded ? 1f : 0f, step);
+                voice.Source.volume = voice.BaseVolume * AudioDistance.OcclusionGain(voice.Occlusion);
+                Shape(voice.Source, ref voice.Filter, voice.Cue.Muffle, listener, voice.Occlusion);
+            }
             foreach (var loop in _activeLoops)
-                if (loop.Source != null) Shape(loop.Source, ref loop.Filter, loop.Muffle, listener);
+            {
+                if (loop.Source == null) continue;
+                loop.Occlusion = Mathf.Lerp(loop.Occlusion, loop.Occluded ? 1f : 0f, step);
+                loop.Source.volume = loop.BaseVolume * loop.VolumeScale * AudioDistance.OcclusionGain(loop.Occlusion);
+                Shape(loop.Source, ref loop.Filter, loop.Muffle, listener, loop.Occlusion);
+            }
+        }
+
+        public Vector3 Listener => ListenerPosition();
+
+        public void SetEnclosure(float enclosure, float wallDistance)
+        {
+            _enclosureTarget = Mathf.Clamp01(enclosure);
+            if (wallDistance > 0f) _wallDistance = wallDistance;
+        }
+
+        public void Emitters(List<AudioEmitter> into)
+        {
+            into.Clear();
+            for (var i = 0; i < _voices.Length; i++)
+            {
+                var voice = _voices[i];
+                if (voice.Cue != null && voice.Source.isPlaying && voice.Source.spatialBlend > 0.5f)
+                    into.Add(new AudioEmitter(i, voice.Source.transform.position));
+            }
+            for (var i = 0; i < _activeLoops.Count; i++)
+            {
+                var loop = _activeLoops[i];
+                if (loop.Source != null && loop.Source.spatialBlend > 0.5f)
+                    into.Add(new AudioEmitter(_voices.Length + i, loop.Source.transform.position));
+            }
+        }
+
+        public void SetOccluded(int id, bool occluded)
+        {
+            if (id < 0) return;
+            if (id < _voices.Length) _voices[id].Occluded = occluded;
+            else if (id - _voices.Length < _activeLoops.Count) _activeLoops[id - _voices.Length].Occluded = occluded;
         }
 
         private Vector3 ListenerPosition()
@@ -263,7 +328,11 @@ namespace Chopper.Presentation.Audio
                 source.transform.position = position;
             Shape(source, ref voice.Filter, cue.Muffle, ListenerPosition());
             source.clip = cue.PickClip();
-            source.volume = cue.PickVolume() * volumeScale;
+            voice.BaseVolume = cue.PickVolume() * volumeScale;
+            // A new sound starts clear; the probe tests it within a few frames.
+            voice.Occlusion = 0f;
+            voice.Occluded = false;
+            source.volume = voice.BaseVolume;
             source.pitch = cue.PickPitch() * pitchScale;
             source.loop = false;
             source.Play();
@@ -276,7 +345,7 @@ namespace Chopper.Presentation.Audio
         /// place's distance rules (<see cref="AudioSpace"/>: far = duller, more echo). 2D sounds (UI, own cockpit) get no
         /// echo. Pooled sources are reused: the filter is added the first time it is needed and is off when open.
         /// </summary>
-        private void Shape(AudioSource source, ref AudioLowPassFilter filter, CueMuffle muffle, Vector3 listener)
+        private void Shape(AudioSource source, ref AudioLowPassFilter filter, CueMuffle muffle, Vector3 listener, float occlusion = 0f)
         {
             var cutoff = muffle == CueMuffle.None ? OpenCutoff : Cutoff(muffle);
             var mix = 0f;
@@ -286,6 +355,8 @@ namespace Chopper.Presentation.Audio
                 var distance = Vector3.Distance(source.transform.position, listener);
                 var air = AudioDistance.AirCutoff(distance, _space.NearDistance, _space.FarDistance, _space.FarCutoff);
                 cutoff = Mathf.Min(cutoff, Mathf.Lerp(OpenCutoff, air, blend));
+                // A building in the way (step 4): duller, as the sound comes round or through it.
+                if (occlusion > 0.001f) cutoff = Mathf.Min(cutoff, AudioDistance.OccludedCutoff(occlusion, _space.OccludedCutoff));
                 mix = blend * AudioDistance.ReverbMix(distance, _space.NearDistance, _space.FarDistance, _space.NearReverbMix, _space.FarReverbMix);
             }
             source.reverbZoneMix = mix;

@@ -98,6 +98,8 @@ namespace Chopper.Presentation.Bridge
 
         public GameConfig Config { get; }
         public IAudioService Audio => _audio;
+        /// <summary>Street echo and occlusion input for the audio (the place probe writes it).</summary>
+        public IAudioPlace AudioPlace => _audio;
         /// <summary>Can be null: cues are then not played.</summary>
         public SoundLibrary Sounds => Config != null ? Config.Audio : null;
         public CombatEffects Effects { get; }

@@ -24,6 +24,10 @@ namespace Chopper.Presentation.Audio
         internal float BasePitch;
         internal CueMuffle Muffle;
         internal AudioLowPassFilter Filter;
+        internal float VolumeScale = 1f;
+        /// <summary>0 = clear line to the listener, 1 = a building in the way (<see cref="IAudioPlace"/>).</summary>
+        internal float Occlusion;
+        internal bool Occluded;
 
         public bool IsPlaying => Source != null && Source.isPlaying;
 
@@ -33,7 +37,8 @@ namespace Chopper.Presentation.Audio
         {
             if (Source == null) return;
             Source.transform.position = position;
-            Source.volume = BaseVolume * volumeScale;
+            VolumeScale = volumeScale;
+            Source.volume = BaseVolume * volumeScale * AudioDistance.OcclusionGain(Occlusion);
             Source.pitch = BasePitch * pitchScale;
         }
     }
@@ -97,5 +102,37 @@ namespace Chopper.Presentation.Audio
         float GetVolume(AudioChannel channel);
 
         void SetVolume(AudioChannel channel, float volume);
+    }
+
+    /// <summary>A playing 3D sound the place probe can test for a building in the way.</summary>
+    public readonly struct AudioEmitter
+    {
+        public readonly int Id;
+        public readonly Vector3 Position;
+        public AudioEmitter(int id, Vector3 position)
+        {
+            Id = id;
+            Position = position;
+        }
+    }
+
+    /// <summary>
+    /// What the world round the listener does to sound, measured with physics rays by the client
+    /// <c>AudioPlaceProbeSystem</c>: how closed in the listener is (street echo) and which sounds a building hides.
+    /// </summary>
+    public interface IAudioPlace
+    {
+        /// <summary>The listener's position (the camera's audio listener).</summary>
+        Vector3 Listener { get; }
+
+        /// <param name="enclosure">0 = open sky, 1 = close walls all round.</param>
+        /// <param name="wallDistance">Mean distance to the walls that were hit (m).</param>
+        void SetEnclosure(float enclosure, float wallDistance);
+
+        /// <summary>Fills <paramref name="into"/> with the playing 3D sounds. Ids are valid until the next call.</summary>
+        void Emitters(List<AudioEmitter> into);
+
+        /// <summary>A building is (or is not) between this sound and the listener. Changes fade in.</summary>
+        void SetOccluded(int id, bool occluded);
     }
 }

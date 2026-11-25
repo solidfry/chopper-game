@@ -40,5 +40,33 @@ namespace Chopper.Tests.EditMode
             Assert.AreEqual(0f, AudioDistance.Share(10f, 50f, 50f));
             Assert.AreEqual(1f, AudioDistance.Share(60f, 50f, 50f));
         }
+
+
+        [Test]
+        public void Enclosure_OpenSkyIsZero_CloseWallsAllRoundIsOne()
+        {
+            Assert.AreEqual(0f, AudioDistance.Enclosure(new[] { -1f, -1f, -1f, -1f }), 0.001f);
+            Assert.AreEqual(1f, AudioDistance.Enclosure(new[] { 0f, 0f, 0f, 0f }), 0.001f);
+            var street = AudioDistance.Enclosure(new[] { 0.1f, -1f, 0.1f, -1f });
+            Assert.Greater(street, 0.3f);
+            Assert.Less(street, 0.6f);
+            Assert.Greater(AudioDistance.Enclosure(new[] { 0.1f, 0.1f }), AudioDistance.Enclosure(new[] { 0.9f, 0.9f }), "near walls count more");
+        }
+
+        [Test]
+        public void EchoDelay_FollowsWallDistance()
+        {
+            Assert.AreEqual(2f * 34.3f / 343f, AudioDistance.EchoDelay(34.3f), 0.001f);
+            Assert.AreEqual(0.3f, AudioDistance.EchoDelay(1000f), 0.001f);
+        }
+
+        [Test]
+        public void Occlusion_QuieterAndDuller()
+        {
+            Assert.AreEqual(1f, AudioDistance.OcclusionGain(0f), 0.001f);
+            Assert.AreEqual(0.5f, AudioDistance.OcclusionGain(1f), 0.001f);
+            Assert.AreEqual(AudioService.OpenCutoff, AudioDistance.OccludedCutoff(0f, 900f), 1f);
+            Assert.AreEqual(900f, AudioDistance.OccludedCutoff(1f, 900f), 1f);
+        }
     }
 }
