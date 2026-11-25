@@ -38,8 +38,13 @@ namespace Chopper.Simulation.Flight
 
         protected override void OnDestroy()
         {
+            if (_controls == null) return;
             _controls.Flight.Disable();
-            _controls.Dispose();
+            // Worlds can shut down after play has ended (domain unload, a cut-short play start): then the editor is in
+            // edit mode and Object.Destroy (PlayerControls.Dispose) is not allowed.
+            if (UnityEngine.Application.isPlaying) _controls.Dispose();
+            else UnityEngine.Object.DestroyImmediate(_controls.asset);
+            _controls = null;
         }
 
         protected override void OnUpdate()
