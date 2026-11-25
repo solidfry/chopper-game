@@ -8,10 +8,10 @@ namespace Chopper.Tests
     {
         private static readonly NukeTuning Tuning = NukeTuning.Default;
 
-        private static NukeEvent Run(ref NukeState s, byte carrier, byte zone, float seconds, bool contested = false)
+        private static NukeEvent Run(ref NukeState s, byte carrier, byte dock, float seconds, bool contested = false)
         {
             var last = NukeEvent.None;
-            var input = new NukeInputs { CarrierTeam = carrier, ZoneTeam = zone, ZoneContested = contested };
+            var input = new NukeInputs { CarrierTeam = carrier, DockTeam = dock, ZoneContested = contested };
             for (var t = 0f; t < seconds - 1e-4f; t += 0.5f)
             {
                 var e = NukeRules.Tick(ref s, input, Tuning, 0.5f);
@@ -39,42 +39,89 @@ namespace Chopper.Tests
             Assert.That(s.Phase, Is.EqualTo(NukePhase.AtSpawn));
         }
 
-        [Test]
-        public void Arm_TakesTwentySecondsInOwnZone_AndPausesWhenContested()
+        /// <summary>Team 1 hooks the nuke and sets it down in its own dock.</summary>
+        private static NukeState Docked1()
         {
             var s = NukeRules.AtSpawn;
-            Run(ref s, 1, 1, 10f);
-            Assert.That(s.ArmProgress, Is.EqualTo(0.5f).Within(0.01f));
-            Run(ref s, 1, 1, 5f, contested: true);
-            Assert.That(s.ArmProgress, Is.EqualTo(0.5f).Within(0.01f), "Enemies in the zone pause arming.");
-            Assert.That(Run(ref s, 1, 1, 10f), Is.EqualTo(NukeEvent.Armed));
+            Run(ref s, 1, 0, 1f);
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { CarrierTeam = 1, DockTeam = 1 }, Tuning, 0.1f), Is.EqualTo(NukeEvent.Docked));
+            return s;
+        }
+
+        [Test]
+        public void Dock_ArmsOnlyWhenSetDown_TwentySeconds_PausedWhenContested()
+        {
+            var s = NukeRules.AtSpawn;
+            Run(ref s, 1, 0, 10f);
+            Assert.That(s.ArmProgress, Is.EqualTo(0f), "Holding it does not arm it.");
+            s = Docked1();
+            Assert.That(s.Phase, Is.EqualTo(NukePhase.Docked));
+            Assert.That(s.DockTeam, Is.EqualTo(1));
+            Assert.That(s.CarrierTeam, Is.EqualTo(0));
+            Run(ref s, 0, 0, 10f);
+            Assert.That(s.ArmProgress, Is.EqualTo(0.5f).Within(0.02f));
+            Run(ref s, 0, 0, 5f, contested: true);
+            Assert.That(s.ArmProgress, Is.EqualTo(0.5f).Within(0.02f), "Enemies in the base pause arming.");
+            Assert.That(Run(ref s, 0, 0, 10f), Is.EqualTo(NukeEvent.Armed));
             Assert.That(s.ArmedBy, Is.EqualTo(1));
+            Assert.That(s.Phase, Is.EqualTo(NukePhase.Docked), "It waits in the dock for its team to lift it.");
         }
 
         [Test]
-        public void Arm_DecaysOutOfZone_AndAnotherTeamStartsFromZero()
+        public void Dock_OwnersWaitForTheArm_EnemyCanStealIt_AndTheArmStops()
         {
-            var s = NukeRules.AtSpawn;
-            Run(ref s, 1, 1, 10f);
-            Run(ref s, 1, 0, 2f);
-            Assert.That(s.ArmProgress, Is.LessThan(0.5f));
-            Run(ref s, 2, 0, 0.5f);
+            var s = Docked1();
+            Run(ref s, 0, 0, 10f);
+            Assert.That(NukeRules.CanHook(s, 1), Is.False, "Owners cannot lift it while it arms.");
+            Assert.That(NukeRules.CanHook(s, 2), Is.True);
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { CarrierTeam = 2 }, Tuning, 0.1f), Is.EqualTo(NukeEvent.Stolen));
             Assert.That(s.ArmProgress, Is.EqualTo(0f));
+            Assert.That(s.CarrierTeam, Is.EqualTo(2));
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { CarrierTeam = 2, DockTeam = 1 }, Tuning, 0.1f), Is.EqualTo(NukeEvent.None),
+                "Thieves cannot arm it in the other team's dock.");
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { CarrierTeam = 2, DockTeam = 2 }, Tuning, 0.1f), Is.EqualTo(NukeEvent.Docked));
+            Assert.That(s.DockTeam, Is.EqualTo(2));
         }
 
         [Test]
-        public void ArmedNuke_InTheEnemyZone_Detonates()
+        public void Dock_StealingAnArmedNuke_ClearsTheArm()
         {
-            var s = NukeRules.AtSpawn;
-            Run(ref s, 1, 1, 20f);
-            Assert.That(Run(ref s, 1, 2, 0.5f), Is.EqualTo(NukeEvent.Detonated));
-            Assert.That(s.Phase, Is.EqualTo(NukePhase.Detonated));
+            var s = Docked1();
+            Run(ref s, 0, 0, 20f);
+            Assert.That(NukeRules.CanHook(s, 1) && NukeRules.CanHook(s, 2), Is.True);
+            Run(ref s, 2, 0, 0.5f);
+            Assert.That(s.ArmedBy, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Planted_CountsDown_ThenDetonates()
+        {
+            var s = Docked1();
+            Run(ref s, 0, 0, 20f);
+            Run(ref s, 1, 0, 1f);  // the owners lift the armed nuke
+            Assert.That(s.ArmedBy, Is.EqualTo(1));
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { CarrierTeam = 1, DockTeam = 2 }, Tuning, 0.1f), Is.EqualTo(NukeEvent.Planted));
+            Assert.That(s.Phase, Is.EqualTo(NukePhase.Planted));
+            Assert.That(s.Countdown, Is.EqualTo(Tuning.PlantSeconds));
+            Assert.That(NukeRules.CanHook(s, 1), Is.False);
+            Assert.That(NukeRules.CanHook(s, 2), Is.True, "Defenders can disarm.");
+            Assert.That(Run(ref s, 0, 0, Tuning.PlantSeconds), Is.EqualTo(NukeEvent.Detonated));
             Assert.That(s.DetonatedBy, Is.EqualTo(1));
             Assert.That(Run(ref s, 0, 0, 5f), Is.EqualTo(NukeEvent.None), "Nothing happens after the blast.");
         }
 
         [Test]
-        public void UnarmedNuke_InTheEnemyZone_DoesNothing()
+        public void Planted_DefendersDisarm_ItBecomesAPlainDrop()
+        {
+            var s = new NukeState { Phase = NukePhase.Planted, ArmedBy = 1, DockTeam = 2, Countdown = 30f };
+            Assert.That(NukeRules.HookSeconds(s, 5f, Tuning), Is.EqualTo(Tuning.DefuseSeconds));
+            Assert.That(NukeRules.Tick(ref s, new NukeInputs { Disarmed = true }, Tuning, 0.1f), Is.EqualTo(NukeEvent.Defused));
+            Assert.That(s.Phase, Is.EqualTo(NukePhase.Dropped));
+            Assert.That(s.ArmedBy, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UnarmedNuke_OverTheEnemyDock_DoesNothing()
         {
             var s = NukeRules.AtSpawn;
             Run(ref s, 1, 2, 5f);
@@ -82,17 +129,14 @@ namespace Chopper.Tests
         }
 
         [Test]
-        public void Defenders_DefuseAnArmedNukeInTheirZone_InTenSeconds()
+        public void Zones_DockNeedsTheNukeLowOverIt()
         {
-            var s = NukeRules.AtSpawn;
-            Run(ref s, 1, 1, 20f);
-            Run(ref s, 0, 0, 1f);  // carrier shot down: dropped, still armed
-            Assert.That(s.ArmedBy, Is.EqualTo(1));
-            Run(ref s, 2, 2, 5f);
-            Run(ref s, 2, 2, 3f, contested: true);
-            Assert.That(s.DefuseProgress, Is.EqualTo(0.5f).Within(0.01f), "Attackers in the zone pause the defuse.");
-            Assert.That(Run(ref s, 2, 2, 5f), Is.EqualTo(NukeEvent.Defused));
-            Assert.That(s.ArmedBy, Is.EqualTo(0));
+            var bases = new NativeArray<NukeBase>(1, Allocator.Temp);
+            bases[0] = new NukeBase { Team = 1, Radius = 120f, Position = default, Dock = new Unity.Mathematics.float3(20, 0, 0) };
+            Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(24, 8, 0), bases), Is.EqualTo(0));
+            Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(24, 30, 0), bases), Is.EqualTo(-1), "Too high.");
+            Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(0, 5, 0), bases), Is.EqualTo(-1), "Too far.");
+            bases.Dispose();
         }
 
         [Test]
@@ -213,6 +257,11 @@ namespace Chopper.Tests
 
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, other, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Escort));
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, other, 2, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Chase));
+
+            // Docked and arming in team 1's dock: team 1 guards it, team 2 goes to steal it.
+            info.Carrier = Unity.Entities.Entity.Null; info.CarrierTeam = 0; info.ArmedBy = 0; info.Phase = NukePhase.Docked; info.DockTeam = 1;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Escort));
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 2, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Hook));
             info.Active = false;
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.None));
         }

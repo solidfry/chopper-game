@@ -62,6 +62,8 @@ namespace Chopper.Simulation.Match
         public byte Team;
         public float Radius;
         public float3 Position;
+        /// <summary>Where the nuke dock stands (ground point): set down here to arm or plant.</summary>
+        public float3 Dock;
     }
 
     /// <summary>
@@ -172,6 +174,22 @@ namespace Chopper.Simulation.Match
 
         /// <summary>Where a nuke resting on <paramref name="ground"/> has its origin.</summary>
         public static float3 Resting(float3 ground) => ground + new float3(0f, RestHeight, 0f);
+
+        /// <summary>Set down at a dock: the hang point this close sideways to the dock, metres.</summary>
+        public const float DockRadius = 10f;
+        /// <summary>... and at most this high over the dock ground (hover low to set it down), metres.</summary>
+        public const float DockHeight = 12f;
+
+        /// <summary>Index of the base whose dock <paramref name="hang"/> (a carried nuke) is over, low enough; or -1.</summary>
+        public static int DockOf(float3 hang, NativeArray<NukeBase> bases)
+        {
+            for (var i = 0; i < bases.Length; i++)
+            {
+                var dock = bases[i].Dock;
+                if (math.distancesq(hang.xz, dock.xz) <= DockRadius * DockRadius && hang.y - dock.y <= DockHeight) return i;
+            }
+            return -1;
+        }
 
         /// <summary>Where a carried nuke hangs.</summary>
         public static float3 HangPoint(float3 carrier) => carrier - new float3(0f, HangBelow, 0f);

@@ -92,6 +92,9 @@ namespace Chopper.Presentation.Hud
         private Callout _objectiveFlash = Callout.Empty;
         private float _flashLeft;
         private string _objectiveText = "";
+        private string _nukeTimerText = "";
+        private CalloutTone _nukeTimerTone;
+        private bool _nukeTimerFinal;
         private float _objectiveProgress = -1f;
         private CalloutTone _objectiveTone;
 
@@ -250,6 +253,35 @@ namespace Chopper.Presentation.Hud
             ObjectiveText = line.Text ?? "";
             ObjectiveProgress = _flashLeft > 0f ? -1f : line.Progress;
             ObjectiveTone = line.Tone;
+        }
+
+        /// <summary>Capture the Nuke countdown at the top for every player ("ARMING  0:14"); empty = hidden.</summary>
+        [CreateProperty]
+        public string NukeTimerText
+        {
+            get => _nukeTimerText;
+            private set => Set(ref _nukeTimerText, value, nameof(NukeTimerText));
+        }
+
+        public CalloutTone NukeTimerTone
+        {
+            get => _nukeTimerTone;
+            private set => Set(ref _nukeTimerTone, value, nameof(NukeTimerTone));
+        }
+
+        /// <summary>The final countdown of a planted nuke (the view makes it stand out).</summary>
+        public bool NukeTimerFinal
+        {
+            get => _nukeTimerFinal;
+            private set => Set(ref _nukeTimerFinal, value, nameof(NukeTimerFinal));
+        }
+
+        /// <summary>Every frame (an equal timer changes nothing).</summary>
+        public void SetNukeTimer(in NukeTimer timer)
+        {
+            NukeTimerText = timer.Shown ? $"{timer.Label}  {timer.Clock}" : "";
+            NukeTimerTone = timer.Tone;
+            NukeTimerFinal = timer.Final;
         }
 
         /// <summary>"YOU CRASHED" or "SHOT DOWN BY ...": from your death until you respawn. With a red tint on the screen.</summary>

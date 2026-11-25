@@ -40,6 +40,7 @@ namespace Chopper.Presentation.Hud
             {
                 _changes.Clear();
                 match.SetObjective(Callout.Empty);
+                match.SetNukeTimer(NukeTimer.None);
                 return;
             }
 
@@ -59,25 +60,17 @@ namespace Chopper.Presentation.Hud
             _changes.Clear();
 
             var status = Callout.Empty;
+            var timer = NukeTimer.None;
             foreach (var (nuke, pose) in SystemAPI.Query<RefRO<NukeState>, RefRO<LocalToWorld>>())
             {
                 var at = pose.ValueRO.Position;
-                status = NukeCallout.Status(nuke.ValueRO, self, ZoneOf(at), carrying, math.distance(position, at) <= range,
-                    NukeTuning.Default.DropResetSeconds);
+                var inRange = NukeRules.CanHook(nuke.ValueRO, self) && math.distance(position, at) <= range;
+                status = NukeCallout.Status(nuke.ValueRO, self, carrying, inRange, NukeTuning.Default.DropResetSeconds);
+                timer = NukeCallout.Timer(nuke.ValueRO, self, NukeTuning.Default);
                 break;
             }
             match.SetObjective(status);
-        }
-
-        /// <summary>Whose base zone a point is in (the zones are upright cylinders; 0 = none).</summary>
-        private byte ZoneOf(float3 point)
-        {
-            foreach (var zone in SystemAPI.Query<RefRO<NukeBase>>())
-            {
-                var offset = point.xz - zone.ValueRO.Position.xz;
-                if (math.lengthsq(offset) <= zone.ValueRO.Radius * zone.ValueRO.Radius) return zone.ValueRO.Team;
-            }
-            return TeamRules.None;
+            match.SetNukeTimer(timer);
         }
 
         /// <summary>New context (scene change): listen on the new scene's events.</summary>

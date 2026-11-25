@@ -90,11 +90,12 @@ namespace Chopper.Simulation.Bots
                     frame.Objective.Carrier = carrier.ValueRO.Chopper;
                     frame.Objective.CarrierTeam = nuke.ValueRO.CarrierTeam;
                     frame.Objective.ArmedBy = nuke.ValueRO.ArmedBy;
+                    frame.Objective.DockTeam = nuke.ValueRO.DockTeam;
                 }
                 foreach (var zone in SystemAPI.Query<RefRO<NukeBase>>())
                 {
-                    if (zone.ValueRO.Team == 1) frame.Objective.Base1 = zone.ValueRO.Position;
-                    else if (zone.ValueRO.Team == 2) frame.Objective.Base2 = zone.ValueRO.Position;
+                    if (zone.ValueRO.Team == 1) frame.Objective.Base1 = zone.ValueRO.Dock;
+                    else if (zone.ValueRO.Team == 2) frame.Objective.Base2 = zone.ValueRO.Dock;
                 }
             }
 

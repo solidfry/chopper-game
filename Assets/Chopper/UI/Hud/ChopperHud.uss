@@ -326,6 +326,33 @@
   -unity-text-align: middle-center;
 }
 
+/* Capture the Nuke countdown (MatchHudModel.NukeTimerText): a small pill under the match timer, out of the
+   aim area. Green = our clock, red = a threat; the final countdown is a bit bigger with a coloured frame. */
+.hud-nuke-timer {
+  position: absolute;
+  top: 104px;
+  align-self: center;
+  font-size: 16px;
+  letter-spacing: 3px;
+  padding: 2px 12px;
+  color: var(--chopper-text);
+  background-color: rgba(4, 12, 6, 0.55);
+  border-radius: var(--chopper-radius);
+  -unity-text-align: middle-center;
+}
+
+.hud-nuke-timer--hidden { display: none; }
+.hud-nuke-timer--good { color: var(--chopper-green); }
+.hud-nuke-timer--alert { color: var(--chopper-red); }
+
+.hud-nuke-timer--final {
+  font-size: 22px;
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.hud-nuke-timer--final.hud-nuke-timer--alert { border-color: var(--chopper-red); }
+.hud-nuke-timer--final.hud-nuke-timer--good { border-color: var(--chopper-green); }
+
 /* Capture the Nuke objective line under the reticle (MatchHudModel.ObjectiveText). Tone classes set the colour. */
 .hud-objective {
   position: absolute;

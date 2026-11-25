@@ -63,10 +63,12 @@ namespace Chopper.Presentation.Effects
                         chopper = Carrier(s.CarrierTeam, end);
                         reach = 1f;
                     }
-                    else if (s.Phase is (NukePhase.AtSpawn or NukePhase.Dropped) && s.HookTeam != TeamRules.None && s.HookProgress > 0f)
+                    else if (s.Phase != NukePhase.Detonated && s.HookTeam != TeamRules.None &&
+                             (s.Phase == NukePhase.Planted ? s.DefuseProgress : s.HookProgress) > 0f)
                     {
+                        // Hooking from the pad, a drop or a dock; over a planted nuke the same line disarms it.
                         chopper = Hooker(s.HookTeam, end);
-                        reach = s.HookProgress;
+                        reach = s.Phase == NukePhase.Planted ? s.DefuseProgress : s.HookProgress;
                     }
                     else continue;
                     if (chopper == Entity.Null) continue;

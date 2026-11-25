@@ -80,6 +80,9 @@ namespace Chopper.Presentation.Audio
         public static NukeStinger Stinger(NukeChange change) => change switch
         {
             NukeChange.PickedUp => NukeStinger.Hooked,
+            NukeChange.Docked => NukeStinger.Hooked,
+            NukeChange.Stolen => NukeStinger.Dropped,
+            NukeChange.Planted => NukeStinger.Armed,
             NukeChange.Dropped => NukeStinger.Dropped,
             NukeChange.Armed => NukeStinger.Armed,
             NukeChange.Defused => NukeStinger.Defused,

@@ -61,16 +61,19 @@ namespace Chopper.Presentation.Effects
                 var range = NukeHookConfig.Base.Range;
                 var self = float3.zero;
                 var hasSelf = false;
+                byte selfTeam = TeamRules.None;
                 foreach (var (pose, chopper) in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<GhostOwnerIsLocal, NukeCarry>().WithEntityAccess())
                 {
                     if (SystemAPI.HasComponent<NukeHookConfig>(chopper)) range = SystemAPI.GetComponent<NukeHookConfig>(chopper).Range;
                     self = pose.ValueRO.Position;
+                    if (SystemAPI.HasComponent<Team>(chopper)) selfTeam = SystemAPI.GetComponent<Team>(chopper).Value;
                     hasSelf = true;
                 }
 
                 foreach (var (nuke, pose, entity) in SystemAPI.Query<RefRO<NukeState>, RefRO<LocalToWorld>>().WithEntityAccess())
                 {
-                    if (nuke.ValueRO.Phase is not (NukePhase.AtSpawn or NukePhase.Dropped)) continue;
+                    // Only where the local team may hook it (pad, drop, the enemy's dock, a planted nuke to disarm).
+                    if (!NukeRules.CanHook(nuke.ValueRO, selfTeam)) continue;
                     _seen.Add(entity);
                     Vector3 centre = pose.ValueRO.Position;
                     if (!_visuals.TryGetValue(entity, out var visual))

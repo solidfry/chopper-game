@@ -16,6 +16,9 @@ namespace Chopper.Simulation.Bots
         public byte CarrierTeam;
         /// <summary>The team that armed the nuke (0 = not armed).</summary>
         public byte ArmedBy;
+        /// <summary>Team whose base dock holds the nuke (docked or planted), else 0.</summary>
+        public byte DockTeam;
+        /// <summary>Base docks (ground points).</summary>
         public float3 Base1;
         public float3 Base2;
     }
@@ -44,6 +47,8 @@ namespace Chopper.Simulation.Bots
         public const float HookArriveRadius = 3f;
         /// <summary>Fly this high over a base zone centre.</summary>
         public const float BaseHeight = 25f;
+        /// <summary>Carrier hover over a dock: the nuke hangs low enough to set down (NukeZones.DockHeight).</summary>
+        public const float DockHoverHeight = Match.NukeZones.HangBelow + 4f;
         /// <summary>An enemy further than this does not pull a bot off the objective, metres.</summary>
         public const float FocusRange = 250f;
         /// <summary>This close to a free nuke, a bot keeps hooking even in a fight, metres.</summary>
@@ -99,8 +104,8 @@ namespace Chopper.Simulation.Bots
             if (info.Carrier == self && self != Entity.Null)
             {
                 var armed = info.ArmedBy == team;
-                goal = (armed ? enemy : home) + new float3(0f, BaseHeight, 0f);
-                arriveRadius = 8f;
+                goal = (armed ? enemy : home) + new float3(0f, DockHoverHeight, 0f);
+                arriveRadius = 4f;
                 return armed ? Kind.Deliver : Kind.ArmAtHome;
             }
             if (info.Carrier != Entity.Null)
@@ -109,6 +114,14 @@ namespace Chopper.Simulation.Bots
                 goal = info.NukePosition + new float3(0f, ally ? EscortHeight + Match.NukeZones.HangBelow : Match.NukeZones.HangBelow, 0f);
                 arriveRadius = ally ? 20f : 10f;
                 return ally ? Kind.Escort : Kind.Chase;
+            }
+            var free = new Match.NukeState { Phase = info.Phase, ArmedBy = info.ArmedBy, DockTeam = info.DockTeam };
+            if (!Match.NukeRules.CanHook(free, team))
+            {
+                // Our own nuke arming in our dock, or our planted nuke counting down: guard it.
+                goal = info.NukePosition + new float3(0f, EscortHeight + Match.NukeZones.HangBelow, 0f);
+                arriveRadius = 20f;
+                return Kind.Escort;
             }
             goal = info.NukePosition + new float3(0f, HookHoverHeight, 0f);
             arriveRadius = HookArriveRadius;

@@ -130,12 +130,13 @@ namespace Chopper.Presentation.Hud
             {
                 var s = nuke.ValueRO;
                 if (s.Phase == Simulation.Match.NukePhase.Detonated) continue;
-                var bar = s.HookTeam != 0 ? s.HookProgress
-                    : s.ArmedBy != 0 ? (s.DefuseProgress > 0f ? 1f - s.DefuseProgress : 1f)
-                    : s.ArmProgress > 0f ? s.ArmProgress
+                var planted = s.Phase == Simulation.Match.NukePhase.Planted;
+                var bar = planted ? (s.DefuseProgress > 0f ? s.DefuseProgress : -1f)
+                    : s.HookTeam != 0 ? s.HookProgress
+                    : s.Phase == Simulation.Match.NukePhase.Docked && s.ArmedBy == 0 ? s.ArmProgress
                     : -1f;
                 var marker = Objective(WorldMarkerKind.Nuke, camera, pose.ValueRO.Position, position, heading, bar);
-                marker.InRange = s.Phase is Simulation.Match.NukePhase.AtSpawn or Simulation.Match.NukePhase.Dropped &&
+                marker.InRange = Simulation.Match.NukeRules.CanHook(s, selfTeam) &&
                                  math.distance(pose.ValueRO.Position, position) <= hookRange;
                 model.Add(marker);
             }

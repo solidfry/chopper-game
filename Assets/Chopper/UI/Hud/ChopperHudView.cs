@@ -100,6 +100,7 @@ namespace Chopper.UI.Hud
         private Label _objectiveText;
         private VisualElement _objectiveBar;
         private VisualElement _objectiveFill;
+        private Label _nukeTimer;
         private VisualElement _pilot;
         private VisualElement _pilotPicture;
         private const string PilotHiddenClass = "hud-pilot--hidden";
@@ -230,6 +231,7 @@ namespace Chopper.UI.Hud
             _objectiveText = match.Q<Label>("objective-text");
             _objectiveBar = match.Q("objective-bar");
             _objectiveFill = match.Q("objective-fill");
+            _nukeTimer = match.Q<Label>("nuke-timer");
             _xpPopup = match.Q("xp-popup");
             Bind(match.Q<Label>("xp-title"), "text", nameof(MatchHudModel.XpTitle));
             Bind(match.Q<Label>("xp-name"), "text", nameof(MatchHudModel.XpName));
@@ -267,6 +269,7 @@ namespace Chopper.UI.Hud
             RefreshBanner();
             RefreshDeathAlert();
             RefreshObjective();
+            RefreshNukeTimer();
             RefreshXp();
         }
 
@@ -512,6 +515,21 @@ namespace Chopper.UI.Hud
             else if (args.propertyName == nameof(MatchHudModel.ObjectiveText) || args.propertyName == nameof(MatchHudModel.ObjectiveProgress) ||
                      args.propertyName == nameof(MatchHudModel.ObjectiveTone))
                 RefreshObjective(args.propertyName == nameof(MatchHudModel.ObjectiveText));
+            else if (args.propertyName == nameof(MatchHudModel.NukeTimerText) || args.propertyName == nameof(MatchHudModel.NukeTimerTone) ||
+                     args.propertyName == nameof(MatchHudModel.NukeTimerFinal))
+                RefreshNukeTimer();
+        }
+
+        /// <summary>The nuke countdown pill at the top (every player sees it).</summary>
+        private void RefreshNukeTimer()
+        {
+            if (_nukeTimer == null) return;
+            var text = _match.NukeTimerText;
+            _nukeTimer.text = text;
+            _nukeTimer.EnableInClassList("hud-nuke-timer--hidden", string.IsNullOrEmpty(text));
+            _nukeTimer.EnableInClassList("hud-nuke-timer--good", _match.NukeTimerTone == CalloutTone.Good);
+            _nukeTimer.EnableInClassList("hud-nuke-timer--alert", _match.NukeTimerTone == CalloutTone.Alert);
+            _nukeTimer.EnableInClassList("hud-nuke-timer--final", _match.NukeTimerFinal);
         }
 
         private void RefreshXp()

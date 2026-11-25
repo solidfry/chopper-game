@@ -28,6 +28,8 @@
         <ui:Label name="death-alert-text" text="" class="hud-death-alert__text chopper-title" />
         <ui:Label name="death-alert-respawn" text="" class="hud-death-alert__respawn chopper-title" />
       </ui:VisualElement>
+      <!-- Capture the Nuke countdown for every player (arming, final countdown, reset): small pill under the match timer -->
+      <ui:Label name="nuke-timer" text="" class="hud-nuke-timer hud-nuke-timer--hidden chopper-title" picking-mode="Ignore" />
       <!-- Capture the Nuke: what to do now, under the reticle (NukeCalloutSystem); green = good for us, red = threat -->
       <ui:VisualElement name="objective" class="hud-objective hud-objective--hidden" picking-mode="Ignore">
         <ui:Label name="objective-text" text="" class="hud-objective__text chopper-title" picking-mode="Ignore" />

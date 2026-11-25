@@ -58,9 +58,11 @@ namespace Chopper.Simulation.Match
                 var holder = carrier.ValueRO.Chopper;
                 if (holder != Entity.Null && !Alive(ref state, holder)) holder = Entity.Null;
 
-                // A free nuke: the nearest live team chopper in its hook's reach must stay there for its hook time
-                // (10 s; the Lifter's winch: 5 s, from further away).
+                // A nuke nobody holds (pad, drop, dock, planted): the nearest live chopper allowed to hook it
+                // (NukeRules.CanHook) must stay in its hook's reach for its hook time (10 s; the Lifter's winch: 5 s,
+                // from further away; disarming a planted nuke: the defuse time). Over a planted nuke the hook disarms.
                 s.HookTeam = TeamRules.None;
+                var disarmed = false;
                 if (holder == Entity.Null && s.Phase != NukePhase.Detonated)
                 {
                     var candidate = Entity.Null;
@@ -69,21 +71,26 @@ namespace Chopper.Simulation.Match
                     foreach (var (pose, health, team, chopper) in
                              SystemAPI.Query<RefRO<LocalToWorld>, RefRO<Health>, RefRO<Team>>().WithAll<Targetable>().WithEntityAccess())
                     {
-                        if (health.ValueRO.IsDead || team.ValueRO.Value == TeamRules.None) continue;
+                        if (health.ValueRO.IsDead || !NukeRules.CanHook(s, team.ValueRO.Value)) continue;
                         var hook = SystemAPI.HasComponent<NukeHookConfig>(chopper) ? SystemAPI.GetComponent<NukeHookConfig>(chopper) : NukeHookConfig.Base;
                         var d = math.distance(pose.ValueRO.Position, position);
                         if (d > hook.Range || d >= best) continue;
                         best = d;
                         candidate = chopper;
-                        candidateSeconds = hook.Seconds;
+                        candidateSeconds = NukeRules.HookSeconds(s, hook.Seconds, tuning);
                     }
 
                     var hooking = carrier.ValueRO.Hooking;
-                    var progress = s.HookProgress;
-                    if (NukeRules.TickHook(ref progress, ref hooking, candidate, candidateSeconds, deltaTime)) holder = hooking;
-                    s.HookProgress = progress;
-                    s.HookTeam = hooking != Entity.Null && holder == Entity.Null ? SystemAPI.GetComponent<Team>(hooking).Value : TeamRules.None;
-                    carrier.ValueRW.Hooking = holder == Entity.Null ? hooking : Entity.Null;
+                    var progress = s.Phase == NukePhase.Planted ? s.DefuseProgress : s.HookProgress;
+                    if (NukeRules.TickHook(ref progress, ref hooking, candidate, candidateSeconds, deltaTime))
+                    {
+                        if (s.Phase == NukePhase.Planted) disarmed = true;
+                        else holder = hooking;
+                    }
+                    if (s.Phase == NukePhase.Planted) s.DefuseProgress = progress;
+                    else s.HookProgress = progress;
+                    s.HookTeam = hooking != Entity.Null && holder == Entity.Null && !disarmed ? SystemAPI.GetComponent<Team>(hooking).Value : TeamRules.None;
+                    carrier.ValueRW.Hooking = holder == Entity.Null && !disarmed ? hooking : Entity.Null;
                 }
                 carrier.ValueRW.Chopper = holder;
 
@@ -91,17 +98,27 @@ namespace Chopper.Simulation.Match
                 if (holder != Entity.Null)
                     position = NukeZones.HangPoint(SystemAPI.GetComponent<LocalToWorld>(holder).Position);
 
-                var zoneTeam = NukeZones.ZoneOf(position, bases.AsArray());
+                var dock = holder != Entity.Null ? NukeZones.DockOf(position, bases.AsArray()) : -1;
+                var dockTeam = dock >= 0 ? bases[dock].Team : TeamRules.None;
+                var armingTeam = s.Phase == NukePhase.Docked ? s.DockTeam : TeamRules.None;
                 var input = new NukeInputs
                 {
                     CarrierTeam = carrierTeam,
-                    ZoneTeam = zoneTeam,
-                    ZoneContested = zoneTeam != TeamRules.None && EnemyIn(ref state, bases.AsArray(), zoneTeam),
+                    DockTeam = dockTeam,
+                    ZoneContested = armingTeam != TeamRules.None && EnemyIn(ref state, bases.AsArray(), armingTeam),
+                    Disarmed = disarmed,
                 };
 
                 var happened = NukeRules.Tick(ref s, input, tuning, deltaTime);
                 switch (happened)
                 {
+                    case NukeEvent.Docked:
+                    case NukeEvent.Planted:
+                        // Set down in the dock: the carrier lets go.
+                        carrier.ValueRW.Chopper = Entity.Null;
+                        position = NukeZones.Resting(bases[dock].Dock);
+                        UnityEngine.Debug.Log($"[Nuke] {happened} in team {dockTeam}'s base (armed by {s.ArmedBy}).");
+                        break;
                     case NukeEvent.Dropped:
                         position = NukeZones.Resting(OnGround(hasPhysics, physics, position, nuke));
                         break;
@@ -117,7 +134,7 @@ namespace Chopper.Simulation.Match
                         ecb.AddComponent<Unity.NetCode.SendRpcCommandRequest>(blast);
                         // The shock front throws choppers as it passes them (NukeShockSystem).
                         ecb.AddComponent(ecb.CreateEntity(), new NukeShockwave { Origin = position, Start = SystemAPI.Time.ElapsedTime });
-                        UnityEngine.Debug.Log($"[Nuke] Team {s.DetonatedBy} set off the nuke in team {zoneTeam}'s base: round won.");
+                        UnityEngine.Debug.Log($"[Nuke] Team {s.DetonatedBy} set off the nuke in team {s.DockTeam}'s base: round won.");
                         // Next round: a new nuke on the pad.
                         s = NukeRules.AtSpawn;
                         carrier.ValueRW = default;
@@ -126,7 +143,7 @@ namespace Chopper.Simulation.Match
                     case NukeEvent.None:
                         break;
                     default:
-                        UnityEngine.Debug.Log($"[Nuke] {happened} (carrier team {carrierTeam}, zone {zoneTeam}, armed by {s.ArmedBy}).");
+                        UnityEngine.Debug.Log($"[Nuke] {happened} (carrier team {carrierTeam}, dock {dockTeam}, armed by {s.ArmedBy}).");
                         break;
                 }
 
