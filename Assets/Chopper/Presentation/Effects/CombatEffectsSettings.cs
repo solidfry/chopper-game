@@ -76,6 +76,22 @@ namespace Chopper.Presentation.Effects
                                  "(about 8 m at 1). 4 x 4 x 10 reads from 200 m away (24 Nov).")]
         private Vector3 nukeBeaconScale = new(4f, 4f, 10f);
 
+        [Header("Capture the Nuke rope (NukeRopeSystem)")]
+        [SerializeField, Tooltip("Cable material (opaque, lit steel; Setup makes Data/Effects/NukeRope). Empty: no rope.")]
+        private Material nukeRopeMaterial;
+        [SerializeField, Min(0.005f), Tooltip("Cable width, m. Real slings are 2-3 cm; wider reads from the chase camera.")]
+        private float nukeRopeWidth = 0.07f;
+        [SerializeField, Tooltip("Winch point in chopper space (under the belly). The Lifter's winch socket is at 0, -1.8, 0.")]
+        private Vector3 nukeRopeWinch = new(0f, -1.2f, 0f);
+        [SerializeField, Range(0f, 2f), Tooltip("How far the middle of the cable hangs below a straight line, m.")]
+        private float nukeRopeSag = 0.15f;
+        [SerializeField, Range(0f, 0.2f), Tooltip("How far the middle bows back per m/s of speed (air pushes it), m.")]
+        private float nukeRopeTrail = 0.03f;
+        [SerializeField, Range(0f, 3f), Tooltip("Most the middle bows back at top speed, m.")]
+        private float nukeRopeMaxTrail = 1.2f;
+        [SerializeField, Range(2, 32), Tooltip("Points along the cable (more = smoother bend).")]
+        private int nukeRopePoints = 12;
+
         [Header("Capture the Nuke blast (NukeBlastSystem)")]
         [SerializeField, Tooltip("The blast prefab (Editor/Setup/NukeBlastAssets; menu Chopper > Tools > Rebuild Nuke Blast): " +
                                  "mushroom cap and stem, shock rings, dust puffs, burn mark, wind strokes, flash core, " +
@@ -305,6 +321,13 @@ namespace Chopper.Presentation.Effects
         public float NukeZoneInRangeScale => nukeZoneInRangeScale;
         public GameObject NukeBeacon => nukeBeacon;
         public Vector3 NukeBeaconScale => nukeBeaconScale;
+        public Material NukeRopeMaterial => nukeRopeMaterial;
+        public float NukeRopeWidth => nukeRopeWidth;
+        public Vector3 NukeRopeWinch => nukeRopeWinch;
+        public float NukeRopeSag => nukeRopeSag;
+        public float NukeRopeTrail => nukeRopeTrail;
+        public float NukeRopeMaxTrail => nukeRopeMaxTrail;
+        public int NukeRopePoints => Mathf.Max(2, nukeRopePoints);
         public Material DownwashMaterial => downwashMaterial;
         public float DownwashHeight => downwashHeight;
         public Vector2 DownwashRadius => downwashRadius;
@@ -367,6 +390,7 @@ namespace Chopper.Presentation.Effects
             if (missile == null) problems.Add($"{name}: no missile prefab (rockets' visual is used).");
             if (flare == null) problems.Add($"{name}: no flare prefab, so flares are invisible.");
             if (nukeZone == null) problems.Add($"{name}: no nuke zone prefab, so Capture the Nuke shows no pick-up range.");
+            if (nukeRopeMaterial == null) problems.Add($"{name}: no nuke rope material, so a carried nuke hangs with no cable.");
             if (downwashMaterial == null) problems.Add($"{name}: no downwash material, so low choppers blow up no dust.");
             if (damageSparkMaterial == null) problems.Add($"{name}: no damage spark material, so hits show no sparks and damaged choppers no fire.");
             if (damageSmokeMaterial == null) problems.Add($"{name}: no damage smoke material, so damaged choppers do not smoke.");
@@ -401,6 +425,12 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: fills an empty downwash material slot.</summary>
+        /// <summary>Editor only: fills the rope material if empty.</summary>
+        public void FillNukeRope(Material material)
+        {
+            if (nukeRopeMaterial == null) nukeRopeMaterial = material;
+        }
+
         public void FillDownwash(Material material)
         {
             if (downwashMaterial == null) downwashMaterial = material;

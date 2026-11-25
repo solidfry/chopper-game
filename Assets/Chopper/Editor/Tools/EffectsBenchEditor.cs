@@ -22,7 +22,7 @@ namespace Chopper.Editor.Tools
             var play = new Button(() => SceneJumper.PlayFrom(bench.gameObject.scene.path)) { text = "▶ Play the bench" };
             root.Add(play);
             root.Add(new HelpBox("Keys in play: 1 ground blast, 2 air blast, 3 missile, 4 rocket, 5 gun, 6 next layer, " +
-                                 "7 hit sparks, 8 crash dust, 9 shoot down (debris), 0 flares, N nuke (then F5), B boost, E engine, H chopper health (100/50/25/10 %), F fly a circle or hover, " +
+                                 "7 hit sparks, 8 crash dust, 9 shoot down (debris), 0 flares, N nuke (then F5), B boost, E engine, H chopper health (100/50/25/10 %), F fly a circle or hover, U carry the nuke (cable), " +
                                  "R repeat, C clear, [ ] time. Camera: right drag turn, wheel zoom, middle drag height, " +
                                  "F1 side, F2 above (chopper view), F3 low, F4 close, F5 far (nuke).", HelpBoxMessageType.Info));
 
@@ -35,6 +35,7 @@ namespace Chopper.Editor.Tools
                 if (orbit != null) orbit.FarView();
             })));
             effects.Add(Row(("Missile impact", bench.MissileImpact), ("Rocket impact", bench.RocketImpact), ("Gun impact", bench.GunImpact)));
+            effects.Add(Row(("Carry nuke (cable)", bench.ToggleCarry)));
             effects.Add(new Label("Damaged chopper (health drives smoke and fire as in a match):") { style = { marginTop = 6 } });
             effects.Add(Row(("100 %", () => bench.Health = 1f), ("50 %", () => bench.Health = 0.5f),
                 ("25 %", () => bench.Health = 0.25f), ("10 %", () => bench.Health = 0.1f)));

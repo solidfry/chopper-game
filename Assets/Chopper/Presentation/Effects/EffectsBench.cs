@@ -9,6 +9,7 @@ namespace Chopper.Presentation.Effects
     /// <see cref="BlastSequence"/>). Its inspector has a button per effect; in play the keys work too:
     /// 1 ground blast, 2 air blast, 3 missile impact, 4 rocket impact, 5 gun impact, 6 next single layer,
     /// 7 hit sparks, 8 crash dust, 9 shoot the chopper down (blast and debris), 0 flares, B boost, E engine, H damaged chopper health (100, 50, 25, 10 %), F fly a circle or hover,
+    /// U hang the nuke under the chopper on its cable (as in Capture the Nuke), N nuke blast,
     /// R repeat the last, C clear, [ and ] slower and faster time. Not a game scene.
     /// </summary>
     public sealed class EffectsBench : MonoBehaviour
@@ -36,6 +37,8 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Speed round the circle, m/s.")] private float circleSpeed = 25f;
         [SerializeField, Tooltip("Engine modules to try on the stand-in (E changes): their model and nozzles, as in a match.")]
         private Chopper.Simulation.Loadout.ModuleDefinition[] engines = System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
+        [SerializeField, Tooltip("A nuke model (U hangs it under the stand-in on the match's cable). Hidden until then.")]
+        private Transform nukeStandIn;
 
         /// <summary>The engine module's two exhausts (as the game's ExhaustPoint) and one hit on the tail boom.</summary>
         private static readonly (Vector3 Point, Vector3 Normal)[] HullPoints =
@@ -80,8 +83,9 @@ namespace Chopper.Presentation.Effects
         /// <summary>Editor only: the scene builder links the settings, the target and the stand-in chopper.</summary>
         public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null,
             Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null, Chopper.Presentation.Camera.CameraSettings lens = null,
-            Chopper.Presentation.Audio.SoundLibrary soundLibrary = null)
+            Chopper.Presentation.Audio.SoundLibrary soundLibrary = null, Transform nuke = null)
         {
+            nukeStandIn = nuke;
             sounds = soundLibrary;
             cameraSettings = lens;
             engines = engineModules ?? System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
@@ -111,7 +115,35 @@ namespace Chopper.Presentation.Effects
             _nukeSound.Clear();
             _audio?.Dispose();
             _lens?.Dispose();
+            _rope?.Dispose();
             Time.timeScale = 1f;
+        }
+
+        private NukeRopeView _rope;
+        private bool _carrying;
+
+        /// <summary>U: the stand-in carries the nuke (or lets it go). F flies the circle so the cable bows back.</summary>
+        public void ToggleCarry()
+        {
+            if (settings == null || settings.NukeRopeMaterial == null)
+            {
+                Debug.LogWarning("Effects bench: no nuke rope material in the effects settings (run Setup).");
+                return;
+            }
+            _carrying = !_carrying;
+            if (nukeStandIn != null) nukeStandIn.gameObject.SetActive(_carrying);
+            if (!_carrying) _rope?.Hide();
+        }
+
+        /// <summary>As the server: the nuke's hook eye <see cref="Chopper.Simulation.Match.NukeZones.HangBelow"/> under the
+        /// chopper; the cable from the settings' winch point to it.</summary>
+        private void Carry(float deltaTime)
+        {
+            if (!_carrying || standIn == null || !standIn.gameObject.activeInHierarchy || settings == null) return;
+            var eye = standIn.position + Vector3.down * Chopper.Simulation.Match.NukeZones.HangBelow;
+            if (nukeStandIn != null) nukeStandIn.SetPositionAndRotation(eye, Quaternion.Euler(0f, standIn.eulerAngles.y, 0f));
+            _rope ??= new NukeRopeView(settings);
+            _rope.Draw(settings, standIn.TransformPoint(settings.NukeRopeWinch), eye, 1f, deltaTime);
         }
 
         private void Update()
@@ -127,6 +159,7 @@ namespace Chopper.Presentation.Effects
             _flares.Tick(_effects, Time.deltaTime, StandInPose);
             BoostFlame(Time.deltaTime);
             Damaged(Time.deltaTime);
+            Carry(Time.deltaTime);
             if (standIn != null && _hiddenUntil > 0f && Time.time > _hiddenUntil)
             {
                 standIn.gameObject.SetActive(true);
@@ -349,6 +382,7 @@ namespace Chopper.Presentation.Effects
             if (keys.digit9Key.wasPressedThisFrame) Wreck();
             if (keys.digit0Key.wasPressedThisFrame) Flares();
             if (keys.nKey.wasPressedThisFrame) Nuke();
+            if (keys.uKey.wasPressedThisFrame) ToggleCarry();
             if (keys.bKey.wasPressedThisFrame) Boost();
             if (keys.eKey.wasPressedThisFrame) NextEngine();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;

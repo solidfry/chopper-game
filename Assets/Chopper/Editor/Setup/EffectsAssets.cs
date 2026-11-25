@@ -153,6 +153,7 @@ namespace Chopper.Editor.Setup
                 // Repair: fill slots added after the asset was made (guided missiles, flares).
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
+                settings.FillNukeRope(EnsureRopeMaterial());
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
@@ -171,6 +172,7 @@ namespace Chopper.Editor.Setup
             settings.Initialise(Load(GunBullet), Load(GunMuzzleFlash), Load(GunImpact), Load(Rocket), Load(RocketMuzzleFlash), Load(RocketImpact));
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
+            settings.FillNukeRope(EnsureRopeMaterial());
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
@@ -180,6 +182,32 @@ namespace Chopper.Editor.Setup
             AssetDatabase.CreateAsset(settings, SettingsPath);
             AssetDatabase.SaveAssets();
             return settings;
+        }
+
+        private const string RopeMaterialPath = "Assets/Chopper/Data/Effects/NukeRope.mat";
+
+        /// <summary>The nuke cable: opaque URP Lit, dark oiled steel (a little metal shine, so it catches the sun against
+        /// the sky and the city glow at night). Made once.</summary>
+        internal static Material EnsureRopeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(RopeMaterialPath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+            {
+                Debug.LogWarning("Combat effects: URP Lit shader not found; no nuke rope material.");
+                return null;
+            }
+            material = new Material(shader) { name = "NukeRope" };
+            material.SetColor("_BaseColor", new Color(0.16f, 0.16f, 0.17f, 1f));
+            material.SetFloat("_Metallic", 0.75f);
+            material.SetFloat("_Smoothness", 0.45f);
+            // Both faces: a view-facing line can show its back when the camera passes under it.
+            material.SetFloat("_Cull", 0f);
+            material.doubleSidedGI = true;
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(RopeMaterialPath));
+            AssetDatabase.CreateAsset(material, RopeMaterialPath);
+            return material;
         }
 
         private const string DownwashMaterialPath = "Assets/Chopper/Data/Effects/DownwashDust.mat";

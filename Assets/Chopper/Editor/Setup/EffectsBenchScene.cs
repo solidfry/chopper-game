@@ -78,7 +78,7 @@ namespace Chopper.Editor.Setup
             var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
             var config = ConfigAssets.Load();
             bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines(), config != null ? config.Camera : null,
-                config != null ? config.Audio : null);
+                config != null ? config.Audio : null, NukeStandIn());
 
             var camera = new GameObject("Bench Camera") { tag = "MainCamera" };
             var cam = camera.AddComponent<UnityEngine.Camera>();
@@ -125,6 +125,19 @@ namespace Chopper.Editor.Setup
             standIn.transform.position = new Vector3(0f, 10f, 0f);
             return standIn.transform;
         }
+
+        /// <summary>The nuke model (plain art, not the networked prefab), hidden until the bench hangs it (U).</summary>
+        private static Transform NukeStandIn()
+        {
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(NukeModel);
+            if (model == null) return null;
+            var nuke = (GameObject)PrefabUtility.InstantiatePrefab(model, UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+            nuke.name = "Nuke Stand-in";
+            nuke.SetActive(false);
+            return nuke.transform;
+        }
+
+        private const string NukeModel = KitAssets.KitsFolder + "/Kit02/Models/Prop_Nuke.fbx";
 
         /// <summary>The engine modules to try on the stand-in: standard, boost, turbine.</summary>
         private static Chopper.Simulation.Loadout.ModuleDefinition[] Engines() => new[]
