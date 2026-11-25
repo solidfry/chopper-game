@@ -233,12 +233,32 @@ namespace Chopper.Editor.Setup
                 Slot(library.NukeArmed, () => Cue("NukeArmed", Clips(Nuke + "/NukeArmed.wav"), ui, 0.7f, blend: 0f, voices: 1, cooldown: 0.5f)),
                 Slot(library.NukeDefused, () => Cue("NukeDefused", Clips(Nuke + "/NukeDefused.wav"), ui, 0.6f, blend: 0f, voices: 1, cooldown: 0.5f)));
 
+            // Places (AudioSpace): reverb and distance by map type. Open: from Unity's "Plain" reverb, faint. City: wetter
+            // than Unity's "City" (closer, louder first echoes off the walls, a longer tail); far sounds duller.
+            library.InitialiseSpaces(
+                library.Space(false) != null ? library.Space(false) : Space("Open", -1000, -2000, 1.5f, 0.5f, -2466, 0.179f, -1926, 0.1f, 21f,
+                    far: 1500f, cutoff: 3000f, nearMix: 0.3f, farMix: 0.8f),
+                library.Space(true) != null ? library.Space(true) : Space("City", -600, -600, 2.2f, 0.6f, -800, 0.012f, -900, 0.02f, 60f,
+                    far: 1000f, cutoff: 2000f, nearMix: 0.6f, farMix: 1.1f));
+
             if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
 
             if (created) AssetDatabase.CreateAsset(library, LibraryPath);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
             return library;
+        }
+
+        private static AudioSpace Space(string name, int room, int roomHF, float decay, float decayHF, int reflections, float reflectionsDelay,
+            int reverb, float reverbDelay, float diffusion, float far, float cutoff, float nearMix, float farMix)
+        {
+            var path = $"{Folder}/Space_{name}.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<AudioSpace>(path);
+            if (existing != null) return existing;
+            var space = ScriptableObject.CreateInstance<AudioSpace>();
+            space.Initialise(room, roomHF, decay, decayHF, reflections, reflectionsDelay, reverb, reverbDelay, diffusion, far, cutoff, nearMix, farMix);
+            AssetDatabase.CreateAsset(space, path);
+            return space;
         }
 
         private static SoundCue Slot(SoundCue current, System.Func<SoundCue> make) => current != null ? current : make();

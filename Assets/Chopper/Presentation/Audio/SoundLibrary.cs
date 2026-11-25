@@ -57,6 +57,10 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Min(0.1f), Tooltip("How fast it changes between views (1/s).")]
         private float cutoffSpeed = 6f;
 
+        [Header("Places (AudioSpace): reverb and distance by map type")]
+        [SerializeField, Tooltip("Open ground (training range, desert).")] private AudioSpace openSpace;
+        [SerializeField, Tooltip("City maps (Map_* scenes): echo off the buildings.")] private AudioSpace citySpace;
+
         [Header("Ambience")]
         [SerializeField, Tooltip("Loop under a city map, on the Ambient channel.")] private SoundCue cityAmbience;
 
@@ -162,6 +166,8 @@ namespace Chopper.Presentation.Audio
         public float ChaseCutoff => chaseCutoff;
         public float CutoffSpeed => cutoffSpeed;
         public SoundCue CityAmbience => cityAmbience;
+        /// <summary>How the map's place sounds: the city space on city maps, else open ground.</summary>
+        public AudioSpace Space(bool city) => city ? citySpace : openSpace;
         public SoundCue AbilityActivate => abilityActivate;
         public SoundCue AbilityReady => abilityReady;
         public SoundCue Jammed => jammed;
@@ -193,6 +199,10 @@ namespace Chopper.Presentation.Audio
             Check(damageTaken, nameof(damageTaken), problems);
             Check(outOfBoundsAlarm, nameof(outOfBoundsAlarm), problems);
             Check(matchEnd, nameof(matchEnd), problems);
+            if (openSpace == null) problems.Add($"{name}: no open-ground audio space (no reverb on open maps).");
+            else openSpace.CollectProblems(problems);
+            if (citySpace == null) problems.Add($"{name}: no city audio space (no reverb in cities).");
+            else citySpace.CollectProblems(problems);
             Check(nukeBlastNear, nameof(nukeBlastNear), problems);
             Check(nukeBlastFar, nameof(nukeBlastFar), problems);
             Check(nukeSiren, nameof(nukeSiren), problems);
@@ -271,6 +281,13 @@ namespace Chopper.Presentation.Audio
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void InitialiseAmbience(SoundCue city) => cityAmbience = city;
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseSpaces(AudioSpace open, AudioSpace city)
+        {
+            openSpace = open;
+            citySpace = city;
+        }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void InitialiseNuke(SoundCue blastNear, SoundCue blastFar, SoundCue siren, SoundCue beep, SoundCue hooked,

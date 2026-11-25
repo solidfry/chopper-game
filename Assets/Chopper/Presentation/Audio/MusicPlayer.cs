@@ -37,6 +37,8 @@ namespace Chopper.Presentation.Audio
                 source.playOnAwake = false;
                 source.loop = true;
                 source.spatialBlend = 0f;
+                // Music is not in the world: no place reverb (AudioSpace).
+                source.reverbZoneMix = 0f;
                 source.volume = 0f;
                 // Music keeps playing while the game is paused (options menu) and while a scene loads.
                 source.ignoreListenerPause = true;

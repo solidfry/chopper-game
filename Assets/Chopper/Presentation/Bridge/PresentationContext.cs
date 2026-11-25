@@ -318,10 +318,14 @@ namespace Chopper.Presentation.Bridge
             StartAmbience();
         }
 
-        /// <summary>City maps (<c>Map_*</c> scenes): the city's sound under everything, on the Ambient channel.</summary>
+        /// <summary>City maps (<c>Map_*</c> scenes): the city's sound under everything, on the Ambient channel. Every scene: its place's reverb.</summary>
         private void StartAmbience()
         {
-            if (_ambience != null || Sounds == null || !_scene.name.StartsWith("Map_", StringComparison.Ordinal)) return;
+            if (Sounds == null) return;
+            var city = _scene.name.StartsWith("Map_", StringComparison.Ordinal);
+            // The place's reverb and distance rules (AudioSpace): city echo, or open ground.
+            _audio.SetSpace(Sounds.Space(city));
+            if (_ambience != null || !city) return;
             _ambience = _audio.StartLoop(Sounds.CityAmbience, Vector3.zero);
         }
 

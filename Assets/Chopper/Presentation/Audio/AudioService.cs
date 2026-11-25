@@ -36,6 +36,10 @@ namespace Chopper.Presentation.Audio
         private bool _ownsMusic = true;
         private float _outsideCutoff = OpenCutoff;
         private float _cabinCutoff = OpenCutoff;
+        private AudioSpace _space;
+        private AudioReverbZone _zone;
+        private AudioListener _listener;
+        private float _nextListenerSearch;
 
         public AudioService(SoundLibrary library, Transform root, int voiceCount = 32)
         {
@@ -86,6 +90,7 @@ namespace Chopper.Presentation.Audio
             {
                 _voice = CreateSource("Voice");
                 _voice.spatialBlend = 0f;
+                _voice.reverbZoneMix = 0f;
                 _voice.outputAudioMixerGroup = _library != null ? _library.VoiceGroup : null;
             }
             _voice.Stop();
@@ -123,8 +128,8 @@ namespace Chopper.Presentation.Audio
             loop.BaseVolume = cue.PickVolume();
             loop.BasePitch = cue.PickPitch();
             loop.Muffle = cue.Muffle;
-            Muffle(source, ref loop.Filter, cue.Muffle);
             loop.Set(position);
+            Shape(source, ref loop.Filter, cue.Muffle, ListenerPosition());
             // Start at a random point, so many choppers do not play the same loop in step.
             source.time = source.clip.length * UnityEngine.Random.value;
             source.Play();
@@ -168,22 +173,64 @@ namespace Chopper.Presentation.Audio
             if (Mathf.Approximately(outside, _outsideCutoff) && Mathf.Approximately(cabin, _cabinCutoff)) return;
             _outsideCutoff = outside;
             _cabinCutoff = cabin;
-            foreach (var voice in _voices)
-                if (voice.Cue != null && voice.Filter != null && voice.Filter.enabled) voice.Filter.cutoffFrequency = Cutoff(voice.Cue.Muffle);
-            foreach (var loop in _activeLoops)
-                if (loop.Muffle != CueMuffle.None && loop.Filter != null) loop.Filter.cutoffFrequency = Cutoff(loop.Muffle);
+            // Playing sounds take the new cutoffs on the next Tick.
         }
+
+        /// <summary>
+        /// The place the listener is in (<see cref="AudioSpace"/>): its reverb on every 3D sound, and how distance dulls
+        /// and wets them. Null = no reverb, no distance treatment.
+        /// </summary>
+        public void SetSpace(AudioSpace space)
+        {
+            _space = space;
+            if (space == null)
+            {
+                if (_zone != null) _zone.enabled = false;
+                return;
+            }
+            if (_zone == null)
+            {
+                var go = new GameObject("Reverb");
+                go.transform.SetParent(_root, false);
+                _zone = go.AddComponent<AudioReverbZone>();
+                // Huge: the listener is always inside it, wherever it flies.
+                _zone.minDistance = 100000f;
+                _zone.maxDistance = 100001f;
+            }
+            space.Apply(_zone);
+            _zone.enabled = true;
+        }
+
+        public AudioSpace Space => _space;
 
         private float Cutoff(CueMuffle muffle) => muffle == CueMuffle.Cabin ? _cabinCutoff : _outsideCutoff;
 
         public void Tick(float deltaTime)
         {
             if (_ownsMusic) _music.Tick(deltaTime);
+            var listener = ListenerPosition();
+            if (_zone != null) _zone.transform.position = listener;
+            // Sounds move and so does the listener: distance treatment and cockpit muffling on every playing sound.
+            foreach (var voice in _voices)
+                if (voice.Cue != null && voice.Source.isPlaying) Shape(voice.Source, ref voice.Filter, voice.Cue.Muffle, listener);
+            foreach (var loop in _activeLoops)
+                if (loop.Source != null) Shape(loop.Source, ref loop.Filter, loop.Muffle, listener);
+        }
+
+        private Vector3 ListenerPosition()
+        {
+            if (_listener == null && Time.unscaledTime >= _nextListenerSearch)
+            {
+                _listener = Object.FindAnyObjectByType<AudioListener>();
+                _nextListenerSearch = Time.unscaledTime + 1f;
+            }
+            return _listener != null ? _listener.transform.position : Vector3.zero;
         }
 
         public void Dispose()
         {
             if (_voice != null) Object.Destroy(_voice.gameObject);
+            if (_zone != null) Object.Destroy(_zone.gameObject);
             foreach (var voice in _voices)
                 if (voice.Source != null) Object.Destroy(voice.Source.gameObject);
             foreach (var loop in _activeLoops)
@@ -209,12 +256,12 @@ namespace Chopper.Presentation.Audio
             var voice = PickVoice(cue);
             var source = voice.Source;
             cue.Apply(source);
-            Muffle(source, ref voice.Filter, cue.Muffle);
             // 2D: position does not matter.
             if (atListener)
                 source.spatialBlend = 0f;
             else
                 source.transform.position = position;
+            Shape(source, ref voice.Filter, cue.Muffle, ListenerPosition());
             source.clip = cue.PickClip();
             source.volume = cue.PickVolume() * volumeScale;
             source.pitch = cue.PickPitch() * pitchScale;
@@ -224,10 +271,25 @@ namespace Chopper.Presentation.Audio
             voice.StartTime = now;
         }
 
-        /// <summary>Pooled sources are reused: the filter is on only for muffled cues. It is added the first time it is needed.</summary>
-        private void Muffle(AudioSource source, ref AudioLowPassFilter filter, CueMuffle muffle)
+        /// <summary>
+        /// Low-pass and echo amount for one sound: the cockpit muffle (<see cref="CueMuffle"/>), and for 3D sounds the
+        /// place's distance rules (<see cref="AudioSpace"/>: far = duller, more echo). 2D sounds (UI, own cockpit) get no
+        /// echo. Pooled sources are reused: the filter is added the first time it is needed and is off when open.
+        /// </summary>
+        private void Shape(AudioSource source, ref AudioLowPassFilter filter, CueMuffle muffle, Vector3 listener)
         {
-            if (muffle == CueMuffle.None)
+            var cutoff = muffle == CueMuffle.None ? OpenCutoff : Cutoff(muffle);
+            var mix = 0f;
+            var blend = source.spatialBlend;
+            if (_space != null && blend > 0f)
+            {
+                var distance = Vector3.Distance(source.transform.position, listener);
+                var air = AudioDistance.AirCutoff(distance, _space.NearDistance, _space.FarDistance, _space.FarCutoff);
+                cutoff = Mathf.Min(cutoff, Mathf.Lerp(OpenCutoff, air, blend));
+                mix = blend * AudioDistance.ReverbMix(distance, _space.NearDistance, _space.FarDistance, _space.NearReverbMix, _space.FarReverbMix);
+            }
+            source.reverbZoneMix = mix;
+            if (cutoff >= OpenCutoff - 1f)
             {
                 if (filter != null) filter.enabled = false;
                 return;
@@ -237,7 +299,7 @@ namespace Chopper.Presentation.Audio
                 filter = source.gameObject.AddComponent<AudioLowPassFilter>();
                 filter.lowpassResonanceQ = 1f;
             }
-            filter.cutoffFrequency = Cutoff(muffle);
+            filter.cutoffFrequency = cutoff;
             filter.enabled = true;
         }
 

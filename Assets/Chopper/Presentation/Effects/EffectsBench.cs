@@ -97,6 +97,8 @@ namespace Chopper.Presentation.Effects
             Create();
             _nuke.Prewarm(settings);
             _audio = new Chopper.Presentation.Audio.AudioService(sounds, transform);
+            // Open ground, as on the training range.
+            _audio.SetSpace(sounds != null ? sounds.Space(false) : null);
             _lens = new Chopper.Presentation.Camera.LensLook(cameraSettings, UnityEngine.Camera.main);
         }
 
