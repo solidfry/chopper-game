@@ -96,8 +96,12 @@ namespace Chopper.Simulation.Bots
             return found;
         }
 
-        /// <summary>True when no static collider (level geometry) is on the straight line; choppers do not block it.</summary>
-        public static bool InSight(in CollisionWorld world, float3 from, float3 to)
+        /// <summary>
+        /// True when no static collider (level geometry) is on the straight line; choppers do not block it.
+        /// <paramref name="target"/>: a static target (a turret) whose own collider is not cover. Without it the ray to a
+        /// turret's gun head always ended on the turret itself, so no bot ever saw (or shot) a turret (25 Nov).
+        /// </summary>
+        public static bool InSight(in CollisionWorld world, float3 from, float3 to, Entity target = default)
         {
             var hits = new NativeList<RaycastHit>(8, Allocator.Temp);
             var clear = true;
@@ -106,6 +110,7 @@ namespace Chopper.Simulation.Bots
                 foreach (var hit in hits)
                 {
                     if (hit.RigidBodyIndex < world.NumDynamicBodies) continue;
+                    if (target != Entity.Null && hit.Entity == target) continue;
                     clear = false;
                     break;
                 }

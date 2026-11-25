@@ -31,6 +31,8 @@ namespace Chopper.Simulation.Bots
         public bool InSight;
         /// <summary>A ground target (a turret): scored below a chopper at the same distance.</summary>
         public bool Ground;
+        /// <summary>A ground target's gun range, metres (0 = not known): the bot circles it from outside this.</summary>
+        public float Reach;
     }
 
     /// <summary>What the bot knows about itself and the threats on it this tick (gathered by <see cref="BotPilotSystem"/>).</summary>
@@ -138,6 +140,15 @@ namespace Chopper.Simulation.Bots
         /// <summary>Seconds of no damage before the bot stops running and repairs.</summary>
         private const double SafeSeconds = 2.5;
         private const double CycleRepeatSeconds = 0.35;
+        /// <summary>Circle a ground target this far outside its gun range, metres (the bot targets the nearest turret of the pad ring).</summary>
+        public const float StandOffMargin = 40f;
+
+        /// <summary>
+        /// Strafe radius round a target: the preferred range, or outside a ground target's gun range
+        /// (<paramref name="reach"/>, 0 = none) while the own gun still reaches (90 % of <paramref name="gunRange"/>).
+        /// </summary>
+        public static float StrafeRange(float preferred, float gunRange, float reach) =>
+            reach <= 0f ? preferred : math.max(preferred, math.min(reach + StandOffMargin, gunRange * 0.9f));
 
         public static BotBrain Create(uint seed) => new()
         {
@@ -260,13 +271,17 @@ namespace Chopper.Simulation.Bots
             // Target: close, hurt, in front, and the current one is kept unless another is much better.
             var best = Entity.Null;
             var bestScore = float.MinValue;
+            var turrets = false;
+            for (var i = 0; i < contacts.Length; i++)
+                if (contacts[i].Ground) turrets = true;
             for (var i = 0; i < contacts.Length; i++)
             {
                 var c = contacts[i];
                 if (!c.InSight && c.Distance > h.HearingRange) continue;
                 var ahead = math.dot(s.Forward, math.normalizesafe(c.Position - s.Position));
                 var score = -c.Distance + (1f - c.Health01) * 150f + ahead * 120f + (c.Entity == Target ? 200f : 0f) + (c.InSight ? 100f : 0f) -
-                            (c.Ground ? BotObjective.TurretScorePenalty : 0f);
+                            (c.Ground ? BotObjective.TurretScorePenalty : 0f) -
+                            (turrets && !c.Ground && c.Distance > BotObjective.FocusRange ? BotObjective.FarChopperPenalty : 0f);
                 if (score <= bestScore) continue;
                 bestScore = score;
                 best = c.Entity;
@@ -368,7 +383,12 @@ namespace Chopper.Simulation.Bots
             }
             var radial = math.normalizesafe(Flat(s.Position - target), -s.Forward);
             var tangent = math.cross(math.up(), radial) * StrafeSign;
-            var spot = target + radial * h.PreferredRange + tangent * (h.PreferredRange * h.StrafeRate * 2f);
+            var range = StrafeRange(h.PreferredRange, h.HasGunRange(s), contact.Reach);
+            // A turret: orbit at the stand-off range itself (the sideways lead pushed the spot 20 % out, to 380-540 m,
+            // where the gun cone was rarely met; played 25 Nov). A chopper: the old wider strafe.
+            var spot = contact.Ground
+                ? target + math.normalizesafe(radial + tangent * (h.StrafeRate * 2f), radial) * range
+                : target + radial * range + tangent * (range * h.StrafeRate * 2f);
             spot.y = math.max(target.y + 12f, s.Position.y - 20f);
             intent.Goal = spot;
             order.Speed = h.EngageSpeed;

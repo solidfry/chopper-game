@@ -169,6 +169,21 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Model_EachDifferentLine_ShowsForTwentySeconds()
+        {
+            var model = new MatchHudModel();
+            model.SetObjective(new Callout("HOOK THE NUKE", CalloutTone.Neutral));
+            model.Tick(MatchHudModel.ObjectiveShowSeconds - 1f);
+            model.SetObjective(new Callout("HOOK THE NUKE", CalloutTone.Neutral));
+            Assert.AreEqual("HOOK THE NUKE", model.ObjectiveText, "Same line: the clock keeps running.");
+            model.Tick(1.5f);
+            model.SetObjective(new Callout("HOOK THE NUKE", CalloutTone.Neutral));
+            Assert.AreEqual("", model.ObjectiveText, "Shown 20 s: hidden.");
+            model.SetObjective(new Callout("ENEMY HAS THE NUKE", CalloutTone.Alert));
+            Assert.AreEqual("ENEMY HAS THE NUKE", model.ObjectiveText, "A different line shows again.");
+        }
+
+        [Test]
         public void Model_NukeTimer_ShowsLabelAndClock_HidesWhenNone()
         {
             var model = new MatchHudModel();

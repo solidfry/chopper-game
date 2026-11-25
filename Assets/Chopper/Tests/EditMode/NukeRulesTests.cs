@@ -274,21 +274,37 @@ namespace Chopper.Tests
         }
 
         [Test]
-        public void BotObjective_Stage_HoldsForAMateOnlyWhileTurretsAreUp()
+        public void BotObjective_Siege_HoldsOutOfReachWhileTurretsCoverTheNuke()
         {
             var info = new Chopper.Simulation.Bots.BotObjectiveInfo
             {
                 Active = true, NukePosition = new Unity.Mathematics.float3(0, 1, -380),
                 Base1 = new Unity.Mathematics.float3(-350, 0, 150), Base2 = new Unity.Mathematics.float3(350, 0, 150),
             };
-            var far = new Unity.Mathematics.float3(-300, 30, 100);
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, true, false, out var staging), Is.True);
+            var turrets = new Unity.Collections.NativeArray<Chopper.Simulation.Bots.BotTurretInfo>(1, Unity.Collections.Allocator.Temp);
+            turrets[0] = new Chopper.Simulation.Bots.BotTurretInfo { Position = new Unity.Mathematics.float3(31, 2, -349), Team = 0, Reach = 260f };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.TurretsCover(info, turrets, 1), Is.True, "Neutral pad turret 44 m from the nuke.");
+
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, true, out var staging), Is.True);
             Assert.That(Unity.Mathematics.math.distance(staging.xz, info.NukePosition.xz), Is.EqualTo(330f).Within(0.1f));
             Assert.That(staging.x, Is.LessThan(0f), "On the home side.");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, true, true, out _), Is.False, "Mate near: go.");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, false, true, false, out _), Is.False, "No turrets: go.");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, far, true, false, false, out _), Is.False, "Alone: go.");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, new Unity.Mathematics.float3(0, 20, -250), true, true, false, out _), Is.False, "Committed.");
+            Assert.That(Unity.Mathematics.math.distance(staging.xz, turrets[0].Position.xz), Is.GreaterThan(turrets[0].Reach), "Out of the turret's reach.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Stage(info, 1, false, out _), Is.False, "No cover: go in and hook.");
+
+            turrets[0] = new Chopper.Simulation.Bots.BotTurretInfo { Position = new Unity.Mathematics.float3(-350, 2, 150), Team = 2, Reach = 260f };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.TurretsCover(info, turrets, 1), Is.False, "A base turret far from the nuke does not cover it.");
+            turrets[0] = new Chopper.Simulation.Bots.BotTurretInfo { Position = new Unity.Mathematics.float3(31, 2, -349), Team = 1, Reach = 260f };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.TurretsCover(info, turrets, 1), Is.False, "Own team's turret.");
+            turrets.Dispose();
+        }
+
+        [Test]
+        public void BotBrain_StrafeRange_CirclesATurretFromOutsideItsReach()
+        {
+            Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 600f, 0f), Is.EqualTo(220f), "Chopper target: preferred range.");
+            Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 600f, 260f), Is.EqualTo(260f + Chopper.Simulation.Bots.BotBrain.StandOffMargin), "Minigun outranges the turret.");
+            Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 250f, 260f), Is.EqualTo(225f), "Short gun: as far as it still reaches.");
+            Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 200f, 260f), Is.EqualTo(220f), "Never closer than the preferred range.");
         }
     }
 }

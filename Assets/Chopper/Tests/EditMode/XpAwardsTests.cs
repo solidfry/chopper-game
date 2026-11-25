@@ -1,4 +1,5 @@
 using Chopper.Presentation.Hud;
+using Chopper.Simulation.Combat;
 using Chopper.Simulation.Match;
 using Chopper.Simulation.Progression;
 using Chopper.Simulation.Session;
@@ -93,6 +94,37 @@ namespace Chopper.Tests
             Assert.That(stats.RepairXp, Is.EqualTo(12));
             Assert.That(stats.Evades, Is.EqualTo(2));
             Assert.That(stats.EvadeXp, Is.EqualTo(2 * Rates.PerMissileEvaded));
+        }
+
+        [Test]
+        public void Turrets_DamageCountsAsDamageXp_AndTheDestroyerGetsTurretXp()
+        {
+            using var shares = new NativeList<DamageShare>(Allocator.Temp);
+            using var awards = new NativeList<XpAward>(Allocator.Temp);
+            // Two pilots shoot a turret (target 0: not a player); pilot 1 destroys it.
+            var hitA = new MatchLogEntry { Kind = MatchLogKind.Hit, Actor = 1, Target = 0, Amount = 40f, Damage = DamageKind.Bullet };
+            var hitB = new MatchLogEntry { Kind = MatchLogKind.Hit, Actor = 2, Target = 0, Amount = 20f, Damage = DamageKind.Bullet, Detail = 1 };
+            var down = new MatchLogEntry { Kind = MatchLogKind.TurretDown, Actor = 2, Target = 0 };
+            Run(shares, awards, hitA, hitB, down);
+
+            Assert.That(awards.Length, Is.EqualTo(1));
+            Assert.That(awards[0].Player, Is.EqualTo(2));
+            Assert.That(awards[0].Reason, Is.EqualTo(XpReason.TurretDown));
+            Assert.That(awards[0].Amount, Is.EqualTo(Rates.PerTurret));
+            Assert.That(shares.Length, Is.EqualTo(0), "No assist shares on a turret.");
+
+            // Damage on the turret is damage dealt: both pilots get damage XP for it on the end screen.
+            PlayerStats a = default, b = default, none = default;
+            var firstBlood = false;
+            MatchStatsRules.Apply(hitA, ref a, true, ref none, false, ref firstBlood);
+            MatchStatsRules.Apply(hitB, ref b, true, ref none, false, ref firstBlood);
+            Assert.That(a.Value.DamageDealt, Is.EqualTo(40f));
+            Assert.That(b.Value.DamageDealt, Is.EqualTo(20f));
+
+            var stats = b.Value;
+            XpAwards.Count(awards[0], ref stats);
+            Assert.That(stats.Turrets, Is.EqualTo(1));
+            Assert.That(stats.TurretXp, Is.EqualTo(Rates.PerTurret));
         }
 
         [Test]

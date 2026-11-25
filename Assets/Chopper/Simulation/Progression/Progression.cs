@@ -95,11 +95,13 @@ namespace Chopper.Simulation.Progression
         public float PerRepair;
         /// <summary>XP for a missile aimed at you that missed (flares or flying).</summary>
         public int PerMissileEvaded;
+        /// <summary>XP for destroying a turret (owner, 25 Nov; a bot kill gives 50).</summary>
+        public int PerTurret;
 
         public static XpRates Default => new()
         {
             MatchComplete = 150, Victory = 300, PerKill = 100, PerDamage = 0.2f, BotKillFactor = 0.5f,
-            PerAssist = 50, AssistMinShare = 0.25f, AssistSeconds = 15f, PerRepair = 0.1f, PerMissileEvaded = 25,
+            PerAssist = 50, AssistMinShare = 0.25f, AssistSeconds = 15f, PerRepair = 0.1f, PerMissileEvaded = 25, PerTurret = 40,
         };
     }
 

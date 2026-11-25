@@ -204,17 +204,8 @@ namespace Chopper.Simulation.Bots
                 var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
                 if (objective == BotObjective.Kind.Hook)
                 {
-                    var turretsUp = false;
-                    for (var i = 0; i < frame.Turrets.Length; i++)
-                        if (Combat.TurretRules.IsEnemy(frame.Turrets[i].Team, selfTeam)) turretsUp = true;
-                    bool hasMates = false, mateNear = false;
-                    for (var i = 0; i < choppers.Length; i++)
-                    {
-                        if (choppers[i].Entity == chopper || choppers[i].Team != selfTeam || selfTeam == Match.TeamRules.None) continue;
-                        hasMates = true;
-                        if (math.distancesq(choppers[i].Position, sense.Position) < BotObjective.GroupRadius * BotObjective.GroupRadius) mateNear = true;
-                    }
-                    if (BotObjective.Stage(frame.Objective, selfTeam, sense.Position, turretsUp, hasMates, mateNear, out var staging))
+                    var cover = BotObjective.TurretsCover(frame.Objective, frame.Turrets, selfTeam);
+                    if (BotObjective.Stage(frame.Objective, selfTeam, cover, out var staging))
                     {
                         objectiveGoal = staging;
                         objectiveRadius = 15f;
@@ -304,8 +295,9 @@ namespace Chopper.Simulation.Bots
                     Position = turret.Position,
                     Health01 = turret.Health01,
                     Distance = distance,
-                    InSight = BotSensing.InSight(world, position, turret.Position),
+                    InSight = BotSensing.InSight(world, position, turret.Position, turret.Entity),
                     Ground = true,
+                    Reach = turret.Reach,
                 });
             }
             return contacts;

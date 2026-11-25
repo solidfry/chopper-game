@@ -14,6 +14,7 @@ namespace Chopper.Simulation.Match
         Assist = 2,
         Repair = 3,
         MissileEvaded = 4,
+        TurretDown = 5,
     }
 
     /// <summary>One XP award during the match, for one player.</summary>
@@ -49,7 +50,8 @@ namespace Chopper.Simulation.Match
     }
 
     /// <summary>
-    /// Turns gameplay events (<see cref="MatchLogEntry"/>) into XP awards: kills, assists, repairs and evaded missiles.
+    /// Turns gameplay events (<see cref="MatchLogEntry"/>) into XP awards: kills, assists, repairs, evaded missiles and
+    /// destroyed turrets.
     /// Pure, so edit-mode tests can run it (XpAwardsTests). <see cref="MatchStatsSystem"/> calls it after the stats
     /// rules and keeps the damage shares between frames.
     /// </summary>
@@ -73,6 +75,11 @@ namespace Chopper.Simulation.Match
                     var repairXp = (int)math.round(entry.Amount * rates.PerRepair);
                     if (repairXp > 0)
                         awards.Add(new XpAward { Player = entry.Actor, Reason = XpReason.Repair, Amount = repairXp });
+                    break;
+
+                case MatchLogKind.TurretDown:
+                    if (entry.Actor != 0 && rates.PerTurret > 0)
+                        awards.Add(new XpAward { Player = entry.Actor, Reason = XpReason.TurretDown, Amount = rates.PerTurret });
                     break;
 
                 case MatchLogKind.MissileDecoyed:
@@ -167,6 +174,10 @@ namespace Chopper.Simulation.Match
                 case XpReason.MissileEvaded:
                     stats.Evades++;
                     stats.EvadeXp += award.Amount;
+                    break;
+                case XpReason.TurretDown:
+                    stats.Turrets++;
+                    stats.TurretXp += award.Amount;
                     break;
             }
         }

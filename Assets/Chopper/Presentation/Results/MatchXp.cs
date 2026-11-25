@@ -52,6 +52,7 @@ namespace Chopper.Presentation.Results
             // Counted live on the server (the in-match XP popups), so these add up to what the player saw.
             if (stats.AssistXp > 0) lines.Add(new XpLine($"ASSISTS x{stats.Assists}", stats.AssistXp));
             if (stats.EvadeXp > 0) lines.Add(new XpLine($"EVADED x{stats.Evades}", stats.EvadeXp));
+            if (stats.TurretXp > 0) lines.Add(new XpLine($"TURRETS x{stats.Turrets}", stats.TurretXp));
             if (stats.RepairXp > 0) lines.Add(new XpLine($"REPAIRS {stats.Repaired:0}", stats.RepairXp));
             var awardXp = 0;
             foreach (var award in awards) awardXp += award.Xp;

@@ -76,6 +76,7 @@ namespace Chopper.Simulation.Bots
                     Position = pose.ValueRO.Position + math.mul(pose.ValueRO.Rotation, new float3(0f, 2f, 0f)),
                     Health01 = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f,
                     Team = config.ValueRO.Team,
+                    Reach = config.ValueRO.Gun.Range,
                 });
             }
             frame.Turrets = turrets.AsArray();

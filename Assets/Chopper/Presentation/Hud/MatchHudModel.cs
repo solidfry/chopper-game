@@ -91,6 +91,9 @@ namespace Chopper.Presentation.Hud
         private Callout _objectiveStatus = Callout.Empty;
         private Callout _objectiveFlash = Callout.Empty;
         private float _flashLeft;
+        /// <summary>The objective line on screen now, and how long it has shown (<see cref="ObjectiveShowSeconds"/>).</summary>
+        private string _shownLine = "";
+        private float _shownFor;
         private string _objectiveText = "";
         private string _nukeTimerText = "";
         private CalloutTone _nukeTimerTone;
@@ -206,7 +209,13 @@ namespace Chopper.Presentation.Hud
         /// <summary>Seconds a nuke change flash (<see cref="FlashObjective"/>) replaces the standing line.</summary>
         public const float ObjectiveFlashSeconds = 2.5f;
 
-        /// <summary>Capture the Nuke centre line under the reticle (<see cref="NukeCallout"/>). Empty = hidden.</summary>
+        /// <summary>
+        /// Each different objective line shows this long, then hides until the line changes (owner, 25 Nov: "only show
+        /// for 20 seconds each different prompt").
+        /// </summary>
+        public const float ObjectiveShowSeconds = 20f;
+
+        /// <summary>Capture the Nuke line at the top, under the nuke timer (<see cref="NukeCallout"/>). Empty = hidden.</summary>
         [CreateProperty]
         public string ObjectiveText
         {
@@ -250,8 +259,15 @@ namespace Chopper.Presentation.Hud
         private void RefreshObjective()
         {
             var line = _flashLeft > 0f ? _objectiveFlash : _objectiveStatus;
-            ObjectiveText = line.Text ?? "";
-            ObjectiveProgress = _flashLeft > 0f ? -1f : line.Progress;
+            var text = line.Text ?? "";
+            if (text != _shownLine)
+            {
+                _shownLine = text;
+                _shownFor = 0f;
+            }
+            var expired = _shownFor >= ObjectiveShowSeconds;
+            ObjectiveText = expired ? "" : text;
+            ObjectiveProgress = _flashLeft > 0f || expired ? -1f : line.Progress;
             ObjectiveTone = line.Tone;
         }
 
@@ -382,6 +398,7 @@ namespace Chopper.Presentation.Hud
                 XpReason.Kill => ("ENEMY DOWN", "KILL", 4),
                 XpReason.BotKill => ("BOT DOWN", "BOT KILL", 3),
                 XpReason.Assist => ("ASSIST", "ASSIST", 2),
+                XpReason.TurretDown => ("TURRET DOWN", "TURRET", 2),
                 XpReason.MissileEvaded => ("EVADED", "EVADED", 1),
                 _ => ("REPAIRED", "REPAIR", 0),
             };
@@ -521,6 +538,11 @@ namespace Chopper.Presentation.Hud
             {
                 _flashLeft = MathF.Max(0f, _flashLeft - deltaTime);
                 if (_flashLeft <= 0f) RefreshObjective();
+            }
+            if (_shownLine.Length > 0 && _shownFor < ObjectiveShowSeconds)
+            {
+                _shownFor += deltaTime;
+                if (_shownFor >= ObjectiveShowSeconds) RefreshObjective();
             }
             if (_respawnLeft > 0f)
             {

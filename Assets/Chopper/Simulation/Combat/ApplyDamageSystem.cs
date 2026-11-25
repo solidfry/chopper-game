@@ -48,6 +48,7 @@ namespace Chopper.Simulation.Combat
         private ComponentLookup<AbilityConfig> _abilityConfigLookup;
         private ComponentLookup<AbilityState> _abilityLookup;
         private ComponentLookup<DeathBlow> _deathBlowLookup;
+        private ComponentLookup<TurretConfig> _turretLookup;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -65,6 +66,7 @@ namespace Chopper.Simulation.Combat
             _abilityConfigLookup = state.GetComponentLookup<AbilityConfig>(isReadOnly: true);
             _abilityLookup = state.GetComponentLookup<AbilityState>();
             _deathBlowLookup = state.GetComponentLookup<DeathBlow>();
+            _turretLookup = state.GetComponentLookup<TurretConfig>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -78,6 +80,7 @@ namespace Chopper.Simulation.Combat
             _ownerLookup.Update(ref state);
             _networkIdLookup.Update(ref state);
             _lastAttackerLookup.Update(ref state);
+            _turretLookup.Update(ref state);
             _transformLookup.Update(ref state);
             _ghostLookup.Update(ref state);
             _repairLookup.Update(ref state);
@@ -156,6 +159,9 @@ namespace Chopper.Simulation.Combat
 
                     if (hasLog && hit.Amount > 0f)
                         log.Add(LogEntry(MatchLogKind.Hit, now, attacker, victim, hit, health.ValueRO.Current, killed));
+                    // A turret destroyed: XP for the shooter (XpAwards, owner 25 Nov).
+                    if (hasLog && killed && attacker != 0 && _turretLookup.HasComponent(victim))
+                        log.Add(LogEntry(MatchLogKind.TurretDown, now, attacker, victim, hit, 0f, true));
 
                     if (killed && _ownerLookup.TryGetComponent(victim, out var victimOwner))
                     {

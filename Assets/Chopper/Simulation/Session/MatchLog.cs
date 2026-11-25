@@ -24,6 +24,8 @@ namespace Chopper.Simulation.Session
         Ability = 7,
         /// <summary>A rocket, bomb or air mine aimed at the target missed it (<see cref="Combat.RocketEvade"/>).</summary>
         RocketEvaded = 8,
+        /// <summary>A hit destroyed a turret; <see cref="MatchLogEntry.Actor"/> is the shooter (Target 0: not a player).</summary>
+        TurretDown = 9,
     }
 
     public enum MissileOutcome : byte

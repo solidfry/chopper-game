@@ -320,6 +320,14 @@ namespace Chopper.Simulation.Session
                         if (_alive.TryGetValue(entry.Target, out var since)) Field("life", entry.Time - since);
                         End();
                         break;
+                    case MatchLogKind.TurretDown:
+                        Begin(entry.Time, "turret_down");
+                        Field("id", entry.Actor);
+                        Field("weapon", entry.Weapon.ToString());
+                        Field("dist", entry.Distance);
+                        Position("tpos", entry.TargetPosition);
+                        End();
+                        break;
                     case MatchLogKind.Flare:
                         Begin(entry.Time, "flare");
                         Field("id", entry.Actor);

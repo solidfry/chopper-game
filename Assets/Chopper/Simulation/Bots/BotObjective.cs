@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -32,6 +33,8 @@ namespace Chopper.Simulation.Bots
         public float Health01;
         /// <summary><see cref="Combat.TurretConfig.Team"/> (0 = shoots everyone).</summary>
         public byte Team;
+        /// <summary>Its gun range, metres.</summary>
+        public float Reach;
     }
 
     /// <summary>
@@ -59,13 +62,17 @@ namespace Chopper.Simulation.Bots
         /// </summary>
         public const float TurretScorePenalty = 150f;
         /// <summary>
-        /// Group assault (owner, 20 Nov): with live turrets on the pad, a bot waits this far from the pad (on its home side,
-        /// outside turret range) until a team mate is within <see cref="GroupRadius"/>, then both go in.
+        /// With turrets in view, an enemy chopper further than <see cref="FocusRange"/> scores this much lower, so turrets
+        /// win over far enemies ("turrets or nearby enemies"). Played 25 Nov: both teams sat at their siege points and
+        /// picked each other at 350 m (too far to reach from there) while the last turret stood.
+        /// </summary>
+        public const float FarChopperPenalty = 400f;
+        /// <summary>
+        /// Siege point distance from the nuke, metres: on the bot's home side, outside the pad turrets' reach (260 m gun
+        /// + 44 m ring). While turrets cover the nuke, bots hold here and shoot them from stand-off range
+        /// (<see cref="BotBrain.StrafeRange"/>); team mates meet here, so they go in together (owner, 20 Nov: group assault).
         /// </summary>
         public const float StagingDistance = 330f;
-        public const float GroupRadius = 90f;
-        /// <summary>A bot already this close to the pad keeps going (no turning back to wait).</summary>
-        public const float CommittedDistance = 200f;
         /// <summary>Escorts fly this far above the carrier.</summary>
         public const float EscortHeight = 15f;
 
@@ -80,17 +87,30 @@ namespace Chopper.Simulation.Bots
         }
 
         /// <summary>
-        /// Group assault: true (and the staging point) when the bot should hold for a team mate before the pad.
-        /// <paramref name="mateNear"/>: a live team mate within <see cref="GroupRadius"/>; <paramref name="hasMates"/>: any live team mate.
+        /// True when a live enemy turret reaches the nuke (its gun range from the nuke): hovering there to hook is death.
+        /// Played 25 Nov: bots that went in with the turrets up died in 3-5 s, 75-150 m from them.
         /// </summary>
-        public static bool Stage(in BotObjectiveInfo info, byte team, float3 position, bool turretsUp, bool hasMates, bool mateNear,
-            out float3 staging)
+        public static bool TurretsCover(in BotObjectiveInfo info, in NativeArray<BotTurretInfo> turrets, byte team)
+        {
+            for (var i = 0; i < turrets.Length; i++)
+            {
+                var turret = turrets[i];
+                if (!Combat.TurretRules.IsEnemy(turret.Team, team)) continue;
+                if (math.distance(turret.Position.xz, info.NukePosition.xz) < turret.Reach) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Siege: true (and the siege point) while turrets cover the nuke. The bot holds there, out of their reach, and
+        /// shoots them; once none covers the nuke it goes in to hook.
+        /// </summary>
+        public static bool Stage(in BotObjectiveInfo info, byte team, bool turretsCover, out float3 staging)
         {
             var home = team == 1 ? info.Base1 : info.Base2;
             var toHome = math.normalizesafe(new float3(home.x - info.NukePosition.x, 0f, home.z - info.NukePosition.z));
             staging = info.NukePosition + toHome * StagingDistance + new float3(0f, BaseHeight, 0f);
-            if (!turretsUp || !hasMates || mateNear) return false;
-            return math.distance(position.xz, info.NukePosition.xz) > CommittedDistance;
+            return turretsCover;
         }
 
         public static Kind Choose(in BotObjectiveInfo info, Entity self, byte team, out float3 goal, out float arriveRadius)

@@ -52,6 +52,9 @@ namespace Chopper.Simulation.Match
         public int AssistXp;
         public int EvadeXp;
         public int RepairXp;
+        /// <summary>Turrets this player destroyed, and the XP for them (popups).</summary>
+        public int Turrets;
+        public int TurretXp;
 
         /// <summary>Hits per shot, 0..1 (rockets can hit more than one target).</summary>
         public float Accuracy => Shots > 0 ? math.saturate((float)Hits / Shots) : 0f;
@@ -180,6 +183,8 @@ namespace Chopper.Simulation.Match
         public int AssistXp;
         public int EvadeXp;
         public int RepairXp;
+        public int Turrets;
+        public int TurretXp;
 
         public static MatchStatsRpc From(int networkId, in PlayerMatchStats s) => new()
         {
@@ -208,6 +213,8 @@ namespace Chopper.Simulation.Match
             AssistXp = s.AssistXp,
             EvadeXp = s.EvadeXp,
             RepairXp = s.RepairXp,
+            Turrets = s.Turrets,
+            TurretXp = s.TurretXp,
         };
 
         public PlayerMatchStats ToStats() => new()
@@ -236,6 +243,8 @@ namespace Chopper.Simulation.Match
             AssistXp = AssistXp,
             EvadeXp = EvadeXp,
             RepairXp = RepairXp,
+            Turrets = Turrets,
+            TurretXp = TurretXp,
         };
     }
 }
