@@ -134,6 +134,9 @@ namespace Chopper.Simulation.Combat
                 ref var selected = ref selection.ValueRW.Selected;
                 if (input.ValueRO.CyclePylon.IsSet)
                     selected = (byte)((selected + 1) % weapons.Length);
+                // Keys 1-5: a slot this loadout does not have changes nothing.
+                var picked = input.ValueRO.SelectPylon;
+                if (picked > 0 && picked <= weapons.Length) selected = (byte)(picked - 1);
                 if (selected >= weapons.Length) selected = 0;
 
                 if (!input.ValueRO.FireSecondary || selected >= cooldowns.Length || cooldowns[selected].CooldownRemaining > 0f) continue;

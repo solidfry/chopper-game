@@ -21,6 +21,7 @@ namespace Chopper.Presentation.Hud
     {
         // The selected pylon's name as text, made again only when the name changes (no string per frame).
         private FixedString32Bytes _pylonName;
+        private byte _pylonSlot = byte.MaxValue;
         private string _pylonText = "";
 
         protected override void OnCreate()
@@ -54,6 +55,7 @@ namespace Chopper.Presentation.Hud
             var pylonRounds = 0;
             var pylonMagazine = 0;
             var pylonReload = 1f;
+            var reticle = ReticleKind.Gun;
             if (SystemAPI.HasBuffer<PylonWeapon>(self))
             {
                 var weapons = SystemAPI.GetBuffer<PylonWeapon>(self);
@@ -65,11 +67,14 @@ namespace Chopper.Presentation.Hud
                     var pylonState = pylonStates[selection.Selected];
                     pylonRounds = Magazine.RoundsLeft(pylonState.RoundsUsed, weapon.MagazineSize);
                     pylonReload = Magazine.ReloadProgress(pylonState.RoundsUsed, pylonState.ReloadRemaining, weapon.ReloadSeconds);
-                    if (weapon.Name != _pylonName)
+                    // "2 HOMING MISSILES": the number is the key that picks it (1-5).
+                    if (weapon.Name != _pylonName || selection.Selected != _pylonSlot)
                     {
                         _pylonName = weapon.Name;
-                        _pylonText = weapon.Name.ToString();
+                        _pylonSlot = selection.Selected;
+                        _pylonText = weapons.Length > 1 ? $"{selection.Selected + 1} {weapon.Name}" : weapon.Name.ToString();
                     }
+                    reticle = Reticles.Of(weapon);
                     pylonName = _pylonText;
                     needsLock = weapon.Behaviour == PylonBehaviour.Guided && weapon.RequiresLock;
                 }
@@ -109,6 +114,7 @@ namespace Chopper.Presentation.Hud
             if (hasTarget && targetLock.OnFlares && SystemAPI.HasComponent<CountermeasureState>(targetLock.Target))
                 lockPoint = FlareFlight.Position(SystemAPI.GetComponent<CountermeasureState>(targetLock.Target));
             var viewport = hasTarget ? camera.WorldToViewportPoint(lockPoint) : Vector3.back;
+            model.SetReticle(reticle);
             model.UpdateTargeting(hasTarget, viewport, targetLock.Progress, targetLock.Locked, pylonName, needsLock, flaresReady);
         }
 

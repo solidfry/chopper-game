@@ -41,7 +41,7 @@ namespace Chopper.Presentation.Hud
         /// <summary>The key hint, for the device in use (<see cref="SetPromptKeys"/>).</summary>
         public string RepairHint => $"HOLD {_repairKey}  REPAIR";
         /// <summary>How long a hit marker shows, seconds.</summary>
-        public const float HitMarkerDuration = 0.15f;
+        public const float HitMarkerDuration = 0.3f;
         public const float KillMarkerDuration = 0.6f;
         public const float DamageIndicatorDuration = 1f;
         /// <summary>Most the flight frame moves from the centre, in pixels (the old HUD used 24).</summary>
@@ -275,6 +275,12 @@ namespace Chopper.Presentation.Hud
             ZoomText = text ?? "";
             ZoomIsHint = hint;
         }
+
+        /// <summary>Centre reticle shape for the selected pylon weapon (<see cref="Reticles"/>).</summary>
+        public ReticleKind Reticle { get => _reticle; private set => Set(ref _reticle, value, nameof(Reticle)); }
+        private ReticleKind _reticle;
+
+        public void SetReticle(ReticleKind kind) => Reticle = kind;
 
         /// <summary>The selected pylon weapon cannot fire without a lock.</summary>
         [CreateProperty] public bool PylonNeedsLock { get => _pylonNeedsLock; private set => Set(ref _pylonNeedsLock, value, nameof(PylonNeedsLock)); }

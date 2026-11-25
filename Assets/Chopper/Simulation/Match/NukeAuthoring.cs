@@ -22,7 +22,8 @@ namespace Chopper.Simulation.Match
     {
         /// <summary>Without a winch (owner, 20 Nov: 5 to 10 s; the winch gives the 5).</summary>
         public const float BaseSeconds = 10f;
-        public const float BaseRange = 12f;
+        /// <summary>Owner, 25 Nov: pick-up zone 2x larger (was 12 m).</summary>
+        public const float BaseRange = 24f;
         /// <summary>Top speed while carrying without a winch (step 3 applies it).</summary>
         public const float BaseCarrySpeed = 0.75f;
 

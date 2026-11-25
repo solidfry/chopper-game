@@ -114,9 +114,9 @@ namespace Chopper.Editor.Setup
                 // The old game's gun: a close explosion pitched up (it was on the BulletRed prefab). Gritty and kinetic.
                 gun: Slot(library.GunFire, () => Cue("GunFire", Clips(Explosions + "11.wav"), effects, 0.82f, blend: 1f, voices: 6, pitch: 1.45f, muffle: CueMuffle.Outside)),
                 hit: Slot(library.HitConfirm, () => Cue("HitConfirm", Clips("Assets/Sound/UI/Switch/Switch (1).wav", "Assets/Sound/UI/Switch/Switch (2).wav",
-                    "Assets/Sound/UI/Switch/Switch (4).wav"), ui, 0.5f, blend: 0f, voices: 2, cooldown: 0.06f)),
+                    "Assets/Sound/UI/Switch/Switch (4).wav"), ui, 1f, blend: 0f, voices: 2, cooldown: 0.06f)), // owner 25 Nov: hits too hard to hear (was 0.5)
                 kill: Slot(library.KillConfirm, () => Cue("KillConfirm", Clips("Assets/Sound/UI/Switch/Switch (5).wav", "Assets/Sound/UI/Switch/Switch (6).wav"),
-                    ui, 0.9f, blend: 0f, voices: 1, pitch: 0.8f)),
+                    ui, 1f, blend: 0f, voices: 1, pitch: 0.8f)),
                 damage: Slot(library.DamageTaken, () => Cue("DamageTaken", Clips(Explosions + "01.wav", Explosions + "02.wav", Explosions + "03.wav"),
                     effects, 0.25f, blend: 0f, voices: 2, cooldown: 0.15f, pitch: 1.4f, muffle: CueMuffle.Cabin)),
                 alarm: Slot(library.OutOfBoundsAlarm, () => Cue("OutOfBoundsAlarm", Clips(SciFi + "/Loops/loop_energy.wav"), ui, 0.4f, blend: 0f, voices: 1)),

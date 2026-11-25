@@ -263,6 +263,56 @@ namespace Chopper.Simulation.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Weapon1"",
+                    ""type"": ""Button"",
+                    ""id"": ""dc2dd6f6-c9bc-49a1-8ae8-b7ab89227b1d"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Weapon2"",
+                    ""type"": ""Button"",
+                    ""id"": ""39defc55-be9b-428f-a8c5-3de3911efcfc"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Weapon3"",
+                    ""type"": ""Button"",
+                    ""id"": ""913c25f2-9892-440f-b939-fff55b496d6b"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Weapon4"",
+                    ""type"": ""Button"",
+                    ""id"": ""d7511854-b518-4ffc-beeb-7d13bb056f64"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Weapon5"",
+                    ""type"": ""Button"",
+                    ""id"": ""49f1d72a-5c63-4a9b-80bf-d7a2ba342af0"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -848,6 +898,61 @@ namespace Chopper.Simulation.Input
                     ""action"": ""Lights"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""493eb40c-0c95-4c8f-926e-e013f15a1012"",
+                    ""path"": ""<Keyboard>/1"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Weapon1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""96dfeaf9-b436-4779-9c7a-54421e7c19f2"",
+                    ""path"": ""<Keyboard>/2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Weapon2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""59172cf9-d0e3-4015-adb6-74f13cb2e4f4"",
+                    ""path"": ""<Keyboard>/3"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Weapon3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f2ed5be9-79fa-4c71-a496-aec79693d49b"",
+                    ""path"": ""<Keyboard>/4"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Weapon4"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4b7c2fa5-78a5-4189-ab4e-d816187504f3"",
+                    ""path"": ""<Keyboard>/5"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mouse and Keyboard"",
+                    ""action"": ""Weapon5"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -901,6 +1006,11 @@ namespace Chopper.Simulation.Input
             m_Flight_Zoom = m_Flight.FindAction("Zoom", throwIfNotFound: true);
             m_Flight_Vision = m_Flight.FindAction("Vision", throwIfNotFound: true);
             m_Flight_Lights = m_Flight.FindAction("Lights", throwIfNotFound: true);
+            m_Flight_Weapon1 = m_Flight.FindAction("Weapon1", throwIfNotFound: true);
+            m_Flight_Weapon2 = m_Flight.FindAction("Weapon2", throwIfNotFound: true);
+            m_Flight_Weapon3 = m_Flight.FindAction("Weapon3", throwIfNotFound: true);
+            m_Flight_Weapon4 = m_Flight.FindAction("Weapon4", throwIfNotFound: true);
+            m_Flight_Weapon5 = m_Flight.FindAction("Weapon5", throwIfNotFound: true);
         }
 
         ~@PlayerControls()
@@ -998,6 +1108,11 @@ namespace Chopper.Simulation.Input
         private readonly InputAction m_Flight_Zoom;
         private readonly InputAction m_Flight_Vision;
         private readonly InputAction m_Flight_Lights;
+        private readonly InputAction m_Flight_Weapon1;
+        private readonly InputAction m_Flight_Weapon2;
+        private readonly InputAction m_Flight_Weapon3;
+        private readonly InputAction m_Flight_Weapon4;
+        private readonly InputAction m_Flight_Weapon5;
         /// <summary>
         /// Provides access to input actions defined in input action map "Flight".
         /// </summary>
@@ -1078,6 +1193,26 @@ namespace Chopper.Simulation.Input
             /// </summary>
             public InputAction @Lights => m_Wrapper.m_Flight_Lights;
             /// <summary>
+            /// Provides access to the underlying input action "Flight/Weapon1".
+            /// </summary>
+            public InputAction @Weapon1 => m_Wrapper.m_Flight_Weapon1;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/Weapon2".
+            /// </summary>
+            public InputAction @Weapon2 => m_Wrapper.m_Flight_Weapon2;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/Weapon3".
+            /// </summary>
+            public InputAction @Weapon3 => m_Wrapper.m_Flight_Weapon3;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/Weapon4".
+            /// </summary>
+            public InputAction @Weapon4 => m_Wrapper.m_Flight_Weapon4;
+            /// <summary>
+            /// Provides access to the underlying input action "Flight/Weapon5".
+            /// </summary>
+            public InputAction @Weapon5 => m_Wrapper.m_Flight_Weapon5;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Flight; }
@@ -1154,6 +1289,21 @@ namespace Chopper.Simulation.Input
                 @Lights.started += instance.OnLights;
                 @Lights.performed += instance.OnLights;
                 @Lights.canceled += instance.OnLights;
+                @Weapon1.started += instance.OnWeapon1;
+                @Weapon1.performed += instance.OnWeapon1;
+                @Weapon1.canceled += instance.OnWeapon1;
+                @Weapon2.started += instance.OnWeapon2;
+                @Weapon2.performed += instance.OnWeapon2;
+                @Weapon2.canceled += instance.OnWeapon2;
+                @Weapon3.started += instance.OnWeapon3;
+                @Weapon3.performed += instance.OnWeapon3;
+                @Weapon3.canceled += instance.OnWeapon3;
+                @Weapon4.started += instance.OnWeapon4;
+                @Weapon4.performed += instance.OnWeapon4;
+                @Weapon4.canceled += instance.OnWeapon4;
+                @Weapon5.started += instance.OnWeapon5;
+                @Weapon5.performed += instance.OnWeapon5;
+                @Weapon5.canceled += instance.OnWeapon5;
             }
 
             /// <summary>
@@ -1216,6 +1366,21 @@ namespace Chopper.Simulation.Input
                 @Lights.started -= instance.OnLights;
                 @Lights.performed -= instance.OnLights;
                 @Lights.canceled -= instance.OnLights;
+                @Weapon1.started -= instance.OnWeapon1;
+                @Weapon1.performed -= instance.OnWeapon1;
+                @Weapon1.canceled -= instance.OnWeapon1;
+                @Weapon2.started -= instance.OnWeapon2;
+                @Weapon2.performed -= instance.OnWeapon2;
+                @Weapon2.canceled -= instance.OnWeapon2;
+                @Weapon3.started -= instance.OnWeapon3;
+                @Weapon3.performed -= instance.OnWeapon3;
+                @Weapon3.canceled -= instance.OnWeapon3;
+                @Weapon4.started -= instance.OnWeapon4;
+                @Weapon4.performed -= instance.OnWeapon4;
+                @Weapon4.canceled -= instance.OnWeapon4;
+                @Weapon5.started -= instance.OnWeapon5;
+                @Weapon5.performed -= instance.OnWeapon5;
+                @Weapon5.canceled -= instance.OnWeapon5;
             }
 
             /// <summary>
@@ -1401,6 +1566,41 @@ namespace Chopper.Simulation.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnLights(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Weapon1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnWeapon1(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Weapon2" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnWeapon2(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Weapon3" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnWeapon3(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Weapon4" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnWeapon4(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Weapon5" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnWeapon5(InputAction.CallbackContext context);
         }
     }
 }

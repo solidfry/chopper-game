@@ -77,6 +77,13 @@ namespace Chopper.Simulation.Flight
             var fireSecondary = flight.Fire2.IsPressed();
             var countermeasure = flight.Fire3.WasPressedThisFrame();
             var cyclePylon = CyclePylonPressed(flight.CyclePylon);
+            // Keys 1-5 pick pylon weapon 1-5 (owner, 25 Nov).
+            byte selectPylon = flight.Weapon1.IsPressed() ? (byte)1
+                : flight.Weapon2.IsPressed() ? (byte)2
+                : flight.Weapon3.IsPressed() ? (byte)3
+                : flight.Weapon4.IsPressed() ? (byte)4
+                : flight.Weapon5.IsPressed() ? (byte)5
+                : (byte)0;
             var repair = flight.Repair.IsPressed();
             var ability = flight.Ability.WasPressedThisFrame();
             var lights = flight.Lights.WasPressedThisFrame();
@@ -107,6 +114,7 @@ namespace Chopper.Simulation.Flight
                     Fire = fire,
                     FireSecondary = fireSecondary,
                     Repair = repair,
+                    SelectPylon = selectPylon,
                 };
                 if (countermeasure)
                     input.ValueRW.Countermeasure.Set();

@@ -12,7 +12,7 @@ namespace Chopper.Presentation.Effects
     /// <summary>
     /// Client only. Capture the Nuke pick-up zone (owner, 20 Nov: "an area indicator for pick up ... each player should see
     /// their own pick up zone size"): a looping shell round the nuke while nobody holds it, its radius the local chopper's
-    /// own hook range (<see cref="NukeHookConfig.Range"/>: 12 m, the Heavy Winch 18 m), the same 3D distance the server
+    /// own hook range (<see cref="NukeHookConfig.Range"/>: 24 m, the Heavy Winch 36 m), the same 3D distance the server
     /// tests, so the ground cuts it to a dome. Dimmer while the local chopper is inside it (a bright shell seen from inside
     /// fills the view; the HUD line reads HOLD POSITION TO HOOK). A light beam on the nuke
     /// shows where it is from far away. Both are pooled prefabs from <see cref="CombatEffectsSettings"/> (picked in the

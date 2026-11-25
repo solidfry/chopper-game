@@ -120,7 +120,11 @@ namespace Chopper.Simulation.Combat
             return math.clamp(config.HealthPerPilot * pilots, config.MinHealth, config.MaxHealth);
         }
 
-        public static bool TickRespawn(ref TurretState state, bool dead, float respawnSeconds, float deltaTime)
+        /// <param name="clockRuns">
+        /// False while another turret of the group still stands: the down clock waits, so the whole group (the pad ring)
+        /// comes back together, <paramref name="respawnSeconds"/> after the last one fell (owner, 25 Nov).
+        /// </param>
+        public static bool TickRespawn(ref TurretState state, bool dead, float respawnSeconds, float deltaTime, bool clockRuns = true)
         {
             if (!dead) return false;
             if (!state.Down)
@@ -130,6 +134,7 @@ namespace Chopper.Simulation.Combat
                 state.Target = Entity.Null;
                 return false;
             }
+            if (!clockRuns) return false;
             state.RespawnRemaining -= deltaTime;
             if (state.RespawnRemaining > 0f) return false;
             state.Down = false;

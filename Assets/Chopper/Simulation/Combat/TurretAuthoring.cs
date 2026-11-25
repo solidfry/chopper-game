@@ -16,7 +16,7 @@ namespace Chopper.Simulation.Combat
         [SerializeField, Tooltip("Health with full teams (the cap).")] private float maxHealth = 120f;
         [SerializeField, Tooltip("Health per pilot in the bigger team (0 = always max).")] private float healthPerPilot = 30f;
         [SerializeField, Tooltip("Health floor (1 pilot a side).")] private float minHealth = 40f;
-        [SerializeField, Tooltip("Seconds a destroyed turret stays down.")] private float respawnSeconds = 120f;
+        [SerializeField, Tooltip("Seconds a destroyed turret stays down.")] private float respawnSeconds = 300f;
         [SerializeField, Tooltip("0 = neutral (shoots every chopper). 1.. = a team: shoots only other teams.")]
         private byte team;
 

@@ -22,6 +22,11 @@ namespace Chopper.Simulation.Flight
         public bool FireSecondary;
         /// <summary>Select the next pylon weapon.</summary>
         public InputEvent CyclePylon;
+        /// <summary>
+        /// Held: pick pylon weapon N (keys 1-5; 0 = none). Held, not an event, so a tick that runs between frames still
+        /// sees it; picking the same slot again changes nothing.
+        /// </summary>
+        public byte SelectPylon;
         /// <summary>Drop flares.</summary>
         public InputEvent Countermeasure;
         /// <summary>Held: field repair (R / gamepad X). Any hit stops it for a moment.</summary>

@@ -705,19 +705,72 @@
   background-color: var(--chopper-green);
 }
 
+/* Reticle per selected pylon weapon (ReticleKind; owner 25 Nov). No class = the gun ring above. */
+/* Lock-on missile: a wide cyan lock ring. */
+.hud-aim--missile {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  border-width: 2px;
+  border-color: var(--chopper-cyan);
+}
+.hud-aim--missile .hud-aim__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--chopper-cyan);
+}
+/* Rockets: a square. */
+.hud-aim--rocket {
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
+  border-color: var(--chopper-yellow);
+}
+.hud-aim--rocket .hud-aim__dot { background-color: var(--chopper-yellow); }
+/* Bombs: an open bracket under the dot (they fall). */
+.hud-aim--bomb {
+  width: 30px;
+  height: 22px;
+  border-radius: 0 0 6px 6px;
+  border-top-width: 0;
+  border-color: var(--chopper-pink);
+}
+.hud-aim--bomb .hud-aim__dot { background-color: var(--chopper-pink); }
+/* Air mines: a small thick box. */
+.hud-aim--mine {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  border-width: 3px;
+  border-color: var(--chopper-red);
+}
+.hud-aim--mine .hud-aim__dot { background-color: var(--chopper-red); }
+/* Repair drone: a bright green ring. */
+.hud-aim--drone {
+  border-width: 3px;
+  border-color: var(--chopper-green);
+}
+
 /* Hit marker: a diamond around the reticle, shown only on a server hit confirm */
 .hud-aim__hit {
   position: absolute;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   rotate: 45deg;
-  border-width: 2px;
-  border-color: var(--chopper-text);
+  border-width: 3px;
+  border-color: #FFFFFF;
   opacity: 0;
+  scale: 1.5 1.5;
+  /* Owner, 25 Nov: hit markers too hard to see. Bright, thicker, and it snaps in from bigger. */
+  transition-property: scale, opacity;
+  transition-duration: 0.1s, 0.15s;
 }
 
 .hud-aim--hit .hud-aim__hit {
   opacity: 1;
+  scale: 1 1;
+  transition-duration: 0.06s, 0s;
 }
 
 .hud-aim--kill .hud-aim__hit {

@@ -71,6 +71,27 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void Respawn_ClockWaitsUntilTheLastTurretOfTheGroupFalls()
+        {
+            var first = new TurretState();
+            TurretRules.TickRespawn(ref first, true, 300f, 0.5f, clockRuns: false);
+            for (var t = 0f; t < 400f; t += 0.5f)
+                Assert.That(TurretRules.TickRespawn(ref first, true, 300f, 0.5f, clockRuns: false), Is.False, "Others still stand.");
+            Assert.That(first.RespawnRemaining, Is.EqualTo(300f));
+
+            // The last one falls: both clocks run from 300 s and come back on the same tick.
+            var last = new TurretState();
+            TurretRules.TickRespawn(ref last, true, 300f, 0.5f, clockRuns: true);
+            bool backFirst = false, backLast = false;
+            for (var t = 0f; t < 301f && !backFirst; t += 0.5f)
+            {
+                backFirst = TurretRules.TickRespawn(ref first, true, 300f, 0.5f);
+                backLast = TurretRules.TickRespawn(ref last, true, 300f, 0.5f);
+            }
+            Assert.That(backFirst && backLast, Is.True);
+        }
+
+        [Test]
         public void HealthFor_ScalesWithTheBiggerTeam_WithinFloorAndCap()
         {
             var config = new TurretConfig { HealthPerPilot = 60f, MinHealth = 80f, MaxHealth = 240f };

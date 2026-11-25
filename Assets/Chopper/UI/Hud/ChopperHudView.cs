@@ -258,6 +258,7 @@ namespace Chopper.UI.Hud
             RefreshOpacity();
             RefreshClasses();
             RefreshAim();
+            RefreshReticle();
             RefreshDamageDirection();
             RefreshSway();
             RefreshLock();
@@ -337,6 +338,17 @@ namespace Chopper.UI.Hud
             label.SetBinding("text", binding);
         }
 
+        /// <summary>One reticle shape class on the aim element for the selected weapon type (<see cref="Reticles"/>).</summary>
+        private void RefreshReticle()
+        {
+            if (_aim == null) return;
+            for (var kind = ReticleKind.Gun; kind <= ReticleKind.Drone; kind++)
+            {
+                var name = Reticles.ClassOf(kind);
+                if (name.Length > 0) _aim.EnableInClassList(name, kind == _model.Reticle);
+            }
+        }
+
         private void OnModelChanged(object sender, BindablePropertyChangedEventArgs args)
         {
             // Also when the panel dropped the tree (rebuild) before the reload callback rebinds: no styles on dead elements.
@@ -347,6 +359,8 @@ namespace Chopper.UI.Hud
                 _zoom?.EnableInClassList("hud-zoom--hint", _model.ZoomIsHint);
             else if (args.propertyName == nameof(ChopperHudModel.AimViewport))
                 RefreshAim();
+            else if (args.propertyName == nameof(ChopperHudModel.Reticle))
+                RefreshReticle();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
                 RefreshSway();
             else if (args.propertyName == nameof(ChopperHudModel.LockViewport) ||

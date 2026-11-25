@@ -44,7 +44,7 @@ namespace Chopper.Simulation.Bots
     /// </summary>
     public static class BotObjective
     {
-        /// <summary>Hover this high over a free nuke: inside the base hook range (12 m), clear of the ground.</summary>
+        /// <summary>Hover this high over a free nuke: inside the base hook range (24 m), clear of the ground.</summary>
         public const float HookHoverHeight = 8f;
         /// <summary>Arrive radius over the nuke: close enough to stay in hook range.</summary>
         public const float HookArriveRadius = 3f;

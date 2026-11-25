@@ -70,6 +70,13 @@ namespace Chopper.Simulation.Combat
             }
             var pilots = team1 + team2 > 0 ? math.max(team1, team2) : players;
 
+            // A group = the turrets of one team (the neutral pad ring is team 0). Its down clocks run only once all of
+            // it is down (TurretRules.TickRespawn).
+            var standing = new FixedList32Bytes<bool>();
+            for (var i = 0; i <= Match.TeamRules.MaxTeams; i++) standing.Add(false);
+            foreach (var (config, health) in SystemAPI.Query<RefRO<TurretConfig>, RefRO<Health>>())
+                if (!health.ValueRO.IsDead && config.ValueRO.Team < standing.Length) standing[config.ValueRO.Team] = true;
+
             foreach (var (config, turret, health, pose, entity) in
                      SystemAPI.Query<RefRO<TurretConfig>, RefRW<TurretState>, RefRW<Health>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
@@ -86,7 +93,8 @@ namespace Chopper.Simulation.Combat
                     if (!health.ValueRO.IsDead) health.ValueRW.Current = math.max(share * max, 1f);
                 }
 
-                if (TurretRules.TickRespawn(ref s, health.ValueRO.IsDead, config.ValueRO.RespawnSeconds, deltaTime))
+                var groupDown = config.ValueRO.Team >= standing.Length || !standing[config.ValueRO.Team];
+                if (TurretRules.TickRespawn(ref s, health.ValueRO.IsDead, config.ValueRO.RespawnSeconds, deltaTime, groupDown))
                     health.ValueRW.Current = health.ValueRO.Max;
                 if (s.Down) continue;
 
