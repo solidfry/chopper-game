@@ -207,18 +207,25 @@ namespace Chopper.Tests
         }
 
         [Test]
-        public void BaseSpawn_GridFacesThePad_SlotsAreSpacedAndFreeSlotSkipsTaken()
+        public void BaseSpawn_BaysFacePad_AwayFromTheDock_SpacedAndFreeSlotSkipsTaken()
         {
             var home = new Unity.Mathematics.float3(-350, 0, 150);
             var towardsPad = new Unity.Mathematics.float3(350, 0, -530);
             NukeBaseSpawn.Slot(home, towardsPad, 0, out var a, out var rotation);
             NukeBaseSpawn.Slot(home, towardsPad, 1, out var b, out _);
-            NukeBaseSpawn.Slot(home, towardsPad, 3, out var backRow, out _);
-            Assert.That(Unity.Mathematics.math.distance(a, b), Is.EqualTo(NukeBaseSpawn.Spacing).Within(0.01f));
             Assert.That(a.y, Is.EqualTo(NukeBaseSpawn.Height));
             var forward = Unity.Mathematics.math.mul(rotation, new Unity.Mathematics.float3(0, 0, 1));
             Assert.That(Unity.Mathematics.math.dot(forward, Unity.Mathematics.math.normalize(towardsPad)), Is.GreaterThan(0.99f), "Faces the pad.");
-            Assert.That(Unity.Mathematics.math.dot(backRow - a, forward), Is.LessThan(0f), "The second row is behind.");
+            for (var i = 0; i < NukeBaseSpawn.MaxSlots; i++)
+            {
+                NukeBaseSpawn.Slot(home, towardsPad, i, out var p, out _);
+                Assert.That(Unity.Mathematics.math.distance(p.xz, home.xz), Is.GreaterThan(40f), "Not on the dock.");
+                for (var k = 0; k < i; k++)
+                {
+                    NukeBaseSpawn.Slot(home, towardsPad, k, out var q, out _);
+                    Assert.That(Unity.Mathematics.math.distance(p, q), Is.GreaterThanOrEqualTo(NukeBaseSpawn.Spacing - 0.01f));
+                }
+            }
 
             var occupied = new NativeArray<Unity.Mathematics.float3>(2, Allocator.Temp);
             occupied[0] = a;

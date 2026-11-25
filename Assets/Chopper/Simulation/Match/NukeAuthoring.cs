@@ -112,34 +112,42 @@ namespace Chopper.Simulation.Match
 
     /// <summary>
     /// Capture the Nuke spawns (owner, 20 Nov: "located at their base and all grouped together ... all take off
-    /// together"): a grid on the ground at the team's base, <see cref="Columns"/> wide, facing the nuke pad.
+    /// together"; 25 Nov: "spawn in the base, but not right on the nuke ... a facility with landing bays"): landing bays
+    /// in two wings left and right of the dock (the base centre), <see cref="WingOffset"/> out, each wing
+    /// <see cref="WingColumns"/> wide; everyone faces the nuke pad.
     /// </summary>
     public static class NukeBaseSpawn
     {
-        public const int Columns = 3;
         public const int MaxSlots = 12;
-        /// <summary>Metres between slots: rotors (up to about 14 m across on the Lifter) must not touch.</summary>
-        public const float Spacing = 16f;
-        /// <summary>Spawn this far above the base (on the gear, a short settle).</summary>
+        public const int WingColumns = 2;
+        /// <summary>Metres between bays in a wing: rotors (up to about 14 m across on the Lifter) stay well apart.</summary>
+        public const float Spacing = 24f;
+        /// <summary>Metres from the dock to the inner bays of each wing (clear of the dock and its arms).</summary>
+        public const float WingOffset = 48f;
+        /// <summary>Spawn this far above the bay (on the gear, a short settle).</summary>
         public const float Height = 3f;
         /// <summary>Seconds from a new round to the take-off (everyone spawns at once).</summary>
         public const float RoundStartDelay = 3f;
 
-        /// <summary>Slot <paramref name="index"/>: rows of <see cref="Columns"/> centred on the base, back rows away from the pad.</summary>
+        /// <summary>Bay <paramref name="index"/>: even = left wing, odd = right wing; rows go from the pad side back.</summary>
         public static void Slot(float3 basePosition, float3 towardsPad, int index, out float3 position, out quaternion rotation)
         {
             var forward = math.normalizesafe(new float3(towardsPad.x, 0f, towardsPad.z), new float3(0f, 0f, 1f));
             var right = math.cross(math.up(), forward);
-            var column = index % Columns - (Columns - 1) * 0.5f;
-            var row = index / Columns;
-            position = basePosition + right * (column * Spacing) - forward * (row * Spacing) + new float3(0f, Height, 0f);
+            var side = index % 2 == 0 ? -1f : 1f;
+            var k = index / 2;
+            var column = k % WingColumns;
+            var row = k / WingColumns;
+            var rows = (MaxSlots / 2 + WingColumns - 1) / WingColumns;
+            position = basePosition + right * (side * (WingOffset + column * Spacing)) +
+                       forward * (((rows - 1) * 0.5f - row) * Spacing) + new float3(0f, Height, 0f);
             rotation = quaternion.LookRotationSafe(forward, math.up());
         }
 
         /// <summary>The first slot with no chopper within half a spacing (or the last slot when all are taken).</summary>
         public static int FreeSlot(float3 basePosition, float3 towardsPad, NativeArray<float3> occupied)
         {
-            var clear = Spacing * 0.5f;
+            const float clear = 8f;
             for (var i = 0; i < MaxSlots; i++)
             {
                 Slot(basePosition, towardsPad, i, out var position, out _);

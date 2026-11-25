@@ -92,6 +92,16 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(2, 32), Tooltip("Points along the cable (more = smoother bend).")]
         private int nukeRopePoints = 12;
 
+        [Header("Capture the Nuke dock (NukeDockSystem)")]
+        [SerializeField, Tooltip("Robot arm turntable (kit Prop_DockArm_Base). Empty: an arm with no model.")]
+        private GameObject dockArmBase;
+        [SerializeField, Tooltip("Robot upper arm (kit Prop_DockArm_Upper).")]
+        private GameObject dockArmUpper;
+        [SerializeField, Tooltip("Robot forearm with the tool (kit Prop_DockArm_Fore).")]
+        private GameObject dockArmFore;
+        [SerializeField, Tooltip("Work drone (kit Prop_DockDrone).")]
+        private GameObject dockDrone;
+
         [Header("Capture the Nuke blast (NukeBlastSystem)")]
         [SerializeField, Tooltip("The blast prefab (Editor/Setup/NukeBlastAssets; menu Chopper > Tools > Rebuild Nuke Blast): " +
                                  "mushroom cap and stem, shock rings, dust puffs, burn mark, wind strokes, flash core, " +
@@ -322,6 +332,10 @@ namespace Chopper.Presentation.Effects
         public GameObject NukeBeacon => nukeBeacon;
         public Vector3 NukeBeaconScale => nukeBeaconScale;
         public Material NukeRopeMaterial => nukeRopeMaterial;
+        public GameObject DockArmBase => dockArmBase;
+        public GameObject DockArmUpper => dockArmUpper;
+        public GameObject DockArmFore => dockArmFore;
+        public GameObject DockDrone => dockDrone;
         public float NukeRopeWidth => nukeRopeWidth;
         public Vector3 NukeRopeWinch => nukeRopeWinch;
         public float NukeRopeSag => nukeRopeSag;
@@ -390,6 +404,7 @@ namespace Chopper.Presentation.Effects
             if (missile == null) problems.Add($"{name}: no missile prefab (rockets' visual is used).");
             if (flare == null) problems.Add($"{name}: no flare prefab, so flares are invisible.");
             if (nukeZone == null) problems.Add($"{name}: no nuke zone prefab, so Capture the Nuke shows no pick-up range.");
+            if (dockArmBase == null || dockDrone == null) problems.Add($"{name}: no dock arm or drone model, so the nuke dock has no robots.");
             if (nukeRopeMaterial == null) problems.Add($"{name}: no nuke rope material, so a carried nuke hangs with no cable.");
             if (downwashMaterial == null) problems.Add($"{name}: no downwash material, so low choppers blow up no dust.");
             if (damageSparkMaterial == null) problems.Add($"{name}: no damage spark material, so hits show no sparks and damaged choppers no fire.");
@@ -425,6 +440,15 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: fills an empty downwash material slot.</summary>
+        /// <summary>Editor only: fills the dock arm and drone models if empty.</summary>
+        public void FillDock(GameObject armBase, GameObject armUpper, GameObject armFore, GameObject drone)
+        {
+            if (dockArmBase == null) dockArmBase = armBase;
+            if (dockArmUpper == null) dockArmUpper = armUpper;
+            if (dockArmFore == null) dockArmFore = armFore;
+            if (dockDrone == null) dockDrone = drone;
+        }
+
         /// <summary>Editor only: fills the rope material if empty.</summary>
         public void FillNukeRope(Material material)
         {

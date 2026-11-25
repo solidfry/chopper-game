@@ -268,10 +268,23 @@ namespace Chopper.Editor.Setup
         /// The team base model (PartForge Prop_Base_Team1 / Team2: apron with the 12 spawn pads, tower, hangar, tanks,
         /// light masts) under each base, facing the pad, with mesh colliders so the buildings are solid. Kept if present.
         /// </summary>
+        /// <summary>Base zone radius of the facility, m (NukeBaseAuthoring default).</summary>
+        private const float NukeFacilityRadius = 120f;
+
         private static void EnsureBaseLooks(Scene scene, Vector3 padPosition)
         {
             foreach (var zone in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukeBaseAuthoring>(true)))
             {
+                // Upgrade (25 Nov): the 45 m apron became a 120 m facility with landing bays round a centre dock.
+                if (zone.Radius < NukeFacilityRadius)
+                {
+                    Undo.RecordObject(zone, "Grow nuke base");
+                    zone.Radius = NukeFacilityRadius;
+                    EditorUtility.SetDirty(zone);
+                    var old = zone.transform.Find("Look");
+                    if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+                    EditorSceneManager.MarkSceneDirty(scene);
+                }
                 if (zone.transform.Find("Look") != null) continue;
                 var modelPath = $"{KitAssets.KitsFolder}/Kit02/Models/Prop_Base_Team{zone.Team}.fbx";
                 // Mesh colliders bake from the mesh data: the model must stay readable.

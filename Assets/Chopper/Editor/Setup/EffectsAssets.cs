@@ -154,6 +154,8 @@ namespace Chopper.Editor.Setup
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
                 settings.FillNukeRope(EnsureRopeMaterial());
+            settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
+                settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
@@ -183,6 +185,10 @@ namespace Chopper.Editor.Setup
             AssetDatabase.SaveAssets();
             return settings;
         }
+
+        /// <summary>A Kit02 model (PartForge export), or null before the kit is exported.</summary>
+        private static GameObject Kit(string model) =>
+            AssetDatabase.LoadAssetAtPath<GameObject>($"{KitAssets.KitsFolder}/Kit02/Models/{model}.fbx");
 
         private const string RopeMaterialPath = "Assets/Chopper/Data/Effects/NukeRope.mat";
 

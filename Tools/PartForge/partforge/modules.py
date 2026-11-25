@@ -608,69 +608,155 @@ def nuke():
 
 
 def team_base(name, accent):
-    """Capture the Nuke team base (owner, 20 Nov: "the bases should look good"). Origin = the base centre on the
-    ground; +z faces the nuke pad. The apron holds the 3 x 4 spawn grid (NukeBaseSpawn: 16 m apart, row 0 at the
-    origin, back rows towards -z), each slot a marked pad with team lights; a control tower, a hangar, fuel tanks and
-    light masts frame it. accent: the team glow swatch."""
+    """Capture the Nuke team base as a facility (owner, 25 Nov: "the base needs to be much larger so helicopters spawn
+    in the base, but not right on the nuke ... a facility with landing bays and other elements"). Origin = the dock at
+    the base centre on the ground; +z faces the nuke pad. The dock: a raised round deck with a cradle (the nuke rests on
+    it, origin 1.4 m up) and four arm plinths (Prop_DockArm turns on them in Unity). Landing bays in two wings left and
+    right (NukeBaseSpawn: 48 m out, 24 m apart, 2 x 3 each); blast walls between dock and wings; control tower,
+    hangars, fuel tanks and light masts round the edge. accent: the team glow swatch."""
     b = Builder()
     con, dark, haz, steel, a = C("concrete"), C("hull_dark"), C("hazard"), C("steel"), C(accent)
-    spacing, cols, rows = 16.0, 3, 4
-    # Apron: one slab, the grid plus room around it; a darker taxi band in front (the side the team flies out).
-    width, front, back = 64.0, 14.0, -(rows - 1) * spacing - 14.0
-    depth = front - back
-    b.box((0, 0.15, (front + back) / 2), (width, 0.3, depth), con)
-    # Ground plinth under the whole site: the tower, hangar, tanks and masts stand on it (one connected model).
-    b.box((0, 0.08, (front + back - 27.0) / 2), (width + 26.0, 0.16, depth + 27.0), dark)
-    b.box((0, 0.31, front - 3.0), (width - 4.0, 0.02, 4.0), dark)
-    # Team edge lights round the apron, and chevrons pointing at the pad.
-    for x in (-width / 2 + 0.4, width / 2 - 0.4):
-        b.box((x, 0.36, (front + back) / 2), (0.25, 0.1, depth - 2.0), a)
-    for z in (front - 0.4, back + 0.4):
-        b.box((0, 0.36, z), (width - 2.0, 0.1, 0.25), a)
-    for i, x in enumerate((-12.0, 0.0, 12.0)):
-        for k in range(3):
-            z = front - 1.5 - k * 1.6
-            for side in (-1, 1):
-                b.box((x + side * 1.1, 0.33, z), (2.4, 0.03, 0.45), a, rotation=Matrix.Rotation(math.radians(side * 35), 3, 'Y'))
-    # Spawn pads: a dark disc, a hazard ring, a team light at four points.
-    for r in range(rows):
+    spacing, offset, cols, rows = 24.0, 48.0, 2, 3
+    # Ground: a dark plinth over the whole site, a concrete apron for each wing and a taxi cross through the dock.
+    b.box((0, 0.08, -6.0), (200.0, 0.16, 132.0), dark)
+    wing_x = offset + (cols - 1) * spacing / 2
+    for side in (-1, 1):
+        b.box((side * wing_x, 0.15, 0), (cols * spacing + 14.0, 0.3, rows * spacing + 14.0), con)
+        # Team edge lights round each wing apron.
+        for dz in (-1, 1):
+            b.box((side * wing_x, 0.36, dz * (rows * spacing + 13.0) / 2), (cols * spacing + 12.0, 0.1, 0.25), a)
+        for dx in (-1, 1):
+            b.box((side * wing_x + dx * (cols * spacing + 13.0) / 2, 0.36, 0), (0.25, 0.1, rows * spacing + 12.0), a)
+    b.box((0, 0.14, 0), (2 * offset - 20.0, 0.28, 18.0), con)
+    b.box((0, 0.14, 0), (18.0, 0.28, 110.0), con)
+    # Chevrons on the taxi lane in front of the dock, pointing at the pad.
+    for k in range(4):
+        z = 16.0 + k * 3.2
+        for side in (-1, 1):
+            b.box((side * 1.4, 0.31, z), (3.0, 0.03, 0.55), a, rotation=Matrix.Rotation(math.radians(side * 35), 3, 'Y'))
+
+    # Landing bays: a dark disc, a hazard ring, an H, a team light at four points.
+    for side in (-1, 1):
         for c in range(cols):
-            x, z = (c - (cols - 1) / 2) * spacing, -r * spacing
-            b.cylinder((x, 0.3, z), (x, 0.36, z), 6.2, haz, segments=24)
-            b.cylinder((x, 0.36, z), (x, 0.4, z), 5.6, dark, segments=24)
-            b.box((x - 1.4, 0.42, z), (0.5, 0.03, 3.6), haz)
-            b.box((x + 1.4, 0.42, z), (0.5, 0.03, 3.6), haz)
-            b.box((x, 0.42, z), (2.3, 0.03, 0.5), haz)
-            for ang in range(4):
-                dx, dz = [(0, 1), (1, 0), (0, -1), (-1, 0)][ang]
-                b.box((x + dx * 6.4, 0.36, z + dz * 6.4), (0.4, 0.12, 0.4), a)
-    # Control tower (left of the grid): shaft, glass cab, a team band, mast and beacon.
-    tx, tz = -width / 2 - 7.0, -spacing
-    b.box((tx, 7.5, tz), (6.0, 15.0, 6.0), con)
-    b.box((tx, 15.2, tz), (8.0, 0.4, 8.0), dark)
-    b.box((tx, 17.0, tz), (7.4, 3.2, 7.4), C("glass"))
-    b.box((tx, 18.8, tz), (8.2, 0.5, 8.2), dark)
-    b.box((tx, 14.2, tz), (6.1, 0.6, 6.1), a)
-    b.cylinder((tx, 18.9, tz), (tx, 25.0, tz), 0.15, steel, segments=6, cap_end=C("warning"))
-    # Hangar behind the grid: a long shed with a dark door and team strip.
-    hz = back - 9.0
-    b.box((0, 6.0, hz), (40.0, 12.0, 16.0), C("hull"))
-    b.box((0, 12.6, hz), (41.0, 1.2, 17.0), dark)
-    b.box((0, 4.5, hz + 8.05), (24.0, 9.0, 0.2), dark)
-    b.box((0, 9.1, hz + 8.05), (24.0, 0.4, 0.3), a)
-    # Fuel tanks (right of the grid) with hazard bands.
-    for i, z in enumerate((-4.0, -16.0, -28.0)):
-        fx = width / 2 + 7.0
-        b.cylinder((fx, 0.0, z), (fx, 7.0, z), 3.6, C("hull_light"), segments=20, cap_end=C("hull_light"))
-        b.cylinder((fx, 3.6, z), (fx, 4.4, z), 3.65, haz, segments=20)
-    # Light masts at the four apron corners, sodium lamps facing in.
-    for x in (-width / 2 - 1.5, width / 2 + 1.5):
-        for z in (front - 1.0, back - 1.5):
-            b.cylinder((x, 0.0, z), (x, 14.0, z), 0.25, steel, segments=8)
-            hx = x - math.copysign(0.6, x)
-            b.box((hx, 14.2, z), (1.6, 0.6, 1.0), dark)
-            b.box((hx, 13.85, z), (1.3, 0.1, 0.8), C("sodium"))
+            for r in range(rows):
+                x = side * (offset + c * spacing)
+                z = ((rows - 1) * 0.5 - r) * spacing
+                b.cylinder((x, 0.3, z), (x, 0.36, z), 8.6, haz, segments=28)
+                b.cylinder((x, 0.36, z), (x, 0.4, z), 8.0, dark, segments=28)
+                b.box((x - 1.8, 0.42, z), (0.6, 0.03, 4.6), haz)
+                b.box((x + 1.8, 0.42, z), (0.6, 0.03, 4.6), haz)
+                b.box((x, 0.42, z), (3.0, 0.03, 0.6), haz)
+                for dx, dz in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+                    b.box((x + dx * 8.9, 0.36, z + dz * 8.9), (0.5, 0.14, 0.5), a)
+
+    # Blast walls between the dock and each wing, with a gap on the taxi cross.
+    for side in (-1, 1):
+        for dz in (-1, 1):
+            b.box((side * 26.0, 2.0, dz * 24.0), (1.6, 4.0, 30.0), con)
+            b.box((side * 26.0, 4.1, dz * 24.0), (1.8, 0.25, 30.2), a)
+
+    # The dock: a raised round deck, a hazard ring, team lights, the cradle and four arm plinths.
+    b.cylinder((0, 0.0, 0), (0, 0.9, 0), 10.0, dark, segments=40, cap_end=con)
+    b.cylinder((0, 0.9, 0), (0, 0.96, 0), 10.05, haz, segments=40)
+    b.cylinder((0, 0.96, 0), (0, 1.0, 0), 4.2, a, segments=32)
+    b.cylinder((0, 1.0, 0), (0, 1.04, 0), 3.8, dark, segments=32)
+    for ang in range(8):
+        t = ang * math.pi / 4
+        b.box((math.sin(t) * 9.7, 1.0, math.cos(t) * 9.7), (0.5, 0.16, 0.5), a)
+    # Cradle: two saddles the nuke body sits in (the nuke lies along z, its body 0.55 m round, centre 0.65 m up).
+    for z in (-1.0, 1.0):
+        b.box((0, 1.25, z), (1.6, 0.5, 0.35), steel)
+        b.box((-0.75, 1.65, z), (0.25, 0.6, 0.35), steel)
+        b.box((0.75, 1.65, z), (0.25, 0.6, 0.35), steel)
+    b.box((0, 1.1, 0), (0.5, 0.2, 2.6), C("gunmetal"))
+    # Arm plinths at the four corners of the cradle (Prop_DockArm stands on each, 1.6 m up).
+    for x in (-4.5, 4.5):
+        for z in (-4.5, 4.5):
+            b.cylinder((x, 0.9, z), (x, 1.6, z), 0.9, C("gunmetal"), segments=16, cap_end=dark)
+            b.cylinder((x, 1.0, z), (x, 1.1, z), 0.95, a, segments=16)
+    # Drone racks behind the dock: two charging pads where the drones rest.
+    for x in (-6.0, 6.0):
+        b.box((x, 1.2, -8.2), (2.2, 0.6, 1.4), dark)
+        b.box((x, 1.52, -8.2), (1.8, 0.05, 1.0), a)
+
+    # Control tower behind the dock: shaft, glass cab, a team band, mast and beacon.
+    tz = -52.0
+    b.box((0, 9.0, tz), (8.0, 18.0, 8.0), con)
+    b.box((0, 18.2, tz), (10.0, 0.4, 10.0), dark)
+    b.box((0, 20.0, tz), (9.4, 3.2, 9.4), C("glass"))
+    b.box((0, 21.8, tz), (10.2, 0.5, 10.2), dark)
+    b.box((0, 17.2, tz), (8.1, 0.6, 8.1), a)
+    b.cylinder((0, 21.9, tz), (0, 29.0, tz), 0.18, steel, segments=6, cap_end=C("warning"))
+    # Hangars behind each wing: long sheds with a dark door facing the bays and a team strip.
+    for side in (-1, 1):
+        hx, hz = side * wing_x, -(rows * spacing) / 2 - 18.0
+        b.box((hx, 7.0, hz), (44.0, 14.0, 18.0), C("hull"))
+        b.box((hx, 14.6, hz), (45.0, 1.2, 19.0), dark)
+        b.box((hx, 5.5, hz + 9.05), (28.0, 11.0, 0.2), dark)
+        b.box((hx, 11.1, hz + 9.05), (28.0, 0.4, 0.3), a)
+    # Fuel tanks at the outer front corners with hazard bands.
+    for side in (-1, 1):
+        for i, z in enumerate((18.0, 32.0)):
+            fx = side * (offset + spacing + 22.0)
+            b.cylinder((fx, 0.0, z), (fx, 8.0, z), 4.0, C("hull_light"), segments=20, cap_end=C("hull_light"))
+            b.cylinder((fx, 4.0, z), (fx, 4.9, z), 4.05, haz, segments=20)
+    # Light masts round the site, sodium lamps facing in.
+    for x in (-96.0, -30.0, 30.0, 96.0):
+        for z in (46.0, -46.0):
+            b.cylinder((x, 0.0, z), (x, 16.0, z), 0.28, steel, segments=8)
+            b.box((x, 16.2, z), (1.6, 0.6, 1.6), dark)
+            b.box((x, 15.85, z), (1.3, 0.1, 1.3), C("sodium"))
     return Part(name, "module", b, slot="Prop")
+
+
+def dock_arm_base():
+    """Dock robot arm, part 1 (Unity turns it about y): a turntable on the plinth and the shoulder. Origin = plinth
+    top; the shoulder pivot is 1.1 m up."""
+    b = Builder()
+    g, d, h = C("gunmetal"), C("hull_dark"), C("hazard")
+    b.cylinder((0, 0, 0), (0, 0.35, 0), 0.75, d, segments=16, cap_end=g)
+    b.cylinder((0, 0.35, 0), (0, 0.45, 0), 0.7, h, segments=16)
+    b.box((0, 0.8, 0), (0.7, 0.8, 0.6), g)
+    b.cylinder((-0.45, 1.1, 0), (0.45, 1.1, 0), 0.32, d, segments=12)
+    return Part("Prop_DockArm_Base", "module", b, slot="Prop")
+
+
+def dock_arm_upper():
+    """Dock robot arm, part 2: the upper arm along +z, 2.4 m. Origin = the shoulder pivot (Unity tilts it about x);
+    the elbow pivot at z = 2.4."""
+    b = Builder()
+    g, d, h = C("gunmetal"), C("hull_dark"), C("hazard")
+    b.box((0, 0, 1.2), (0.45, 0.45, 2.3), C("hull_light"))
+    b.box((0, 0.24, 1.2), (0.3, 0.05, 1.6), h)
+    b.cylinder((0, 0.1, 0.2), (0, 0.1, 2.2), 0.08, d, segments=6)
+    b.cylinder((-0.35, 0, 2.4), (0.35, 0, 2.4), 0.26, d, segments=12)
+    return Part("Prop_DockArm_Upper", "module", b, slot="Prop")
+
+
+def dock_arm_fore():
+    """Dock robot arm, part 3: the forearm along +z, 2 m, with a tool head and a glowing tip (the welding light).
+    Origin = the elbow pivot."""
+    b = Builder()
+    g, d = C("gunmetal"), C("hull_dark")
+    b.box((0, 0, 1.0), (0.34, 0.34, 1.9), C("hull_light"))
+    b.cylinder((0, 0, 1.95), (0, 0, 2.25), 0.2, g, segments=10)
+    b.cylinder((0, 0, 2.25), (0, 0, 2.45), 0.1, d, segments=8, cap_end=C("neon_cyan"))
+    for side in (-1, 1):
+        b.box((side * 0.14, 0, 2.5), (0.05, 0.08, 0.25), g)
+    return Part("Prop_DockArm_Fore", "module", b, slot="Prop")
+
+
+def dock_drone():
+    """Dock work drone: a small quad with a tool and a team-free status light. Origin = its centre."""
+    b = Builder()
+    g, d, h = C("gunmetal"), C("hull_dark"), C("hazard")
+    b.box((0, 0, 0), (0.5, 0.18, 0.5), C("hull_light"))
+    b.box((0, 0.1, 0), (0.3, 0.05, 0.3), d)
+    for dx, dz in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+        b.box((dx * 0.32, 0.02, dz * 0.32), (0.32, 0.05, 0.06), d, rotation=Matrix.Rotation(math.radians(45 * dx * dz), 3, 'Y'))
+        b.cylinder((dx * 0.45, 0.02, dz * 0.45), (dx * 0.45, 0.08, dz * 0.45), 0.2, h, segments=12)
+    b.cylinder((0, -0.09, 0), (0, -0.3, 0), 0.04, g, segments=6, cap_end=C("neon_cyan"))
+    return Part("Prop_DockDrone", "module", b, slot="Prop")
 
 
 def all_modules():
@@ -696,4 +782,5 @@ def all_modules():
         engine("Engine_Turbine", [163], 1, "exhaust", 0.22),
         turret_base(), turret_head(), turret_guns(), nuke(),
         team_base("Prop_Base_Team1", "neon_cyan"), team_base("Prop_Base_Team2", "warning"),
+        dock_arm_base(), dock_arm_upper(), dock_arm_fore(), dock_drone(),
     ]
