@@ -213,6 +213,7 @@ namespace Chopper.Editor.Setup
             }
 
             EnsureNuke(scene, pad.transform.position);
+            ResiteSmallBases(scene, pad.transform.position);
             EnsureBases(scene, basePositions);
             EnsureBaseLooks(scene, pad.transform.position);
 
@@ -311,6 +312,41 @@ namespace Chopper.Editor.Setup
                 Undo.RegisterCreatedObjectUndo(look, "Add base look");
                 EditorSceneManager.MarkSceneDirty(scene);
             }
+        }
+
+        /// <summary>
+        /// Upgrade (25 Nov): bases placed for the old 45 m apron may not have room for the 120 m facility. On a map with
+        /// arena bounds, old bases are removed and new sites found round the same pad (EnsureBases then adds them).
+        /// The training range (no bounds) keeps its open-ground spots.
+        /// </summary>
+        private static void ResiteSmallBases(Scene scene, Vector3 padPosition)
+        {
+            var bases = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukeBaseAuthoring>(true)).ToArray();
+            if (bases.Length == 0 || bases.All(b => b.Radius >= NukeFacilityRadius)) return;
+            var bounds = UnityEngine.Object.FindAnyObjectByType<ArenaBoundsAuthoring>();
+            if (bounds == null) return;
+            NukeSiteFinder.SetLava(UnityEngine.Object.FindObjectsByType<Chopper.Simulation.Visuals.CityTrafficAuthoring>()
+                .SelectMany(t => t.Lava).Where(l => l?.points != null).Select(l => (l.points, l.width)));
+            // The old bases' own models must not block the search.
+            foreach (var b in bases) b.gameObject.SetActive(false);
+            var found = NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, out var sites, padPosition);
+            foreach (var b in bases) b.gameObject.SetActive(true);
+            if (!found)
+            {
+                Debug.LogWarning($"[Setup] {scene.name}: no room for the facility bases round the pad; old bases kept. Place them by hand.");
+                return;
+            }
+            var positions = new[] { sites.Base1, sites.Base2 };
+            foreach (var b in bases)
+            {
+                var i = Mathf.Clamp(b.Team - 1, 0, 1);
+                Undo.RecordObject(b.transform, "Move nuke base");
+                b.transform.position = positions[i];
+                var look = b.transform.Find("Look");
+                if (look != null) Undo.DestroyObjectImmediate(look.gameObject);
+            }
+            EditorSceneManager.MarkSceneDirty(scene);
+            Debug.Log($"[Setup] {scene.name}: facility bases at {sites.Base1} and {sites.Base2} (pad {padPosition}).");
         }
 
         private static void EnsureBases(Scene scene, Vector3[] positions)

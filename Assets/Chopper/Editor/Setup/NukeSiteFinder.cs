@@ -9,8 +9,9 @@ namespace Chopper.Editor.Setup
     /// </summary>
     internal static class NukeSiteFinder
     {
-        /// <summary>Clear, flat radius a base needs: the 3 x 4 spawn grid (16 m apart) and room for the base model.</summary>
-        public const float BaseRadius = 45f;
+        /// <summary>Clear, flat radius round a base's dock (the first test; <see cref="Footprint"/> then checks the
+        /// whole facility).</summary>
+        public const float BaseRadius = 70f;
         /// <summary>Clear radius the pad needs: its turret ring (2 x 22 m) and room to hover.</summary>
         public const float PadRadius = 55f;
         /// <summary>Base to pad, at least: turret range (260 m) + ring (44 m) + room to spawn and climb.</summary>
@@ -38,7 +39,7 @@ namespace Chopper.Editor.Setup
         /// The best sites inside the arena (centre, half size). False when no layout fits (then the caller keeps its
         /// defaults). Tries base axes every 15°, bases at 55..80 % of the way to the edge.
         /// </summary>
-        public static bool Find(Vector3 centre, Vector3 halfSize, out Sites sites)
+        public static bool Find(Vector3 centre, Vector3 halfSize, out Sites sites, Vector3? fixedPad = null)
         {
             sites = default;
             Physics.SyncTransforms();
@@ -65,8 +66,15 @@ namespace Chopper.Editor.Setup
             // The pad: as near the middle as the map allows (a dense centre pushes it out).
             var pad = Vector3.zero;
             var padFound = false;
-            foreach (var search in new[] { 350f, 650f, 950f })
-                if (BestNear(centre, search, 30f, PadRadius, top, out pad)) { padFound = true; break; }
+            if (fixedPad.HasValue)
+            {
+                // The pad (and its turrets) stays; only the bases move.
+                pad = fixedPad.Value;
+                padFound = true;
+            }
+            else
+                foreach (var search in new[] { 350f, 650f, 950f })
+                    if (BestNear(centre, search, 30f, PadRadius, top, out pad)) { padFound = true; break; }
             if (!padFound) return false;
 
             var reach = Mathf.Min(halfSize.x, halfSize.z);
@@ -75,7 +83,7 @@ namespace Chopper.Editor.Setup
             for (var angle = 0; angle < 180; angle += 15)
             {
                 var axis = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
-                for (var share = 0.55f; share <= 0.81f; share += 0.0833f)
+                for (var share = 0.4f; share <= 0.81f; share += 0.0667f)
                 {
                     var target1 = centre + axis * (reach * share);
                     var target2 = centre - axis * (reach * share);
@@ -158,9 +166,9 @@ namespace Chopper.Editor.Setup
         }
 
 
-        /// <summary>The base model's footprint around its origin (PartForge team_base: plinth), metres: x half width,
-        /// z from the front edge (towards the pad) to the back edge.</summary>
-        public const float FootHalfWidth = 46f, FootFront = 15f, FootBack = -92f;
+        /// <summary>The base model's footprint around its origin (PartForge team_base facility, 25 Nov: plinth 200 x 132 m,
+        /// centre 6 m back), metres: x half width, z from the front edge (towards the pad) to the back edge.</summary>
+        public const float FootHalfWidth = 101f, FootFront = 61f, FootBack = -73f;
         /// <summary>Highest step allowed under the base model, metres (the apron is 0.3 m thick).</summary>
         private const float FootStep = 1f;
         /// <summary>Sites stay this far from the edge of any lava line, metres.</summary>
@@ -200,8 +208,8 @@ namespace Chopper.Editor.Setup
             if (forward == Vector3.zero) forward = Vector3.forward;
             var right = Vector3.Cross(Vector3.up, forward);
             float low = float.MaxValue, high = float.MinValue;
-            for (var x = -FootHalfWidth; x <= FootHalfWidth + 0.1f; x += FootHalfWidth / 4f)
-            for (var z = FootBack; z <= FootFront + 0.1f; z += (FootFront - FootBack) / 8f)
+            for (var x = -FootHalfWidth; x <= FootHalfWidth + 0.1f; x += FootHalfWidth / 8f)
+            for (var z = FootBack; z <= FootFront + 0.1f; z += (FootFront - FootBack) / 10f)
             {
                 var p = origin + right * x + forward * z;
                 if (NearLava(p, 0f)) return false;
