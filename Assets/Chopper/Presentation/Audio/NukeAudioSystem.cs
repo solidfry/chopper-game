@@ -27,7 +27,7 @@ namespace Chopper.Presentation.Audio
     {
         private readonly List<NukeChanged> _changes = new();
         private readonly List<NukeDetonated> _detonations = new();
-        private readonly List<(float At, float Near, float Far)> _blasts = new();
+        private readonly NukeBlastSound _blasts = new();
         private PresentationContext _context;
         private IDisposable _changeSubscription;
         private IDisposable _blastSubscription;
@@ -62,22 +62,10 @@ namespace Chopper.Presentation.Audio
             var now = UnityEngine.Time.time;
             var listener = ListenerPosition();
 
-            foreach (var detonation in _detonations)
-            {
-                var distance = Vector3.Distance(listener, detonation.Position);
-                var speed = context.Effects.Settings != null ? context.Effects.Settings.NukeShockSpeed : 340f;
-                NukeSound.BlastMix(distance, out var near, out var far);
-                _blasts.Add((now + NukeBlastTimeline.ShockArrival(distance, speed), near, far));
-            }
+            var speed = context.Effects.Settings != null ? context.Effects.Settings.NukeShockSpeed : 340f;
+            foreach (var detonation in _detonations) _blasts.Add(detonation.Position, listener, speed, now);
             _detonations.Clear();
-            for (var i = _blasts.Count - 1; i >= 0; i--)
-            {
-                if (_blasts[i].At > now) continue;
-                // Both cues are 2D: a nuke fills the sky, and the volume already follows the distance.
-                if (_blasts[i].Near > 0.01f) audio.Play(sounds.NukeBlastNear, listener, _blasts[i].Near);
-                if (_blasts[i].Far > 0.01f) audio.Play(sounds.NukeBlastFar, listener, _blasts[i].Far);
-                _blasts.RemoveAt(i);
-            }
+            _blasts.Tick(audio, sounds, listener, now);
 
             foreach (var change in _changes) PlayStinger(audio, sounds, NukeSound.Stinger(change.Change));
             _changes.Clear();

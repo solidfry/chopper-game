@@ -16,6 +16,8 @@ namespace Chopper.Presentation.Effects
         [SerializeField] private CombatEffectsSettings settings;
         [SerializeField, Tooltip("Lens dirt and sun flare, as on the game camera.")]
         private Chopper.Presentation.Camera.CameraSettings cameraSettings;
+        [SerializeField, Tooltip("The game's sound library: the nuke blast sound (N), as in a match.")]
+        private Chopper.Presentation.Audio.SoundLibrary sounds;
         [SerializeField, Tooltip("Where blasts go off (the ground point).")] private Transform target;
         [SerializeField, Tooltip("Height of the air blast above the target, m.")] private float airHeight = 30f;
         [SerializeField, Tooltip("The wreck's speed at an air blast, m/s (the fall drifts this way).")]
@@ -47,6 +49,8 @@ namespace Chopper.Presentation.Effects
         private DamageParticles _damage;
         private readonly BlastSequence _sequence = new();
         private readonly NukeBlastPlayer _nuke = new();
+        private readonly Chopper.Presentation.Audio.NukeBlastSound _nukeSound = new();
+        private Chopper.Presentation.Audio.AudioService _audio;
         private float _smokeCarry;
         private float _flameCarry;
         private float _angle;
@@ -75,8 +79,10 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>Editor only: the scene builder links the settings, the target and the stand-in chopper.</summary>
         public void Configure(CombatEffectsSettings effectSettings, Transform blastPoint, Transform chopperStandIn = null,
-            Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null, Chopper.Presentation.Camera.CameraSettings lens = null)
+            Chopper.Simulation.Loadout.ModuleDefinition[] engineModules = null, Chopper.Presentation.Camera.CameraSettings lens = null,
+            Chopper.Presentation.Audio.SoundLibrary soundLibrary = null)
         {
+            sounds = soundLibrary;
             cameraSettings = lens;
             engines = engineModules ?? System.Array.Empty<Chopper.Simulation.Loadout.ModuleDefinition>();
             settings = effectSettings;
@@ -90,6 +96,7 @@ namespace Chopper.Presentation.Effects
         {
             Create();
             _nuke.Prewarm(settings);
+            _audio = new Chopper.Presentation.Audio.AudioService(sounds, transform);
             _lens = new Chopper.Presentation.Camera.LensLook(cameraSettings, UnityEngine.Camera.main);
         }
 
@@ -99,6 +106,8 @@ namespace Chopper.Presentation.Effects
             _damage?.Dispose();
             _boost.Clear();
             _nuke.Clear();
+            _nukeSound.Clear();
+            _audio?.Dispose();
             _lens?.Dispose();
             Time.timeScale = 1f;
         }
@@ -110,6 +119,8 @@ namespace Chopper.Presentation.Effects
             _effects.Tick(Time.deltaTime);
             _sequence.Tick(_effects, Time.time);
             _nuke.Tick(settings, Time.time);
+            _audio.Tick(Time.deltaTime);
+            _nukeSound.Tick(_audio, sounds, Listener, Time.time);
             _effects.Debris.Tick(Time.deltaTime, Time.time, Ray);
             _flares.Tick(_effects, Time.deltaTime, StandInPose);
             BoostFlame(Time.deltaTime);
@@ -271,7 +282,14 @@ namespace Chopper.Presentation.Effects
         public void AirBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * airHeight, airVelocity, Time.time, Cast));
         /// <summary>The Capture the Nuke blast (same player as the game), bursting <see cref="NukeBurstHeight"/> m up.
         /// F5 is the far view for it.</summary>
-        public void Nuke() => Run(() => _nuke.Start(settings, Point + Vector3.up * NukeBurstHeight, Point, UnityEngine.Camera.main, Time.time));
+        public void Nuke() => Run(() =>
+        {
+            var burst = Point + Vector3.up * NukeBurstHeight;
+            _nuke.Start(settings, burst, Point, UnityEngine.Camera.main, Time.time);
+            _nukeSound.Add(burst, Listener, settings.NukeShockSpeed, Time.time);
+        });
+
+        private static Vector3 Listener => UnityEngine.Camera.main != null ? UnityEngine.Camera.main.transform.position : Vector3.zero;
 
         private const float NukeBurstHeight = 35f;
 
@@ -295,6 +313,7 @@ namespace Chopper.Presentation.Effects
         {
             _sequence.Clear();
             _nuke.Clear();
+            _nukeSound.Clear();
             _flares.Clear();
             _boost.Clear();
             _effects?.Dispose();

@@ -77,7 +77,8 @@ namespace Chopper.Editor.Setup
             var point = new GameObject("Blast Point").transform;
             var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
             var config = ConfigAssets.Load();
-            bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines(), config != null ? config.Camera : null);
+            bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines(), config != null ? config.Camera : null,
+                config != null ? config.Audio : null);
 
             var camera = new GameObject("Bench Camera") { tag = "MainCamera" };
             var cam = camera.AddComponent<UnityEngine.Camera>();
