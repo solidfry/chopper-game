@@ -12,7 +12,7 @@ namespace Chopper.Simulation.Match
         [SerializeField, Tooltip("1.. (team A = 1).")] private byte team = 1;
         [SerializeField, Tooltip("Base zone radius, m (a facility: landing bays round the dock; owner, 25 Nov).")]
         private float radius = 120f;
-        [SerializeField, Tooltip("The nuke dock, in this object's space: the carrier sets the nuke down here to arm it.")]
+        [SerializeField, Tooltip("The nuke dock, in this object's space (Setup turns the base to face the pad, like its model): the carrier sets the nuke down here to arm it.")]
         private Vector3 dockOffset = Vector3.zero;
 
         public byte Team { get => team; set => team = value; }

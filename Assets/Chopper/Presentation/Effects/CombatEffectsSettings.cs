@@ -439,7 +439,6 @@ namespace Chopper.Presentation.Effects
             if (flare == null) flare = flareVisual;
         }
 
-        /// <summary>Editor only: fills an empty downwash material slot.</summary>
         /// <summary>Editor only: fills the dock arm and drone models if empty.</summary>
         public void FillDock(GameObject armBase, GameObject armUpper, GameObject armFore, GameObject drone)
         {
@@ -455,6 +454,7 @@ namespace Chopper.Presentation.Effects
             if (nukeRopeMaterial == null) nukeRopeMaterial = material;
         }
 
+        /// <summary>Editor only: fills an empty downwash material slot.</summary>
         public void FillDownwash(Material material)
         {
             if (downwashMaterial == null) downwashMaterial = material;

@@ -196,9 +196,7 @@ namespace Chopper.Editor.Setup
                 var padPosition = DefaultPadPosition;
                 var bounds = UnityEngine.Object.FindAnyObjectByType<ArenaBoundsAuthoring>();
                 // Lava lines (City04): no site on or next to them.
-                NukeSiteFinder.SetLava(UnityEngine.Object.FindObjectsByType<Chopper.Simulation.Visuals.CityTrafficAuthoring>()
-                    .SelectMany(t => t.Lava).Where(l => l?.points != null).Select(l => (l.points, l.width)));
-                if (bounds != null && NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, out var sites))
+                if (bounds != null && NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, SceneLava(), out var sites))
                 {
                     padPosition = sites.Pad;
                     basePositions = new[] { sites.Base1, sites.Base2 };
@@ -213,9 +211,9 @@ namespace Chopper.Editor.Setup
             }
 
             EnsureNuke(scene, pad.transform.position);
-            ResiteSmallBases(scene, pad.transform.position);
+            var keepSmall = !ResiteSmallBases(scene, pad.transform.position);
             EnsureBases(scene, basePositions);
-            EnsureBaseLooks(scene, pad.transform.position);
+            EnsureBaseLooks(scene, pad.transform.position, keepSmall);
 
             // Turrets already placed: move them onto the ring (owner 20 Nov: too tight).
             var placed = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TurretAuthoring>(true)).ToArray();
@@ -265,17 +263,37 @@ namespace Chopper.Editor.Setup
             nuke.transform.position = (Vector3)NukeZones.Resting(padPosition);
         }
 
-        /// <summary>
-        /// The team base model (PartForge Prop_Base_Team1 / Team2: apron with the 12 spawn pads, tower, hangar, tanks,
-        /// light masts) under each base, facing the pad, with mesh colliders so the buildings are solid. Kept if present.
-        /// </summary>
         /// <summary>Base zone radius of the facility, m (NukeBaseAuthoring default).</summary>
         private const float NukeFacilityRadius = 120f;
 
-        private static void EnsureBaseLooks(Scene scene, Vector3 padPosition)
+        /// <summary>
+        /// The team base model (PartForge Prop_Base_Team1 / Team2: the facility with the centre dock and the landing
+        /// bays) under each base, with mesh colliders so the buildings are solid. Kept if present. The base object
+        /// itself is turned to face the pad, so its dock offset and the model share one frame.
+        /// <paramref name="keepSmall"/>: the re-site found no room, so old small bases are not grown over their
+        /// neighbours (they keep their radius and look).
+        /// </summary>
+        private static void EnsureBaseLooks(Scene scene, Vector3 padPosition, bool keepSmall)
         {
             foreach (var zone in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukeBaseAuthoring>(true)))
             {
+                var toPad = padPosition - zone.transform.position;
+                toPad.y = 0f;
+                var facing = toPad.sqrMagnitude > 1f ? Quaternion.LookRotation(toPad.normalized) : Quaternion.identity;
+                if (Quaternion.Angle(zone.transform.rotation, facing) > 0.1f)
+                {
+                    var oldLook = zone.transform.Find("Look");
+                    Undo.RecordObject(zone.transform, "Face nuke base to pad");
+                    zone.transform.rotation = facing;
+                    if (oldLook != null)
+                    {
+                        Undo.RecordObject(oldLook, "Face nuke base to pad");
+                        oldLook.rotation = facing;
+                    }
+                    EditorSceneManager.MarkSceneDirty(scene);
+                }
+                // No room found for the facility: leave the old small base as it is.
+                if (keepSmall && zone.Radius < NukeFacilityRadius) continue;
                 // Upgrade (25 Nov): the 45 m apron became a 120 m facility with landing bays round a centre dock.
                 if (zone.Radius < NukeFacilityRadius)
                 {
@@ -303,9 +321,7 @@ namespace Chopper.Editor.Setup
                 var look = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
                 look.name = "Look";
                 look.transform.SetParent(zone.transform, false);
-                var toPad = padPosition - zone.transform.position;
-                toPad.y = 0f;
-                look.transform.rotation = toPad.sqrMagnitude > 1f ? Quaternion.LookRotation(toPad.normalized) : Quaternion.identity;
+                look.transform.localRotation = Quaternion.identity;
                 look.transform.localPosition = Vector3.zero;
                 foreach (var filter in look.GetComponentsInChildren<MeshFilter>(true))
                     filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
@@ -319,22 +335,35 @@ namespace Chopper.Editor.Setup
         /// arena bounds, old bases are removed and new sites found round the same pad (EnsureBases then adds them).
         /// The training range (no bounds) keeps its open-ground spots.
         /// </summary>
-        private static void ResiteSmallBases(Scene scene, Vector3 padPosition)
+        /// <summary>The open scenes' lava lines (City04), for the site finder.</summary>
+        private static (Vector3[] Points, float Width)[] SceneLava() =>
+            UnityEngine.Object.FindObjectsByType<Chopper.Simulation.Visuals.CityTrafficAuthoring>()
+                .SelectMany(t => t.Lava).Where(l => l?.points != null).Select(l => (l.points, l.width)).ToArray();
+
+        /// <returns>False when old small bases are still there (no room found): do not grow them.</returns>
+        private static bool ResiteSmallBases(Scene scene, Vector3 padPosition)
         {
             var bases = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NukeBaseAuthoring>(true)).ToArray();
-            if (bases.Length == 0 || bases.All(b => b.Radius >= NukeFacilityRadius)) return;
+            if (bases.Length == 0 || bases.All(b => b.Radius >= NukeFacilityRadius)) return true;
             var bounds = UnityEngine.Object.FindAnyObjectByType<ArenaBoundsAuthoring>();
-            if (bounds == null) return;
-            NukeSiteFinder.SetLava(UnityEngine.Object.FindObjectsByType<Chopper.Simulation.Visuals.CityTrafficAuthoring>()
-                .SelectMany(t => t.Lava).Where(l => l?.points != null).Select(l => (l.points, l.width)));
-            // The old bases' own models must not block the search.
+            if (bounds == null) return true;  // the training range: open ground, grow in place
+            var lava = SceneLava();
+            bool found;
+            NukeSiteFinder.Sites sites;
+            // The old bases' own models must not block the search; always turn them back on.
             foreach (var b in bases) b.gameObject.SetActive(false);
-            var found = NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, out var sites, padPosition);
-            foreach (var b in bases) b.gameObject.SetActive(true);
+            try
+            {
+                found = NukeSiteFinder.Find(bounds.transform.position, bounds.Size * 0.5f, lava, out sites, padPosition);
+            }
+            finally
+            {
+                foreach (var b in bases) b.gameObject.SetActive(true);
+            }
             if (!found)
             {
-                Debug.LogWarning($"[Setup] {scene.name}: no room for the facility bases round the pad; old bases kept. Place them by hand.");
-                return;
+                Debug.LogWarning($"[Setup] {scene.name}: no room for the facility bases round the pad; old bases kept at their size. Place them by hand.");
+                return false;
             }
             var positions = new[] { sites.Base1, sites.Base2 };
             foreach (var b in bases)
@@ -347,6 +376,7 @@ namespace Chopper.Editor.Setup
             }
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log($"[Setup] {scene.name}: facility bases at {sites.Base1} and {sites.Base2} (pad {padPosition}).");
+            return true;
         }
 
         private static void EnsureBases(Scene scene, Vector3[] positions)

@@ -81,7 +81,7 @@ namespace Chopper.Presentation.Effects
             public float Phase;
         }
 
-        private readonly GameObject _root;
+        private GameObject _root;
         private readonly Arm[] _arms;
         private readonly Drone[] _drones;
         private float _work;
@@ -163,7 +163,11 @@ namespace Chopper.Presentation.Effects
 
         public void Dispose()
         {
-            if (_root != null) Object.Destroy(_root);
+            if (_root == null) return;
+            // The world can shut down after play has ended (domain unload): Destroy is not allowed in edit mode.
+            if (Application.isPlaying) Object.Destroy(_root);
+            else Object.DestroyImmediate(_root);
+            _root = null;
         }
 
         private static float Smooth(float t) => t * t * (3f - 2f * t);

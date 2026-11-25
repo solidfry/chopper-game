@@ -73,7 +73,11 @@ namespace Chopper.Presentation.Effects
                 foreach (var (nuke, pose, entity) in SystemAPI.Query<RefRO<NukeState>, RefRO<LocalToWorld>>().WithEntityAccess())
                 {
                     // Only where the local team may hook it (pad, drop, the enemy's dock, a planted nuke to disarm).
-                    if (!NukeRules.CanHook(nuke.ValueRO, selfTeam)) continue;
+                    // No local chopper (dead, respawning): still show the open pick-ups at the pad and drops.
+                    var open = hasSelf
+                        ? NukeRules.CanHook(nuke.ValueRO, selfTeam)
+                        : nuke.ValueRO.Phase is NukePhase.AtSpawn or NukePhase.Dropped;
+                    if (!open) continue;
                     _seen.Add(entity);
                     Vector3 centre = pose.ValueRO.Position;
                     if (!_visuals.TryGetValue(entity, out var visual))

@@ -6,8 +6,9 @@ namespace Chopper.Editor.Setup
     /// Editor only. Finds Capture the Nuke sites on a map (owner, 20 Nov: "each map should have good positions for the team
     /// bases"): the pad near the middle, the two bases on opposite sides, each on open, flat ground with clear sky above
     /// (physics rays on the open scenes). The bases stay out of the pad turrets' reach.
+    /// One search = one instance (<see cref="Find"/>): the street level, arena and lava lines are per search, not static.
     /// </summary>
-    internal static class NukeSiteFinder
+    internal sealed class NukeSiteFinder
     {
         /// <summary>Clear, flat radius round a base's dock (the first test; <see cref="Footprint"/> then checks the
         /// whole facility).</summary>
@@ -23,10 +24,10 @@ namespace Chopper.Editor.Setup
 
         /// <summary>A site may sit this far above the street level (kerbs, plazas), metres.</summary>
         private const float FloorTolerance = 6f;
-        private static float _floor;
-        private static Vector3 _centre;
+        private float _floor;
+        private Vector3 _centre;
         /// <summary>Sites stay this far inside the arena edge (half size minus room), x and z.</summary>
-        private static Vector2 _inner = new(float.MaxValue, float.MaxValue);
+        private Vector2 _inner = new(float.MaxValue, float.MaxValue);
 
         public struct Sites
         {
@@ -39,7 +40,20 @@ namespace Chopper.Editor.Setup
         /// The best sites inside the arena (centre, half size). False when no layout fits (then the caller keeps its
         /// defaults). Tries base axes every 15°, bases at 55..80 % of the way to the edge.
         /// </summary>
-        public static bool Find(Vector3 centre, Vector3 halfSize, out Sites sites, Vector3? fixedPad = null)
+        /// <param name="lava">Lava lines to stay off (points, width); null for none.</param>
+        public static bool Find(Vector3 centre, Vector3 halfSize,
+            System.Collections.Generic.IEnumerable<(Vector3[] Points, float Width)> lava, out Sites sites, Vector3? fixedPad = null)
+            => new NukeSiteFinder(lava).Search(centre, halfSize, out sites, fixedPad);
+
+        private NukeSiteFinder(System.Collections.Generic.IEnumerable<(Vector3[] Points, float Width)> lava)
+        {
+            if (lava == null) return;
+            foreach (var (points, width) in lava)
+                for (var i = 0; i + 1 < points.Length; i++)
+                    _lava.Add((points[i], points[i + 1], width * 0.5f + LavaClearance));
+        }
+
+        private bool Search(Vector3 centre, Vector3 halfSize, out Sites sites, Vector3? fixedPad)
         {
             sites = default;
             Physics.SyncTransforms();
@@ -104,7 +118,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>The usable site closest to <paramref name="target"/> on a grid within <paramref name="search"/> metres.</summary>
-        private static bool BestNear(Vector3 target, float search, float step, float radius, float top, out Vector3 site,
+        private bool BestNear(Vector3 target, float search, float step, float radius, float top, out Vector3 site,
             Vector3? facePad = null)
         {
             site = default;
@@ -132,7 +146,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>Flat ground (9 rays within <paramref name="radius"/>) with nothing in the air above it.</summary>
-        public static bool Usable(Vector3 point, float radius, float top, out Vector3 ground)
+        private bool Usable(Vector3 point, float radius, float top, out Vector3 ground)
         {
             ground = default;
             if (!Ground(point, top, out var centre)) return false;
@@ -173,21 +187,12 @@ namespace Chopper.Editor.Setup
         private const float FootStep = 1f;
         /// <summary>Sites stay this far from the edge of any lava line, metres.</summary>
         private const float LavaClearance = 40f;
-        private static readonly System.Collections.Generic.List<(Vector3 A, Vector3 B, float Keep)> Lava = new();
-
         /// <summary>Lava lines to stay off: segments with the half width plus <see cref="LavaClearance"/>.</summary>
-        public static void SetLava(System.Collections.Generic.IEnumerable<(Vector3[] Points, float Width)> lines)
-        {
-            Lava.Clear();
-            if (lines == null) return;
-            foreach (var (points, width) in lines)
-                for (var i = 0; i + 1 < points.Length; i++)
-                    Lava.Add((points[i], points[i + 1], width * 0.5f + LavaClearance));
-        }
+        private readonly System.Collections.Generic.List<(Vector3 A, Vector3 B, float Keep)> _lava = new();
 
-        private static bool NearLava(Vector3 p, float pad)
+        private bool NearLava(Vector3 p, float pad)
         {
-            foreach (var (a, b, keep) in Lava)
+            foreach (var (a, b, keep) in _lava)
             {
                 var ab = new Vector2(b.x - a.x, b.z - a.z);
                 var ap = new Vector2(p.x - a.x, p.z - a.z);
@@ -201,7 +206,7 @@ namespace Chopper.Editor.Setup
         /// The whole base model fits here facing <paramref name="towardsPad"/>: ground within <see cref="FootStep"/>, no
         /// lava, clear air. <paramref name="height"/> = the highest ground under it (the model sits there).
         /// </summary>
-        public static bool Footprint(Vector3 origin, Vector3 towardsPad, float top, out float height)
+        private bool Footprint(Vector3 origin, Vector3 towardsPad, float top, out float height)
         {
             height = 0f;
             var forward = new Vector3(towardsPad.x, 0f, towardsPad.z).normalized;

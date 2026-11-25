@@ -169,11 +169,14 @@ namespace Chopper.Presentation.Hud
             {
                 case NukePhase.Docked when s.ArmedBy == TeamRules.None:
                     var left = (1f - math.saturate(s.ArmProgress)) * tuning.ArmSeconds;
+                    // No team yet (spectator, or before Team replicates): neutral, not "enemy".
+                    if (self == TeamRules.None) return new NukeTimer("ARMING", left, CalloutTone.Neutral);
                     return s.DockTeam == self
                         ? new NukeTimer("ARMING", left, CalloutTone.Good)
                         : new NukeTimer("ENEMY ARMING", left, CalloutTone.Alert);
                 case NukePhase.Planted:
-                    return new NukeTimer("DETONATION", s.Countdown, s.DockTeam == self ? CalloutTone.Alert : CalloutTone.Good, final: true);
+                    var tone = self == TeamRules.None ? CalloutTone.Neutral : s.DockTeam == self ? CalloutTone.Alert : CalloutTone.Good;
+                    return new NukeTimer("DETONATION", s.Countdown, tone, final: true);
                 case NukePhase.Dropped:
                     return new NukeTimer("NUKE RESET", math.max(0f, tuning.DropResetSeconds - s.DroppedFor), CalloutTone.Neutral);
                 default:
@@ -198,6 +201,9 @@ namespace Chopper.Presentation.Hud
             }
             if (before.Phase == NukePhase.Planted && after.Phase != NukePhase.Planted)
             {
+                // Only a disarm drops the nuke. A blast resets it to the pad in the same server tick, so clients see
+                // Planted -> AtSpawn: that is not a defuse (the blast comes as NukeDetonatedRpc).
+                if (after.Phase != NukePhase.Dropped) return NukeChange.None;
                 team = before.DockTeam;
                 return NukeChange.Defused;
             }

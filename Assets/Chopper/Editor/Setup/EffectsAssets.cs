@@ -154,7 +154,6 @@ namespace Chopper.Editor.Setup
                 settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
                 settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
                 settings.FillNukeRope(EnsureRopeMaterial());
-            settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
                 settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
@@ -175,6 +174,7 @@ namespace Chopper.Editor.Setup
             settings.FillGuidedSlots(Load(Missile), Load(RocketImpact), Load(Flare));
             settings.FillNukeZone(Load(NukeZone), Load(NukeBeacon));
             settings.FillNukeRope(EnsureRopeMaterial());
+            settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());

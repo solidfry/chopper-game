@@ -106,6 +106,10 @@ namespace Chopper.Tests
             Assert.AreEqual(CalloutTone.Good, NukeCallout.Timer(Planted(Them), Us, NukeTuning.Default).Tone);
             Assert.IsFalse(NukeCallout.Timer(Carried(Us), Us, NukeTuning.Default).Shown);
             Assert.IsFalse(NukeCallout.Timer(Docked(Us, 1f, Us), Us, NukeTuning.Default).Shown, "Armed and waiting: no clock.");
+            var noTeam = NukeCallout.Timer(Docked(Them), TeamRules.None, NukeTuning.Default);
+            Assert.AreEqual("ARMING", noTeam.Label, "No team: never 'enemy'.");
+            Assert.AreEqual(CalloutTone.Neutral, noTeam.Tone);
+            Assert.AreEqual(CalloutTone.Neutral, NukeCallout.Timer(Planted(Them), TeamRules.None, NukeTuning.Default).Tone);
         }
 
         [Test]
@@ -123,6 +127,8 @@ namespace Chopper.Tests
             Assert.AreEqual(NukeChange.Planted, NukeCallout.Diff(Carried(Us, Us), Planted(Them), out team));
             Assert.AreEqual(Us, team);
             Assert.AreEqual(NukeChange.Defused, NukeCallout.Diff(Planted(Them), new NukeState { Phase = NukePhase.Dropped }, out team));
+            Assert.AreEqual(NukeChange.None, NukeCallout.Diff(Planted(Them), NukeRules.AtSpawn, out _),
+                "A blast resets the nuke to the pad in the same tick: not a defuse.");
             Assert.AreEqual(Them, team);
             Assert.AreEqual(NukeChange.Dropped, NukeCallout.Diff(Carried(Us), new NukeState { Phase = NukePhase.Dropped }, out team));
             Assert.AreEqual(NukeChange.Reset, NukeCallout.Diff(new NukeState { Phase = NukePhase.Dropped }, NukeRules.AtSpawn, out _));
