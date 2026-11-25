@@ -44,6 +44,7 @@ namespace Chopper.Editor.Setup
         /// <summary>Cockpit alarm tones made for the game (beeps, not effects-pack loops): lock and missile warnings.</summary>
         private const string Warnings = "Assets/Chopper/Audio/SFX/Warnings";
         private const string Flares = "Assets/Chopper/Audio/SFX/Flares";
+        private const string Nuke = "Assets/Chopper/Audio/SFX/Nuke";
         private const string Explosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_CloseExplosion_";
         private const string DistantExplosions = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_DistantExplosion_";
         internal const string SciFiGuns = "Assets/ThirdParty/Sci-Fi Gun Sounds";
@@ -216,6 +217,21 @@ namespace Chopper.Editor.Setup
 
             library.InitialiseAmbience(Slot(library.CityAmbience, () => Cue("CityAmbience",
                 Clips("Assets/Sound/Ambient/City/city din at night (off big street).wav"), ambient, 0.18f, blend: 0f, voices: 1, muffle: CueMuffle.Outside)));
+
+            // Capture the Nuke (Assets/Chopper/Audio/SFX/Nuke, made with SoX): the blast from the Ultimate SFX bundle's
+            // "Massive Atom Explosion" (far: low-passed at 420 Hz with reverb); siren, calls from Khron Interdimensional
+            // Interface alarms; beep from Khron Futuristic Weapons grenade countdown.
+            library.InitialiseNuke(
+                Slot(library.NukeBlastNear, () => Cue("NukeBlastNear", Clips(Nuke + "/NukeBlast_Near.wav"), effects, 1f, blend: 0f, voices: 2,
+                    muffle: CueMuffle.Outside)),
+                Slot(library.NukeBlastFar, () => Cue("NukeBlastFar", Clips(Nuke + "/NukeBlast_Far.wav"), effects, 1f, blend: 0f, voices: 2,
+                    muffle: CueMuffle.Outside)),
+                Slot(library.NukeSiren, () => Cue("NukeSiren", Clips(Nuke + "/NukeSiren_Loop.wav"), ui, 0.35f, blend: 0f, voices: 1)),
+                Slot(library.NukeBeep, () => Cue("NukeBeep", Clips(Nuke + "/NukeBeep.wav"), effects, 0.8f, blend: 1f, voices: 2, cooldown: 0.08f)),
+                Slot(library.NukeHooked, () => Cue("NukeHooked", Clips(Nuke + "/NukeHooked.wav"), ui, 0.6f, blend: 0f, voices: 1, cooldown: 0.5f)),
+                Slot(library.NukeDropped, () => Cue("NukeDropped", Clips(Nuke + "/NukeDropped.wav"), ui, 0.6f, blend: 0f, voices: 1, cooldown: 0.5f)),
+                Slot(library.NukeArmed, () => Cue("NukeArmed", Clips(Nuke + "/NukeArmed.wav"), ui, 0.7f, blend: 0f, voices: 1, cooldown: 0.5f)),
+                Slot(library.NukeDefused, () => Cue("NukeDefused", Clips(Nuke + "/NukeDefused.wav"), ui, 0.6f, blend: 0f, voices: 1, cooldown: 0.5f)));
 
             if (library.VoiceGroup == null) library.SetVoiceGroup(ui);
 

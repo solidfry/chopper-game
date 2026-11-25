@@ -70,6 +70,16 @@ namespace Chopper.Presentation.Audio
         [Header("Match")]
         [SerializeField] private SoundCue matchEnd;
 
+        [Header("Capture the Nuke (NukeAudioSystem)")]
+        [SerializeField, Tooltip("2D. The blast close by: heard when the shock front arrives.")] private SoundCue nukeBlastNear;
+        [SerializeField, Tooltip("2D. The blast far away: a dull, long rumble the whole map hears.")] private SoundCue nukeBlastFar;
+        [SerializeField, Tooltip("Loop, 2D, while a nuke is armed. Louder for the team it threatens.")] private SoundCue nukeSiren;
+        [SerializeField, Tooltip("3D at the nuke: one beep of the arm, defuse or hook bar (faster as it fills).")] private SoundCue nukeBeep;
+        [SerializeField, Tooltip("2D. A chopper hooked the nuke.")] private SoundCue nukeHooked;
+        [SerializeField, Tooltip("2D. The nuke was dropped (played lower when it resets to its pad).")] private SoundCue nukeDropped;
+        [SerializeField, Tooltip("2D. The nuke is armed.")] private SoundCue nukeArmed;
+        [SerializeField, Tooltip("2D. The nuke was defused.")] private SoundCue nukeDefused;
+
         [Header("UI")]
         [SerializeField] private SoundCue uiClick;
         [SerializeField] private SoundCue uiNavigate;
@@ -114,6 +124,14 @@ namespace Chopper.Presentation.Audio
         public SoundCue DamageTaken => damageTaken;
         public SoundCue OutOfBoundsAlarm => outOfBoundsAlarm;
         public SoundCue MatchEnd => matchEnd;
+        public SoundCue NukeBlastNear => nukeBlastNear;
+        public SoundCue NukeBlastFar => nukeBlastFar;
+        public SoundCue NukeSiren => nukeSiren;
+        public SoundCue NukeBeep => nukeBeep;
+        public SoundCue NukeHooked => nukeHooked;
+        public SoundCue NukeDropped => nukeDropped;
+        public SoundCue NukeArmed => nukeArmed;
+        public SoundCue NukeDefused => nukeDefused;
         public SoundCue LockTone => lockTone;
         public SoundCue LockedTone => lockedTone;
         public SoundCue LockWarning => lockWarning;
@@ -175,6 +193,14 @@ namespace Chopper.Presentation.Audio
             Check(damageTaken, nameof(damageTaken), problems);
             Check(outOfBoundsAlarm, nameof(outOfBoundsAlarm), problems);
             Check(matchEnd, nameof(matchEnd), problems);
+            Check(nukeBlastNear, nameof(nukeBlastNear), problems);
+            Check(nukeBlastFar, nameof(nukeBlastFar), problems);
+            Check(nukeSiren, nameof(nukeSiren), problems);
+            Check(nukeBeep, nameof(nukeBeep), problems);
+            Check(nukeHooked, nameof(nukeHooked), problems);
+            Check(nukeDropped, nameof(nukeDropped), problems);
+            Check(nukeArmed, nameof(nukeArmed), problems);
+            Check(nukeDefused, nameof(nukeDefused), problems);
             Check(lockTone, nameof(lockTone), problems);
             Check(lockedTone, nameof(lockedTone), problems);
             Check(lockWarning, nameof(lockWarning), problems);
@@ -245,6 +271,20 @@ namespace Chopper.Presentation.Audio
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void InitialiseAmbience(SoundCue city) => cityAmbience = city;
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseNuke(SoundCue blastNear, SoundCue blastFar, SoundCue siren, SoundCue beep, SoundCue hooked,
+            SoundCue dropped, SoundCue armed, SoundCue defused)
+        {
+            nukeBlastNear = blastNear;
+            nukeBlastFar = blastFar;
+            nukeSiren = siren;
+            nukeBeep = beep;
+            nukeHooked = hooked;
+            nukeDropped = dropped;
+            nukeArmed = armed;
+            nukeDefused = defused;
+        }
 
         /// <summary>Editor only: the cue in a surface slot as set (no fallback). Order: metal, concrete, ground, water.</summary>
         public SoundCue SurfaceHitCue(int index) => index switch { 0 => metalHit, 1 => concreteHit, 2 => groundHit, _ => waterHit };
