@@ -70,6 +70,7 @@ namespace Chopper.Presentation.Hud
         private float _hitMarkerTime;
         private float _killMarkerTime;
         private bool _hitMarkerVisible;
+        private int _hitCount;
         private bool _killMarkerVisible;
         private bool _outOfBounds;
         private float _damageIndicatorTime;
@@ -466,11 +467,15 @@ namespace Chopper.Presentation.Hud
                 AimViewport = new Vector2(MathF.Round(viewport.x * 1000f) / 1000f, MathF.Round(viewport.y * 1000f) / 1000f);
         }
 
+        /// <summary>Confirmed hits so far: each change pulses the reticle once (owner, 25 Nov).</summary>
+        public int HitCount { get => _hitCount; private set => Set(ref _hitCount, value, nameof(HitCount)); }
+
         /// <summary>Called for each hit the server confirms.</summary>
         public void ShowHit(bool killed)
         {
             _hitMarkerTime = HitMarkerDuration;
             HitMarkerVisible = true;
+            HitCount = _hitCount + 1;
             if (!killed) return;
             _killMarkerTime = KillMarkerDuration;
             KillMarkerVisible = true;

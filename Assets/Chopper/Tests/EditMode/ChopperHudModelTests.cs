@@ -112,6 +112,18 @@ namespace Chopper.Tests
         }
 
         [Test]
+        public void ShowHit_EachHitChangesTheCount_SoTheReticlePulsesPerHit()
+        {
+            var model = new ChopperHudModel();
+            var changes = 0;
+            model.propertyChanged += (_, e) => { if (e.propertyName == nameof(ChopperHudModel.HitCount)) changes++; };
+            model.ShowHit(killed: false);
+            model.ShowHit(killed: false);
+            model.ShowHit(killed: false);
+            Assert.That(changes, Is.EqualTo(3), "Three hits while the marker still shows: three pulses.");
+        }
+
+        [Test]
         public void ShowDamageFrom_ShowsDirectionThenFades()
         {
             var model = new ChopperHudModel();

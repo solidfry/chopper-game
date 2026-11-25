@@ -692,6 +692,8 @@
   border-width: 2px;
   border-color: var(--chopper-green-dim);
   border-radius: 14px;
+  transition-property: scale, border-color;
+  transition-duration: 0.08s, 0.08s;
 }
 
 .hud-aim--hidden {
@@ -751,6 +753,13 @@
   border-width: 3px;
   border-color: var(--chopper-green);
 }
+
+/* Hit pulse (owner, 25 Nov): yellow and 20 % bigger for a moment per hit; after the weapon shapes so it wins. */
+.hud-aim--pulse {
+  scale: 1.2 1.2;
+  border-color: var(--chopper-yellow);
+}
+.hud-aim--pulse .hud-aim__dot { background-color: var(--chopper-yellow); }
 
 /* Hit marker: a diamond around the reticle, shown only on a server hit confirm */
 .hud-aim__hit {

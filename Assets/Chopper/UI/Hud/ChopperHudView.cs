@@ -28,6 +28,10 @@ namespace Chopper.UI.Hud
         private const string ArcLowClass = "hud-arc--low";
         private const string AimHiddenClass = "hud-aim--hidden";
         private const string HitClass = "hud-aim--hit";
+        /// <summary>One short yellow pulse of the reticle per confirmed hit (same size each time, never stacked).</summary>
+        private const string PulseClass = "hud-aim--pulse";
+        private const long PulseMilliseconds = 110;
+        private IVisualElementScheduledItem _pulseOff;
         private const string KillClass = "hud-aim--kill";
         private const string WarningHiddenClass = "hud-warning--hidden";
         private const string BannerHiddenClass = "hud-match__banner--hidden";
@@ -338,6 +342,24 @@ namespace Chopper.UI.Hud
             label.SetBinding("text", binding);
         }
 
+        /// <summary>
+        /// Yellow and a little bigger for a moment. A hit during a pulse restarts it (off for one frame, then on), so
+        /// a fast gun gives a pulse per hit and the size never grows past the one step.
+        /// </summary>
+        private void PulseReticle()
+        {
+            if (_aim == null) return;
+            _pulseOff?.Pause();
+            if (_aim.ClassListContains(PulseClass))
+            {
+                _aim.RemoveFromClassList(PulseClass);
+                _aim.schedule.Execute(() => _aim.AddToClassList(PulseClass)).StartingIn(16);
+            }
+            else
+                _aim.AddToClassList(PulseClass);
+            _pulseOff = _aim.schedule.Execute(() => _aim.RemoveFromClassList(PulseClass)).StartingIn(PulseMilliseconds);
+        }
+
         /// <summary>One reticle shape class on the aim element for the selected weapon type (<see cref="Reticles"/>).</summary>
         private void RefreshReticle()
         {
@@ -361,6 +383,8 @@ namespace Chopper.UI.Hud
                 RefreshAim();
             else if (args.propertyName == nameof(ChopperHudModel.Reticle))
                 RefreshReticle();
+            else if (args.propertyName == nameof(ChopperHudModel.HitCount))
+                PulseReticle();
             else if (args.propertyName == nameof(ChopperHudModel.Sway))
                 RefreshSway();
             else if (args.propertyName == nameof(ChopperHudModel.LockViewport) ||
