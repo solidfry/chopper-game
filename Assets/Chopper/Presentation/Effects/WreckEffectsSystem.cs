@@ -48,9 +48,11 @@ namespace Chopper.Presentation.Effects
             {
                 var hasWorld = SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics);
                 if (hasWorld) _world = physics.CollisionWorld;
+                var blastCue = context.Sounds != null ? context.Sounds.WreckBlast : null;
                 foreach (var blast in _explosions)
                 {
-                    _sequence.Start(effects, blast.Position, blast.Velocity, now, hasWorld ? CastStatic : null);
+                    _sequence.Start(effects, blast.Position, blast.Velocity, now, hasWorld ? CastStatic : null, muteAudio: blastCue != null);
+                    if (blastCue != null) context.Audio.Play(blastCue, blast.Position);
                     context.HeatMarks.AddTimed(blast.Position, VisionMath.BlastHeat * 2f, VisionMath.BlastSeconds * 2f);
                     Shake(context, settings, blast.Position);
                 }

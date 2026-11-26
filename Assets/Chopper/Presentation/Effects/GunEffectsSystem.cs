@@ -193,9 +193,11 @@ namespace Chopper.Presentation.Effects
         /// <summary>The impact effect and the surface's hit sound. The cue's cooldown and voice limit keep fast guns tidy.</summary>
         private void Impact(CombatEffectsSettings settings, Vector3 point, Vector3 direction, SurfaceKind surface)
         {
-            _effects.SpawnOneShot(settings.GunImpact, point, Quaternion.LookRotation(-direction));
             var sounds = _context != null ? _context.Sounds : null;
-            if (sounds != null) _context.Audio.Play(sounds.SurfaceHit(surface), point);
+            var hit = sounds != null ? sounds.SurfaceHit(surface) : null;
+            // The surface cue replaces the prefab's own sound (a fire blast per bullet, not shaped by distance or place).
+            _effects.SpawnOneShot(settings.GunImpact, point, Quaternion.LookRotation(-direction), muteAudio: hit != null);
+            if (hit != null) _context.Audio.Play(hit, point);
         }
 
         private void MoveBullets(CombatEffectsSettings settings, float deltaTime, bool hasWorld, in CollisionWorld world)

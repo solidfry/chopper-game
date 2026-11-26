@@ -51,7 +51,8 @@ namespace Chopper.Presentation.Effects
         /// One explosion layer: scaled (particle sizes and speeds follow the transform), emits for its seconds, then is
         /// destroyed after its life. Not pooled (rare: one per chopper death).
         /// </summary>
-        public void SpawnLayer(in BlastLayer layer, Vector3 position)
+        /// <param name="muteAudio">True when a sound cue plays instead of the prefab's own audio (the wreck blast).</param>
+        public void SpawnLayer(in BlastLayer layer, Vector3 position, bool muteAudio = false)
         {
             if (layer.Prefab == null || Settings == null) return;
             var offset = Vector3.up * layer.Up;
@@ -108,7 +109,7 @@ namespace Chopper.Presentation.Effects
                     FlattenRotation(renderer);
                 }
             }
-            RouteAudio(instance, mute: false);
+            RouteAudio(instance, muteAudio);
             if (layer.EmitSeconds > 0f) _emitting.Add((_clock + layer.EmitSeconds, instance));
             Object.Destroy(instance, layer.LifeSeconds);
         }

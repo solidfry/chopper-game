@@ -144,7 +144,13 @@ namespace Chopper.Editor.Setup
             // overdriven, over a fire loop (Gun & Explosion Sounds), made with SoX. ChopperAudioSystem cuts it in and out.
             library.InitialiseWreck(
                 Slot(library.EngineFailure, () => Cue("EngineFailure", Clips("Assets/Chopper/Audio/SFX/Wreck/EngineFailure_Loop.wav"),
-                    effects, 0.9f, blend: 0.6f, voices: 8, muffle: CueMuffle.Cabin)));
+                    effects, 0.9f, blend: 0.6f, voices: 8, muffle: CueMuffle.Cabin)),
+                // Wreck blast (26 Nov): the clips the effect prefabs played (Tom Winandy close explosion, Sci-Fi rocket
+                // impacts at their layer delays) plus a Big Explosion body, mixed with SoX. As a cue, far blasts are
+                // duller and echo by place.
+                Slot(library.WreckBlast, () => Cue("WreckBlast", Clips("Assets/Chopper/Audio/SFX/Wreck/WreckBlast_01.wav",
+                    "Assets/Chopper/Audio/SFX/Wreck/WreckBlast_02.wav", "Assets/Chopper/Audio/SFX/Wreck/WreckBlast_03.wav"),
+                    effects, 1f, blend: 1f, voices: 4, cooldown: 0.05f, muffle: CueMuffle.Outside)));
 
             // Hangar (placeholders): mechanical reload clunks for fit and remove, short laser charges for focus and scan.
             library.InitialiseHangar(

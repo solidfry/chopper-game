@@ -233,7 +233,7 @@ namespace Chopper.Presentation.Effects
             // A stand-in entity: the debris only uses it as a key.
             _effects.Debris.TrackVisuals(new Unity.Entities.Entity { Index = 1, Version = 1 }, Time.time, new[] { standIn.gameObject });
             _effects.Debris.Burst(position, velocity);
-            _sequence.Start(_effects, position, velocity, Time.time, Cast);
+            StartBlast(position, velocity);
             standIn.gameObject.SetActive(false);
             _hiddenUntil = Time.time + 6f;
         });
@@ -313,8 +313,16 @@ namespace Chopper.Presentation.Effects
         /// <summary>Crash dust at the ground point (the bench uses the downwash colour; maps use their fog colour).</summary>
         public void CrashDust() => Run(() => _damage.EmitDust(Point, settings.DownwashColour, 40));
 
-        public void GroundBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * 1.5f, Vector3.zero, Time.time, Cast));
-        public void AirBlast() => Run(() => _sequence.Start(_effects, Point + Vector3.up * airHeight, airVelocity, Time.time, Cast));
+        public void GroundBlast() => Run(() => StartBlast(Point + Vector3.up * 1.5f, Vector3.zero));
+        public void AirBlast() => Run(() => StartBlast(Point + Vector3.up * airHeight, airVelocity));
+
+        /// <summary>A wreck blast as in a match: the blast cue, with the effect prefabs silent.</summary>
+        private void StartBlast(Vector3 position, Vector3 velocity)
+        {
+            var cue = sounds != null && _audio != null ? sounds.WreckBlast : null;
+            _sequence.Start(_effects, position, velocity, Time.time, Cast, muteAudio: cue != null);
+            if (cue != null) _audio.Play(cue, position);
+        }
         /// <summary>The Capture the Nuke blast (same player as the game), bursting <see cref="NukeBurstHeight"/> m up.
         /// F5 is the far view for it.</summary>
         public void Nuke() => Run(() =>
