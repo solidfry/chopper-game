@@ -30,14 +30,18 @@
 .transition__status {
   font-size: 14px;
   letter-spacing: 6px;
-  color: var(--chopper-green-dim);
+  color: var(--chopper-cyan);
+  opacity: 0.7;
   padding: 0;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
-.transition__label {
-  font-size: 44px;
-  letter-spacing: 6px;
+.transition__label,
+.transition__label.chopper-deco-dot {
+  /* Display name in Karnivore Dot, as the page headings (style guide). */
+  font-size: 60px;
+  letter-spacing: 10px;
+  opacity: 1;
   color: var(--chopper-green);
   padding: 0;
   text-shadow: 0 0 14px rgba(0, 255, 148, 0.55);
@@ -55,7 +59,8 @@
   left: 32px;
   bottom: 28px;
   font-size: 13px;
-  color: rgba(0, 240, 255, 0.45);
+  color: var(--chopper-cyan);
+  opacity: 0.45;
   padding: 0;
 }
 
@@ -98,7 +103,8 @@
 .briefing__head {
   font-size: 13px;
   letter-spacing: 4px;
-  color: rgba(0, 240, 255, 0.7);
+  color: var(--chopper-cyan);
+  opacity: 0.75;
   padding: 0;
   margin-bottom: 8px;
 }
@@ -122,7 +128,7 @@
 }
 
 .briefing__line--accent {
-  color: rgb(255, 210, 90);
+  color: var(--chopper-yellow);
 }
 
 .briefing__rules {
@@ -140,16 +146,16 @@
   max-width: 90%;
   margin-top: 36px;
   padding: 12px 24px;
-  border-top-width: 1px;
-  border-bottom-width: 1px;
-  border-color: rgba(0, 255, 148, 0.25);
-  background-color: rgba(0, 255, 148, 0.05);
+  /* A style-guide card: dark-pair fill, 1px accent border. */
+  border-width: 1px;
+  border-color: var(--chopper-green-dim);
+  background-color: var(--chopper-panel);
 }
 
 .briefing__tip-head {
   font-size: 15px;
   letter-spacing: 3px;
-  color: rgb(255, 210, 90);
+  color: var(--chopper-yellow);
   padding: 0;
   margin-right: 12px;
 }
@@ -158,7 +164,7 @@
   flex-shrink: 1;
   flex-grow: 1;
   font-size: 17px;
-  color: rgba(220, 255, 236, 0.9);
+  color: var(--chopper-text);
   padding: 0;
   white-space: normal;
 }

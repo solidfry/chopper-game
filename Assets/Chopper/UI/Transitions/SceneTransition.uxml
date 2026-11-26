@@ -1,28 +1,29 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
   <Style src="SceneTransition.uss" />
-  <!-- Scene change overlay (SceneTransitionView): the block wipe, and the destination over it while covered. -->
+  <!-- Scene change overlay (SceneTransitionView): the block wipe, and the destination over it while covered.
+       Type (style guide): destination in Karnivore Dot (display), values in Bold, labels in Lite, the tip in Chakra Petch. -->
   <ui:VisualElement name="transition" class="transition transition--hidden" picking-mode="Ignore">
     <Chopper.UI.Transitions.DigitalWipe name="wipe" class="transition__wipe" />
     <ui:VisualElement name="info" class="transition__info" picking-mode="Ignore">
       <ui:Label name="status" text="LINKING" class="transition__status" />
-      <ui:Label name="label" text="" class="transition__label chopper-title" />
+      <ui:Label name="label" text="" class="transition__label chopper-deco-dot" />
       <ui:VisualElement class="transition__rule" picking-mode="Ignore" />
     </ui:VisualElement>
     <!-- Match briefing (MatchBriefing): shown under the destination while a match scene loads; the lines type in. -->
     <ui:VisualElement name="briefing" class="briefing briefing--hidden" picking-mode="Ignore">
       <ui:VisualElement class="briefing__columns" picking-mode="Ignore">
         <ui:VisualElement class="briefing__column" picking-mode="Ignore">
-          <ui:Label text="// MISSION" class="briefing__head chopper-title" picking-mode="Ignore" />
+          <ui:Label text="// MISSION" class="briefing__head" picking-mode="Ignore" />
           <ui:Label name="briefing-mode" class="briefing__big chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-tagline" class="briefing__line chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-rules" class="briefing__rules chopper-title" picking-mode="Ignore" />
+          <ui:Label name="briefing-tagline" class="briefing__line" picking-mode="Ignore" />
+          <ui:Label name="briefing-rules" class="briefing__rules" picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:VisualElement class="briefing__divider" picking-mode="Ignore" />
         <ui:VisualElement class="briefing__column" picking-mode="Ignore">
-          <ui:Label text="// AREA" class="briefing__head chopper-title" picking-mode="Ignore" />
+          <ui:Label text="// AREA" class="briefing__head" picking-mode="Ignore" />
           <ui:Label name="briefing-map" class="briefing__big chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-conditions" class="briefing__line briefing__line--accent chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-players" class="briefing__rules chopper-title" picking-mode="Ignore" />
+          <ui:Label name="briefing-conditions" class="briefing__line briefing__line--accent" picking-mode="Ignore" />
+          <ui:Label name="briefing-players" class="briefing__rules" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
       <ui:VisualElement class="briefing__tip-row" picking-mode="Ignore">
