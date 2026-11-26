@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using Unity.Burst;
 using Chopper.Presentation.Bridge;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Physics;
@@ -48,71 +50,119 @@ namespace Chopper.Presentation.Audio
             if (!TryGetContext(out var context)) return;
             var place = context.AudioPlace;
             if (place == null) return;
-            CompleteDependency();
-            var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
             var listener = (float3)place.Listener;
             var now = UnityEngine.Time.unscaledTime;
-
-            if (now >= _nextEnclosure)
-            {
-                _nextEnclosure = now + EnclosureInterval;
-                ProbeEnclosure(world, listener, place);
-            }
+            var enclosure = now >= _nextEnclosure;
+            if (enclosure) _nextEnclosure = now + EnclosureInterval;
 
             place.Emitters(_emitters);
-            if (_emitters.Count == 0) return;
-            var count = Mathf.Min(OcclusionRaysPerFrame, _emitters.Count);
-            for (var n = 0; n < count; n++)
+            var occlusion = Mathf.Min(OcclusionRaysPerFrame, _emitters.Count);
+            var rayCount = (enclosure ? EnclosureRays : 0) + occlusion;
+            if (rayCount == 0) return;
+
+            // All of this frame's rays in one Burst job (26 Nov: the managed rays cost ~1.3 ms a frame with 9 choppers on City04).
+            var rays = new NativeArray<RaycastInput>(rayCount, Allocator.TempJob);
+            var fractions = new NativeArray<float>(rayCount, Allocator.TempJob);
+            var r = 0;
+            if (enclosure)
+                for (var i = 0; i < EnclosureRays; i++)
+                {
+                    var angle = i * (2f * math.PI / EnclosureRays);
+                    var direction = new float3(math.cos(angle), 0f, math.sin(angle));
+                    rays[r++] = Ray(listener, listener + direction * EnclosureRange);
+                }
+            var firstEmitter = _nextEmitter;
+            for (var n = 0; n < occlusion; n++)
+            {
+                var index = (firstEmitter + 1 + n) % _emitters.Count;
+                var source = (float3)_emitters[index].Position;
+                var offset = source - listener;
+                var length = math.length(offset);
+                // Too close to block: a zero-length ray (no hit).
+                rays[r++] = length <= SourceMargin * 2f
+                    ? Ray(listener, listener)
+                    : Ray(listener, listener + offset * ((length - SourceMargin) / length));
+            }
+
+            CompleteDependency();
+            var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+            new StaticRaysJob { World = world, Rays = rays, Fractions = fractions }.Run();
+
+            r = 0;
+            if (enclosure)
+            {
+                _fractions.Clear();
+                var wallSum = 0f;
+                var walls = 0;
+                for (var i = 0; i < EnclosureRays; i++)
+                {
+                    var fraction = fractions[r++];
+                    _fractions.Add(fraction);
+                    if (fraction < 0f) continue;
+                    wallSum += fraction * EnclosureRange;
+                    walls++;
+                }
+                place.SetEnclosure(AudioDistance.Enclosure(_fractions), walls > 0 ? wallSum / walls : 0f);
+            }
+            for (var n = 0; n < occlusion; n++)
             {
                 _nextEmitter = (_nextEmitter + 1) % _emitters.Count;
-                var emitter = _emitters[_nextEmitter];
-                place.SetOccluded(emitter.Id, Blocked(world, listener, emitter.Position));
+                place.SetOccluded(_emitters[_nextEmitter].Id, fractions[r++] >= 0f);
+            }
+            rays.Dispose();
+            fractions.Dispose();
+        }
+
+        private static RaycastInput Ray(float3 from, float3 to) =>
+            new() { Start = from, End = to, Filter = CollisionFilter.Default };
+
+        /// <summary>Each ray's fraction (0..1) of the nearest static hit, or -1 when nothing static is hit.</summary>
+        [BurstCompile]
+        private struct StaticRaysJob : IJob
+        {
+            [ReadOnly] public CollisionWorld World;
+            [ReadOnly] public NativeArray<RaycastInput> Rays;
+            public NativeArray<float> Fractions;
+
+            public void Execute()
+            {
+                for (var i = 0; i < Rays.Length; i++)
+                {
+                    var ray = Rays[i];
+                    if (math.lengthsq(ray.End - ray.Start) < 1e-6f)
+                    {
+                        Fractions[i] = -1f;
+                        continue;
+                    }
+                    var collector = new ClosestStaticHit(World.NumDynamicBodies);
+                    World.CastRay(ray, ref collector);
+                    Fractions[i] = collector.NumHits > 0 ? collector.MaxFraction : -1f;
+                }
             }
         }
 
-        private void ProbeEnclosure(in CollisionWorld world, float3 listener, IAudioPlace place)
+        /// <summary>Keeps the closest hit on a static body (buildings, ground); choppers and wrecks are skipped.</summary>
+        private struct ClosestStaticHit : ICollector<Unity.Physics.RaycastHit>
         {
-            _fractions.Clear();
-            var wallSum = 0f;
-            var walls = 0;
-            for (var i = 0; i < EnclosureRays; i++)
-            {
-                var angle = i * (2f * math.PI / EnclosureRays);
-                var direction = new float3(math.cos(angle), 0f, math.sin(angle));
-                var fraction = StaticHit(world, listener, listener + direction * EnclosureRange);
-                _fractions.Add(fraction);
-                if (fraction < 0f) continue;
-                wallSum += fraction * EnclosureRange;
-                walls++;
-            }
-            place.SetEnclosure(AudioDistance.Enclosure(_fractions), walls > 0 ? wallSum / walls : 0f);
-        }
+            private readonly int _numDynamic;
 
-        private static bool Blocked(in CollisionWorld world, float3 listener, float3 source)
-        {
-            var offset = source - listener;
-            var length = math.length(offset);
-            if (length <= SourceMargin * 2f) return false;
-            var end = listener + offset * ((length - SourceMargin) / length);
-            return StaticHit(world, listener, end) >= 0f;
-        }
-
-        /// <summary>Fraction (0..1) along the ray of the nearest static hit, or -1 when nothing static is hit.</summary>
-        private static float StaticHit(in CollisionWorld world, float3 from, float3 to)
-        {
-            var hits = new NativeList<Unity.Physics.RaycastHit>(8, Allocator.Temp);
-            try
+            public ClosestStaticHit(int numDynamic)
             {
-                var ray = new RaycastInput { Start = from, End = to, Filter = CollisionFilter.Default };
-                if (!world.CastRay(ray, ref hits)) return -1f;
-                var best = 2f;
-                foreach (var hit in hits)
-                    if (hit.RigidBodyIndex >= world.NumDynamicBodies && hit.Fraction < best) best = hit.Fraction;
-                return best <= 1f ? best : -1f;
+                _numDynamic = numDynamic;
+                MaxFraction = 1f;
+                NumHits = 0;
             }
-            finally
+
+            public bool EarlyOutOnFirstHit => false;
+            public float MaxFraction { get; private set; }
+            public int NumHits { get; private set; }
+
+            public bool AddHit(Unity.Physics.RaycastHit hit)
             {
-                hits.Dispose();
+                if (hit.RigidBodyIndex < _numDynamic) return false;
+                MaxFraction = hit.Fraction;
+                NumHits = 1;
+                return true;
             }
         }
     }
