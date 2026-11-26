@@ -131,12 +131,13 @@ namespace Chopper.Editor.Setup
                 if (created) FitEffects(root);
                 var fitted = FitColliders(root);
                 var gear = LinkGear(root, part);
-                if (!created && added == 0 && !fitted && !gear) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var lit = FitHullLights(root);
+                if (!created && added == 0 && !fitted && !gear && !lit) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
                 var saved = PrefabUtility.SaveAsPrefabAsset(root, path);
                 Debug.Log(created ? $"Setup: made {path} from kit model {model.name}."
                     : $"Setup: {path}: {added} socket(s) added{(fitted ? ", body colliders fitted" : "")}" +
-                      $"{(gear ? ", landing gear linked" : "")}.");
+                      $"{(gear ? ", landing gear linked" : "")}{(lit ? ", hull lights fitted" : "")}.");
                 return saved;
             }
             finally
@@ -182,6 +183,75 @@ namespace Chopper.Editor.Setup
                 return false;
             visuals.SetGear(legs.ToArray());
             return true;
+        }
+
+        /// <summary>Hull light names: one under the belly, one each side (owner, 26 Nov: "more of the vehicle lit up in
+        /// the dark").</summary>
+        private static readonly string[] HullLightNames = { "Hull Light Belly", "Hull Light Left", "Hull Light Right" };
+
+        /// <summary>Hull fill light colour: the nose spot's cool green-white, so the chopper reads as lit by its own lamps.</summary>
+        private static readonly Color HullLightColour = new(0.665f, 1f, 0.93f);
+
+        /// <summary>
+        /// The chopper lights itself: realtime point lights round the hull (sized from the model's bounds; no shadows,
+        /// Forward+ has room) and the two nose nav lights turned from Baked (they never lit anything at runtime) into
+        /// realtime lights that wash the nose green and red. Places only missing lights and only fixes baked nav lights,
+        /// so hand tuning on the prefab stays. All of them follow the L key (ChopperLightsSystem). True when it changed.
+        /// </summary>
+        private static bool FitHullLights(GameObject root)
+        {
+            var model = root.transform.Find(ModelName);
+            if (model == null) return false;
+            var changed = false;
+
+            foreach (var light in root.GetComponentsInChildren<Light>(true))
+            {
+                if (light.transform.parent != root.transform || !light.name.StartsWith("Area Light")) continue;
+                if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
+                light.lightmapBakeType = LightmapBakeType.Realtime;
+                light.range = 4f;
+                light.intensity = 3f;
+                light.shadows = LightShadows.None;
+                changed = true;
+            }
+
+            var renderers = model.GetComponentsInChildren<MeshRenderer>(true);
+            if (renderers.Length == 0) return changed;
+            var bounds = new Bounds(Local(root, renderers[0].transform), Vector3.zero);
+            foreach (var renderer in renderers)
+            {
+                var b = renderer.bounds;
+                for (var i = 0; i < 8; i++)
+                {
+                    var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                    bounds.Encapsulate(root.transform.InverseTransformPoint(corner));
+                }
+            }
+
+            var c = bounds.center;
+            var e = bounds.extents;
+            var spots = new[]
+            {
+                (Position: new Vector3(c.x, bounds.min.y - 1.2f, c.z + e.z * 0.1f), Range: Mathf.Max(6f, e.z * 1.3f)),
+                (Position: new Vector3(bounds.min.x - 1.6f, c.y + e.y * 0.3f, c.z + e.z * 0.15f), Range: Mathf.Max(5f, e.z * 1.1f)),
+                (Position: new Vector3(bounds.max.x + 1.6f, c.y + e.y * 0.3f, c.z + e.z * 0.15f), Range: Mathf.Max(5f, e.z * 1.1f)),
+            };
+            for (var i = 0; i < HullLightNames.Length; i++)
+            {
+                if (root.transform.Find(HullLightNames[i]) != null) continue;
+                var go = new GameObject(HullLightNames[i]);
+                go.transform.SetParent(root.transform, false);
+                go.transform.localPosition = spots[i].Position;
+                var light = go.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.lightmapBakeType = LightmapBakeType.Realtime;
+                light.color = HullLightColour;
+                light.intensity = 2.5f;
+                light.range = spots[i].Range;
+                light.shadows = LightShadows.None;
+                changed = true;
+            }
+            return changed;
         }
 
         /// <summary>A new variant: the kit model replaces the old model and its placeholder sockets.</summary>
