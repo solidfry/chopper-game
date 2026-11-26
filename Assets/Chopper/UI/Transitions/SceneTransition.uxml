@@ -4,6 +4,12 @@
        Type (style guide): destination in Karnivore Dot (display), values in Bold, labels in Lite, the tip in Chakra Petch. -->
   <ui:VisualElement name="transition" class="transition transition--hidden" picking-mode="Ignore">
     <Chopper.UI.Transitions.DigitalWipe name="wipe" class="transition__wipe" />
+    <!-- LCD panel look while covered (owner, 26 Nov): a tiled subpixel grid and a dark edge. -->
+    <ui:VisualElement name="lcd" class="transition__lcd" picking-mode="Ignore">
+      <ui:VisualElement class="transition__lcd-glow" picking-mode="Ignore" />
+      <ui:VisualElement class="transition__lcd-grid" picking-mode="Ignore" />
+      <ui:VisualElement class="transition__lcd-vignette" picking-mode="Ignore" />
+    </ui:VisualElement>
     <!-- A terminal log in the bottom left (owner, 26 Nov: "displayed like Claude would"): a prompt line, a bullet with
          the destination, then the briefing as indented result lines; the values type in. No tagline or rules. -->
     <ui:VisualElement class="terminal" picking-mode="Ignore">

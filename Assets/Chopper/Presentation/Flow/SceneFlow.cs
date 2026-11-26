@@ -24,6 +24,11 @@ namespace Chopper.Presentation.Flow
         public bool Visible => Cover > 0.0001f;
         /// <summary>Match briefing for this transition, or null (menu scenes).</summary>
         public MatchBriefing Briefing { get; internal set; }
+        /// <summary>
+        /// <see cref="Time"/> when the briefing starts to type: once the new scene has loaded, so the main-thread hitches
+        /// of the load (world creation, scene swap) fall before it and the typing stays smooth. Infinity until then.
+        /// </summary>
+        public float BriefingFrom { get; internal set; } = float.PositiveInfinity;
     }
 
     /// <summary>
@@ -324,7 +329,12 @@ namespace Chopper.Presentation.Flow
         {
             _phase = phase;
             _phaseTime = 0f;
-            if (phase == Phase.Waiting) _ready = false;
+            if (phase == Phase.Covering) Model.BriefingFrom = float.PositiveInfinity;
+            if (phase == Phase.Waiting)
+            {
+                _ready = false;
+                Model.BriefingFrom = Model.Time;
+            }
             if (phase == Phase.Idle)
             {
                 _target = null;

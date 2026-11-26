@@ -20,6 +20,7 @@ namespace Chopper.UI.Transitions
         private DigitalWipe _wipe;
         private VisualElement _info;
         private Label _status;
+        private VisualElement _lcd;
         private Label _label;
         private Label _code;
         private VisualElement _briefing;
@@ -59,6 +60,7 @@ namespace Chopper.UI.Transitions
             _status = _root.Q<Label>("status");
             _label = _root.Q<Label>("label");
             _code = _root.Q<Label>("code");
+            _lcd = _root.Q("lcd");
             _briefing = _root.Q("briefing");
             _briefMode = _root.Q<Label>("briefing-mode");
             _briefTagline = _root.Q<Label>("briefing-tagline");
@@ -116,6 +118,7 @@ namespace Chopper.UI.Transitions
                 _infoOpacity = opacity;
                 if (_info != null) _info.style.opacity = opacity;
                 if (_code != null) _code.style.opacity = opacity;
+                if (_lcd != null) _lcd.style.opacity = opacity;
                 if (_briefing != null) _briefing.style.opacity = opacity;
             }
             if (_status != null && _status.text != _model.Status) _status.text = _model.Status;
@@ -140,7 +143,7 @@ namespace Chopper.UI.Transitions
             if (briefing == null) return;
 
             // Characters shown so far: about 90 a second from fully covered (all at once when revealing).
-            var since = _model.Time - (_settings != null ? _settings.CoverSeconds : 0.55f);
+            var since = Mathf.Max(0f, _model.Time - _model.BriefingFrom);
             var typed = _model.Revealing ? int.MaxValue : Mathf.Max(0, (int)(since * 90f));
             if (typed == _typed && briefing.Version == _briefVersion) return;
             _typed = typed;
