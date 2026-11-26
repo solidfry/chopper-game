@@ -63,6 +63,8 @@ namespace Chopper.Simulation.Combat
         public float ProximityFuse;
         /// <summary>Seconds after launch before the missile steers (it clears the launcher first).</summary>
         public float ArmTime;
+        /// <summary>Guided only: the curving flight (kick, boost, corkscrew).</summary>
+        public MissileArc Arc;
         public Entity MissilePrefab;
         /// <summary>Guided only: splits into submunitions (<see cref="ClusterConfig.Count"/> 0 = no).</summary>
         public ClusterConfig Cluster;

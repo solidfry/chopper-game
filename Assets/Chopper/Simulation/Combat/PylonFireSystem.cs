@@ -292,7 +292,16 @@ namespace Chopper.Simulation.Combat
                 forward = Cluster.Direction(forward, weapon.SalvoConeCos, (uint)shooterId * 7919u, shot);
                 rotation = quaternion.LookRotationSafe(forward, math.mul(pose.Rotation, math.up()));
             }
-            var velocity = chopperVelocity + forward * weapon.Speed;
+            // Curving flight: full speed is what the old straight launch had; the missile leaves at part of it, kicked up
+            // and out to the pylon side, and the flight system speeds it up and bends it round (MissileArc).
+            var fullSpeed = math.length(chopperVelocity + forward * weapon.Speed);
+            var arc = weapon.Arc;
+            var kicked = MissileArcMath.KickDirection(forward, math.mul(pose.Rotation, math.up()), math.mul(pose.Rotation, math.right()),
+                weapon.MuzzleOffset.x, arc.KickRadians, shot);
+            if (arc.KickRadians > 0f) rotation = quaternion.LookRotationSafe(kicked, math.mul(pose.Rotation, math.up()));
+            var velocity = arc.KickRadians > 0f || arc.BoostSeconds > 0f
+                ? kicked * MissileArcMath.SpeedAt(arc, fullSpeed, 0f)
+                : chopperVelocity + forward * weapon.Speed;
 
             var missile = ecb.Instantiate(weapon.MissilePrefab);
             ecb.SetComponent(missile, LocalTransform.FromPositionRotation(position, rotation));
@@ -317,6 +326,10 @@ namespace Chopper.Simulation.Combat
                 SplitRemaining = weapon.Cluster.SplitTime,
                 IgnoresFlares = Salvo.IgnoresFlares(shot, weapon.FlareResistance),
                 Weapon = weapon.Name,
+                Arc = arc,
+                Lifetime = weapon.Lifetime,
+                FullSpeed = fullSpeed,
+                WeavePhase = MissileArcMath.Phase(shooterId, shot),
             });
         }
 

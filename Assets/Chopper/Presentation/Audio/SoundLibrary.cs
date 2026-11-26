@@ -71,6 +71,12 @@ namespace Chopper.Presentation.Audio
         [SerializeField, Tooltip("Loop while a missile chases you; it speeds up as it closes in.")] private SoundCue missileWarning;
         [SerializeField] private SoundCue flares;
 
+        [Header("Missiles and rockets (3D; the effect prefabs' own sounds are muted)")]
+        [SerializeField, Tooltip("A missile leaves the pylon: the motor lights (thump and burn).")] private SoundCue missileLaunch;
+        [SerializeField, Tooltip("Loop on each missile in flight (the motor roar).")] private SoundCue missileFlight;
+        [SerializeField, Tooltip("A missile explodes (air burst: crack and body).")] private SoundCue missileBlast;
+        [SerializeField, Tooltip("A rocket explodes (heavy, on the ground or a target).")] private SoundCue rocketBlast;
+
         [Header("Match")]
         [SerializeField] private SoundCue matchEnd;
 
@@ -141,6 +147,10 @@ namespace Chopper.Presentation.Audio
         public SoundCue LockWarning => lockWarning;
         public SoundCue MissileWarning => missileWarning;
         public SoundCue Flares => flares;
+        public SoundCue MissileLaunch => missileLaunch;
+        public SoundCue MissileFlight => missileFlight;
+        public SoundCue MissileBlast => missileBlast;
+        public SoundCue RocketBlast => rocketBlast;
         public SoundCue UIClick => uiClick;
         public SoundCue UINavigate => uiNavigate;
         /// <summary>A bullet lands on this surface. Falls back to the concrete cue.</summary>
@@ -216,6 +226,10 @@ namespace Chopper.Presentation.Audio
             Check(lockWarning, nameof(lockWarning), problems);
             Check(missileWarning, nameof(missileWarning), problems);
             Check(flares, nameof(flares), problems);
+            Check(missileLaunch, nameof(missileLaunch), problems);
+            Check(missileFlight, nameof(missileFlight), problems);
+            Check(missileBlast, nameof(missileBlast), problems);
+            Check(rocketBlast, nameof(rocketBlast), problems);
             Check(uiClick, nameof(uiClick), problems);
             Check(uiNavigate, nameof(uiNavigate), problems);
             Check(moduleFit, nameof(moduleFit), problems);
@@ -287,6 +301,15 @@ namespace Chopper.Presentation.Audio
         {
             openSpace = open;
             citySpace = city;
+        }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseWeapons(SoundCue launch, SoundCue flight, SoundCue blast, SoundCue rocket)
+        {
+            missileLaunch = launch;
+            missileFlight = flight;
+            missileBlast = blast;
+            rocketBlast = rocket;
         }
 
         /// <summary>Editor only: used by the audio setup tool.</summary>

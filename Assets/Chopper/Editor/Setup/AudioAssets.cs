@@ -233,6 +233,25 @@ namespace Chopper.Editor.Setup
                 Slot(library.NukeArmed, () => Cue("NukeArmed", Clips(Nuke + "/NukeArmed.wav"), ui, 0.7f, blend: 0f, voices: 1, cooldown: 0.5f)),
                 Slot(library.NukeDefused, () => Cue("NukeDefused", Clips(Nuke + "/NukeDefused.wav"), ui, 0.6f, blend: 0f, voices: 1, cooldown: 0.5f)));
 
+            // Missiles and rockets (Assets/Chopper/Audio/SFX/Missiles, made with SoX; owner, 26 Nov: more real launch, better
+            // blasts). Launch: a Khron firework launch burn (a real rocket motor) over a low thump from "Big Explosion
+            // Distant 01". Missile blast: "Air Explosion 01-04" crack over "Big Explosion 05-08". Rocket blast: "Big
+            // Explosion 01-04" cut to 3.2 s (Gun & Explosion Sounds). Flight loop: the Sci-Fi Arsenal rocket loop the
+            // missile prefab played before.
+            const string weapons = "Assets/Chopper/Audio/SFX/Missiles";
+            library.InitialiseWeapons(
+                Slot(library.MissileLaunch, () => Cue("MissileLaunch", Clips(weapons + "/MissileLaunch_01.wav", weapons + "/MissileLaunch_02.wav"),
+                    effects, 0.9f, blend: 1f, voices: 4, cooldown: 0.04f, muffle: CueMuffle.Outside)),
+                Slot(library.MissileFlight, () => Cue("MissileFlight",
+                    Clips("Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound/Loops/loop_rocket2.wav"),
+                    effects, 0.45f, blend: 1f, voices: 6, muffle: CueMuffle.Outside)),
+                Slot(library.MissileBlast, () => Cue("MissileBlast", Clips(weapons + "/MissileBlast_01.wav", weapons + "/MissileBlast_02.wav",
+                    weapons + "/MissileBlast_03.wav", weapons + "/MissileBlast_04.wav"), effects, 1f, blend: 1f, voices: 4, cooldown: 0.03f,
+                    muffle: CueMuffle.Outside)),
+                Slot(library.RocketBlast, () => Cue("RocketBlast", Clips(weapons + "/RocketBlast_01.wav", weapons + "/RocketBlast_02.wav",
+                    weapons + "/RocketBlast_03.wav", weapons + "/RocketBlast_04.wav"), effects, 0.9f, blend: 1f, voices: 5, cooldown: 0.03f,
+                    muffle: CueMuffle.Outside)));
+
             // Places (AudioSpace): reverb and distance by map type. Open: from Unity's "Plain" reverb, faint. City: wetter
             // than Unity's "City" (closer, louder first echoes off the walls, a longer tail); far sounds duller.
             library.InitialiseSpaces(

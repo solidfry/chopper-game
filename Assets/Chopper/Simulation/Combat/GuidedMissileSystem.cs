@@ -104,9 +104,20 @@ namespace Chopper.Simulation.Combat
                     aimPoint = FlareFlight.Position(flares);
                     aimVelocity = FlareFlight.Velocity(flares);
                 }
+                // Curving flight (MissileArc): the motor speeds it up from the kick, and it corkscrews round the line to
+                // the target until close in. Both follow from the age, so a re-simulated tick gives the same result.
+                var age = missile.Lifetime - missile.Remaining;
+                if (missile.FullSpeed > 0f)
+                {
+                    missile.Speed = MissileArcMath.SpeedAt(missile.Arc, missile.FullSpeed, age);
+                    missile.Velocity = math.normalizesafe(missile.Velocity, math.forward()) * missile.Speed;
+                }
                 if (hasTarget && missile.ArmRemaining <= 0f)
+                {
+                    if (!missile.Decoyed) aimPoint = MissileArcMath.WeaveAim(missile.Arc, start, aimPoint, age, missile.WeavePhase);
                     missile.Velocity = Guidance.Steer(start, missile.Velocity, aimPoint, aimVelocity,
                         missile.Speed, missile.TurnRate, missile.NavigationGain, deltaTime);
+                }
 
                 var end = start + missile.Velocity * deltaTime;
                 pose.Position = end;

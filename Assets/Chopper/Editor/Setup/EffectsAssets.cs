@@ -156,6 +156,7 @@ namespace Chopper.Editor.Setup
                 settings.FillNukeRope(EnsureRopeMaterial());
                 settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
                 settings.FillDownwash(EnsureDownwashMaterial());
+                settings.FillMissileSmoke(EnsureMissileSmokeMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
                 DressExhaustSmoke();
@@ -176,6 +177,7 @@ namespace Chopper.Editor.Setup
             settings.FillNukeRope(EnsureRopeMaterial());
             settings.FillDock(Kit("Prop_DockArm_Base"), Kit("Prop_DockArm_Upper"), Kit("Prop_DockArm_Fore"), Kit("Prop_DockDrone"));
             settings.FillDownwash(EnsureDownwashMaterial());
+            settings.FillMissileSmoke(EnsureMissileSmokeMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
@@ -333,6 +335,24 @@ namespace Chopper.Editor.Setup
             material.SetColor("_EmissionColor", new Color(0.05f, 0.05f, 0.055f));
             material = Save(material, ExhaustMaterialPath, emission: true);
             CameraFade(material, 1.5f, 7f);
+            return material;
+        }
+
+        private const string MissileSmokeMaterialPath = "Assets/Chopper/Data/Effects/MissileSmoke.mat";
+
+        /// <summary>Missile smoke column: the damage smoke look with a strong pale glow (owner, 26 Nov: obvious white
+        /// trails; the lit smoke went dark grey at dusk and night).</summary>
+        private static Material EnsureMissileSmokeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(MissileSmokeMaterialPath);
+            if (material != null) return material;
+            var smoke = EnsureSmokeMaterial();
+            if (smoke == null) return null;
+            material = new Material(smoke) { name = "MissileSmoke" };
+            material.SetTexture("_BaseMap", EnsureSmokeSheet());
+            material.SetColor("_EmissionColor", new Color(0.42f, 0.42f, 0.45f));
+            material = Save(material, MissileSmokeMaterialPath, emission: true);
+            CameraFade(material, 1.5f, 6f);
             return material;
         }
 

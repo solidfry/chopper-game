@@ -38,11 +38,12 @@ namespace Chopper.Presentation.Effects
         public CombatEffectsSettings Settings { get; }
 
         /// <summary>Muzzle flashes and impacts. Not pooled: the pack's light fade script destroys its light.</summary>
-        public void SpawnOneShot(GameObject prefab, Vector3 position, Quaternion rotation)
+        /// <param name="muteAudio">True when a sound cue plays instead of the prefab's own audio (missile and rocket blasts).</param>
+        public void SpawnOneShot(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
         {
             if (prefab == null || Settings == null) return;
             var instance = Object.Instantiate(prefab, position, rotation, _root);
-            RouteAudio(instance, mute: false);
+            RouteAudio(instance, muteAudio);
             Object.Destroy(instance, Settings.OneShotLifetime);
         }
 

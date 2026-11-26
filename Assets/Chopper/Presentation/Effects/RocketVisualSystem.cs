@@ -78,7 +78,7 @@ namespace Chopper.Presentation.Effects
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
             CollectFuseTargets(owners);
-            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime, context.HeatMarks);
+            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime, context.HeatMarks, context);
         }
 
         /// <summary>Subscribes to the context's launches; a new context (scene change) drops the old rockets.</summary>
@@ -158,7 +158,7 @@ namespace Chopper.Presentation.Effects
         }
 
         private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime,
-            Chopper.Presentation.Camera.HeatMarks heat)
+            Chopper.Presentation.Camera.HeatMarks heat, PresentationContext context)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
             {
@@ -169,7 +169,10 @@ namespace Chopper.Presentation.Effects
 
                 if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact) || TryFuse(rocket, end, out impact))
                 {
-                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, back);
+                    // The blast sound comes from the cue (place rules: far and hidden blasts are duller), not the prefab.
+                    var blast = context.Sounds != null ? context.Sounds.RocketBlast : null;
+                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, back, muteAudio: blast != null);
+                    if (blast != null) context.Audio?.Play(blast, (Vector3)impact);
                     heat.AddTimed(impact, VisionMath.BlastHeat, VisionMath.BlastSeconds);
                     Finish(effects, i, impact);
                     continue;

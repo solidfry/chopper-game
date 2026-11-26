@@ -16,7 +16,7 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Seconds between missiles.")] private float fireInterval = 2.5f;
         [SerializeField] private float speed = 160f;
         [SerializeField] private float lifetime = 6f;
-        [SerializeField, Tooltip("Seconds before it steers, so it clears the launcher.")] private float armTime = 0.15f;
+        [SerializeField, Tooltip("Seconds before it steers, so it clears the launcher.")] private float armTime = 0.3f;
         [SerializeField, Tooltip("Missile ghost prefab (GhostAuthoringComponent + GuidedMissileAuthoring).")]
         private GameObject missilePrefab;
         [SerializeField, Range(0, 255), Tooltip("Rounds before a reload; a salvo is one round. 0 = no limit.")] private int magazineSize = 4;
@@ -36,6 +36,16 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, Tooltip("Degrees per second.")] private float turnRate = 120f;
         [SerializeField, Tooltip("Lead on a moving target: 0 = pure pursuit, 3 = full lead.")] private float navigationGain = 3f;
         [SerializeField, Tooltip("Explodes this close to the target, metres.")] private float proximityFuse = 6f;
+
+        [Header("Arc (curving flight: kick out, speed up, corkscrew in)")]
+        [SerializeField, Range(0f, 80f), Tooltip("Launch direction turned this far from the nose, up and out to the pylon side, degrees. 0 = straight.")]
+        private float launchKickDegrees = 35f;
+        [SerializeField, Range(0f, 1f), Tooltip("Launch speed as a share of full speed. 1 = full speed at once.")]
+        private float launchSpeedShare = 0.45f;
+        [SerializeField, Tooltip("Seconds from launch to full speed.")] private float boostSeconds = 0.7f;
+        [SerializeField, Range(0f, 30f), Tooltip("Corkscrew size seen from the missile, degrees (it fades out near the target). 0 = none.")]
+        private float weaveDegrees = 10f;
+        [SerializeField, Range(0f, 3f), Tooltip("Corkscrew turns per second.")] private float weaveHz = 0.8f;
 
         [Header("Damage")]
         [SerializeField] private float directDamage = 45f;
@@ -77,6 +87,14 @@ namespace Chopper.Simulation.Definitions
         public float TurnRateRadians => turnRate * Mathf.Deg2Rad;
         public float NavigationGain => navigationGain;
         public float ProximityFuse => proximityFuse;
+        public MissileArc Arc => new()
+        {
+            KickRadians = launchKickDegrees * Mathf.Deg2Rad,
+            StartSpeedShare = launchSpeedShare,
+            BoostSeconds = boostSeconds,
+            WeaveRadians = weaveDegrees * Mathf.Deg2Rad,
+            WeaveHz = weaveHz,
+        };
         public float DirectDamage => directDamage;
         public float SplashDamage => splashDamage;
         public float SplashRadius => splashRadius;

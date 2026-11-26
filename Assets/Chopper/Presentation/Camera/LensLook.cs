@@ -48,7 +48,7 @@ namespace Chopper.Presentation.Camera
             if (settings.SunFlare == null) return null;
             var sun = RenderSettings.sun;
             if (sun == null)
-                foreach (var light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                foreach (var light in Object.FindObjectsByType<Light>())
                     if (light.type == LightType.Directional) { sun = light; break; }
             if (sun == null || sun.GetComponent<LensFlareComponentSRP>() != null) return null;
             var flare = sun.gameObject.AddComponent<LensFlareComponentSRP>();

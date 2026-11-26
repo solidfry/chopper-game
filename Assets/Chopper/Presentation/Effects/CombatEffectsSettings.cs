@@ -35,6 +35,17 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Looping visual that follows each missile ghost. Pooled.")]
         private GameObject missile;
         [SerializeField] private GameObject missileImpact;
+        [SerializeField, Tooltip("Missile smoke column material: the damage smoke with a glow, so the column reads white at night " +
+                                 "too (made by Setup). Empty: the Damage Smoke Material.")]
+        private Material missileSmokeMaterial;
+        [SerializeField, Tooltip("Seconds the missile smoke column hangs in the air. 0 = no column.")]
+        private float missileSmokeLife = 4f;
+        [SerializeField, Tooltip("Puff size (m) at the nozzle.")] private float missileSmokeSize = 2.2f;
+        [SerializeField, Tooltip("Puff size at the end of its life, times the start size: how fat the column grows.")]
+        private float missileSmokeGrowth = 4f;
+        [SerializeField, Tooltip("Metres between puffs along the path. Smaller = a denser column, more particles.")]
+        private float missileSmokeSpacing = 1.2f;
+        [SerializeField, Tooltip("Smoke colour; alpha = thickness.")] private Color missileSmokeColour = new(0.92f, 0.92f, 0.94f, 0.75f);
         [SerializeField, Tooltip("Looping visual for one flare (falls and burns out). Pooled.")]
         private GameObject flare;
         [SerializeField] private int flaresPerDrop = 6;
@@ -272,6 +283,12 @@ namespace Chopper.Presentation.Effects
         public float OneShotLifetime => oneShotLifetime;
         public GameObject Missile => missile != null ? missile : rocket;
         public GameObject MissileImpact => missileImpact != null ? missileImpact : rocketImpact;
+        public Material MissileSmokeMaterial => missileSmokeMaterial != null ? missileSmokeMaterial : damageSmokeMaterial;
+        public float MissileSmokeLife => missileSmokeLife;
+        public float MissileSmokeSize => missileSmokeSize;
+        public float MissileSmokeGrowth => Mathf.Max(1f, missileSmokeGrowth);
+        public float MissileSmokeSpacing => missileSmokeSpacing;
+        public Color MissileSmokeColour => missileSmokeColour;
         /// <summary>A wreck's explosion (Docs/ChopperDeathDesign.md); empty = the missile impact, layered.</summary>
         /// <summary>Setup: the layered wreck explosion, when none is set.</summary>
         public void FillExplosionLayers(BlastLayer[] layers, bool replace = false)
@@ -456,6 +473,12 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: fills an empty downwash material slot.</summary>
+        /// <summary>Editor only: fills the missile smoke material slot when it is empty.</summary>
+        public void FillMissileSmoke(Material material)
+        {
+            if (missileSmokeMaterial == null) missileSmokeMaterial = material;
+        }
+
         public void FillDownwash(Material material)
         {
             if (downwashMaterial == null) downwashMaterial = material;

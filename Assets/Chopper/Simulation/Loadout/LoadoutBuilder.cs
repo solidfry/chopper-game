@@ -308,6 +308,7 @@ namespace Chopper.Simulation.Loadout
             NavigationGain = missile.NavigationGain,
             ProximityFuse = missile.ProximityFuse,
             ArmTime = missile.ArmTime,
+            Arc = missile.Arc,
             Cluster = missile.Cluster,
             SalvoCount = missile.SalvoCount,
             SalvoInterval = missile.SalvoInterval,

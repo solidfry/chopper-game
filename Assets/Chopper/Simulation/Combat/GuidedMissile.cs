@@ -38,6 +38,13 @@ namespace Chopper.Simulation.Combat
         [GhostField] public bool Decoyed;
         /// <summary>Server: short name of the weapon that fired it, for the match log.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
+
+        // Set at launch the same way on the server and the shooter's predicted copy (no ghost fields: they never change).
+        /// <summary>The curving flight; the age comes from <see cref="Lifetime"/> - <see cref="Remaining"/>.</summary>
+        public MissileArc Arc;
+        public float Lifetime;
+        public float FullSpeed;
+        public float WeavePhase;
     }
 
     /// <summary>Server to all: a missile exploded here (its ghost is removed, so clients need the place).</summary>
