@@ -39,16 +39,16 @@ namespace Chopper.Editor.Setup
             });
             var airToGround = Definition<GuidedMissileDefinition>("Weapon_HeatSeekerAG", d =>
             {
-                // Slower and heavier; can dumb-fire at the ground.
-                d.Initialise(prefab, TargetClass.Ground, needsLock: false, cone: 10f, range: 800f, lockSeconds: 1.5f, missileSpeed: 110f,
+                // Slower and heavier; fires only with a lock (owner, 26 Nov; it used to dumb-fire).
+                d.Initialise(prefab, TargetClass.Ground, needsLock: true, cone: 10f, range: 800f, lockSeconds: 1.5f, missileSpeed: 110f,
                     turnDegreesPerSecond: 60f, gain: 2f, fuse: 3f, direct: 60f, splash: 35f, radius: 9f, interval: 3f, life: 8f);
                 d.SetMagazine(size: 2, reload: 14f);
                 d.SetMuzzleOffset(new Vector3(1.4f, -0.8f, 1.5f));
             });
             var cluster = Definition<GuidedMissileDefinition>("Weapon_ClusterMissile", d =>
             {
-                // Area denial: flies at the ground target (or straight when dumb-fired), splits into 8 bomblets.
-                d.Initialise(prefab, TargetClass.Ground, needsLock: false, cone: 12f, range: 900f, lockSeconds: 1.5f, missileSpeed: 120f,
+                // Area denial: flies at the locked ground target (lock needed, owner 26 Nov), splits into 8 bomblets.
+                d.Initialise(prefab, TargetClass.Ground, needsLock: true, cone: 12f, range: 900f, lockSeconds: 1.5f, missileSpeed: 120f,
                     turnDegreesPerSecond: 45f, gain: 2f, fuse: 3f, direct: 30f, splash: 15f, radius: 6f, interval: 5f, life: 6f);
                 d.SetCluster(count: 8, distance: 60f, time: 1.8f, subSpeed: 90f, spread: 14f, subLifetime: 2.5f, direct: 20f, splash: 18f,
                     radius: 6f);
@@ -68,7 +68,7 @@ namespace Chopper.Editor.Setup
 
             Link(catalog, HomingMissilesId, m => m.Weapon == null, m => m.SetWeapon(airToAir));
             Link(catalog, FlaresId, m => m.Ability == null, m => m.SetAbility(flares));
-            EnsureModule(catalog, GroundSeekerId, "Ground Seeker", "Heat-seeking air-to-ground missile. Dumb-fires without a lock.",
+            EnsureModule(catalog, GroundSeekerId, "Ground Seeker", "Heat-seeking air-to-ground missile. Fires only with a lock.",
                 "Pylon_GroundSeeker", weight: 16f, unlockLevel: 6, airToGround);
             EnsureModule(catalog, ClusterMissilesId, "Cluster Missiles", "Splits into bomblets over the target. Area denial.",
                 "Pylon_ClusterMissiles", weight: 18f, unlockLevel: 8, cluster);

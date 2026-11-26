@@ -237,14 +237,15 @@ namespace Chopper.Editor.Setup
             // blasts). Launch: a Khron firework launch burn (a real rocket motor) over a low thump from "Big Explosion
             // Distant 01". Missile blast: "Air Explosion 01-04" crack over "Big Explosion 05-08". Rocket blast: "Big
             // Explosion 01-04" cut to 3.2 s (Gun & Explosion Sounds). Flight loop: the Sci-Fi Arsenal rocket loop the
-            // missile prefab played before.
+            // missile prefab played before. Launch and flight are not muffled (owner, 26 Nov: "homing missiles are silent";
+            // the canopy low-pass took out their hiss); all clips compressed with SoX so they sit near the gun's level.
             const string weapons = "Assets/Chopper/Audio/SFX/Missiles";
             library.InitialiseWeapons(
                 Slot(library.MissileLaunch, () => Cue("MissileLaunch", Clips(weapons + "/MissileLaunch_01.wav", weapons + "/MissileLaunch_02.wav"),
-                    effects, 0.9f, blend: 1f, voices: 4, cooldown: 0.04f, muffle: CueMuffle.Outside)),
+                    effects, 1f, blend: 1f, voices: 4, cooldown: 0.04f, muffle: CueMuffle.None)),
                 Slot(library.MissileFlight, () => Cue("MissileFlight",
                     Clips("Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound/Loops/loop_rocket2.wav"),
-                    effects, 0.45f, blend: 1f, voices: 6, muffle: CueMuffle.Outside)),
+                    effects, 0.6f, blend: 1f, voices: 6, muffle: CueMuffle.None)),
                 Slot(library.MissileBlast, () => Cue("MissileBlast", Clips(weapons + "/MissileBlast_01.wav", weapons + "/MissileBlast_02.wav",
                     weapons + "/MissileBlast_03.wav", weapons + "/MissileBlast_04.wav"), effects, 1f, blend: 1f, voices: 4, cooldown: 0.03f,
                     muffle: CueMuffle.Outside)),
