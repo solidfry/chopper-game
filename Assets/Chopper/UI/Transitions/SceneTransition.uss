@@ -39,8 +39,8 @@
 .transition__label,
 .transition__label.chopper-deco-dot {
   /* Display name in Karnivore Dot, as the page headings (style guide). */
-  font-size: 60px;
-  letter-spacing: 10px;
+  font-size: 76px;
+  letter-spacing: 14px;
   opacity: 1;
   color: var(--chopper-green);
   padding: 0;
@@ -48,16 +48,16 @@
 }
 
 .transition__rule {
-  width: 320px;
+  width: 560px;
   height: 1px;
-  margin-top: 10px;
+  margin-top: 18px;
   background-color: var(--chopper-green-dim);
 }
 
 .transition__code {
   position: absolute;
-  left: 32px;
-  bottom: 28px;
+  left: 56px;
+  bottom: 44px;
   font-size: 13px;
   color: var(--chopper-cyan);
   opacity: 0.45;
@@ -66,7 +66,7 @@
 
 /* With a briefing the destination moves up to make room. */
 .transition__info--briefing {
-  top: 18%;
+  top: 12%;
 }
 
 /* Match briefing (SceneTransitionView): two columns, a tip under them. */
@@ -74,7 +74,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 34%;
+  top: 36%;
   align-items: center;
 }
 
@@ -84,14 +84,14 @@
 
 .briefing__columns {
   flex-direction: row;
-  width: 900px;
-  max-width: 90%;
+  width: 1500px;
+  max-width: 84%;
 }
 
 .briefing__column {
   flex-grow: 1;
   flex-basis: 0;
-  padding: 0 24px;
+  padding: 8px 64px;
 }
 
 .briefing__divider {
@@ -102,16 +102,16 @@
 
 .briefing__head {
   font-size: 13px;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
   color: var(--chopper-cyan);
   opacity: 0.75;
   padding: 0;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
 }
 
 .briefing__big {
-  font-size: 30px;
-  letter-spacing: 4px;
+  font-size: 40px;
+  letter-spacing: 6px;
   color: var(--chopper-green);
   padding: 0;
   white-space: normal;
@@ -119,11 +119,11 @@
 }
 
 .briefing__line {
-  font-size: 15px;
-  letter-spacing: 3px;
+  font-size: 17px;
+  letter-spacing: 4px;
   color: var(--chopper-green-dim);
   padding: 0;
-  margin-top: 4px;
+  margin-top: 10px;
   white-space: normal;
 }
 
@@ -132,20 +132,20 @@
 }
 
 .briefing__rules {
-  font-size: 15px;
-  letter-spacing: 2px;
+  font-size: 17px;
+  letter-spacing: 3px;
   color: var(--chopper-green);
   padding: 0;
-  margin-top: 14px;
+  margin-top: 32px;
   white-space: normal;
 }
 
 .briefing__tip-row {
   flex-direction: row;
-  width: 900px;
-  max-width: 90%;
-  margin-top: 36px;
-  padding: 12px 24px;
+  width: 1500px;
+  max-width: 84%;
+  margin-top: 88px;
+  padding: 22px 40px;
   /* A style-guide card: dark-pair fill, 1px accent border. */
   border-width: 1px;
   border-color: var(--chopper-green-dim);
@@ -157,13 +157,13 @@
   letter-spacing: 3px;
   color: var(--chopper-yellow);
   padding: 0;
-  margin-right: 12px;
+  margin-right: 24px;
 }
 
 .briefing__tip {
   flex-shrink: 1;
   flex-grow: 1;
-  font-size: 17px;
+  font-size: 19px;
   color: var(--chopper-text);
   padding: 0;
   white-space: normal;
