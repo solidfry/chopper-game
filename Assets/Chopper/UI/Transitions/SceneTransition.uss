@@ -28,53 +28,62 @@
 }
 
 .transition__status {
-  font-size: 14px;
-  letter-spacing: 6px;
+  font-size: 11px;
+  letter-spacing: 8px;
   color: var(--chopper-cyan);
-  opacity: 0.7;
+  opacity: 0.5;
   padding: 0;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .transition__label,
 .transition__label.chopper-deco-dot {
-  /* Display name in Karnivore Dot, as the page headings (style guide). */
-  font-size: 76px;
-  letter-spacing: 14px;
+  /* Display name in Karnivore Dot (style guide), held back: subtle glow, wide tracking. */
+  font-size: 46px;
+  letter-spacing: 18px;
   opacity: 1;
   color: var(--chopper-green);
   padding: 0;
-  text-shadow: 0 0 14px rgba(0, 255, 148, 0.55);
+  text-shadow: 0 0 18px rgba(0, 255, 148, 0.3);
 }
 
 .transition__rule {
-  width: 560px;
+  width: 240px;
   height: 1px;
-  margin-top: 18px;
+  margin-top: 22px;
   background-color: var(--chopper-green-dim);
+  opacity: 0.6;
 }
 
 .transition__code {
   position: absolute;
   left: 56px;
   bottom: 44px;
-  font-size: 13px;
+  font-size: 10px;
   color: var(--chopper-cyan);
-  opacity: 0.45;
+  opacity: 0.3;
   padding: 0;
 }
 
-/* With a briefing the destination moves up to make room. */
+/* With a briefing the destination sits a little higher. */
 .transition__info--briefing {
-  top: 12%;
+  top: 34%;
 }
 
-/* Match briefing (SceneTransitionView): two columns, a tip under them. */
+/* Match briefing (SceneTransitionView): a small terminal read-out, key then value, under the destination. */
 .briefing {
   position: absolute;
   left: 0;
   right: 0;
-  top: 36%;
+  top: 0;
+  bottom: 0;
+}
+
+.briefing__rows {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
   align-items: center;
 }
 
@@ -82,89 +91,47 @@
   display: none;
 }
 
-.briefing__columns {
+.briefing__row {
   flex-direction: row;
-  width: 1500px;
-  max-width: 84%;
+  width: 360px;
+  margin-bottom: 8px;
 }
 
-.briefing__column {
-  flex-grow: 1;
-  flex-basis: 0;
-  padding: 8px 64px;
-}
-
-.briefing__divider {
-  width: 1px;
-  background-color: var(--chopper-green-dim);
-  opacity: 0.6;
-}
-
-.briefing__head {
-  font-size: 13px;
+.briefing__key {
+  width: 110px;
+  font-size: 11px;
   letter-spacing: 6px;
   color: var(--chopper-cyan);
-  opacity: 0.75;
+  opacity: 0.45;
   padding: 0;
-  margin-bottom: 20px;
+  -unity-text-align: middle-left;
 }
 
-.briefing__big {
-  font-size: 40px;
-  letter-spacing: 6px;
-  color: var(--chopper-green);
-  padding: 0;
-  white-space: normal;
-  text-shadow: 0 0 10px rgba(0, 255, 148, 0.4);
-}
-
-.briefing__line {
-  font-size: 17px;
-  letter-spacing: 4px;
-  color: var(--chopper-green-dim);
-  padding: 0;
-  margin-top: 10px;
-  white-space: normal;
-}
-
-.briefing__line--accent {
-  color: var(--chopper-yellow);
-}
-
-.briefing__rules {
-  font-size: 17px;
-  letter-spacing: 3px;
-  color: var(--chopper-green);
-  padding: 0;
-  margin-top: 32px;
-  white-space: normal;
-}
-
-.briefing__tip-row {
-  flex-direction: row;
-  width: 1500px;
-  max-width: 84%;
-  margin-top: 88px;
-  padding: 22px 40px;
-  /* A style-guide card: dark-pair fill, 1px accent border. */
-  border-width: 1px;
-  border-color: var(--chopper-green-dim);
-  background-color: var(--chopper-panel);
-}
-
-.briefing__tip-head {
-  font-size: 15px;
-  letter-spacing: 3px;
-  color: var(--chopper-yellow);
-  padding: 0;
-  margin-right: 24px;
-}
-
-.briefing__tip {
-  flex-shrink: 1;
+.briefing__value {
   flex-grow: 1;
-  font-size: 19px;
-  color: var(--chopper-text);
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--chopper-green);
+  opacity: 0.85;
   padding: 0;
+  -unity-text-align: middle-left;
+}
+
+.briefing__value--accent {
+  color: var(--chopper-yellow);
+  opacity: 0.75;
+}
+
+/* The tip: one dim line near the bottom, as a terminal comment. */
+.briefing__tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 44px;
+  font-size: 13px;
+  color: var(--chopper-text);
+  opacity: 0.4;
+  -unity-text-align: middle-center;
   white-space: normal;
+  padding: 0 20%;
 }

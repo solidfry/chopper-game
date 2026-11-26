@@ -9,27 +9,28 @@
       <ui:Label name="label" text="" class="transition__label chopper-deco-dot" />
       <ui:VisualElement class="transition__rule" picking-mode="Ignore" />
     </ui:VisualElement>
-    <!-- Match briefing (MatchBriefing): shown under the destination while a match scene loads; the lines type in. -->
+    <!-- Match briefing (MatchBriefing): a quiet terminal read-out under the destination; the values type in.
+         Tagline and rules are left out on purpose (owner, 26 Nov: less text, subtle). -->
     <ui:VisualElement name="briefing" class="briefing briefing--hidden" picking-mode="Ignore">
-      <ui:VisualElement class="briefing__columns" picking-mode="Ignore">
-        <ui:VisualElement class="briefing__column" picking-mode="Ignore">
-          <ui:Label text="// MISSION" class="briefing__head" picking-mode="Ignore" />
-          <ui:Label name="briefing-mode" class="briefing__big chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-tagline" class="briefing__line" picking-mode="Ignore" />
-          <ui:Label name="briefing-rules" class="briefing__rules" picking-mode="Ignore" />
+      <ui:VisualElement class="briefing__rows" picking-mode="Ignore">
+        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
+          <ui:Label text="MODE" class="briefing__key" picking-mode="Ignore" />
+          <ui:Label name="briefing-mode" class="briefing__value" picking-mode="Ignore" />
         </ui:VisualElement>
-        <ui:VisualElement class="briefing__divider" picking-mode="Ignore" />
-        <ui:VisualElement class="briefing__column" picking-mode="Ignore">
-          <ui:Label text="// AREA" class="briefing__head" picking-mode="Ignore" />
-          <ui:Label name="briefing-map" class="briefing__big chopper-title" picking-mode="Ignore" />
-          <ui:Label name="briefing-conditions" class="briefing__line briefing__line--accent" picking-mode="Ignore" />
-          <ui:Label name="briefing-players" class="briefing__rules" picking-mode="Ignore" />
+        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
+          <ui:Label text="AREA" class="briefing__key" picking-mode="Ignore" />
+          <ui:Label name="briefing-map" class="briefing__value" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
+          <ui:Label text="COND" class="briefing__key" picking-mode="Ignore" />
+          <ui:Label name="briefing-conditions" class="briefing__value briefing__value--accent" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
+          <ui:Label text="SLOTS" class="briefing__key" picking-mode="Ignore" />
+          <ui:Label name="briefing-players" class="briefing__value" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
-      <ui:VisualElement class="briefing__tip-row" picking-mode="Ignore">
-        <ui:Label text="TIP //" class="briefing__tip-head chopper-title" picking-mode="Ignore" />
-        <ui:Label name="briefing-tip" class="briefing__tip chopper-body" picking-mode="Ignore" />
-      </ui:VisualElement>
+      <ui:Label name="briefing-tip" class="briefing__tip chopper-body" picking-mode="Ignore" />
     </ui:VisualElement>
     <ui:Label name="code" text="" class="transition__code chopper-deco-dot" />
   </ui:VisualElement>
