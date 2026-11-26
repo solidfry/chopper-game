@@ -33,6 +33,12 @@ namespace Chopper.Presentation.Bridge
         private AudioClip _musicOverride;
         private bool _musicStarted;
         private float _musicLevel = -1f;
+        /// <summary>Seconds the flying state has differed from the one the music level follows (see UpdateMusicLevel).</summary>
+        private float _musicStateFor;
+        private bool _musicFlying;
+        /// <summary>Seconds of steady flight before the music ducks, and without a chopper before it comes back up.</summary>
+        private const float MusicDuckAfter = 2f;
+        private const float MusicRiseAfter = 1.5f;
         private SoundLoop _ambience;
         /// <summary>0 = chase view, 1 = cockpit view; moves slowly, so the sound changes with the camera blend.</summary>
         private float _cockpitMuffle;
@@ -334,6 +340,8 @@ namespace Chopper.Presentation.Bridge
         private void StartMusic()
         {
             _musicLevel = -1f;
+            _musicFlying = false;
+            _musicStateFor = 0f;
             var music = Config != null ? Config.Music : null;
             // Across a scene change the old scene's music is still playing: cross-fade into this scene's set.
             var fade = music != null && _flow != null ? music.SceneCrossFadeSeconds : 1.5f;
@@ -348,12 +356,28 @@ namespace Chopper.Presentation.Bridge
         /// Menus: full level. Matches: down while you fly, so the rotors and guns come through; up a little while you
         /// wait to spawn and on the results.
         /// </summary>
-        private void UpdateMusicLevel()
+        /// <remarks>
+        /// Steady (owner, 26 Nov: music should blend after loading screens): the level holds while a transition covers the
+        /// screen, ducks only after <see cref="MusicDuckAfter"/> s of flight and rises only after <see cref="MusicRiseAfter"/>
+        /// s without a chopper, so a spawn, a respawn or a short gap does not pump it.
+        /// </remarks>
+        private void UpdateMusicLevel(float deltaTime = 0f)
         {
             var music = Config != null ? Config.Music : null;
             if (music == null || !_musicStarted) return;
-            var flying = Hud.HasChopper && !Match.BannerVisible;
-            var level = _musicSet == MusicLibrary.Set.Menu ? music.MenuLevel : flying ? music.CombatLevel : music.IdleLevel;
+            var covered = _flow != null && _flow.Model.Cover > 0.001f;
+            var flyingNow = Hud.HasChopper && !Match.BannerVisible && !covered;
+            if (flyingNow == _musicFlying) _musicStateFor = 0f;
+            else
+            {
+                _musicStateFor += deltaTime;
+                if (_musicStateFor >= (flyingNow ? MusicDuckAfter : MusicRiseAfter))
+                {
+                    _musicFlying = flyingNow;
+                    _musicStateFor = 0f;
+                }
+            }
+            var level = _musicSet == MusicLibrary.Set.Menu ? music.MenuLevel : _musicFlying ? music.CombatLevel : music.IdleLevel;
             if (Mathf.Approximately(level, _musicLevel)) return;
             _musicLevel = level;
             _audio.SetMusicLevel(level, music.LevelFadeSeconds);
@@ -376,7 +400,7 @@ namespace Chopper.Presentation.Bridge
         {
             _audio.Tick(unscaledDeltaTime);
             if (_linkLost && !_leftAfterLinkLost) _leftAfterLinkLost = LeaveAfterLinkLost();
-            UpdateMusicLevel();
+            UpdateMusicLevel(unscaledDeltaTime);
             UpdateOutsideSounds(unscaledDeltaTime);
             // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.
             if (_flow != null && _flow.WaitingFor(_scene) && (!IsMatchScene || Hud.HasChopper)) _flow.SceneReady(_scene);

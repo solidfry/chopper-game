@@ -16,6 +16,7 @@ namespace Chopper.Presentation.Audio
     public sealed class MusicPlayer : IDisposable
     {
         private readonly AudioSource[] _sources = new AudioSource[2];
+        private const float MaxStep = 1f / 20f;
         private readonly float[] _fade = new float[2];
         private readonly float[] _fadeTarget = new float[2];
         private readonly float[] _fadeSpeed = new float[2];
@@ -106,6 +107,8 @@ namespace Chopper.Presentation.Audio
 
         public void Tick(float deltaTime)
         {
+            // A long frame (a scene load) must not step the fades: they slow down a little instead of jumping.
+            deltaTime = Mathf.Min(deltaTime, MaxStep);
             AdvancePlaylist();
             _level = Mathf.MoveTowards(_level, _levelTarget, _levelSpeed * deltaTime);
             for (var i = 0; i < _sources.Length; i++)
