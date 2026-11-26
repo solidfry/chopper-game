@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
 
 namespace Chopper.Simulation.Bots
 {
@@ -50,7 +51,12 @@ namespace Chopper.Simulation.Bots
     {
         /// <summary>How far (cells) to look for a usable cell when the start or goal cell is not.</summary>
         private const int SnapRadius = 4;
-        private const float HeuristicWeight = 1.2f;
+        private static readonly ProfilerMarker SearchMarker = new("NavPathfinder.Search");
+        private static readonly ProfilerMarker SearchNoGoalMarker = new("NavPathfinder.SearchNoGoal");
+        private static readonly ProfilerMarker PullMarker = new("NavPathfinder.Pull");
+        // 26 Nov: 1.2 -> 2 (City04, 8 bots: searches averaged 3.5 ms, max 9.4 ms; a greedier search opens far fewer
+        // cells in open air, paths a little less short).
+        private const float HeuristicWeight = 2f;
 
         /// <summary>
         /// Writes the path to <paramref name="path"/> (cleared first): waypoints after the start, the last is the goal or
@@ -90,6 +96,7 @@ namespace Chopper.Simulation.Bots
             var reached = false;
             var opened = 0;
 
+            var search = goalIndex >= 0 ? SearchMarker.Auto() : SearchNoGoalMarker.Auto();
             while (open.Length > 0 && opened < query.MaxNodes)
             {
                 var current = Pop(ref open);
@@ -140,6 +147,8 @@ namespace Chopper.Simulation.Bots
                 }
             }
 
+            search.Dispose();
+            using var pull = PullMarker.Auto();
             // Walk back from the end cell, then string-pull forwards from the start.
             var cells = new NativeList<float3>(64, Allocator.Temp);
             for (var index = best; index != -1; index = parent[index])
