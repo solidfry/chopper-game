@@ -165,6 +165,16 @@
   display: flex;
 }
 
+/* Pixel grid over the live city render (shared class chopper-screen-grid). */
+.home__grid {
+  display: none;
+  opacity: 0.06;
+}
+
+.home--live .home__grid {
+  display: flex;
+}
+
 .home__city {
   position: absolute;
   left: 0;

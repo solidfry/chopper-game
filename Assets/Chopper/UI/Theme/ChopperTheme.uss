@@ -641,3 +641,16 @@
 .terminal-reveal.terminal-reveal--typing {
   text-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
+
+/* Pixel-grid screen (owner, 26 Nov): a 6 px subpixel cell tiled over a full-screen layer. Each screen sets the
+   strength with opacity (loading screen, Home city render). */
+.chopper-screen-grid {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("/Assets/Chopper/UI/Transitions/LcdCell.png");
+  background-repeat: repeat repeat;
+  background-size: 6px 6px;
+}

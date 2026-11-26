@@ -7,7 +7,7 @@
     <!-- LCD panel look while covered (owner, 26 Nov): a tiled subpixel grid and a dark edge. -->
     <ui:VisualElement name="lcd" class="transition__lcd" picking-mode="Ignore">
       <ui:VisualElement class="transition__lcd-glow" picking-mode="Ignore" />
-      <ui:VisualElement class="transition__lcd-grid" picking-mode="Ignore" />
+      <ui:VisualElement class="transition__lcd-grid chopper-screen-grid" picking-mode="Ignore" />
       <ui:VisualElement class="transition__lcd-vignette" picking-mode="Ignore" />
     </ui:VisualElement>
     <!-- A terminal log in the bottom left (owner, 26 Nov: "displayed like Claude would"): a prompt line, a bullet with
@@ -18,7 +18,7 @@
           <ui:Label text="&gt;" class="terminal__mark terminal__mark--prompt chopper-body" picking-mode="Ignore" />
           <ui:Label name="status" text="LINKING" class="terminal__prompt chopper-body" picking-mode="Ignore" />
         </ui:VisualElement>
-        <ui:VisualElement class="terminal__line terminal__line--gap" picking-mode="Ignore">
+        <ui:VisualElement class="terminal__line terminal__line--gap" picking-mode="Ignore" style="display: none;">
           <ui:Label text="&#x2022;" class="terminal__mark terminal__mark--bullet chopper-body" picking-mode="Ignore" />
           <ui:Label name="label" text="" class="terminal__title chopper-title" picking-mode="Ignore" />
         </ui:VisualElement>

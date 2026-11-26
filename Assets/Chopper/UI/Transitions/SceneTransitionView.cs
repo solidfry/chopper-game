@@ -122,7 +122,13 @@ namespace Chopper.UI.Transitions
                 if (_briefing != null) _briefing.style.opacity = opacity;
             }
             if (_status != null && _status.text != _model.Status) _status.text = _model.Status;
-            if (_label != null && _label.text != _model.Label) _label.text = _model.Label;
+            if (_label != null && _label.text != _model.Label)
+            {
+                _label.text = _model.Label;
+                // No destination (boot): hide its bullet line too.
+                if (_label.parent != null)
+                    _label.parent.style.display = string.IsNullOrEmpty(_model.Label) ? DisplayStyle.None : DisplayStyle.Flex;
+            }
             UpdateCode();
             UpdateBriefing();
         }
