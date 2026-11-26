@@ -251,9 +251,10 @@
   transition-duration: 0.12s;
 }
 
+/* Focus and hover: the yellow pair of the palette, Lightning Yellow fill with its dark pair for the text (owner, 26 Nov). */
 .home-nav__item:hover,
 .home-nav__item:focus {
-  background-color: var(--chopper-green);
+  background-color: var(--chopper-yellow);
   border-color: var(--chopper-yellow);
   translate: 14px 0;
   width: 420px;
@@ -278,7 +279,7 @@
 .home-nav__item:focus .home-nav__label,
 .home-nav__item:hover .home-nav__index,
 .home-nav__item:focus .home-nav__index {
-  color: var(--chopper-green-dark);
+  color: var(--chopper-yellow-dark);
 }
 
 .home-nav__item--quit .home-nav__label {
@@ -289,6 +290,13 @@
 .home-nav__item--quit:focus {
   background-color: var(--chopper-red);
   border-color: var(--chopper-red);
+}
+
+.home-nav__item--quit:hover .home-nav__label,
+.home-nav__item--quit:focus .home-nav__label,
+.home-nav__item--quit:hover .home-nav__index,
+.home-nav__item--quit:focus .home-nav__index {
+  color: var(--chopper-red-dark);
 }
 
 .home-nav__hint {
@@ -729,10 +737,14 @@
   padding: 0 0 0 10px;
 }
 
-/* Page headings and the main menu nav in Karnivore Dot, as the codex call sign (owner, 11 Nov). */
+/* Page headings in Karnivore Dot, as the codex call sign (owner, 11 Nov). */
 .codex__title,
-.codex__title.chopper-title,
+.codex__title.chopper-title {
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOD Centred.asset");
+}
+
+/* The main menu nav in the solid cut, Karnivore Bold (owner, 26 Nov; was Dot). */
 .home-nav__label,
 .home-nav__label.chopper-title {
-  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOD Centred.asset");
+  -unity-font-definition: url("/Assets/Chopper/UI/Fonts/KARNIVOB Centred.asset");
 }

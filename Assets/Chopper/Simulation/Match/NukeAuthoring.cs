@@ -105,8 +105,8 @@ namespace Chopper.Simulation.Match
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent(entity, NukeRules.AtSpawn);
                 AddComponent<NukeCarrier>(entity);
-                // Seekers can show it; not damageable for now (shooting the carrier drops it).
-                AddComponent(entity, new Targetable { Class = TargetClass.Ground, BaseHeat = 0.9f });
+                // Not Targetable (owner, 26 Nov): it takes no damage, so a seeker lock on it only wasted missiles and
+                // stole the lock from the carrier. Shoot the carrier to drop it; its HUD marker comes from NukeState.
             }
         }
     }
