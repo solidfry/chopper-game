@@ -237,6 +237,12 @@ namespace Chopper.Presentation.Effects
         private static void ConfigureTrail(ParticleSystem system, CombatEffectsSettings settings)
         {
             var trail = TrailOf(system);
+            if (settings.BoostTrailTime <= 0f)
+            {
+                // No trail (the default since 26 Nov: the teal ribbon read as a green streak behind the jet flame).
+                if (trail != null) Object.Destroy(trail.gameObject);
+                return;
+            }
             if (trail == null)
             {
                 var child = new GameObject("Trail");

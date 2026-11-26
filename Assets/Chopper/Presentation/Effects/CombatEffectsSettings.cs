@@ -183,8 +183,9 @@ namespace Chopper.Presentation.Effects
         private float boostFlameCockpitScale = 0.15f;
 
         [Header("Boost trail (glowing streak left behind while boosting)")]
-        [SerializeField, Tooltip("Seconds the trail lasts before it has faded. 0 = no trail.")]
-        private float boostTrailTime = 0.9f;
+        [SerializeField, Tooltip("Seconds the trail lasts before it has faded. 0 = no trail (default: owner, 25 Nov, " +
+                                 "removed the green streak; the jet flame alone shows the boost).")]
+        private float boostTrailTime = 0f;
         [SerializeField, Tooltip("Trail width (m) at the exhaust.")]
         private float boostTrailWidth = 0.35f;
         [SerializeField, ColorUsage(true, true), Tooltip("Trail colour at the exhaust (HDR); it fades to clear along the trail.")]

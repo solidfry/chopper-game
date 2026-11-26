@@ -150,6 +150,31 @@ namespace Chopper.Simulation.Bots
         public static float StrafeRange(float preferred, float gunRange, float reach) =>
             reach <= 0f ? preferred : math.max(preferred, math.min(reach + StandOffMargin, gunRange * 0.9f));
 
+        /// <summary>Aim error on a ground target (a turret) as a share of the error on a chopper.</summary>
+        public const float GroundAimErrorScale = 0.5f;
+        /// <summary>Fire cone floor, degrees: a chopper (it moves; a miss gives it away) and a turret (it sits still).</summary>
+        public const float AirFireConeDegrees = 1.5f;
+        public const float GroundFireConeDegrees = 2.5f;
+        /// <summary>Half the target width the fire cone covers near in, metres: a chopper, and a turret with its base.</summary>
+        public const float AirTargetRadius = 5f;
+        public const float GroundTargetRadius = 7f;
+
+        /// <summary>
+        /// Cosine of the fire cone: the target's half width at this distance, or the floor angle far out. A turret gets
+        /// the wider floor: from the 300 m stand-off it is about 13 m round the turret, so a hovering bot meets it
+        /// while its nose sways in the orbit (26 Nov; was 1.5 degrees for every target).
+        /// </summary>
+        public static float FireConeCos(float distance, bool ground)
+        {
+            var floor = math.radians(ground ? GroundFireConeDegrees : AirFireConeDegrees);
+            var radius = ground ? GroundTargetRadius : AirTargetRadius;
+            return math.cos(math.max(floor, math.atan(radius / math.max(distance, 1f))));
+        }
+
+        /// <summary>True when the rockets reach this far before their lifetime ends (no lifetime: always).</summary>
+        public static bool InRocketRange(in BotSituation s, float distance) =>
+            s.RocketLifetime <= 0f || s.RocketSpeed <= 1f || distance < s.RocketSpeed * s.RocketLifetime * 0.9f;
+
         public static BotBrain Create(uint seed) => new()
         {
             Random = Random.CreateFromIndex(seed),
@@ -398,7 +423,7 @@ namespace Chopper.Simulation.Bots
             var targetSpeed = math.length(TargetVelocity);
             var wanted = -1;
             if (s.SeekerPylon >= 0 && distance < s.SeekerLockRange && distance > h.MinRange * 1.5f) wanted = s.SeekerPylon;
-            else if (s.RocketPylon >= 0 && (targetSpeed < 10f || distance < 250f)) wanted = s.RocketPylon;
+            else if (s.RocketPylon >= 0 && (targetSpeed < 10f || distance < 250f) && InRocketRange(s, distance)) wanted = s.RocketPylon;
             if (wanted >= 0 && wanted != s.SelectedPylon && now >= NextCycle)
             {
                 intent.Actions.CyclePylon = true;
@@ -418,7 +443,9 @@ namespace Chopper.Simulation.Bots
                 AimOffset = Random.NextFloat3Direction();
             }
             var settle = Aiming ? math.saturate((float)(now - AimSince) / h.AimSettleSeconds) : 0f;
-            var error = h.AimError * (1f - 0.67f * settle);
+            // A turret does not move, so the aim is steadier (26 Nov: at the 300 m stand-off the full error kept the
+            // nose off the 1.5 degree fire cone and the last turret stood 60 s+, so bots never got to hook).
+            var error = h.AimError * (1f - 0.67f * settle) * (contact.Ground ? GroundAimErrorScale : 1f);
             aim += AimOffset * (distance * math.tan(error));
 
             var toAim = math.normalizesafe(aim - s.Position, s.Forward);
@@ -440,7 +467,7 @@ namespace Chopper.Simulation.Bots
             // Fire when lined up (the true lead point, not the aim point: the error makes it miss sometimes). Each weapon
             // checks its own lead: with rockets selected the nose follows the rocket lead, and the gun only fires when
             // that also lines up with the gun lead.
-            var fireCone = math.cos(math.max(math.radians(1.5f), math.atan(5f / distance)));
+            var fireCone = FireConeCos(distance, contact.Ground);
             var onTarget = math.dot(s.Forward, math.normalizesafe(lead - s.Position)) > fireCone;
             var gunSolved = GunLead(s, target, TargetVelocity, out var gunLead);
             var gunOnTarget = gunSolved && math.dot(s.Forward, math.normalizesafe(gunLead - s.Position)) > fireCone;

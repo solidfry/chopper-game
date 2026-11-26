@@ -87,6 +87,7 @@ Short list. One line per item. Read the history file for the full row.
 | 25 Nov | CTN bots vs pad turrets (sight fix, stand-off, siege), turret health halved, turret XP, objective prompts at the top for 20 s. Bots still never hook. | `4d0dc28f` |
 | 25 Nov | Weapon keys 1-5, reticle per weapon type, stronger hit marker and sounds, base/dock material fix, turret group respawn 300 s, pick-up reach 24 m. | `5f425bb6` |
 | 25 Nov | Reticle pulses yellow (20 % bigger, fixed size) on each confirmed hit. EditMode 465/465. | see git log |
+| 26 Nov | **CTN bots hook the nuke (first time).** Turret aim: half aim error and a 2.5° fire-cone floor on turrets (`BotBrain.FireConeCos`), rockets only in their range (`InRocketRange`); all 4 turrets down by ~400 s in a bot run (was: last turret stood). Hook: with no turret covering the nuke a bot leaves a fight from 150 m (`BotObjective.CommitRange`; was 60 m, both teams dogfought 70-150 m out for minutes). Played: hooked at ~130 s, carried 250 m, shot and dropped, hooked and carried again. Boost: the teal ribbon trail (read as green) is off (`boostTrailTime` 0); the jet flame stays. EditMode 468/468. | see git log |
 
 **Rebuild server and client before any online test.** Ghost fields, RPCs and input changed on 18, 19 and 25 Nov (25 Nov: `ChopperInput.SelectPylon`, `MatchStatsRpc` turret fields).
 
@@ -100,7 +101,7 @@ Short list. One line per item. Read the history file for the full row.
 | URP render errors in the console, seen once on 6 Nov after a recompile: NullReferenceException in `ReflectionProbeManager.UpdateGpuData`, InvalidOperationException for `ZBinningJob` | Unknown. Stack is editor view rendering, not game code | Did not return in the next play run. If they return, note what was open and running |
 | Cloud Save write after a match (progression step 4) never confirmed | The 18 Nov Edgegap run logged no `[Progress]` line: no `UGS_*` variables on the deployment | Owner: do `CloudCode/README.md` dashboard steps 1-2 (service account, secrets `ugs_key_id` and `ugs_secret_key`, development environment). No redeploy needed for the secrets |
 | Allocator is on the development environment only | Production not set up | Phase 3 work (see open line 6) |
-| CTN bots never hook the nuke (5 bot runs, 25 Nov) | At 300 m stand-off the bot gun cone is rarely met, so the last pad turret stands long | Let bots fire rockets or missiles at turrets from stand-off, or widen the fire cone for static targets; then watch a full round (log on, see section 4a 25 Nov) |
+| CTN bots: no full round (arm, deliver) seen yet | Fixed 26 Nov: bots now kill the turrets and hook (section 4a). Turrets still take ~6 min in game time with 3 bots | Watch a full round to arm and detonation; if turrets stay slow, let bots use rockets on them from closer in |
 
 Solved and removed from this table: Server Tick Batching warnings (29 Oct), Edgegap idle stop and old protocol (18 Nov, image `0.1.5`). Details in the history file.
 

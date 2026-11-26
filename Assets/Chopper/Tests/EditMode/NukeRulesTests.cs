@@ -306,5 +306,37 @@ namespace Chopper.Tests
             Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 250f, 260f), Is.EqualTo(225f), "Short gun: as far as it still reaches.");
             Assert.That(Chopper.Simulation.Bots.BotBrain.StrafeRange(220f, 200f, 260f), Is.EqualTo(220f), "Never closer than the preferred range.");
         }
+
+        [Test]
+        public void BotBrain_FireCone_IsWiderOnATurretAtStandOff()
+        {
+            static float Degrees(float cos) => Unity.Mathematics.math.degrees(Unity.Mathematics.math.acos(cos));
+            var air = Degrees(Chopper.Simulation.Bots.BotBrain.FireConeCos(300f, false));
+            var ground = Degrees(Chopper.Simulation.Bots.BotBrain.FireConeCos(300f, true));
+            Assert.That(air, Is.EqualTo(Chopper.Simulation.Bots.BotBrain.AirFireConeDegrees).Within(0.01f), "Far chopper: the floor.");
+            Assert.That(ground, Is.EqualTo(Chopper.Simulation.Bots.BotBrain.GroundFireConeDegrees).Within(0.01f), "Turret at 300 m: the wider floor.");
+            Assert.That(ground, Is.GreaterThan(air));
+            var near = Degrees(Chopper.Simulation.Bots.BotBrain.FireConeCos(50f, true));
+            Assert.That(near, Is.GreaterThan(ground), "Near in, the turret's width sets the cone.");
+            Assert.That(Chopper.Simulation.Bots.BotBrain.FireConeCos(0f, true), Is.GreaterThan(0f), "No divide by zero.");
+        }
+
+        [Test]
+        public void BotObjective_CommitRange_IsWiderWhenNoTurretCoversTheNuke()
+        {
+            Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(true), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.HookCommitRange));
+            Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(false), Is.GreaterThan(Chopper.Simulation.Bots.BotObjective.HookCommitRange * 2f),
+                "Turrets down: a bot 150 m out leaves the dogfight to hook.");
+        }
+
+        [Test]
+        public void BotBrain_InRocketRange_StopsAtTheRocketsReach()
+        {
+            var s = new Chopper.Simulation.Bots.BotSituation { RocketSpeed = 200f, RocketLifetime = 2f };
+            Assert.That(Chopper.Simulation.Bots.BotBrain.InRocketRange(s, 300f), Is.True, "300 m inside 90 % of 400 m.");
+            Assert.That(Chopper.Simulation.Bots.BotBrain.InRocketRange(s, 380f), Is.False, "Beyond 360 m the rockets burn out.");
+            s.RocketLifetime = 0f;
+            Assert.That(Chopper.Simulation.Bots.BotBrain.InRocketRange(s, 5000f), Is.True, "No lifetime: no limit.");
+        }
     }
 }

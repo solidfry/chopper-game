@@ -202,9 +202,10 @@ namespace Chopper.Simulation.Bots
                     if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
                 var objective = BotObjective.Choose(frame.Objective, chopper, selfTeam, out var objectiveGoal, out var objectiveRadius);
                 var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
+                var cover = false;
                 if (objective == BotObjective.Kind.Hook)
                 {
-                    var cover = BotObjective.TurretsCover(frame.Objective, frame.Turrets, selfTeam);
+                    cover = BotObjective.TurretsCover(frame.Objective, frame.Turrets, selfTeam);
                     if (BotObjective.Stage(frame.Objective, selfTeam, cover, out var staging))
                     {
                         objectiveGoal = staging;
@@ -217,7 +218,8 @@ namespace Chopper.Simulation.Bots
                     if (frame.Turrets[i].Entity == brain.Target) turretTarget = true;
                 var farFight = brain.Mode == BotMode.Attack && !turretTarget &&
                                (math.distancesq(brain.TargetPosition, sense.Position) > BotObjective.FocusRange * BotObjective.FocusRange ||
-                                (objective == BotObjective.Kind.Hook && math.distancesq(objectiveGoal, sense.Position) < BotObjective.HookCommitRange * BotObjective.HookCommitRange));
+                                (objective == BotObjective.Kind.Hook &&
+                                 math.distance(objectiveGoal, sense.Position) < BotObjective.CommitRange(cover)));
                 if (objective != BotObjective.Kind.None && (intent.Wander || farFight || (carrying && brain.Mode != BotMode.Evade)))
                 {
                     intent.Wander = false;

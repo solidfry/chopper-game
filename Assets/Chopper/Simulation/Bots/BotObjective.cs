@@ -57,6 +57,14 @@ namespace Chopper.Simulation.Bots
         /// <summary>This close to a free nuke, a bot keeps hooking even in a fight, metres.</summary>
         public const float HookCommitRange = 60f;
         /// <summary>
+        /// With no turret covering the nuke, a bot this close leaves a fight to hook, metres. Played 26 Nov: with all four
+        /// turrets down both teams dogfought 70-150 m from the nuke for minutes and no one hooked (60 m was too close).
+        /// </summary>
+        public const float OpenHookCommitRange = 150f;
+
+        /// <summary>Distance to the hook point inside which a bot keeps to the hook in a fight.</summary>
+        public static float CommitRange(bool turretsCover) => turretsCover ? HookCommitRange : OpenHookCommitRange;
+        /// <summary>
         /// Target score cost of a turret against a chopper, metres: an enemy chopper this much further away is still
         /// picked first (owner, 20 Nov: "prioritise the turrets or nearby enemies").
         /// </summary>
