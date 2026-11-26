@@ -37,6 +37,13 @@ namespace Chopper.Presentation.Audio
         private const float BoostFullPitchSpeed = 160f;
         /// <summary>Seconds the boost must be off before a new boost plays the kick again.</summary>
         private const float MinBoostGap = 0.3f;
+        /// <summary>Death fall: the engine coughs (noise over time, this many changes a second), cuts out more often as the
+        /// fall goes on, and winds down over <see cref="FailureWindDown"/> s to <see cref="FailureMinPitch"/>.</summary>
+        private const float StutterRate = 6f;
+        private const float FailureWindDown = 4f;
+        private const float FailureMinPitch = 0.6f;
+        /// <summary>The kill cam pulls back from the own wreck: its rotor is lifted by this so the fall stays heard.</summary>
+        private const float OwnWreckBoost = 1.4f;
 
         private sealed class Voices
         {
@@ -51,6 +58,8 @@ namespace Chopper.Presentation.Audio
             public bool AbilityCooling;
             public bool Jammed;
             public bool AbilitySeen;
+            public SoundLoop Failure;
+            public float Gate = 1f;
         }
 
         private readonly Dictionary<Entity, Voices> _choppers = new();
@@ -88,6 +97,7 @@ namespace Chopper.Presentation.Audio
             var outOfBounds = false;
             var deltaTime = SystemAPI.Time.DeltaTime;
 
+            var localId = SystemAPI.TryGetSingleton<NetworkId>(out var networkId) ? networkId.Value : -1;
             _seen.Clear();
             foreach (var (pose, velocity, flight, entity) in SystemAPI
                          .Query<RefRO<LocalToWorld>, RefRO<PhysicsVelocity>, RefRO<ChopperFlightState>>()
@@ -110,9 +120,18 @@ namespace Chopper.Presentation.Audio
 
                 var speed01 = math.saturate(speed / FullPitchSpeed);
                 var strain = math.max(state.Collective, 0f) * CollectivePitch + voices.BoostLevel * BoostRotorPitch;
-                voices.Rotor?.Set(position,
-                    volumeScale: 1f + voices.BoostLevel * BoostRotorVolume,
-                    pitchScale: math.lerp(MinRotorPitch, MaxRotorPitch, speed01) + strain);
+                var rotorVolume = 1f + voices.BoostLevel * BoostRotorVolume;
+                var rotorPitch = math.lerp(MinRotorPitch, MaxRotorPitch, speed01) + strain;
+                var wreck = SystemAPI.HasComponent<Wreck>(entity) ? SystemAPI.GetComponent<Wreck>(entity) : default;
+                if (wreck.Active)
+                    UpdateFailure(audio, library, voices, entity, wreck.Age, position, isLocal || wreck.OwnerNetworkId == localId, deltaTime, ref rotorVolume, ref rotorPitch);
+                else if (voices.Failure != null)
+                {
+                    audio.StopLoop(voices.Failure);
+                    voices.Failure = null;
+                    voices.Gate = 1f;
+                }
+                voices.Rotor?.Set(position, volumeScale: rotorVolume, pitchScale: rotorPitch);
 
                 if (isLocal) outOfBounds = hasBounds && !bounds.Contains(position);
                 if (isLocal) UpdateRepair(audio, library, voices, entity, position);
@@ -121,6 +140,25 @@ namespace Chopper.Presentation.Audio
 
             StopMissing(audio);
             UpdateAlarm(audio, library, outOfBounds);
+        }
+
+        /// <summary>
+        /// A dead chopper falling (owner, 26 Nov: the engine went silent): the rotor stutters (cuts in and out, more often as
+        /// it falls) and winds down, with a grinding, burning engine loop that coughs with it. Stops when the wreck is gone.
+        /// </summary>
+        private void UpdateFailure(IAudioService audio, SoundLibrary library, Voices voices, Entity entity, float age,
+            Vector3 position, bool isLocal, float deltaTime, ref float rotorVolume, ref float rotorPitch)
+        {
+            if (voices.Failure == null && library.EngineFailure != null) voices.Failure = audio.StartLoop(library.EngineFailure, position);
+            var fall = math.saturate(age / FailureWindDown);
+            var noise = Mathf.PerlinNoise((float)SystemAPI.Time.ElapsedTime * StutterRate, entity.Index * 0.37f);
+            var running = noise > math.lerp(0.35f, 0.6f, fall);
+            voices.Gate = Mathf.MoveTowards(voices.Gate, running ? 1f : 0f, deltaTime * 30f);
+            var gate = voices.Gate;
+            rotorVolume *= math.lerp(0.1f, 1.1f, gate) * (isLocal ? OwnWreckBoost : 1f);
+            rotorPitch *= math.lerp(1f, FailureMinPitch, fall) * math.lerp(0.85f, 1f, gate);
+            voices.Failure?.Set(position, volumeScale: math.lerp(0.45f, 1f, gate) * (isLocal ? OwnWreckBoost : 1f),
+                pitchScale: math.lerp(1.05f, 0.75f, fall) * math.lerp(0.9f, 1.05f, gate));
         }
 
         /// <summary>Kick on the rising edge; the roar fades in fast and out slowly, pitch rising with speed.</summary>
@@ -219,6 +257,7 @@ namespace Chopper.Presentation.Audio
             audio.StopLoop(voices.Rotor);
             if (voices.Boost != null) audio.StopLoop(voices.Boost);
             if (voices.Repair != null) audio.StopLoop(voices.Repair);
+            if (voices.Failure != null) audio.StopLoop(voices.Failure);
         }
 
         private void StopMissing(IAudioService audio)

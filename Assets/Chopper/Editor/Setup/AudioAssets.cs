@@ -140,6 +140,12 @@ namespace Chopper.Editor.Setup
                 Slot(library.BoostLoop, () => Cue("BoostLoop", Clips(SciFi + "/Loops/loop_rocket2.wav"), effects, 0.5f, blend: 0.3f, voices: 8,
                     pitch: 0.5f, muffle: CueMuffle.Cabin)));
 
+            // Death fall (owner, 26 Nov: "the engine should stutter ... it goes silent"): the rotor loop pitched down and
+            // overdriven, over a fire loop (Gun & Explosion Sounds), made with SoX. ChopperAudioSystem cuts it in and out.
+            library.InitialiseWreck(
+                Slot(library.EngineFailure, () => Cue("EngineFailure", Clips("Assets/Chopper/Audio/SFX/Wreck/EngineFailure_Loop.wav"),
+                    effects, 0.9f, blend: 0.6f, voices: 8, muffle: CueMuffle.Cabin)));
+
             // Hangar (placeholders): mechanical reload clunks for fit and remove, short laser charges for focus and scan.
             library.InitialiseHangar(
                 Slot(library.ModuleFit, () => Cue("ModuleFit", Clips(SciFiGuns + "/Weapon 01 Reload 1.wav", SciFiGuns + "/Weapon 07 Reload 1.wav"),

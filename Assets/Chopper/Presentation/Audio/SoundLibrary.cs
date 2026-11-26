@@ -27,6 +27,8 @@ namespace Chopper.Presentation.Audio
         private SoundCue boostStart;
         [SerializeField, Tooltip("Loop while boosting (the engine roar). Volume and pitch follow the boost.")]
         private SoundCue boostLoop;
+        [SerializeField, Tooltip("Loop while a dead chopper falls: a failing, grinding engine with fire. It cuts in and out with the rotor.")]
+        private SoundCue engineFailure;
 
         [Header("Combat")]
         [SerializeField] private SoundCue gunFire;
@@ -128,6 +130,7 @@ namespace Chopper.Presentation.Audio
         public SoundCue RotorRemote => rotorRemote;
         public SoundCue BoostStart => boostStart;
         public SoundCue BoostLoop => boostLoop;
+        public SoundCue EngineFailure => engineFailure;
         public SoundCue GunFire => gunFire;
         public SoundCue HitConfirm => hitConfirm;
         public SoundCue KillConfirm => killConfirm;
@@ -203,6 +206,7 @@ namespace Chopper.Presentation.Audio
             Check(rotorRemote, nameof(rotorRemote), problems);
             Check(boostStart, nameof(boostStart), problems);
             Check(boostLoop, nameof(boostLoop), problems);
+            Check(engineFailure, nameof(engineFailure), problems);
             Check(gunFire, nameof(gunFire), problems);
             Check(hitConfirm, nameof(hitConfirm), problems);
             Check(killConfirm, nameof(killConfirm), problems);
@@ -265,6 +269,9 @@ namespace Chopper.Presentation.Audio
             boostStart = start;
             boostLoop = loop;
         }
+
+        /// <summary>Editor only: used by the audio setup tool.</summary>
+        public void InitialiseWreck(SoundCue failure) => engineFailure = failure;
 
         /// <summary>Editor only: used by the audio setup tool.</summary>
         public void InitialiseAbility(SoundCue activate, SoundCue ready, SoundCue jam)
