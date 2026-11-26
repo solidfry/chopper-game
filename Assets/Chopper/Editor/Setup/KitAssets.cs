@@ -115,6 +115,20 @@ namespace Chopper.Editor.Setup
             public string textureSet;
             /// <summary>The socket marker nodes in the model (chassis: module sockets; cockpit: the eye).</summary>
             public SocketInfo[] sockets;
+            /// <summary>Chassis: landing gear legs, each a child mesh named <see cref="GearInfo.name"/>.</summary>
+            public GearInfo[] gear;
+        }
+
+        /// <summary>One landing gear leg (PartForge GearLeg): pivot at the node's origin, fold in Unity space.</summary>
+        [Serializable]
+        internal sealed class GearInfo
+        {
+            /// <summary>Node name in the model (GEAR_0); the FBX may prefix it with the part name.</summary>
+            public string name;
+            public float[] hinge;
+            public float[] axis;
+            public float degrees;
+            public float lift;
         }
 
         [Serializable]

@@ -263,6 +263,11 @@ MonoBehaviour:
   focusCameraOffset: {x: 0, y: 1.5, z: -4}
   focusFieldOfView: 35
   focusChopperYaw: -45
+--- !u!4 &4788479699383127155 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2377671589885919562, guid: 70bc1236f1b54b644a72d016632b7e10, type: 3}
+  m_PrefabInstance: {fileID: 7100830106500123961}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &5002369036676373911 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6349851729498681170, guid: 70bc1236f1b54b644a72d016632b7e10, type: 3}
@@ -310,6 +315,16 @@ MonoBehaviour:
 --- !u!4 &7278254746583673554 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 70bc1236f1b54b644a72d016632b7e10, type: 3}
+  m_PrefabInstance: {fileID: 7100830106500123961}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7606508094793856760 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 793910701042498497, guid: 70bc1236f1b54b644a72d016632b7e10, type: 3}
+  m_PrefabInstance: {fileID: 7100830106500123961}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8286500799641271867 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1185757109368484610, guid: 70bc1236f1b54b644a72d016632b7e10, type: 3}
   m_PrefabInstance: {fileID: 7100830106500123961}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &8402888766866592626 stripped
@@ -377,8 +392,48 @@ PrefabInstance:
       value: -2.45
       objectReference: {fileID: 0}
     - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
       propertyPath: rotors.Array.size
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[0].Part
+      value: 
+      objectReference: {fileID: 4788479699383127155}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[1].Part
+      value: 
+      objectReference: {fileID: 8286500799641271867}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[2].Part
+      value: 
+      objectReference: {fileID: 7606508094793856760}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[0].Axis.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[1].Axis.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[2].Axis.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[0].Degrees
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[1].Degrees
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 1450102928009879997, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
+      propertyPath: gear.Array.data[2].Degrees
+      value: -90
       objectReference: {fileID: 0}
     - target: {fileID: 2909252180854403118, guid: 5c5abfb5279dd504b913c78c9b8e2383, type: 3}
       propertyPath: m_LocalPosition.y

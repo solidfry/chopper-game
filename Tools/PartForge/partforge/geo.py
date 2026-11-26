@@ -93,6 +93,35 @@ class Builder:
             loop[self.screen_uv].uv = uv
         return face
 
+    def split_off(self, face_groups, origins):
+        """Moves each group of faces (indices in build order) into a Builder of its own, its points shifted so that
+        its origin (Unity space) is (0, 0, 0) there, and deletes them here (with verts left loose). For parts that
+        move on their own in the game (landing gear legs). Call before to_object."""
+        self.bm.faces.ensure_lookup_table()
+        swatch = self.swatch
+        parts, doomed = [], []
+        for faces, origin in zip(face_groups, origins):
+            part = Builder()
+            shift = Vector(origin)
+            made = {}
+            for index in faces:
+                face = self.bm.faces[index]
+                verts = []
+                for vert in face.verts:
+                    copy = made.get(vert)
+                    if copy is None:
+                        copy = part.bm.verts.new(vert.co - shift)
+                        made[vert] = copy
+                    verts.append(copy)
+                part._face(verts, face[swatch])
+                doomed.append(face)
+            parts.append(part)
+        bmesh.ops.delete(self.bm, geom=doomed, context="FACES")
+        loose = [v for v in self.bm.verts if not v.link_faces]
+        if loose:
+            bmesh.ops.delete(self.bm, geom=loose, context="VERTS")
+        return parts
+
     # -- surface placement ----------------------------------------------------------------------------------------
     def snapshot_surface(self):
         """Remembers the hull built so far; on_surface() lays parts flat on it. Call right after the main hull."""

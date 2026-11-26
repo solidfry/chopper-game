@@ -70,7 +70,9 @@ def texture_sets(state):
     chassis = [(part, obj) for part, obj in state.built.values() if part.kind == "chassis"]
     modules = [obj for part, obj in state.built.values() if part.kind == "module"]
     scale = values["skin_scale"]
-    sets = [TextureSet(part.name.replace("Chassis_", ""), [obj], _size([obj], values), scale) for part, obj in chassis]
+    # A chassis set holds the hull and its landing gear legs (child meshes, GEAR_<i>).
+    sets = [TextureSet(part.name.replace("Chassis_", ""), [obj] + _legs(obj), _size([obj] + _legs(obj), values), scale)
+            for part, obj in chassis]
     for texture_set, (part, _obj) in zip(sets, chassis):
         texture_set.markings = _tail_code(texture_set.name, part.seed)
     sets.append(TextureSet(MODULES_SET, modules, int(values["module_size"]), scale))
@@ -137,6 +139,11 @@ def _tail_code(name, seed):
     letters = "KDGRSTVXNLA"
     serial = (seed * 7919 + 1013) % 900 + 100
     return f"{name[0].upper() if name[0].upper() in letters else 'K'}{letters[seed % len(letters)]}-{serial}", f"{seed % 90 + 10}"
+
+
+def _legs(obj):
+    """The landing gear legs of a chassis object: its mesh children."""
+    return [child for child in obj.children if child.type == "MESH"]
 
 
 def _size(objects, values):
@@ -413,18 +420,29 @@ def _bake_object(objects, material):
     collection = bpy.data.collections.get("PF Bake") or bpy.data.collections.new("PF Bake")
     if collection.name not in bpy.context.scene.collection.children:
         bpy.context.scene.collection.children.link(collection)
-    columns = max(1, math.ceil(math.sqrt(len(objects))))
-    copies = []
-    for i, obj in enumerate(objects):
+    # Child parts (landing gear legs) sit where they hang on their parent, in its local space, so they shade with the
+    # hull and share its wear pattern; only top-level parts get a grid cell.
+    roots = [obj for obj in objects if obj.parent not in objects]
+    columns = max(1, math.ceil(math.sqrt(len(roots))))
+    copies, cell = [], {}
+    for obj in objects:
+        offset = obj.location.copy() if obj.parent in objects else None
         mesh = obj.data.copy()
         attribute = mesh.attributes.new(LOCAL, "FLOAT_VECTOR", "POINT")
-        attribute.data.foreach_set("vector", [c for v in mesh.vertices for c in v.co])
+        attribute.data.foreach_set("vector", [c for v in mesh.vertices for c in (v.co + offset if offset else v.co)])
         mesh.materials.clear()
         mesh.materials.append(material)
         copy = bpy.data.objects.new(f"PF Bake {obj.name}", mesh)
         collection.objects.link(copy)
-        copy.location = ((i % columns) * MODULE_SPACING, (i // columns) * MODULE_SPACING, 0.0)
-        copies.append(copy)
+        if offset is None:
+            i = roots.index(obj)
+            cell[obj.name] = (i % columns) * MODULE_SPACING, (i // columns) * MODULE_SPACING
+        copies.append((obj, copy, offset))
+    for obj, copy, offset in copies:
+        base = cell[obj.parent.name] if offset is not None else cell[obj.name]
+        copy.location = (base[0] + (offset.x if offset else 0.0), base[1] + (offset.y if offset else 0.0),
+                         offset.z if offset else 0.0)
+    copies = [copy for _obj, copy, _offset in copies]
     bpy.ops.object.select_all(action="DESELECT")
     for copy in copies:
         copy.select_set(True)

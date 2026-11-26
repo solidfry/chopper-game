@@ -59,12 +59,37 @@ namespace Chopper.Simulation.Visuals
             public Vector3 DegreesPerSecond;
         }
 
+        /// <summary>A landing gear leg (kit chassis GEAR_&lt;i&gt; child, origin at its hinge). Setup fills these from the kit
+        /// manifest (PartForge GearLeg).</summary>
+        [Serializable]
+        public struct GearLeg
+        {
+            public Transform Part;
+            [Tooltip("Fold axis, chopper space (Quaternion.AngleAxis: +90 round +x swings a hanging leg back).")]
+            public Vector3 Axis;
+            public float Degrees;
+            [Tooltip("Folded: also moves this far up (chopper space, m). Skids slide up instead of turning.")]
+            public float Lift;
+        }
+
         [SerializeField] private Rotor[] rotors = Array.Empty<Rotor>();
+        [SerializeField] private GearLeg[] gear = Array.Empty<GearLeg>();
+        [Header("Landing gear")]
+        [SerializeField, Tooltip("Gear goes up above this height over the ground, m (from the chopper's centre).")]
+        private float gearUpHeight = 8f;
+        [SerializeField, Tooltip("Gear comes down below this height, m. Lower than the up height, so it does not flap.")]
+        private float gearDownHeight = 5f;
+        [SerializeField, Tooltip("Time for a full fold or unfold, s.")]
+        private float gearSeconds = 1.2f;
 
         public Rotor[] Rotors => rotors;
+        public GearLeg[] Gear => gear;
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetRotors(Rotor[] value) => rotors = value;
+
+        /// <summary>Editor only: used by the setup tool (KitChassis).</summary>
+        public void SetGear(GearLeg[] value) => gear = value;
 
         private sealed class Baker : Baker<ChopperVisualsAuthoring>
         {
@@ -97,10 +122,50 @@ namespace Chopper.Simulation.Visuals
                 }
             }
 
+            /// <summary>Legs with their fold turned from chopper space into each leg's parent space (the kit model root
+            /// may be turned or scaled by the import).</summary>
+            private void BakeGear(ChopperVisualsAuthoring authoring, Entity entity)
+            {
+                var legs = 0;
+                foreach (var leg in authoring.gear)
+                {
+                    if (leg.Part == null) continue;
+                    if (legs++ == 0) AddBuffer<LandingGearLeg>(entity);
+                    var root = authoring.transform;
+                    var parent = leg.Part.parent;
+                    DependsOn(leg.Part);
+                    var axis = root.TransformDirection(leg.Axis);
+                    var lift = root.TransformVector(Vector3.up * leg.Lift);
+                    if (parent != null)
+                    {
+                        axis = parent.InverseTransformDirection(axis);
+                        lift = parent.InverseTransformVector(lift);
+                    }
+                    AppendToBuffer(entity, new LandingGearLeg
+                    {
+                        Leg = GetEntity(leg.Part, TransformUsageFlags.Dynamic),
+                        DownPosition = leg.Part.localPosition,
+                        DownRotation = leg.Part.localRotation,
+                        Axis = math.normalizesafe((float3)axis, new float3(1f, 0f, 0f)),
+                        Radians = math.radians(leg.Degrees),
+                        Lift = lift,
+                    });
+                }
+                if (legs == 0) return;
+                AddComponent(entity, new LandingGearState
+                {
+                    UpHeight = authoring.gearUpHeight,
+                    DownHeight = math.min(authoring.gearDownHeight, authoring.gearUpHeight),
+                    Seconds = authoring.gearSeconds,
+                    Extension = 1f,
+                });
+            }
+
             public override void Bake(ChopperVisualsAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 BakeExhaust(authoring, entity);
+                BakeGear(authoring, entity);
                 var buffer = AddBuffer<RotorSpin>(entity);
                 foreach (var rotor in authoring.rotors)
                 {

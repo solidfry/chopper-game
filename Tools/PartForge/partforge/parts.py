@@ -13,11 +13,47 @@ from .palette import SCREEN_OF, screen_uvs
 from .palette import swatch as S
 
 
+class GearLeg:
+    """One landing-gear leg that retracts on its own in the game. faces: its face range in the chassis builder (built
+    in one go). hinge: the pivot, Unity space. Retracted pose: turned round axis (Unity space) by degrees, as Unity's
+    Quaternion.AngleAxis (+90 round +x swings a leg that hangs down to point back), then slid up by lift metres."""
+
+    def __init__(self, faces, hinge, axis=(1.0, 0.0, 0.0), degrees=0.0, lift=0.0):
+        self.faces = faces
+        self.hinge = tuple(float(v) for v in hinge)
+        self.axis = tuple(float(v) for v in axis)
+        self.degrees = degrees
+        self.lift = lift
+
+    def manifest(self, index):
+        return {"name": f"GEAR_{index}", "hinge": list(self.hinge), "axis": list(self.axis), "degrees": self.degrees,
+                "lift": self.lift}
+
+
+class _Leg:
+    """with _Leg(b, legs, hinge, ...): the faces built inside become one GearLeg."""
+
+    def __init__(self, b, legs, hinge, axis=(1.0, 0.0, 0.0), degrees=0.0, lift=0.0):
+        self.b, self.legs, self.args = b, legs, (hinge, axis, degrees, lift)
+
+    def __enter__(self):
+        self.start = len(self.b.bm.faces)
+        return self
+
+    def __exit__(self, *_):
+        hinge, axis, degrees, lift = self.args
+        self.legs.append(GearLeg(range(self.start, len(self.b.bm.faces)), hinge, axis, degrees, lift))
+        return False
+
+
 class Part:
     """One exported model: geometry + sockets (slot, index, Unity position)."""
 
-    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=(), seed=0, ground=None, gear_faces=()):
+    def __init__(self, name, kind, builder, slot=None, module_ids=(), sockets=(), seed=0, ground=None, gear_faces=(),
+                 gear_legs=()):
         self.name = name
+        # Chassis only: the legs that retract (each exported as its own child mesh, GEAR_<i>, origin at its hinge).
+        self.gear_legs = list(gear_legs)
         # Chassis only: the height the gear touches the ground, and the faces of the gear (wheels, struts, skids). The
         # audit checks that nothing else (chassis or a fitted module) goes lower than the gear (audit.CLEARANCE).
         self.ground = ground
@@ -76,27 +112,27 @@ def chassis(spec, style):
     ring = _ring_fn(style)
     tail = _boom_rings(ring, style, W, H, boom, tail_z, tall=attack or assault, thick=heavy)
 
-    ground, gear_start, gear_end = None, 0, 0
+    ground, gear_start, gear_end, legs = None, 0, 0, []
     if attack:
         rotors = [((0, _attack_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
         gear_start = len(b.bm.faces)
-        ground = _wheels(b, style, W, H, F, tail_z)
+        ground = _wheels(b, style, W, H, F, tail_z, legs)
         gear_end = len(b.bm.faces)
     elif assault:
         rotors = [((0, _assault_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
         gear_start = len(b.bm.faces)
-        ground = _wheels(b, style, W, H, F, tail_z)
+        ground = _wheels(b, style, W, H, F, tail_z, legs)
         gear_end = len(b.bm.faces)
     elif heavy:
         rotors = _heavy_body(b, spec, style, ring, W, H, F, boom, tail_z, layout)
         gear_start = len(b.bm.faces)
-        ground = _heavy_gear(b, W, H, F)
+        ground = _heavy_gear(b, W, H, F, legs)
         gear_end = len(b.bm.faces)
     else:
         rotors = [((0, _utility_body(b, spec, style, ring, tail, W, H, F), 0), 1.0)]
         if spec.get("skids", True):
             gear_start = len(b.bm.faces)
-            ground = _skids(b, style, F, W, H)
+            ground = _skids(b, style, F, W, H, legs)
             gear_end = len(b.bm.faces)
 
     pylon_points = _sponson_pylons(b, spec, W, H) if heavy else _wings_or_stubs(b, spec, style, W, H)
@@ -123,7 +159,7 @@ def chassis(spec, style):
     sockets = _seat_sockets(b, _sockets(spec, W, H, F, rotors, pylon_points, body,
                                         engine_points=getattr(b, "engine_points", None)))
     return Part(f"Chassis_{spec['name']}", "chassis", b, sockets=sockets, seed=spec["seed"], ground=ground,
-                gear_faces=range(gear_start, gear_end))
+                gear_faces=range(gear_start, gear_end), gear_legs=legs)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1257,20 +1293,23 @@ def _strut(b, top, bottom, radius):
                C("gunmetal"), segments=8)
 
 
-def _heavy_gear(b, W, H, F):
-    """Dual main wheels under the sponsons and a dual nose wheel. Returns the ground height."""
+def _heavy_gear(b, W, H, F, legs):
+    """Dual main wheels under the sponsons and a dual nose wheel. Returns the ground height. Retracted, the main legs
+    fold back and the nose leg forward, about their strut tops."""
     ground = -H / 2 - 0.75
     for side in (1, -1):
         x = side * (W / 2 + 0.32)
-        _strut(b, (x, -0.40 * H, -0.6), (x, ground + 0.42, -0.6), 0.08)
-        b.cylinder((x - 0.2, ground + 0.42, -0.6), (x + 0.2, ground + 0.42, -0.6), 0.05, C("gunmetal"), segments=6)
-        for dx in (-0.16, 0.16):
-            _wheel(b, (x + dx, ground + 0.42, -0.6), 0.42, 0.14)
+        with _Leg(b, legs, (x, -0.40 * H, -0.6), degrees=90.0):
+            _strut(b, (x, -0.40 * H, -0.6), (x, ground + 0.42, -0.6), 0.08)
+            b.cylinder((x - 0.2, ground + 0.42, -0.6), (x + 0.2, ground + 0.42, -0.6), 0.05, C("gunmetal"), segments=6)
+            for dx in (-0.16, 0.16):
+                _wheel(b, (x + dx, ground + 0.42, -0.6), 0.42, 0.14)
     z = F - 1.0
-    _strut(b, (0, -0.45 * H, z), (0, ground + 0.32, z - 0.1), 0.07)
-    b.cylinder((-0.17, ground + 0.32, z - 0.1), (0.17, ground + 0.32, z - 0.1), 0.045, C("gunmetal"), segments=6)
-    for dx in (-0.13, 0.13):
-        _wheel(b, (dx, ground + 0.32, z - 0.1), 0.32, 0.12)
+    with _Leg(b, legs, (0, -0.45 * H, z), degrees=-90.0):
+        _strut(b, (0, -0.45 * H, z), (0, ground + 0.32, z - 0.1), 0.07)
+        b.cylinder((-0.17, ground + 0.32, z - 0.1), (0.17, ground + 0.32, z - 0.1), 0.045, C("gunmetal"), segments=6)
+        for dx in (-0.13, 0.13):
+            _wheel(b, (dx, ground + 0.32, z - 0.1), 0.32, 0.12)
     return ground
 
 
@@ -1311,17 +1350,20 @@ def _tandem_cockpit(b, style, cw, H, F):
                 b.lay((side * 50.0, y, z), (-side, 0, 0), (0.03, 0.1, length), C("glass"), everything=True)
 
 
-def _wheels(b, style, W, H, F, tail_z):
-    """Main wheels on struts under the cheek pods and a tail wheel (attack bodies). Returns the ground height."""
+def _wheels(b, style, W, H, F, tail_z, legs):
+    """Main wheels on struts under the cheek pods and a tail wheel (attack bodies). Returns the ground height.
+    Retracted, the main legs fold back about the strut top and the tail wheel folds forward under the boom."""
     ground = -H / 2 - 0.75
     for side in (1, -1):
         x = side * 0.40 * W
-        _strut(b, (side * 0.36 * W, -0.30 * H, F - 1.6), (x, ground + 0.3, F - 1.7), 0.06)
-        b.cylinder((side * 0.36 * W, -0.30 * H, F - 2.4), (x, ground + 0.3, F - 1.7), 0.045, C("gunmetal"), segments=6)
-        _wheel(b, (x, ground + 0.3, F - 1.7), 0.3, 0.2)
+        with _Leg(b, legs, (side * 0.36 * W, -0.30 * H, F - 1.6), degrees=90.0):
+            _strut(b, (side * 0.36 * W, -0.30 * H, F - 1.6), (x, ground + 0.3, F - 1.7), 0.06)
+            b.cylinder((side * 0.36 * W, -0.30 * H, F - 2.4), (x, ground + 0.3, F - 1.7), 0.045, C("gunmetal"), segments=6)
+            _wheel(b, (x, ground + 0.3, F - 1.7), 0.3, 0.2)
     z = tail_z + 0.7
-    _strut(b, (0, 0.12 * H, z), (0, ground + 0.18, z - 0.2), 0.05)
-    _wheel(b, (0, ground + 0.18, z - 0.2), 0.18, 0.14)
+    with _Leg(b, legs, (0, 0.12 * H, z), degrees=-90.0):
+        _strut(b, (0, 0.12 * H, z), (0, ground + 0.18, z - 0.2), 0.05)
+        _wheel(b, (0, ground + 0.18, z - 0.2), 0.18, 0.14)
     return ground
 
 
@@ -1483,22 +1525,24 @@ def _wings_or_stubs(b, spec, style, W, H):
     return points
 
 
-def _skids(b, style, F, W, H):
+def _skids(b, style, F, W, H, legs):
     """Skids with cross tubes. Returns the ground height (the skid tubes' underside)."""
     y = -H / 2 - 0.55
     heavy = style["wear"] > 0
     radius = 0.085 if heavy else 0.07
-    for side in (1, -1):
-        x = side * 0.55 * W
-        b.cylinder((x, y, -1.8), (x, y, F - 1.3), radius, C("gunmetal"), segments=8)
-        b.cylinder((x, y, F - 1.3), (x, y + 0.25, F - 0.95), radius, C("gunmetal"), segments=8)
-        for z in (0.8, -1.2):
-            b.cylinder((side * 0.32 * W, -H / 2 + 0.15, z), (x, y, z), 0.05, C("gunmetal"), segments=6)
+    # Retracted, the skid set slides up until the tubes sit at the belly line (the cross tubes run up into the hull).
+    with _Leg(b, legs, (0, -H / 2, 0), lift=0.5):
+        for side in (1, -1):
+            x = side * 0.55 * W
+            b.cylinder((x, y, -1.8), (x, y, F - 1.3), radius, C("gunmetal"), segments=8)
+            b.cylinder((x, y, F - 1.3), (x, y + 0.25, F - 0.95), radius, C("gunmetal"), segments=8)
+            for z in (0.8, -1.2):
+                b.cylinder((side * 0.32 * W, -H / 2 + 0.15, z), (x, y, z), 0.05, C("gunmetal"), segments=6)
+            if heavy:
+                # Boarding step plate.
+                b.box((x - side * 0.08, y + radius + 0.005, 0.2), (0.3, 0.03, 0.4), C("bare"))
         if heavy:
-            # Boarding step plate.
-            b.box((x - side * 0.08, y + radius + 0.005, 0.2), (0.3, 0.03, 0.4), C("bare"))
-    if heavy:
-        b.cylinder((0.55 * W, y, -1.6), (-0.55 * W, y, -1.6), 0.05, C("gunmetal"), segments=6)
+            b.cylinder((0.55 * W, y, -1.6), (-0.55 * W, y, -1.6), 0.05, C("gunmetal"), segments=6)
     return y - radius
 
 

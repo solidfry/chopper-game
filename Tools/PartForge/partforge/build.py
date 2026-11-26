@@ -84,6 +84,9 @@ def generate(style, kit=None):
         # Cockpit: a chamfer per edge, sized to its room (fine on switches, wide on the seat and consoles).
         cockpit = part.kind == "cockpit"
         bevel = COCKPIT_CHAMFER if cockpit else MODULE_BEVEL if part.kind == "module" else None
+        # Landing gear legs leave the hull mesh before it is baked into an object: each is a child of its own.
+        legs = part.builder.split_off([leg.faces for leg in part.gear_legs], [leg.hinge for leg in part.gear_legs]) \
+            if part.gear_legs else []
         obj = part.builder.to_object(part.name, export_collection, bevel_width=bevel, detail=detail,
                                      bevel_fine=COCKPIT_BEVEL if cockpit else None)
         if part.kind == "cockpit":
@@ -104,6 +107,15 @@ def generate(style, kit=None):
             empty.parent = obj
             empty.location = to_blender(position)
             empty.scale = (scale, scale, scale)
+        for index, (leg, leg_builder) in enumerate(zip(part.gear_legs, legs)):
+            leg_obj = leg_builder.to_object(f"{part.name}:GEAR_{index}", export_collection)
+            palette.apply_uvs(leg_obj)
+            leg_obj.data.materials.clear()
+            leg_obj.data.materials.append(material)
+            for polygon in leg_obj.data.polygons:
+                polygon.material_index = 0
+            leg_obj.parent = obj
+            leg_obj.location = to_blender(leg.hinge)
         built[part.name] = (part, obj)
 
     _ensure_stage(scene)
@@ -138,6 +150,13 @@ def _showcase(scene, built, specs):
         holder.location = Vector(((i - (count - 1) / 2) * -CHASSIS_SPACING, 0, 2.6))
         holder.rotation_euler = (0, 0, math.radians(-35))
         shown.append(holder)
+        for child in source.children:
+            if child.type != "MESH":
+                continue
+            leg = bpy.data.objects.new(f"{holder.name}_{child.name.split(':')[-1]}", child.data)
+            choppers_collection.objects.link(leg)
+            leg.parent = holder
+            leg.location = child.location
         loadout = kits.PREVIEW_LOADOUTS.get(spec["name"], {})
         for slot, index, position, scale in part.sockets:
             names = loadout.get(slot, [])
@@ -240,6 +259,7 @@ def export(state, out_dir):
                 "sockets": [{"name": f"SOCKET_{slot}_{index}", "slot": slot, "index": index, "position": list(position),
                              "scale": scale}
                             for slot, index, position, scale in part.sockets],
+                "gear": [leg.manifest(index) for index, leg in enumerate(part.gear_legs)],
             })
     finally:
         export_collection.hide_viewport = True

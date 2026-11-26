@@ -130,17 +130,58 @@ namespace Chopper.Editor.Setup
                 var added = AddSockets(root, part);
                 if (created) FitEffects(root);
                 var fitted = FitColliders(root);
-                if (!created && added == 0 && !fitted) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                var gear = LinkGear(root, part);
+                if (!created && added == 0 && !fitted && !gear) return AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
                 var saved = PrefabUtility.SaveAsPrefabAsset(root, path);
                 Debug.Log(created ? $"Setup: made {path} from kit model {model.name}."
-                    : $"Setup: {path}: {added} socket(s) added{(fitted ? ", body colliders fitted" : "")}.");
+                    : $"Setup: {path}: {added} socket(s) added{(fitted ? ", body colliders fitted" : "")}" +
+                      $"{(gear ? ", landing gear linked" : "")}.");
                 return saved;
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+        }
+
+        /// <summary>
+        /// Links the model's landing gear legs (manifest <c>gear</c>, nodes named GEAR_&lt;i&gt;) to the visuals
+        /// authoring, so they fold in flight. True when the list changed.
+        /// </summary>
+        private static bool LinkGear(GameObject root, KitAssets.PartInfo part)
+        {
+            if (!root.TryGetComponent<ChopperVisualsAuthoring>(out var visuals)) return false;
+            var model = root.transform.Find(ModelName);
+            var legs = new List<ChopperVisualsAuthoring.GearLeg>();
+            if (model != null && part.gear != null)
+            {
+                var nodes = model.GetComponentsInChildren<Transform>(true);
+                foreach (var info in part.gear)
+                {
+                    var node = nodes.FirstOrDefault(t => t.name == info.name || t.name.EndsWith(":" + info.name) ||
+                                                         t.name.EndsWith("_" + info.name));
+                    if (node == null)
+                    {
+                        Debug.LogWarning($"Setup: kit part {part.name} has no node {info.name}. Re-import the kit.");
+                        continue;
+                    }
+                    legs.Add(new ChopperVisualsAuthoring.GearLeg
+                    {
+                        Part = node,
+                        Axis = info.axis is { Length: 3 } ? new Vector3(info.axis[0], info.axis[1], info.axis[2]) : Vector3.right,
+                        Degrees = info.degrees,
+                        Lift = info.lift,
+                    });
+                }
+            }
+
+            var old = visuals.Gear;
+            if (old.Length == legs.Count && old.Zip(legs, (a, b) => a.Part == b.Part && a.Axis == b.Axis &&
+                    Mathf.Approximately(a.Degrees, b.Degrees) && Mathf.Approximately(a.Lift, b.Lift)).All(x => x))
+                return false;
+            visuals.SetGear(legs.ToArray());
+            return true;
         }
 
         /// <summary>A new variant: the kit model replaces the old model and its placeholder sockets.</summary>
