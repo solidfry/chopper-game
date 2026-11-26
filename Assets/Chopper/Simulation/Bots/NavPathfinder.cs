@@ -74,10 +74,12 @@ namespace Chopper.Simulation.Bots
             var goalIndex = goalReachable ? grid.Index(goalCell) : -1;
             var goalCentre = grid.Centre(goalCell);
 
-            var open = new NativeList<HeapNode>(256, Allocator.Temp);
-            var cost = new NativeHashMap<int, float>(1024, Allocator.Temp);
-            var parent = new NativeHashMap<int, int>(1024, Allocator.Temp);
-            var closed = new NativeHashSet<int>(1024, Allocator.Temp);
+            // Sized for the whole budget at once: growing (rehashing) mid-search was a large share of a long search.
+            var capacity = math.clamp(query.MaxNodes, 1024, 1 << 17);
+            var open = new NativeList<HeapNode>(capacity, Allocator.Temp);
+            var cost = new NativeHashMap<int, float>(capacity * 2, Allocator.Temp);
+            var parent = new NativeHashMap<int, int>(capacity * 2, Allocator.Temp);
+            var closed = new NativeHashSet<int>(capacity, Allocator.Temp);
 
             cost[startIndex] = 0f;
             parent[startIndex] = -1;

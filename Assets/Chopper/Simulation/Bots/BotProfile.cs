@@ -163,8 +163,9 @@ namespace Chopper.Simulation.Bots
         public float PathCruiseHeight = 30f;
         [Tooltip("Extra cost per 100 m above the cruise height (1 = twice the length). 0 = height does not matter.")]
         public float PathHeightCost = 1.5f;
-        [Tooltip("Most grid cells one search may open (CPU limit). Then the path goes to the closest point found.")]
-        public int PathMaxNodes = 40000;
+        [Tooltip("Most grid cells one search may open (CPU limit). Then the path goes to the closest point found, and the bot plans again from there.")]
+        // 26 Nov: 40,000 gave server spikes up to 27 ms (City04, 8 bots); 16,000 keeps one search to a few ms.
+        public int PathMaxNodes = 16000;
         [Tooltip("Plan the path again after this many seconds.")]
         public float ReplanSeconds = 4f;
 

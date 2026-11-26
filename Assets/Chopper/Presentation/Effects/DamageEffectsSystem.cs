@@ -5,6 +5,7 @@ using Chopper.Presentation.Events;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Visuals;
 using Unity.Entities;
+using Unity.Profiling;
 using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
@@ -33,6 +34,10 @@ namespace Chopper.Presentation.Effects
     public partial class DamageEffectsSystem : PresentationSystemBase
     {
         private const float CockpitClearance = 2.5f;
+        private static readonly ProfilerMarker HitsMarker = new("DamageEffects.Hits");
+        private static readonly ProfilerMarker LoopMarker = new("DamageEffects.Loop");
+        private static readonly ProfilerMarker BreakUpMarker = new("DamageEffects.BreakUp");
+        private static readonly ProfilerMarker BindMarker = new("DamageEffects.Bind");
         /// <summary>Flame puffs per second at full fire (see <see cref="DamageLook.Fire"/>).</summary>
         public const float FlameRate = 40f;
 
@@ -81,15 +86,16 @@ namespace Chopper.Presentation.Effects
                 Clear();
                 return;
             }
-            Bind(context);
+            using (BindMarker.Auto()) Bind(context);
             var settings = context.Effects.Settings;
             var deltaTime = SystemAPI.Time.DeltaTime;
             var rig = context.CameraRig;
             var cockpit = rig != null && rig.HidesOwnChopper;
             var eye = rig != null ? rig.transform.position : Vector3.zero;
 
-            ApplyHits(settings);
+            using (HitsMarker.Auto()) ApplyHits(settings);
 
+            var loop = LoopMarker.Auto();
             _seen.Clear();
             var repairs = SystemAPI.GetComponentLookup<ChopperRepair>(true);
             var drones = SystemAPI.GetComponentLookup<RepairDroneState>(true);
@@ -162,7 +168,8 @@ namespace Chopper.Presentation.Effects
                 }
             }
 
-            BreakUp(deltaTime);
+            loop.Dispose();
+            using (BreakUpMarker.Auto()) BreakUp(deltaTime);
 
             _gone.Clear();
             foreach (var entity in _damaged.Keys)
