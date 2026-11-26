@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Chopper.Presentation.Visuals;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
+using Unity.Mathematics;
 using Chopper.Simulation.Combat;
 using Unity.Physics;
 using UnityEngine;
@@ -199,6 +202,22 @@ namespace Chopper.Presentation.Effects
             _burst.Clear();
         }
 
+        /// <summary>
+        /// Cuts these chopper models' hulls now (all their meshes), so the first break-up of each type has no hitch
+        /// (26 Nov: 6-26 ms per chassis on its first wreck). Call under the loading screen.
+        /// </summary>
+        public void Prewarm(IEnumerable<GameObject> models)
+        {
+            if (models == null) return;
+            var filters = new List<MeshFilter>();
+            foreach (var model in models)
+            {
+                if (model == null) continue;
+                model.GetComponentsInChildren(true, filters);
+                foreach (var filter in filters) _shatter.Cut(filter.sharedMesh, HullChunks);
+            }
+        }
+
         /// <summary>A ground ray for scenes without ECS physics (the effects bench): true = hit at point, normal.</summary>
         public delegate bool GroundRay(Vector3 from, Vector3 to, out Vector3 point, out Vector3 normal);
 
@@ -217,22 +236,43 @@ namespace Chopper.Presentation.Effects
             if (deltaTime <= 0f) return;
             for (var i = _pieces.Count - 1; i >= 0; i--)
             {
-                var piece = _pieces[i];
-                piece.Age += deltaTime;
-                if (piece.Age >= piece.Life + DebrisMotion.SinkSeconds)
-                {
-                    Remove(i);
-                    continue;
-                }
+                _pieces[i].Age += deltaTime;
+                if (_pieces[i].Age >= _pieces[i].Life + DebrisMotion.SinkSeconds) Remove(i);
+            }
 
+            // Moving pieces: this frame's step as rays. In a match all rays go in one Burst job (26 Nov: up to 72 managed
+            // rays a frame after a few wrecks); the bench uses its scene ray.
+            var rays = hasWorld ? new NativeArray<RaycastInput>(_pieces.Count, Allocator.TempJob) : default;
+            var hits = hasWorld ? new NativeArray<GroundHit>(_pieces.Count, Allocator.TempJob) : default;
+            for (var i = 0; i < _pieces.Count; i++)
+            {
+                var piece = _pieces[i];
+                var from = piece.Object.transform.position;
+                if (!piece.Resting)
+                    piece.Velocity = DebrisMotion.Drag(piece.Velocity, piece.Size, deltaTime) + Vector3.down * (Gravity * deltaTime);
+                var to = piece.Resting ? from : from + piece.Velocity * deltaTime;
+                if (hasWorld) rays[i] = new RaycastInput { Start = from, End = to, Filter = CollisionFilter.Default };
+            }
+            if (hasWorld) new GroundRaysJob { World = world, Rays = rays, Hits = hits }.Run();
+
+            for (var i = 0; i < _pieces.Count; i++)
+            {
+                var piece = _pieces[i];
                 var transform = piece.Object.transform;
-                var from = transform.position;
                 if (!piece.Resting)
                 {
-                    piece.Velocity = DebrisMotion.Drag(piece.Velocity, piece.Size, deltaTime) + Vector3.down * (Gravity * deltaTime);
+                    var from = transform.position;
                     var to = from + piece.Velocity * deltaTime;
                     Vector3 point = default, normal = default;
-                    if (hasWorld ? Cast(world, from, to, out point, out normal) : ray != null && ray(from, to, out point, out normal))
+                    bool hit;
+                    if (hasWorld)
+                    {
+                        hit = hits[i].Hit;
+                        point = hits[i].Point;
+                        normal = hits[i].Normal;
+                    }
+                    else hit = ray != null && ray(from, to, out point, out normal);
+                    if (hit)
                     {
                         piece.Velocity = DebrisMotion.Bounce(piece.Velocity, normal, out var rest);
                         piece.Spin *= 0.5f;
@@ -259,6 +299,39 @@ namespace Chopper.Presentation.Effects
                 var trailVelocity = piece.Resting ? Vector3.zero : piece.Velocity;
                 if (flames > 0) _flames?.Invoke(transform.position, trailVelocity, heat, flames);
                 if (puffs > 0) _smoke?.Invoke(transform.position, trailVelocity, smoke, puffs);
+            }
+            if (hasWorld)
+            {
+                rays.Dispose();
+                hits.Dispose();
+            }
+        }
+
+        private struct GroundHit
+        {
+            public bool Hit;
+            public float3 Point;
+            public float3 Normal;
+        }
+
+        /// <summary>The nearest hit of each ray (zero-length rays: none).</summary>
+        [BurstCompile]
+        private struct GroundRaysJob : IJob
+        {
+            [ReadOnly] public CollisionWorld World;
+            [ReadOnly] public NativeArray<RaycastInput> Rays;
+            public NativeArray<GroundHit> Hits;
+
+            public void Execute()
+            {
+                for (var i = 0; i < Rays.Length; i++)
+                {
+                    var ray = Rays[i];
+                    if (math.lengthsq(ray.End - ray.Start) > 1e-8f && World.CastRay(ray, out var hit))
+                        Hits[i] = new GroundHit { Hit = true, Point = hit.Position, Normal = hit.SurfaceNormal };
+                    else
+                        Hits[i] = default;
+                }
             }
         }
 
@@ -349,19 +422,5 @@ namespace Chopper.Presentation.Effects
 
         private static float Size(Part part) =>
             part.Mesh == null ? 0f : Vector3.Scale(part.Mesh.bounds.size, part.Matrix.lossyScale).magnitude;
-
-        private static bool Cast(in CollisionWorld world, Vector3 from, Vector3 to, out Vector3 point, out Vector3 normal)
-        {
-            var input = new RaycastInput { Start = from, End = to, Filter = CollisionFilter.Default };
-            if (world.CastRay(input, out var hit))
-            {
-                point = hit.Position;
-                normal = hit.SurfaceNormal;
-                return true;
-            }
-            point = to;
-            normal = Vector3.up;
-            return false;
-        }
     }
 }

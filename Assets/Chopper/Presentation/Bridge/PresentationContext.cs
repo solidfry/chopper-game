@@ -55,6 +55,14 @@ namespace Chopper.Presentation.Bridge
             Events = new PresentationEvents();
             _audio = new AudioService(config != null ? config.Audio : null, root);
             Effects = new CombatEffects(config != null ? config.Effects : null, root);
+            // Scene load is under the loading screen: cut the chopper hulls for wreck break-ups now, not at the first wreck.
+            if (config != null && config.LoadoutCatalog != null)
+            {
+                var models = new System.Collections.Generic.List<GameObject>();
+                foreach (var chassis in config.LoadoutCatalog.Chassis)
+                    if (chassis != null) models.Add(chassis.Prefab);
+                Effects.Debris.Prewarm(models);
+            }
             var moduleRoot = new GameObject("Module Visuals").transform;
             moduleRoot.SetParent(root, false);
             ModuleVisuals = new EffectPool(moduleRoot);

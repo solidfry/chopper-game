@@ -11,12 +11,16 @@ namespace Chopper.Presentation.Effects
     /// </summary>
     public sealed class MeshShatter
     {
-        private readonly Dictionary<(Mesh, int), (Mesh Mesh, Vector3 Centre)[]> _cache = new();
+        // Keyed by the mesh's content, not the object: in a build the subscene's hull mesh can be a different object
+        // from the prefab's, and the cut is made ahead (Prewarm, at scene load) from the prefab.
+        private readonly Dictionary<(string, int, Vector3, int), (Mesh Mesh, Vector3 Centre)[]> _cache = new();
+
+        private static (string, int, Vector3, int) Key(Mesh mesh, int chunks) => (mesh.name, mesh.vertexCount, mesh.bounds.size, chunks);
 
         public (Mesh Mesh, Vector3 Centre)[] Cut(Mesh mesh, int chunks)
         {
             if (mesh == null || !mesh.isReadable || chunks < 2) return null;
-            if (_cache.TryGetValue((mesh, chunks), out var cached)) return cached;
+            if (_cache.TryGetValue(Key(mesh, chunks), out var cached)) return cached;
 
             var positions = mesh.vertices;
             var normals = mesh.normals;
@@ -62,7 +66,7 @@ namespace Chopper.Presentation.Effects
                 result.Add((part, box.center));
             }
             var array = result.ToArray();
-            _cache[(mesh, chunks)] = array;
+            _cache[Key(mesh, chunks)] = array;
             return array;
         }
 
