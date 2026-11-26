@@ -27,111 +27,120 @@
   align-items: center;
 }
 
-.transition__status {
-  font-size: 11px;
-  letter-spacing: 8px;
-  color: var(--chopper-cyan);
-  opacity: 0.5;
-  padding: 0;
-  margin-bottom: 14px;
-}
-
-.transition__label,
-.transition__label.chopper-deco-dot {
-  /* Display name in Karnivore Dot (style guide), held back: subtle glow, wide tracking. */
-  font-size: 46px;
-  letter-spacing: 18px;
-  opacity: 1;
-  color: var(--chopper-green);
-  padding: 0;
-  text-shadow: 0 0 18px rgba(0, 255, 148, 0.3);
-}
-
-.transition__rule {
-  width: 240px;
-  height: 1px;
-  margin-top: 22px;
-  background-color: var(--chopper-green-dim);
-  opacity: 0.6;
-}
-
-.transition__code {
+/* The terminal log, bottom left (owner, 26 Nov): one column, left aligned, small and calm. */
+.terminal {
   position: absolute;
-  left: 56px;
-  bottom: 44px;
-  font-size: 10px;
-  color: var(--chopper-cyan);
-  opacity: 0.3;
-  padding: 0;
+  left: 64px;
+  bottom: 72px;
+  width: 760px;
+  max-width: 70%;
 }
 
-/* With a briefing the destination sits a little higher. */
-.transition__info--briefing {
-  top: 34%;
-}
-
-/* Match briefing (SceneTransitionView): a small terminal read-out, key then value, under the destination. */
-.briefing {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-}
-
-.briefing__rows {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 52%;
-  align-items: center;
+.terminal__block {
+  flex-direction: column;
 }
 
 .briefing--hidden {
   display: none;
 }
 
-.briefing__row {
+.terminal__line {
   flex-direction: row;
-  width: 360px;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
 }
 
-.briefing__key {
-  width: 110px;
-  font-size: 11px;
-  letter-spacing: 6px;
-  color: var(--chopper-cyan);
-  opacity: 0.45;
+.terminal__line--gap {
+  margin-top: 14px;
+}
+
+.terminal__mark {
+  width: 22px;
+  font-size: 15px;
   padding: 0;
-  -unity-text-align: middle-left;
+  -unity-text-align: upper-left;
 }
 
-.briefing__value {
-  flex-grow: 1;
-  font-size: 13px;
+.terminal__mark--prompt {
+  color: var(--chopper-cyan);
+  opacity: 0.6;
+}
+
+.terminal__mark--bullet {
+  color: var(--chopper-green);
+}
+
+.terminal__mark--tip {
+  color: var(--chopper-yellow);
+  opacity: 0.7;
+}
+
+.terminal__prompt {
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--chopper-cyan);
+  opacity: 0.6;
+  padding: 0;
+}
+
+.terminal__title,
+.terminal__title.chopper-title {
+  font-size: 18px;
   letter-spacing: 4px;
   color: var(--chopper-green);
-  opacity: 0.85;
   padding: 0;
-  -unity-text-align: middle-left;
+  text-shadow: 0 0 10px rgba(0, 255, 148, 0.25);
 }
 
-.briefing__value--accent {
-  color: var(--chopper-yellow);
-  opacity: 0.75;
+/* Result lines under the bullet, indented with a hanging bar. */
+.terminal__result {
+  flex-direction: row;
+  margin-left: 22px;
+  padding-left: 14px;
+  border-left-width: 1px;
+  border-color: var(--chopper-green-dim);
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
-/* The tip: one dim line near the bottom, as a terminal comment. */
-.briefing__tip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 44px;
+.terminal__key {
+  width: 70px;
   font-size: 13px;
   color: var(--chopper-text);
   opacity: 0.4;
-  -unity-text-align: middle-center;
+  padding: 0;
+}
+
+.terminal__value {
+  flex-grow: 1;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--chopper-text);
+  opacity: 0.85;
+  padding: 0;
+}
+
+.terminal__value--accent {
+  color: var(--chopper-yellow);
+}
+
+.terminal__tip {
+  flex-shrink: 1;
+  flex-grow: 1;
+  font-size: 13px;
+  color: var(--chopper-text);
+  opacity: 0.55;
+  padding: 0;
   white-space: normal;
-  padding: 0 20%;
+}
+
+/* Link address, bottom right: faint decoration. */
+.transition__code {
+  position: absolute;
+  right: 64px;
+  bottom: 72px;
+  font-size: 10px;
+  color: var(--chopper-cyan);
+  opacity: 0.3;
+  padding: 0;
 }

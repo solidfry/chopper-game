@@ -4,33 +4,41 @@
        Type (style guide): destination in Karnivore Dot (display), values in Bold, labels in Lite, the tip in Chakra Petch. -->
   <ui:VisualElement name="transition" class="transition transition--hidden" picking-mode="Ignore">
     <Chopper.UI.Transitions.DigitalWipe name="wipe" class="transition__wipe" />
-    <ui:VisualElement name="info" class="transition__info" picking-mode="Ignore">
-      <ui:Label name="status" text="LINKING" class="transition__status" />
-      <ui:Label name="label" text="" class="transition__label chopper-deco-dot" />
-      <ui:VisualElement class="transition__rule" picking-mode="Ignore" />
-    </ui:VisualElement>
-    <!-- Match briefing (MatchBriefing): a quiet terminal read-out under the destination; the values type in.
-         Tagline and rules are left out on purpose (owner, 26 Nov: less text, subtle). -->
-    <ui:VisualElement name="briefing" class="briefing briefing--hidden" picking-mode="Ignore">
-      <ui:VisualElement class="briefing__rows" picking-mode="Ignore">
-        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
-          <ui:Label text="MODE" class="briefing__key" picking-mode="Ignore" />
-          <ui:Label name="briefing-mode" class="briefing__value" picking-mode="Ignore" />
+    <!-- A terminal log in the bottom left (owner, 26 Nov: "displayed like Claude would"): a prompt line, a bullet with
+         the destination, then the briefing as indented result lines; the values type in. No tagline or rules. -->
+    <ui:VisualElement class="terminal" picking-mode="Ignore">
+      <ui:VisualElement name="info" class="terminal__block" picking-mode="Ignore">
+        <ui:VisualElement class="terminal__line" picking-mode="Ignore">
+          <ui:Label text="&gt;" class="terminal__mark terminal__mark--prompt chopper-body" picking-mode="Ignore" />
+          <ui:Label name="status" text="LINKING" class="terminal__prompt chopper-body" picking-mode="Ignore" />
         </ui:VisualElement>
-        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
-          <ui:Label text="AREA" class="briefing__key" picking-mode="Ignore" />
-          <ui:Label name="briefing-map" class="briefing__value" picking-mode="Ignore" />
-        </ui:VisualElement>
-        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
-          <ui:Label text="COND" class="briefing__key" picking-mode="Ignore" />
-          <ui:Label name="briefing-conditions" class="briefing__value briefing__value--accent" picking-mode="Ignore" />
-        </ui:VisualElement>
-        <ui:VisualElement class="briefing__row" picking-mode="Ignore">
-          <ui:Label text="SLOTS" class="briefing__key" picking-mode="Ignore" />
-          <ui:Label name="briefing-players" class="briefing__value" picking-mode="Ignore" />
+        <ui:VisualElement class="terminal__line terminal__line--gap" picking-mode="Ignore">
+          <ui:Label text="&#x2022;" class="terminal__mark terminal__mark--bullet chopper-body" picking-mode="Ignore" />
+          <ui:Label name="label" text="" class="terminal__title chopper-title" picking-mode="Ignore" />
         </ui:VisualElement>
       </ui:VisualElement>
-      <ui:Label name="briefing-tip" class="briefing__tip chopper-body" picking-mode="Ignore" />
+      <ui:VisualElement name="briefing" class="terminal__block briefing--hidden" picking-mode="Ignore">
+        <ui:VisualElement class="terminal__result" picking-mode="Ignore">
+          <ui:Label text="mode" class="terminal__key chopper-body" picking-mode="Ignore" />
+          <ui:Label name="briefing-mode" class="terminal__value chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="terminal__result" picking-mode="Ignore">
+          <ui:Label text="area" class="terminal__key chopper-body" picking-mode="Ignore" />
+          <ui:Label name="briefing-map" class="terminal__value chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="terminal__result" picking-mode="Ignore">
+          <ui:Label text="cond" class="terminal__key chopper-body" picking-mode="Ignore" />
+          <ui:Label name="briefing-conditions" class="terminal__value terminal__value--accent chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="terminal__result" picking-mode="Ignore">
+          <ui:Label text="slots" class="terminal__key chopper-body" picking-mode="Ignore" />
+          <ui:Label name="briefing-players" class="terminal__value chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="terminal__line terminal__line--gap" picking-mode="Ignore">
+          <ui:Label text="&#x2022;" class="terminal__mark terminal__mark--tip chopper-body" picking-mode="Ignore" />
+          <ui:Label name="briefing-tip" class="terminal__tip chopper-body" picking-mode="Ignore" />
+        </ui:VisualElement>
+      </ui:VisualElement>
     </ui:VisualElement>
     <ui:Label name="code" text="" class="transition__code chopper-deco-dot" />
   </ui:VisualElement>
