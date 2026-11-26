@@ -60,6 +60,11 @@ namespace Chopper.Presentation.Pilots
         private const float BlinkSeconds = 0.16f;
         /// <summary>Seconds between looks for the brightest directional light (lights can change with the scene).</summary>
         private const float SunSearchSeconds = 2f;
+        /// <summary>
+        /// Most picture draws per second. Each draw runs a command buffer at once, which makes Unity finish the
+        /// frame's particle update there (26 Nov: ~0.5 ms a frame on City04); the face moves slowly, 30 is enough.
+        /// </summary>
+        private const float DrawsPerSecond = 30f;
 
         private readonly PilotPortraitLook _look;
         private readonly Material _material;
@@ -70,6 +75,7 @@ namespace Chopper.Presentation.Pilots
         private Light _sun;
         private float _sunSearch;
         private float _time;
+        private float _drawWait;
         private float _seed;
         private float _breath;
         private float _blinkWait = 1f;
@@ -223,6 +229,10 @@ namespace Chopper.Presentation.Pilots
             _material.SetVector(FxId, new Vector4(_time, _flash, look.Rim, 1f));
             _material.SetFloat(FlipYId, 0f);
             ApplyLight(input.Facing, deltaTime);
+            // A hit draws at once, so the flash is never missed.
+            _drawWait -= deltaTime;
+            if (_drawWait > 0f && input.Hit <= 0f) return;
+            _drawWait = 1f / DrawsPerSecond;
             Draw();
         }
 
