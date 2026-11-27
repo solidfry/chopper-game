@@ -2,9 +2,9 @@
 
 public class UniStormStereoRenderer : MonoBehaviour
 {
-    // Start is called before the first frame update
     void Start()
     {
+        /*
         if (!UnityEngine.XR.XRSettings.enabled)
             return;
 
@@ -14,5 +14,6 @@ public class UniStormStereoRenderer : MonoBehaviour
         {
             renderer.material.EnableKeyword("STEREO_INSTANCING_ON");
         }
+        */
     }
 }

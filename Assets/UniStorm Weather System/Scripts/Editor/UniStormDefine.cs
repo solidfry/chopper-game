@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Callbacks;
-using UnityEditor.Build; //Added namespace for NamedBuildTarget
 
 namespace UniStorm.Utility
 {
@@ -19,36 +18,24 @@ namespace UniStorm.Utility
 
         static void InitializeUniStormDefines()
         {
-            //Get the selected build target group
-            var buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            var BTG = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            string UniStormDef = PlayerSettings.GetScriptingDefineSymbols(BTG);
 
-            //Convert BuildTargetGroup to NamedBuildTarget
-            var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(buildTargetGroup);
-
-            //Get the current scripting define symbols
-            string scriptingDefines = PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
-
-            //Check if the UniStorm define symbol is already present
-            if (!scriptingDefines.Contains(UniStormDefinesString))
+            if (!UniStormDef.Contains(UniStormDefinesString))
             {
-                if (string.IsNullOrEmpty(scriptingDefines))
+                if (string.IsNullOrEmpty(UniStormDef))
                 {
-                    //If there are no existing symbols, set the UniStorm define symbol
-                    PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, UniStormDefinesString);
+                    PlayerSettings.SetScriptingDefineSymbols(BTG, UniStormDefinesString);
                 }
                 else
                 {
-                    //Ensure the existing symbols end with a semicolon
-                    if (scriptingDefines[scriptingDefines.Length - 1] != ';')
+                    if (UniStormDef[UniStormDef.Length - 1] != ';')
                     {
-                        scriptingDefines += ';';
+                        UniStormDef += ';';
                     }
 
-                    //Add the UniStorm define symbol
-                    scriptingDefines += UniStormDefinesString;
-
-                    //Set the updated scripting define symbols
-                    PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, scriptingDefines);
+                    UniStormDef += UniStormDefinesString;
+                    PlayerSettings.SetScriptingDefineSymbols(BTG, UniStormDef);
                 }
             }
         }

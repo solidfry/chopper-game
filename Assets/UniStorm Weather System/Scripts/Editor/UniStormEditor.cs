@@ -2526,9 +2526,8 @@ namespace UniStorm.Utility
                     }
                     EditorGUILayout.EndHorizontal();
                     EditorGUILayout.Space();
-                    EditorGUILayout.Space();
 
-                    EditorGUILayout.PropertyField(URPForwardRenderer);
+                    //EditorGUILayout.PropertyField(URPForwardRenderer);
 
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();

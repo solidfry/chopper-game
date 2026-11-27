@@ -56,7 +56,6 @@ public class UniStormAtmosphericFogFeature : ScriptableRendererFeature
         fogPass.renderPassEvent = settings.renderPassEvent;
         fogPass.settings = settings;
 
-        // The shader samples _CameraDepthTexture.
         fogPass.ConfigureInput(ScriptableRenderPassInput.Depth);
 
         renderer.EnqueuePass(fogPass);

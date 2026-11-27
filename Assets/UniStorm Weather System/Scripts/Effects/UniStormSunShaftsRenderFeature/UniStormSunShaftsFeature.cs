@@ -25,9 +25,9 @@ public class UniStormSunShaftsFeature : ScriptableRendererFeature
     public class Settings
     {
         public bool isEnabled = true;
-        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
+        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
-        public SunShaftsResolution resolution = SunShaftsResolution.Normal;
+        public SunShaftsResolution resolution = SunShaftsResolution.High;
         public ShaftsScreenBlendMode screenBlendMode = ShaftsScreenBlendMode.Screen;
 
         public string celestialName;

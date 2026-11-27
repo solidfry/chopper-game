@@ -79,6 +79,18 @@ namespace UniStorm.Utility
         }
         */
 
+        [MenuItem("Window/UniStorm/Video Tutorial - Setting up UniStorm with URP", false, 400)]
+        static void SettingUpWithURP()
+        {
+            Application.OpenURL("https://www.youtube.com/watch?v=sBOCZJqCLnI");
+        }
+
+        [MenuItem("Window/UniStorm/Video Tutorial - Updating UniStorm using URP", false, 400)]
+        static void UpdatingUniStormUsingURP()
+        {
+            Application.OpenURL("https://www.youtube.com/watch?v=zVJDdTD3r1I");
+        }
+
         [MenuItem("Window/UniStorm/Documentation and Tutorials", false, 200)]
         static void Documentation()
         {

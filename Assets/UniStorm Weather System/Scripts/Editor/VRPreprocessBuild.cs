@@ -12,6 +12,7 @@ namespace UniStorm.Utility
         public int callbackOrder { get { return 0; } }
         public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report)
         {
+            /*
             var VRStateData = Resources.Load("VR State Data") as VRState;
             VRStateData.VREnabled = UnityEngine.XR.XRSettings.enabled;
 
@@ -19,6 +20,7 @@ namespace UniStorm.Utility
                 VRStateData.StereoRenderingMode = VRState.StereoRenderingModes.SinglePass;
             else if (PlayerSettings.stereoRenderingPath == StereoRenderingPath.MultiPass)
                 VRStateData.StereoRenderingMode = VRState.StereoRenderingModes.MultiPass;
+            */
         }
     }
 }

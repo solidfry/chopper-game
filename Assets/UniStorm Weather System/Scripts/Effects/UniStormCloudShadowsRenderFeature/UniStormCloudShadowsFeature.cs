@@ -9,11 +9,11 @@ public class UniStormCloudShadowsFeature : ScriptableRendererFeature
     public class Settings
     {
         public bool isEnabled = true;
-        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingSkybox;
+        public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
 
-        public float Fade = 0.33f;
+        public float Fade = 1f;
         public RenderTexture CloudShadowTexture;
-        public Color ShadowColor = Color.white;
+        public Color ShadowColor = new Color(0.55f, 0.55f, 0.55f, 1f);
         public float CloudTextureScale = 0.1f;
         public float BottomThreshold = 0f;
         public float TopThreshold = 1f;
@@ -24,7 +24,17 @@ public class UniStormCloudShadowsFeature : ScriptableRendererFeature
         public float m_CurrentCloudHeight;
         public int CloudSpeed;
 
-        public float NormalY;
+        public float NormalY = 1f;
+
+        [Header("Stable Sun Follow")]
+        [Tooltip("UV offset amount added from the sun direction. This keeps the shadows loosely following the sun without physical projection flipping.")]
+        public float SunProjectionOffset = 0.25f;
+
+        [Tooltip("How quickly the sun offset catches up when the sun moves. Higher = snappier, lower = smoother.")]
+        public float SunProjectionSmoothing = 8f;
+
+        [Tooltip("Minimum amount of sun offset even when the sun is high overhead.")]
+        [Range(0f, 1f)] public float MinimumSunOffset = 0.15f;
     }
 
     public Settings settings = new Settings();
@@ -44,5 +54,10 @@ public class UniStormCloudShadowsFeature : ScriptableRendererFeature
         cloudShadowsPass.renderPassEvent = settings.renderPassEvent;
         cloudShadowsPass.settings = settings;
         renderer.EnqueuePass(cloudShadowsPass);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        cloudShadowsPass?.Dispose();
     }
 }

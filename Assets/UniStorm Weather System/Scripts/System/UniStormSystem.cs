@@ -1,12 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.Events;
-using UnityEngine.Rendering.Universal;
+using System.Linq;
 using UniStorm.Effects;
 using UniStorm.Utility;
-using System.Linq;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
 namespace UniStorm
 {
@@ -420,8 +421,6 @@ namespace UniStorm
         public bool UniStormInitialized = false;
         public UnityEngine.Audio.AudioMixer UniStormAudioMixer;
         public bool UpgradedToCurrentVersion = false;
-        public VRState VRStateData;
-        float m_DetailStrength = 0.072f;
 
         void Awake()
         {
@@ -431,19 +430,8 @@ namespace UniStorm
             m_UniStormManager.name = "UniStorm Manager";
             Instance = this;
             m_UniStormClouds = FindAnyObjectByType<UniStormClouds>();
+            RendererFeatureCheck.Check();
             InitializeCloudSettings();
-
-            //When in the Unity Editor, check the state of VR, along with the StereoRenderingPath, and cache it within VRState so can be used during runtime for VR related features.
-            var m_VRStateData = Resources.Load("VR State Data") as VRState;
-#if UNITY_EDITOR
-            m_VRStateData.VREnabled = UnityEngine.XR.XRSettings.enabled; //UnityEditor.PlayerSettings.virtualRealitySupported;
-            if (UnityEngine.XR.XRSettings.stereoRenderingMode == UnityEngine.XR.XRSettings.StereoRenderingMode.SinglePassInstanced) //(UnityEditor.PlayerSettings.stereoRenderingPath == UnityEditor.StereoRenderingPath.SinglePass)
-                m_VRStateData.StereoRenderingMode = VRState.StereoRenderingModes.SinglePass;
-            else if (UnityEngine.XR.XRSettings.stereoRenderingMode == UnityEngine.XR.XRSettings.StereoRenderingMode.MultiPass) //(UnityEditor.PlayerSettings.stereoRenderingPath == UnityEditor.StereoRenderingPath.MultiPass)
-                m_VRStateData.StereoRenderingMode = VRState.StereoRenderingModes.MultiPass;
-#endif
-            VRStateData = m_VRStateData;
-
             FindURPRendererData();
         }
 
@@ -868,45 +856,36 @@ namespace UniStorm
                 }
             }
 
-            //Enable Single Pass support for UniStorm's clouds, given that the VR settings are enabled.
-            if (VRStateData.VREnabled && VRStateData.StereoRenderingMode == VRState.StereoRenderingModes.SinglePass)
-                m_CloudsMaterial.SetFloat("_VRSinglePassEnabled", 1);
-            else if (!VRStateData.VREnabled || VRStateData.VREnabled && VRStateData.StereoRenderingMode == VRState.StereoRenderingModes.MultiPass)
-                m_CloudsMaterial.SetFloat("_VRSinglePassEnabled", 0);
-
+            //m_CloudsMaterial.SetFloat("_VRSinglePassEnabled", 1);
             UniStormInitialized = true;
         }
 
         IEnumerator InitializeCloudShadows()
         {
-            //Cloud Shadows are not currently supported with URP so disable them
-            GetCloudShadowsFeatureSettings().isEnabled = false;
-            CloudShadows = EnableFeature.Disabled;
-            yield break;
-
-            /*
             if (CloudShadows == EnableFeature.Enabled)
             {
                 if (GetCloudShadowsFeature() != null)
                 {
                     m_CloudShadows = GetCloudShadowsFeatureSettings();
                 }
-                else
-                {
-                    m_CloudShadows = GetCloudShadowsFeatureSettings();
-                    m_CloudShadows.isEnabled = true;
-                }
+
+                if (m_CloudShadows == null) yield break;
 
                 //Find UniStorm's cloud system and wait until the cloud shadows are generated before finishing initialization.
                 yield return new WaitUntil(() => m_UniStormClouds.PublicCloudShadowTexture != null);
+                m_CloudShadows.isEnabled = true;
                 m_CloudShadows.CloudShadowTexture = m_UniStormClouds.PublicCloudShadowTexture;
                 m_CloudShadows.BottomThreshold = 0.5f;
+                m_CloudShadows.Fade = 0.33f;
                 m_CloudShadows.TopThreshold = 1;
-                m_CloudShadows.CloudTextureScale = 0.001f;
+                m_CloudShadows.CloudTextureScale = 0.0000001f;
                 m_CloudShadows.ShadowIntensity = CurrentWeatherType.CloudShadowIntensity;
 
-                m_CloudShadows.m_CurrentCloudHeight = m_CurrentCloudHeight;
-                m_CloudShadows.CloudSpeed = CloudSpeed;
+                //m_CloudShadows.m_CurrentCloudHeight = m_CurrentCloudHeight;
+                m_CloudShadows.m_CurrentCloudHeight = 400;
+                m_CloudShadows.CloudSpeed = 15;
+                m_CloudShadows.ShadowColor = Color.white;
+                m_CloudShadows.SunProjectionSmoothing = 16;
 
                 PlayerCamera.clearFlags = CameraClearFlags.Skybox;
             }
@@ -917,7 +896,6 @@ namespace UniStorm
                     GetCloudShadowsFeatureSettings().isEnabled = false;
                 }
             }
-            */
         }
 
         internal UniStormCloudShadowsFeature.Settings GetCloudShadowsFeatureSettings()
@@ -993,18 +971,8 @@ namespace UniStorm
                 m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
                 m_CloudsMaterial.SetFloat("_uCloudsDensity", m_CP.Density);
                 m_CloudsMaterial.SetFloat("_uCloudsDetailScale", 1000f);
-
-                if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
-                {
-                    m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", m_CP.CoverageBias);
-                    m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
-                }
-                else
-                {
-                    m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", 0.02f);
-                    m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
-                }
-
+                m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", m_CP.CoverageBias);
+                m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
                 m_CloudsMaterial.SetFloat("_uCloudsBaseScale", 1.72f);
             }
             else if (CloudType == CloudTypeEnum._2D)
@@ -1439,8 +1407,6 @@ namespace UniStorm
                     m_CloudDomeMaterial.SetFloat("_EnableDithering", 1);
                     m_CloudDomeMaterial.SetTexture("_NoiseTex", (Texture2D)Resources.Load("Clouds/baseNoise") as Texture2D);
                 }
-
-                Invoke("CheckSinglePass", 0.05f);
             }
         }
 
@@ -1483,13 +1449,6 @@ namespace UniStorm
             return new UniStormSunShaftsFeature.Settings();
         }
 
-        void CheckSinglePass()
-        {
-            ////Enable Single Pass support for UniStorm Fog, given that the VR settings are enabled.
-            //if (VRStateData.VREnabled && VRStateData.StereoRenderingMode == VRState.StereoRenderingModes.SinglePass)
-            //m_UniStormAtmosphericFog.fogMaterial.SetFloat("_VRSinglePassEnabled", 1);
-        }
-
         //Create and positioned UniStorm's moon
         void CreateMoon()
         {
@@ -1503,8 +1462,7 @@ namespace UniStorm
             m_MoonPhaseMaterial.SetColor("_MoonColor", MoonPhaseColor);
             m_MoonTransform.parent = m_MoonLight.transform;
 
-            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
-            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_MoonLight.shadowResolution = MoonShadowResolution;
+            //m_MoonLight.shadowResolution = MoonShadowResolution;
             m_MoonLight.shadows = MoonShadowType;
             m_MoonLight.shadowStrength = MoonShadowStrength;
 
@@ -1524,10 +1482,7 @@ namespace UniStorm
                 m_MoonTransform.localScale = new Vector3(m_MoonTransform.localScale.x, m_MoonTransform.localScale.y, m_MoonTransform.localScale.z);
             }
 
-            //if (MoonShaftsEffect == EnableFeature.Enabled)
-            //{
             CreateMoonShafts();
-            //}
         }
 
         //Sets up UniStorm's sun
@@ -1538,8 +1493,7 @@ namespace UniStorm
             m_CelestialAxisTransform = GameObject.Find("Celestial Axis").transform;
             RenderSettings.sun = m_SunLight;
             m_SkyBoxMaterial = RenderSettings.skybox;
-            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
-            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_SunLight.shadowResolution = SunShadowResolution;
+            //m_SunLight.shadowResolution = SunShadowResolution;
             m_SunLight.shadows = SunShadowType;
             m_SunLight.shadowStrength = SunShadowStrength;
 
@@ -1562,10 +1516,7 @@ namespace UniStorm
                 m_SunTransform.localEulerAngles = new Vector3(270, 0, 0);
             }
 
-            //if (SunShaftsEffect == EnableFeature.Enabled)
-            //{
             CreatSunShafts();
-            //}
         }
 
         void CreatSunShafts()
@@ -1577,6 +1528,8 @@ namespace UniStorm
             m_SunShafts.sunShaftBlurRadius = 4.86f;
             m_SunShafts.radialBlurIterations = 2;
             m_SunShafts.sunShaftIntensity = 1;
+            m_SunShafts.resolution = UniStormSunShaftsFeature.SunShaftsResolution.High;
+            m_SunShafts.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
             Color SunColor;
             ColorUtility.TryParseHtmlString("#C8A763", out SunColor);
             m_SunShafts.sunColor = SunColor;
@@ -1595,6 +1548,8 @@ namespace UniStorm
             m_MoonShafts.sunShaftBlurRadius = 3.32f;
             m_MoonShafts.radialBlurIterations = 3;
             m_MoonShafts.sunShaftIntensity = 1;
+            m_MoonShafts.resolution = UniStormSunShaftsFeature.SunShaftsResolution.High;
+            m_MoonShafts.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
             GameObject MoonTransform = new GameObject("Moon Transform");
             MoonTransform.transform.SetParent(m_MoonLight.transform);
             MoonTransform.transform.localPosition = new Vector3(0, 0, -20000);
@@ -1627,8 +1582,7 @@ namespace UniStorm
             m_LightningLight.transform.SetParent(this.transform);
             m_LightningLight.transform.localPosition = Vector3.zero;
             m_LightningLight.intensity = 0;
-            // Chopper edit: Built-in only (URP warns and ignores it; URP shadow size comes from the pipeline asset).
-            if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == null) m_LightningLight.shadowResolution = LightningShadowResolution;
+            //m_LightningLight.shadowResolution = LightningShadowResolution;
             m_LightningLight.shadows = LightningShadowType;
             m_LightningLight.shadowStrength = LightningShadowStrength;
             m_LightningLight.color = LightningLightColor;
@@ -1663,7 +1617,7 @@ namespace UniStorm
             WeatherButtonGameObject = GameObject.Find("Change Weather Button");
 
             WeatherDropdown = GameObject.Find("Weather Dropdown").GetComponent<Dropdown>();
-            GameObject.Find("Change Weather Button").GetComponent<Button>().onClick.AddListener(delegate { ChangeWeatherUI(); });
+            WeatherButtonGameObject.GetComponent<Button>().onClick.AddListener(delegate { ChangeWeatherUI(); });
 
             List<string> m_DropOptions = new List<string> { };
 
@@ -1781,6 +1735,8 @@ namespace UniStorm
             //Only run UniStorm if it has been initialized.
             if (UniStormInitialized)
             {
+                m_EffectsTransform.transform.rotation = Quaternion.identity;
+
                 //Only allow runtime editing of Customize Quality settings if enabled.
                 if (CustomizeQuality == CustomizeQualityEnum.Yes && UpdateMarchStepsDuringRuntime == EnableFeature.Enabled && CloudQuality == CloudQualityEnum.Ultra)
                 {
@@ -2377,11 +2333,7 @@ namespace UniStorm
             if (CloudType == CloudTypeEnum.Volumetric && CurrentWeatherType.CloudLevel != WeatherType.CloudLevelEnum.DontChange)
             {
                 CloudProfile m_CP = CurrentWeatherType.CloudProfileComponent;
-
-                if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
-                    CloudProfileCoroutine = StartCoroutine(CloudProfileSequence(10 * TransitionSpeed, m_CP.EdgeSoftness, m_CP.BaseSoftness, m_CP.DetailStrength, m_CP.Density, m_CP.CoverageBias, m_CP.DetailScale));
-                else
-                    CloudProfileCoroutine = StartCoroutine(CloudProfileSequence(10 * TransitionSpeed, m_CP.EdgeSoftness, m_CP.BaseSoftness, m_DetailStrength, m_CP.Density, 0.02f, m_CP.DetailScale));
+                CloudProfileCoroutine = StartCoroutine(CloudProfileSequence(10 * TransitionSpeed, m_CP.EdgeSoftness, m_CP.BaseSoftness, m_CP.DetailStrength, m_CP.Density, m_CP.CoverageBias, m_CP.DetailScale));
             }
 
             //Cloud Shadows

@@ -355,16 +355,8 @@ namespace UniStorm
                     m_CloudsMaterial.SetFloat("_uCloudsBaseScale", 1.72f);
                     m_CloudsMaterial.SetFloat("_uCloudsDetailScale", 1000f);
 
-                    if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
-                    {
-                        m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", m_CP.CoverageBias);
-                        m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
-                    }
-                    else
-                    {
-                        m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", 0.02f);
-                        m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", 0.072f);
-                    }
+                    m_CloudsMaterial.SetFloat("_uCloudsCoverageBias", m_CP.CoverageBias);
+                    m_CloudsMaterial.SetFloat("_uCloudsDetailStrength", m_CP.DetailStrength);
                 }
 
                 if (UniStormSystem.Instance.CloudShadows == UniStormSystem.EnableFeature.Enabled)

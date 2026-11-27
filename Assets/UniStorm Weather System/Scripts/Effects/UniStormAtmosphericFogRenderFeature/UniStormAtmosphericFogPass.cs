@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.XR;
 
 public class UniStormAtmosphericFogPass : ScriptableRenderPass
 {
@@ -53,7 +52,15 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
         settings.SunSource = null;
         settings.MoonSource = null;
 
-        Light[] directionalLights = Array.FindAll(UnityEngine.Object.FindObjectsByType<Light>(), l => l.type == LightType.Directional && (l.cullingMask & 1) != 0);
+#if UNITY_6000_5_OR_NEWER
+Light[] directionalLights = System.Array.FindAll(
+    UnityEngine.Object.FindObjectsByType<Light>(),
+    light => light.type == LightType.Directional);
+#else
+        Light[] directionalLights = System.Array.FindAll(
+            UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None),
+            light => light.type == LightType.Directional);
+#endif
 
         foreach (Light directionalLight in directionalLights)
         {
@@ -83,11 +90,9 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
         public TextureHandle temp;
         public Material fogMaterial;
         public int passIndex;
-        public bool stereoInstancing;
-        public bool stereoMultiview;
     }
 
-    private void UpdateMaterial(Camera camera, bool stereoInstancing, bool stereoMultiview)
+    private void UpdateMaterial(Camera camera)
     {
         Transform camTr = camera.transform;
         Vector3 camPos = camTr.position;
@@ -121,7 +126,7 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
         fogMaterial.SetFloat(FogGradientHeightId, settings.FogGradientHeight);
         fogMaterial.SetFloat(SunControlId, settings.SunControl);
         fogMaterial.SetFloat(MoonControlId, settings.MoonControl);
-        fogMaterial.SetFloat(VRSinglePassEnabledId, stereoInstancing || stereoMultiview ? 1f : 0f);
+        fogMaterial.SetFloat(VRSinglePassEnabledId, 0f);
 
         if (settings.Dither == UniStormAtmosphericFogFeature.DitheringControl.Enabled)
         {
@@ -174,24 +179,7 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
         SetupDirectionalLights();
 
         RenderTextureDescriptor cameraDesc = cameraData.cameraTargetDescriptor;
-        bool stereoInstancing = false;
-        bool stereoMultiview = false;
-
-        if (XRSettings.enabled && XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced)
-        {
-            if (cameraDesc.volumeDepth == 2)
-                stereoInstancing = true;
-        }
-
-        if (XRSettings.enabled &&
-            XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.MultiPass &&
-            camera.stereoActiveEye != Camera.MonoOrStereoscopicEye.Mono &&
-            camera.stereoEnabled)
-        {
-            stereoMultiview = true;
-        }
-
-        UpdateMaterial(camera, stereoInstancing, stereoMultiview);
+        UpdateMaterial(camera);
 
         int passIndex = 0;
         if (settings.distanceFog && settings.heightFog)
@@ -213,8 +201,6 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
             passData.temp = temp;
             passData.fogMaterial = fogMaterial;
             passData.passIndex = passIndex;
-            passData.stereoInstancing = stereoInstancing;
-            passData.stereoMultiview = stereoMultiview;
 
             builder.UseTexture(source, AccessFlags.ReadWrite);
             builder.UseTexture(temp, AccessFlags.ReadWrite);
@@ -223,24 +209,12 @@ public class UniStormAtmosphericFogPass : ScriptableRenderPass
             {
                 CommandBuffer cmd = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
 
-                if (data.stereoInstancing)
-                    cmd.EnableShaderKeyword("STEREO_INSTANCING_ON");
-
-                if (data.stereoMultiview)
-                    cmd.EnableShaderKeyword("STEREO_MULTIVIEW_ON");
-
                 RTHandle sourceRT = data.source;
                 RTHandle tempRT = data.temp;
 
                 cmd.SetGlobalTexture(MainTexId, sourceRT.nameID);
                 cmd.Blit(sourceRT.nameID, tempRT.nameID, data.fogMaterial, data.passIndex);
                 cmd.Blit(tempRT.nameID, sourceRT.nameID);
-
-                if (data.stereoInstancing)
-                    cmd.DisableShaderKeyword("STEREO_INSTANCING_ON");
-
-                if (data.stereoMultiview)
-                    cmd.DisableShaderKeyword("STEREO_MULTIVIEW_ON");
             });
         }
     }

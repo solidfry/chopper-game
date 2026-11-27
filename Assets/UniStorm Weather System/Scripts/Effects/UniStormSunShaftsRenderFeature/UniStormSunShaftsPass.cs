@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
-using UnityEngine.XR;
 
 public class UniStormSunShaftsPass : ScriptableRenderPass
 {
@@ -21,10 +20,19 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
         {
             if (sunTransform == null)
             {
-                Light[] lights = System.Array.FindAll(UnityEngine.Object.FindObjectsByType<Light>(), l => l.type == LightType.Directional);
-                if (lights.Length > 0)
+#if UNITY_6000_5_OR_NEWER
+Light[] directionalLights = System.Array.FindAll(
+    UnityEngine.Object.FindObjectsByType<Light>(),
+    light => light.type == LightType.Directional);
+#else
+                Light[] directionalLights = System.Array.FindAll(
+                    UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None),
+                    light => light.type == LightType.Directional);
+#endif
+
+                if (directionalLights.Length > 0)
                 {
-                    Light sunLight = lights.FirstOrDefault(x => x.name.Equals(settings.celestialName));
+                    Light sunLight = directionalLights.FirstOrDefault(x => x.name.Equals(settings.celestialName));
                     if (sunLight != null)
                     {
                         sunTransform = sunLight.transform.GetChild(0);
@@ -60,10 +68,7 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
         public Color sunColor;
         public Color sunThreshold;
         public Vector3 vl;
-        public Vector3 vr;
         public int screenBlendMode;
-        public bool stereoInstancing;
-        public bool stereoMultiview;
         public bool supportsCopyTexture;
     }
 
@@ -81,11 +86,6 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
 
         RenderTextureDescriptor cameraDesc = cameraData.cameraTargetDescriptor;
 
-        bool stereoInstancing = XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced
-            && cameraDesc.volumeDepth == 2;
-        bool stereoMultiview = XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.MultiPass
-            && camera.stereoActiveEye != Camera.MonoOrStereoscopicEye.Mono && camera.stereoEnabled;
-
         int divider = 4;
         if (settings.resolution == UniStormSunShaftsFeature.SunShaftsResolution.Normal)
             divider = 2;
@@ -93,29 +93,15 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
             divider = 1;
 
         Vector3 vl = Vector3.one * 0.5f;
-        Vector3 vr = Vector3.one * 0.5f;
-
-        Camera.MonoOrStereoscopicEye leftEye;
-        if (camera.stereoActiveEye == Camera.MonoOrStereoscopicEye.Left
-            && XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced)
-        {
-            leftEye = Camera.MonoOrStereoscopicEye.Left;
-        }
-        else
-        {
-            leftEye = Camera.MonoOrStereoscopicEye.Mono;
-        }
 
         if (SunTransform)
         {
             var sunPosition = SunTransform.position;
-            vl = camera.WorldToViewportPoint(sunPosition, leftEye);
-            vr = camera.WorldToViewportPoint(sunPosition, Camera.MonoOrStereoscopicEye.Right);
+            vl = camera.WorldToViewportPoint(sunPosition);
         }
         else
         {
             vl = new Vector3(0.5f, 0.5f, 0.0f);
-            vr = new Vector3(0.5f, 0.5f, 0.0f);
         }
 
         int width = cameraDesc.width;
@@ -153,10 +139,7 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
             passData.sunColor = settings.sunColor;
             passData.sunThreshold = settings.sunThreshold;
             passData.vl = vl;
-            passData.vr = vr;
             passData.screenBlendMode = (int)settings.screenBlendMode;
-            passData.stereoInstancing = stereoInstancing;
-            passData.stereoMultiview = stereoMultiview;
             passData.supportsCopyTexture = (SystemInfo.copyTextureSupport & CopyTextureSupport.Basic) != 0;
 
             builder.UseTexture(source, AccessFlags.ReadWrite);
@@ -168,11 +151,6 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
             {
                 CommandBuffer cmd = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
 
-                if (data.stereoInstancing)
-                    cmd.EnableShaderKeyword("STEREO_INSTANCING_ON");
-                if (data.stereoMultiview)
-                    cmd.EnableShaderKeyword("STEREO_MULTIVIEW_ON");
-
                 Material mat = data.material;
                 RTHandle srcRT = data.source;
                 RTHandle pingRT = data.pingBuffer;
@@ -182,7 +160,7 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
                 mat.SetVectorArray("_SunPositionArray", new Vector4[2]
                 {
                     new Vector4(data.vl.x, data.vl.y, data.vl.z, data.maxRadius),
-                    new Vector4(data.vr.x, data.vr.y, data.vr.z, data.maxRadius)
+                    new Vector4(data.vl.x, data.vl.y, data.vl.z, data.maxRadius)
                 });
                 mat.SetVector("_SunThreshold", data.sunThreshold);
 
@@ -194,7 +172,7 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
                 mat.SetVectorArray("_SunPositionArray", new Vector4[2]
                 {
                     new Vector4(data.vl.x, data.vl.y, data.vl.z, data.maxRadius),
-                    new Vector4(data.vr.x, data.vr.y, data.vr.z, data.maxRadius)
+                    new Vector4(data.vl.x, data.vl.y, data.vl.z, data.maxRadius)
                 });
 
                 for (int it2 = 0; it2 < data.radialBlurIterations; it2++)
@@ -224,9 +202,6 @@ public class UniStormSunShaftsPass : ScriptableRenderPass
                     cmd.CopyTexture(finalRT, srcRT);
                 else
                     cmd.Blit(finalRT.nameID, srcRT.nameID); //GLES fallback: no flip on GL
-
-                cmd.DisableShaderKeyword("STEREO_INSTANCING_ON");
-                cmd.DisableShaderKeyword("STEREO_MULTIVIEW_ON");
             });
         }
     }

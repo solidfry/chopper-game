@@ -46,19 +46,13 @@ namespace UniStorm
 
         private static void SetForwardRendererToUniStormSystem()
         {
-#if UNITY_2021_3_OR_NEWER
+            /*
             UniStorm.UniStormSystem unistormSystem = UnityEngine.Object.FindAnyObjectByType<UniStorm.UniStormSystem>();
             if (unistormSystem != null && scriptableRendererData != null)
             {
                 unistormSystem.urpForwardRendererData = scriptableRendererData as UniversalRendererData;
             }
-#else
-        UniStorm.UniStormSystem unistormSystem = UnityEngine.Object.FindAnyObjectByType<UniStorm.UniStormSystem>();
-        if (unistormSystem != null && scriptableRendererData != null)
-        {
-            unistormSystem.urpForwardRendererData = scriptableRendererData as ForwardRendererData;
-        }
-#endif
+            */
         }
 
         private static void ExtractRenderPipelineAsset()

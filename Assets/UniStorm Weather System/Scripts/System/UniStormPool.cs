@@ -69,7 +69,8 @@ namespace UniStorm.Utility
         /// </summary>
         class PoolMember : MonoBehaviour
         {
-            [System.NonSerialized] public Pool myPool;
+            [System.NonSerialized]
+            public Pool myPool;
         }
 
         // All of our pools

@@ -1,6 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UniStorm.CharacterController;
 using UnityEngine;
+
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace UniStorm.Example
 {
@@ -32,8 +37,24 @@ namespace UniStorm.Example
         {
             m_AutoSaveTimer += Time.deltaTime;
 
+            bool SaveKeyPressed = false;
+            bool LoadKeyPressed = false;
+
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null)
+            {
+                SaveKeyPressed = Keyboard.current.tKey.wasPressedThisFrame;
+                LoadKeyPressed = Keyboard.current.yKey.wasPressedThisFrame;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            SaveKeyPressed |= Input.GetKeyDown(KeyCode.T);
+            LoadKeyPressed |= Input.GetKeyDown(KeyCode.Y);
+#endif
+
             //Save player data
-            if (Input.GetKeyDown(KeyCode.T) && SaveType == SaveTypeEnum.Manual || m_AutoSaveTimer >= AutoSaveSeconds && SaveType == SaveTypeEnum.Auto)
+            if ((SaveKeyPressed && SaveType == SaveTypeEnum.Manual) || (m_AutoSaveTimer >= AutoSaveSeconds && SaveType == SaveTypeEnum.Auto))
             {
                 PlayerPrefs.SetInt("UniStorm Hour", UniStormSystem.Instance.Hour);
                 PlayerPrefs.SetInt("UniStorm Minute", UniStormSystem.Instance.Minute);
@@ -46,18 +67,19 @@ namespace UniStorm.Example
                 PlayerPrefs.SetString("UniStorm Player Position", PlayerTransform.position.ToString());
                 PlayerPrefs.SetString("UniStorm Player Rotation", PlayerTransform.eulerAngles.ToString());
                 PlayerPrefs.SetString("UniStorm Camera Rotation", PlayerCamera.eulerAngles.ToString());
+                PlayerPrefs.SetString("UniStorm Camera Position", PlayerCamera.position.ToString());
                 m_AutoSaveTimer = 0;
 
                 if (DebugLogs == DebugLogsEnum.Enabled)
                 {
-                    Debug.Log("Data Saved: UniStorm Time: " + UniStormSystem.Instance.Hour.ToString() + ":" + UniStormSystem.Instance.Minute.ToString("00") + 
+                    Debug.Log("Data Saved: UniStorm Time: " + UniStormSystem.Instance.Hour.ToString() + ":" + UniStormSystem.Instance.Minute.ToString("00") +
                         " - UniStorm Weather: " + UniStormSystem.Instance.CurrentWeatherType.WeatherTypeName + " - UniStorm Temperature: " + UniStormSystem.Instance.Temperature.ToString() + "°" + " " +
                         "- UniStorm Date: " + UniStormSystem.Instance.Month.ToString() + "/" + UniStormSystem.Instance.Day.ToString() + "/" + UniStormSystem.Instance.Year.ToString());
                 }
             }
 
             //Load player data
-            if (Input.GetKeyDown(KeyCode.Y) && SaveType == SaveTypeEnum.Manual)
+            if (LoadKeyPressed && SaveType == SaveTypeEnum.Manual)
             {
                 LoadData();
             }
@@ -74,6 +96,18 @@ namespace UniStorm.Example
                 PlayerTransform.position = StringToVector3(PlayerPrefs.GetString("UniStorm Player Position"));
                 PlayerTransform.eulerAngles = StringToVector3(PlayerPrefs.GetString("UniStorm Player Rotation"));
                 PlayerCamera.eulerAngles = StringToVector3(PlayerPrefs.GetString("UniStorm Camera Rotation"));
+
+                if (PlayerPrefs.HasKey("UniStorm Camera Position"))
+                {
+                    PlayerCamera.position = StringToVector3(PlayerPrefs.GetString("UniStorm Camera Position"));
+                }
+
+                FlyCamera m_FlyCamera = PlayerCamera.GetComponent<FlyCamera>();
+
+                if (m_FlyCamera)
+                {
+                    m_FlyCamera.SetPositionAndRotation(PlayerCamera.position, PlayerCamera.eulerAngles);
+                }
 
                 string LoadedWeatherTypeName = PlayerPrefs.GetString("UniStorm Weather");
                 //To allow weather to be assigned using a string, look through each weather type for a matching Weather Type Name
