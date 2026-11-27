@@ -149,7 +149,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Bullet/BulletImpactYellow.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Minigun", AudioAssets.ClipsIn(Guns + "Minigun"), group, 0.7f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.012f, Tracer = 0.4f, Tail = TailLight,
+                Kick = 0.05f, Tracer = 0.4f, Tail = TailLight,
             };
             // Thump: red tracer, big fire flash, more kick.
             yield return new GunFamily
@@ -160,7 +160,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Bullet/BulletImpactRed.prefab",
                 Cue = group => AudioAssets.Cue("Gun_HeavyMG", AudioAssets.ClipsIn(Guns + "HeavyMG"), group, 0.8f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.025f, Tracer = 0.55f, Tail = TailLight,
+                Kick = 0.1f, Tracer = 0.55f, Tail = TailLight,
             };
             // Slow, heavy rounds: fat orange tracer, fire blast on impact, strong kick.
             yield return new GunFamily
@@ -171,7 +171,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Fire/V2/YellowFireImpactV2.prefab",
                 Cue = group => AudioAssets.Cue("Gun_ChainGun", AudioAssets.ClipsIn(Guns + "ChainGun"), group, 0.9f, blend: 1f, voices: 4,
                     muffle: CueMuffle.Outside),
-                Kick = 0.07f, Tracer = 0.6f, Tail = TailHeavy,
+                Kick = 0.25f, Tracer = 0.6f, Tail = TailHeavy,
             };
             // Cannon shells: fireball flash, flak-like red puffs.
             yield return new GunFamily
@@ -182,7 +182,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Fire/V2/RedFireImpactV2.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Autocannon", AudioAssets.ClipsIn(Guns + "Autocannon"), group, 0.8f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.04f, Tracer = 0.6f, Tail = TailHeavy,
+                Kick = 0.16f, Tracer = 0.6f, Tail = TailHeavy,
             };
             // One heavy blue bolt, sharp crack, big kick.
             yield return new GunFamily
@@ -193,7 +193,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/LaserBolt/BlueLaserBoltImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Railgun", AudioAssets.Clips(SciFiGuns + "Weapon 09 Shoot 1.wav", SciFiGuns + "Weapon 09 Shoot 2.wav"),
                     group, 0.9f, blend: 1f, voices: 2, muffle: CueMuffle.Outside),
-                Kick = 0.3f, Tracer = 0.6f, Tail = TailRail,
+                Kick = 0.5f, Tracer = 0.6f, Tail = TailRail,
             };
             // Green bolts, no shells, zap.
             yield return new GunFamily
@@ -204,7 +204,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/LaserSmall/GreenLaserSmallImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_PulseLaser", AudioAssets.Clips(SciFiGuns + "Weapon 07 Shoot 1.wav", SciFiGuns + "Weapon 02 Shoot 1.wav"),
                     group, 0.6f, blend: 1f, voices: 6, muffle: CueMuffle.Outside),
-                Kick = 0.008f, Tracer = 0.5f, Tail = TailLight,
+                Kick = 0.035f, Tracer = 0.5f, Tail = TailLight,
             };
         }
 
