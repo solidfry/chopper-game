@@ -35,6 +35,8 @@ namespace Chopper.Presentation.Effects
             public float Drag;
             public float ProximityFuse;
             public TargetClass FuseTargets;
+            /// <summary>The pylon family's look (blast); null = shared.</summary>
+            public WeaponLook Look;
         }
 
         private struct FuseTarget
@@ -95,9 +97,12 @@ namespace Chopper.Presentation.Effects
 
         private void Spawn(CombatEffects effects, in RocketLaunched launch)
         {
+            var settings = effects.Settings;
+            var look = settings.Look(launch.ModuleId, WeaponLookLibrary.RocketKind(launch.Gravity, launch.Drag));
             var rotation = Quaternion.LookRotation(launch.Velocity);
-            effects.SpawnOneShot(effects.Settings.RocketMuzzleFlash, launch.Position, rotation);
-            var visual = effects.SpawnPooled(effects.Settings.Rocket, launch.Position, rotation);
+            effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), launch.Position, rotation);
+            if (look != null && look.FireCue != null) _context?.Audio?.Play(look.FireCue, launch.Position);
+            var visual = effects.SpawnPooled(settings.RocketFor(look), launch.Position, rotation);
             // One rocket model for every type: its size follows the blast, so a bomb reads bigger than a light rocket.
             // Set on every spawn: the object comes from a pool.
             if (visual != null) visual.transform.localScale = Vector3.one * RocketScale(launch.SplashRadius);
@@ -112,6 +117,7 @@ namespace Chopper.Presentation.Effects
                 Drag = launch.Drag,
                 ProximityFuse = launch.ProximityFuse,
                 FuseTargets = launch.FuseTargets,
+                Look = look,
             });
         }
 
@@ -171,7 +177,7 @@ namespace Chopper.Presentation.Effects
                 {
                     // The blast sound comes from the cue (place rules: far and hidden blasts are duller), not the prefab.
                     var blast = context.Sounds != null ? context.Sounds.RocketBlast : null;
-                    effects.SpawnOneShot(effects.Settings.RocketImpact, impact, back, muteAudio: blast != null);
+                    effects.SpawnOneShot(effects.Settings.RocketImpactFor(rocket.Look), impact, back, muteAudio: blast != null);
                     if (blast != null) context.Audio?.Play(blast, (Vector3)impact);
                     heat.AddTimed(impact, VisionMath.BlastHeat, VisionMath.BlastSeconds);
                     Finish(effects, i, impact);

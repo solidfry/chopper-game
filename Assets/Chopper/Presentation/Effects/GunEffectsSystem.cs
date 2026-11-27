@@ -47,6 +47,8 @@ namespace Chopper.Presentation.Effects
             /// <summary>A round with travel time: ray-cast each frame's step, so it stops on what is there when it arrives.</summary>
             public bool CastEachFrame;
             public Entity Shooter;
+            /// <summary>The gun's family look (impact on arrival); null = shared.</summary>
+            public WeaponLook Look;
         }
 
         private readonly Dictionary<Entity, uint> _lastShotCount = new();
@@ -126,15 +128,17 @@ namespace Chopper.Presentation.Effects
             // First sight of this shooter: remember its count, draw nothing.
             if (!_lastShotCount.TryGetValue(entity, out var last) || count <= last) return;
 
+            // The gun family's look and sound (Docs/WeaponFeelPlan.md); empty slots use the shared ones.
+            var look = settings.Look(config.ModuleId, WeaponKind.Gun);
             var rotation = quaternion.LookRotationSafe(forward, up);
             if (!fromCockpit &&
                 (!_lastFlashTime.TryGetValue(entity, out var lastFlash) || now - lastFlash >= settings.GunMuzzleFlashInterval))
             {
-                _effects.SpawnOneShot(settings.GunMuzzleFlash, muzzle, rotation);
+                _effects.SpawnOneShot(settings.GunMuzzleFlashFor(look), muzzle, rotation);
                 _lastFlashTime[entity] = now;
             }
 
-            audio.Play(gunSound, muzzle);
+            audio.Play(look != null && look.FireCue != null ? look.FireCue : gunSound, muzzle);
 
             var shots = math.min(count - last, MaxShotsPerFrame);
             var bulletSpeed = config.BulletSpeed;
@@ -145,7 +149,7 @@ namespace Chopper.Presentation.Effects
                 var start = fromCockpit ? math.min(CockpitBulletStart, distance) : 0f;
                 for (var i = 0u; i < shots; i++)
                     Fire(settings, muzzle + forward * start, forward, rotation, distance - start, settings.GunBulletSpeed, hit, surface,
-                        castEachFrame: false, entity);
+                        castEachFrame: false, entity, look);
             }
             else
             {
@@ -159,7 +163,7 @@ namespace Chopper.Presentation.Effects
                 var flightRotation = quaternion.LookRotationSafe(direction, up);
                 for (var i = 0u; i < shots; i++)
                     Fire(settings, muzzle + direction * start, direction, flightRotation, flight - start, speed, false, SurfaceKind.Concrete,
-                        castEachFrame: true, entity);
+                        castEachFrame: true, entity, look);
             }
         }
 
@@ -172,31 +176,31 @@ namespace Chopper.Presentation.Effects
         }
 
         private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, float speed,
-            bool hit, SurfaceKind surface, bool castEachFrame, Entity shooter)
+            bool hit, SurfaceKind surface, bool castEachFrame, Entity shooter, WeaponLook look)
         {
-            var visual = _effects.SpawnPooled(settings.GunBullet, muzzle, rotation, muteAudio: !settings.GunBulletAudio);
+            var visual = _effects.SpawnPooled(settings.GunBulletFor(look), muzzle, rotation, muteAudio: !settings.GunBulletAudio);
             // No bullet visual set: an instant gun shows the impact at once; a round with travel time still flies unseen,
             // so its impact shows when it arrives.
             if (visual == null && !castEachFrame)
             {
-                if (hit) Impact(settings, muzzle + forward * distance, forward, surface);
+                if (hit) Impact(settings, muzzle + forward * distance, forward, surface, look);
                 return;
             }
 
             _bullets.Add(new Bullet
             {
                 Visual = visual, Position = muzzle, Direction = forward, DistanceLeft = distance, Speed = speed, Impact = hit, Surface = surface,
-                CastEachFrame = castEachFrame, Shooter = shooter,
+                CastEachFrame = castEachFrame, Shooter = shooter, Look = look,
             });
         }
 
         /// <summary>The impact effect and the surface's hit sound. The cue's cooldown and voice limit keep fast guns tidy.</summary>
-        private void Impact(CombatEffectsSettings settings, Vector3 point, Vector3 direction, SurfaceKind surface)
+        private void Impact(CombatEffectsSettings settings, Vector3 point, Vector3 direction, SurfaceKind surface, WeaponLook look)
         {
             var sounds = _context != null ? _context.Sounds : null;
             var hit = sounds != null ? sounds.SurfaceHit(surface) : null;
             // The surface cue replaces the prefab's own sound (a fire blast per bullet, not shaped by distance or place).
-            _effects.SpawnOneShot(settings.GunImpact, point, Quaternion.LookRotation(-direction), muteAudio: hit != null);
+            _effects.SpawnOneShot(settings.GunImpactFor(look), point, Quaternion.LookRotation(-direction), muteAudio: hit != null);
             if (hit != null) _context.Audio.Play(hit, point);
         }
 
@@ -209,7 +213,7 @@ namespace Chopper.Presentation.Effects
                 if (bullet.CastEachFrame && hasWorld && move > 0f &&
                     RayCast(world, _surfaces, bullet.Shooter, bullet.Position, bullet.Direction, move, out var hitDistance, out var surface))
                 {
-                    Impact(settings, bullet.Position + bullet.Direction * hitDistance, bullet.Direction, surface);
+                    Impact(settings, bullet.Position + bullet.Direction * hitDistance, bullet.Direction, surface, bullet.Look);
                     if (bullet.Visual != null) _effects.Release(bullet.Visual);
                     _bullets.RemoveAt(i);
                     continue;
@@ -225,8 +229,8 @@ namespace Chopper.Presentation.Effects
                 }
 
                 if (bullet.Impact)
-                    Impact(settings, bullet.Position, bullet.Direction, bullet.Surface);
-                _effects.Release(bullet.Visual);
+                    Impact(settings, bullet.Position, bullet.Direction, bullet.Surface, bullet.Look);
+                if (bullet.Visual != null) _effects.Release(bullet.Visual);
                 _bullets.RemoveAt(i);
             }
         }

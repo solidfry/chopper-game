@@ -49,6 +49,8 @@ namespace Chopper.Simulation.Combat
         /// <summary><see cref="TargetClass"/> bits.</summary>
         public byte FuseTargets;
         public int ShooterNetworkId;
+        /// <summary>Pylon module id, for the client's look and sound (<see cref="PylonWeapon.ModuleId"/>).</summary>
+        public ushort ModuleId;
     }
 
     /// <summary>Client only, one entity per predicted launch, for presentation (draw the rocket at once).</summary>
@@ -62,6 +64,7 @@ namespace Chopper.Simulation.Combat
         public float Drag;
         public float ProximityFuse;
         public TargetClass FuseTargets;
+        public ushort ModuleId;
     }
 
     /// <summary>

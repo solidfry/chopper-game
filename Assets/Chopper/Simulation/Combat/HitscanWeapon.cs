@@ -31,6 +31,9 @@ namespace Chopper.Simulation.Combat
         public float BulletSpeed;
         /// <summary>The gun module's short name, for the match log (server only).</summary>
         public Unity.Collections.FixedString32Bytes Name;
+        /// <summary>The gun module's id (<see cref="Loadout.ModuleDefinition.Id"/>), for the client's look and sound.
+        /// Local on both sides (the loadout is applied on each), not sent. 0 = none (turrets: gun kind default).</summary>
+        public ushort ModuleId;
     }
 
     /// <summary>

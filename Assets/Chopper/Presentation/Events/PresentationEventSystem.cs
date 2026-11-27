@@ -170,7 +170,7 @@ namespace Chopper.Presentation.Events
             {
                 var own = launch.ValueRO;
                 events.Publish(new RocketLaunched(own.Position, own.Velocity, own.Lifetime, localId, own.Gravity, own.Drag,
-                    own.ProximityFuse, own.FuseTargets, own.SplashRadius));
+                    own.ProximityFuse, own.FuseTargets, own.SplashRadius, own.ModuleId));
             }
             foreach (var rpc in SystemAPI.Query<RefRO<RocketLaunchRpc>>().WithAll<ReceiveRpcCommandRequest>())
             {
@@ -178,7 +178,7 @@ namespace Chopper.Presentation.Events
                 if (rpc.ValueRO.ShooterNetworkId == localId) continue;
                 var other = rpc.ValueRO;
                 events.Publish(new RocketLaunched(other.Position, other.Velocity, other.Lifetime, other.ShooterNetworkId, other.Gravity,
-                    other.Drag, other.ProximityFuse, (TargetClass)other.FuseTargets, other.SplashRadius));
+                    other.Drag, other.ProximityFuse, (TargetClass)other.FuseTargets, other.SplashRadius, other.ModuleId));
             }
 
             // Cluster submunitions: rebuilt from the server's seed, drawn like rockets (also for the shooter: not predicted).

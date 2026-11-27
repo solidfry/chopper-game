@@ -13,6 +13,11 @@ namespace Chopper.Presentation.Effects
     [CreateAssetMenu(menuName = "Chopper/Effects/Combat Effects Settings", fileName = "CombatEffectsSettings")]
     public sealed class CombatEffectsSettings : ScriptableObject, IValidatedAsset
     {
+        [Header("Weapon looks")]
+        [SerializeField, Tooltip("Per weapon family look and sound (Docs/WeaponFeelPlan.md). Empty, or an empty slot in a " +
+                                 "look = the shared prefabs below. Setup step 1 links it.")]
+        private WeaponLookLibrary weaponLooks;
+
         [Header("Nose gun")]
         [SerializeField, Tooltip("Looping projectile visual, flown from the muzzle to where the shot ends. Pooled.")]
         private GameObject gunBullet;
@@ -271,6 +276,21 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Min(1f), Tooltip("No shake beyond this distance (m).")]
         private float chopperExplosionShakeRange = 150f;
 
+        public WeaponLookLibrary WeaponLooks => weaponLooks;
+
+        /// <summary>The look for a weapon (its family, else its kind default); null = shared prefabs only.</summary>
+        public WeaponLook Look(ushort moduleId, WeaponKind kind) => weaponLooks != null ? weaponLooks.For(moduleId, kind) : null;
+
+        /// <summary>The look's slot when it has one, else the shared one.</summary>
+        public static GameObject Pick(GameObject lookSlot, GameObject shared) => lookSlot != null ? lookSlot : shared;
+
+        public GameObject GunBulletFor(WeaponLook look) => Pick(look != null ? look.Projectile : null, gunBullet);
+        public GameObject GunMuzzleFlashFor(WeaponLook look) => Pick(look != null ? look.MuzzleFlash : null, gunMuzzleFlash);
+        public GameObject GunImpactFor(WeaponLook look) => Pick(look != null ? look.Impact : null, gunImpact);
+        public GameObject RocketFor(WeaponLook look) => Pick(look != null ? look.Projectile : null, rocket);
+        public GameObject RocketMuzzleFlashFor(WeaponLook look) => Pick(look != null ? look.MuzzleFlash : null, rocketMuzzleFlash);
+        public GameObject RocketImpactFor(WeaponLook look) => Pick(look != null ? look.Impact : null, rocketImpact);
+
         public GameObject GunBullet => gunBullet;
         public GameObject GunMuzzleFlash => gunMuzzleFlash;
         public GameObject GunImpact => gunImpact;
@@ -428,7 +448,12 @@ namespace Chopper.Presentation.Effects
             if (damageSparkMaterial == null) problems.Add($"{name}: no damage spark material, so hits show no sparks and damaged choppers no fire.");
             if (damageSmokeMaterial == null) problems.Add($"{name}: no damage smoke material, so damaged choppers do not smoke.");
             if (effectsMixerGroup == null) problems.Add($"{name}: no effects mixer group, so prefab sounds skip the volume setting.");
+            if (weaponLooks == null) problems.Add($"{name}: no weapon look library, so every weapon uses the shared look (press '1. Create / repair config').");
+            else weaponLooks.CollectProblems(problems);
         }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetWeaponLooks(WeaponLookLibrary library) => weaponLooks = library;
 
         /// <summary>Editor only: used by the scene setup tool.</summary>
         public void Initialise(GameObject bullet, GameObject gunFlash, GameObject gunHit, GameObject rocketVisual,

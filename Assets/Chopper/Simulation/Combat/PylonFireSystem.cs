@@ -253,6 +253,7 @@ namespace Chopper.Simulation.Combat
                     ProximityFuse = weapon.ProximityFuse,
                     FuseTargets = (byte)weapon.Targets,
                     ShooterNetworkId = shooterId,
+                    ModuleId = weapon.ModuleId,
                 });
                 ecb.AddComponent<SendRpcCommandRequest>(rpc); // No target = every connection.
             }
@@ -269,6 +270,7 @@ namespace Chopper.Simulation.Combat
                     Drag = weapon.Drag,
                     ProximityFuse = weapon.ProximityFuse,
                     FuseTargets = weapon.Targets,
+                    ModuleId = weapon.ModuleId,
                 });
             }
         }

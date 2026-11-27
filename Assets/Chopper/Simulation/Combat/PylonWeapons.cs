@@ -24,6 +24,8 @@ namespace Chopper.Simulation.Combat
     public struct PylonWeapon : IBufferElementData
     {
         public PylonBehaviour Behaviour;
+        /// <summary>Module that holds this weapon (<see cref="Loadout.ModuleDefinition.Id"/>), for its look and sound. 0 = none (kind default).</summary>
+        public ushort ModuleId;
         /// <summary>Short name for the HUD.</summary>
         public FixedString32Bytes Name;
         public float FireInterval;

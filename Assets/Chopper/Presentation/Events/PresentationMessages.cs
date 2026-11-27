@@ -129,9 +129,12 @@ namespace Chopper.Presentation.Events
         public readonly TargetClass FuseTargets;
         /// <summary>Blast size, metres: the visual's size follows it. 0 = not given (standard size).</summary>
         public readonly float SplashRadius;
+        /// <summary>Pylon module id, for the weapon's look (0 = rocket kind default: cluster bomblets).</summary>
+        public readonly ushort ModuleId;
         public RocketLaunched(Vector3 position, Vector3 velocity, float lifetime, int shooter, float gravity = 0f, float drag = 0f,
-            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None, float splashRadius = 0f)
+            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None, float splashRadius = 0f, ushort moduleId = 0)
         {
+            ModuleId = moduleId;
             SplashRadius = splashRadius;
             Position = position;
             Velocity = velocity;

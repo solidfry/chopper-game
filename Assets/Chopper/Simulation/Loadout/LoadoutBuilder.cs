@@ -191,6 +191,7 @@ namespace Chopper.Simulation.Loadout
                         CoolRate = gun.CoolRate,
                         BulletSpeed = gun.BulletSpeed,
                         Name = ShortName(module),
+                        ModuleId = module.Id,
                     };
                 }
 
@@ -249,6 +250,7 @@ namespace Chopper.Simulation.Loadout
         private static PylonWeapon RocketPylon(ModuleDefinition module, RocketWeaponDefinition rocket, float3 muzzle) => new()
         {
             Behaviour = PylonBehaviour.Rocket,
+            ModuleId = module.Id,
             Name = ShortName(module),
             FireInterval = rocket.FireInterval,
             Speed = rocket.Speed,
@@ -271,6 +273,7 @@ namespace Chopper.Simulation.Loadout
         private static PylonWeapon DronePylon(ModuleDefinition module, RepairDroneDefinition drone, float3 muzzle) => new()
         {
             Behaviour = PylonBehaviour.Drone,
+            ModuleId = module.Id,
             Name = ShortName(module),
             // Fire interval: a repeat press cannot launch twice; the magazine is the real limit.
             FireInterval = 0.5f,
@@ -287,6 +290,7 @@ namespace Chopper.Simulation.Loadout
             Func<GameObject, Entity> resolveMissilePrefab) => new()
         {
             Behaviour = PylonBehaviour.Guided,
+            ModuleId = module.Id,
             Name = ShortName(module),
             FireInterval = missile.FireInterval,
             Speed = missile.Speed,

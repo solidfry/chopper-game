@@ -64,12 +64,15 @@ namespace Chopper.Presentation.Effects
                 Quaternion rotation = pose.ValueRO.Rotation;
                 if (!_visuals.TryGetValue(entity, out var visual))
                 {
-                    effects.SpawnOneShot(settings.RocketMuzzleFlash, position, rotation);
-                    visual = effects.SpawnPooled(settings.Missile, position, rotation, muteAudio: true);
+                    // Guided kind default for now: the missile ghost carries no module id yet (WeaponFeelPlan step 4).
+                    var look = settings.Look(0, WeaponKind.Guided);
+                    effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), position, rotation);
+                    visual = effects.SpawnPooled(CombatEffectsSettings.Pick(look != null ? look.Projectile : null, settings.Missile),
+                        position, rotation, muteAudio: true);
                     _visuals[entity] = visual;
                     if (audio != null && sounds != null)
                     {
-                        audio.Play(sounds.MissileLaunch, position);
+                        audio.Play(look != null && look.FireCue != null ? look.FireCue : sounds.MissileLaunch, position);
                         var loop = audio.StartLoop(sounds.MissileFlight, position);
                         if (loop != null) _loops[entity] = loop;
                     }
