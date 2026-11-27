@@ -160,7 +160,7 @@ namespace Chopper.Editor.Setup
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
                 settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
                 DressExhaustSmoke();
-                if (settings.WeaponLooks == null) settings.SetWeaponLooks(WeaponLookAssets.Ensure());
+                settings.SetWeaponLooks(WeaponLookAssets.Ensure(mixer)); // Adds missing gun families.
                 EditorUtility.SetDirty(settings);
                 // Repair: route prefab sounds once the mixer exists.
                 if (settings.EffectsMixerGroup == null && mixer != null)
@@ -182,7 +182,7 @@ namespace Chopper.Editor.Setup
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
             settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
-            settings.SetWeaponLooks(WeaponLookAssets.Ensure());
+            settings.SetWeaponLooks(WeaponLookAssets.Ensure(mixer));
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SettingsPath));
             AssetDatabase.CreateAsset(settings, SettingsPath);

@@ -157,6 +157,7 @@ namespace Chopper.Presentation.Effects
             _nukeSound.Tick(_audio, sounds, Listener, Time.time);
             _effects.Debris.Tick(Time.deltaTime, Time.time, Ray);
             _flares.Tick(_effects, Time.deltaTime, StandInPose);
+            TickGunBurst(Time.deltaTime);
             BoostFlame(Time.deltaTime);
             Damaged(Time.deltaTime);
             Carry(Time.deltaTime);
@@ -336,6 +337,83 @@ namespace Chopper.Presentation.Effects
 
         private const float NukeBurstHeight = 35f;
 
+        private sealed class BenchRound
+        {
+            public GameObject Visual;
+            public Vector3 Position;
+            public Vector3 Direction;
+            public float DistanceLeft;
+            public WeaponLook Look;
+        }
+
+        private const int BurstRounds = 8;
+        private const float BurstInterval = 0.09f;
+        private const float BenchRoundSpeed = 250f;
+        private readonly System.Collections.Generic.List<BenchRound> _rounds = new();
+        private int _gunFamily = -1;
+        private int _burstLeft;
+        private float _burstTimer;
+        private WeaponLook _burstLook;
+
+        /// <summary>Name of the gun family the last G burst used (bench UI).</summary>
+        public string GunFamilyName { get; private set; } = "";
+
+        /// <summary>G: a burst of the next gun family (Docs/WeaponFeelPlan.md step 2) from the stand-in to the target:
+        /// its tracer, flash, impact and fire sound.</summary>
+        public void GunBurst() => Run(() =>
+        {
+            var library = settings.WeaponLooks;
+            var families = library != null ? library.Families : null;
+            if (families == null || families.Count == 0)
+            {
+                Debug.LogWarning("Effects bench: no weapon look families (press Setup '1. Create / repair config').");
+                return;
+            }
+            _gunFamily = (_gunFamily + 1) % families.Count;
+            _burstLook = families[_gunFamily].Look;
+            GunFamilyName = families[_gunFamily].Name;
+            _burstLeft = BurstRounds;
+            _burstTimer = 0f;
+            Debug.Log($"Effects bench: gun family {GunFamilyName}.");
+        });
+
+        private void TickGunBurst(float deltaTime)
+        {
+            if (_burstLeft > 0 && (_burstTimer -= deltaTime) <= 0f)
+            {
+                _burstTimer = BurstInterval;
+                _burstLeft--;
+                var muzzle = ChopperPoint + Vector3.down * 0.6f;
+                var aim = Point + Vector3.up * 0.2f + Random.insideUnitSphere * 0.6f;
+                var direction = (aim - muzzle).normalized;
+                var rotation = Quaternion.LookRotation(direction);
+                _effects.SpawnOneShot(settings.GunMuzzleFlashFor(_burstLook), muzzle, rotation);
+                var cue = _burstLook != null && _burstLook.FireCue != null ? _burstLook.FireCue : sounds != null ? sounds.GunFire : null;
+                if (cue != null) _audio.Play(cue, muzzle);
+                _rounds.Add(new BenchRound
+                {
+                    Visual = _effects.SpawnPooled(settings.GunBulletFor(_burstLook), muzzle, rotation, muteAudio: !settings.GunBulletAudio),
+                    Position = muzzle, Direction = direction, DistanceLeft = Vector3.Distance(muzzle, aim), Look = _burstLook,
+                });
+            }
+
+            for (var i = _rounds.Count - 1; i >= 0; i--)
+            {
+                var round = _rounds[i];
+                var move = Mathf.Min(BenchRoundSpeed * deltaTime, round.DistanceLeft);
+                round.Position += round.Direction * move;
+                round.DistanceLeft -= move;
+                if (round.DistanceLeft > 0f)
+                {
+                    if (round.Visual != null) round.Visual.transform.position = round.Position;
+                    continue;
+                }
+                _effects.SpawnOneShot(settings.GunImpactFor(round.Look), round.Position, Quaternion.LookRotation(-round.Direction));
+                if (round.Visual != null) _effects.Release(round.Visual);
+                _rounds.RemoveAt(i);
+            }
+        }
+
         public void MissileImpact() => Run(() => _effects.SpawnOneShot(settings.MissileImpact, Point + Vector3.up, Quaternion.identity));
         public void RocketImpact() => Run(() => _effects.SpawnOneShot(settings.RocketImpact, Point + Vector3.up, Quaternion.identity));
         public void GunImpact() => Run(() => _effects.SpawnOneShot(settings.GunImpact, Point + Vector3.up * 0.2f, Quaternion.LookRotation(Vector3.up)));
@@ -359,6 +437,8 @@ namespace Chopper.Presentation.Effects
             _nukeSound.Clear();
             _flares.Clear();
             _boost.Clear();
+            _rounds.Clear();
+            _burstLeft = 0;
             _effects?.Dispose();
             _damage?.Dispose();
             Create();
@@ -392,6 +472,7 @@ namespace Chopper.Presentation.Effects
             if (keys.nKey.wasPressedThisFrame) Nuke();
             if (keys.uKey.wasPressedThisFrame) ToggleCarry();
             if (keys.bKey.wasPressedThisFrame) Boost();
+            if (keys.gKey.wasPressedThisFrame) GunBurst();
             if (keys.eKey.wasPressedThisFrame) NextEngine();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
             if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;

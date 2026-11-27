@@ -94,14 +94,14 @@ namespace Chopper.Presentation.Effects
                          .WithEntityAccess())
             {
                 // Own gun from the cockpit: no muzzle flash (the pilot sits right above it), bullets start ahead.
-                var fromCockpit = cockpitView && SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) &&
-                                  SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+                var own = SystemAPI.HasComponent<GhostOwnerIsLocal>(entity) && SystemAPI.IsComponentEnabled<GhostOwnerIsLocal>(entity);
+                var fromCockpit = cockpitView && own;
                 var velocity = Ballistics.IsInstant(config.ValueRO.BulletSpeed)
                     ? float3.zero
                     : ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
                 DrawShots(settings, audio, gunSound, world, now, entity, weapon.ValueRO.ShotCount, config.ValueRO,
                     math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset), pose.ValueRO.Forward, pose.ValueRO.Up,
-                    velocity, fromCockpit);
+                    velocity, fromCockpit, own);
             }
 
             // Ground turrets: the same shots, along the replicated barrel aim (the turret does not move).
@@ -111,7 +111,7 @@ namespace Chopper.Presentation.Effects
                 var aim = math.normalizesafe(turret.ValueRO.Aim, pose.ValueRO.Forward);
                 DrawShots(settings, audio, gunSound, world, now, entity, turret.ValueRO.ShotCount, config.ValueRO.Gun,
                     TurretRules.Muzzle(pose.ValueRO.Value, config.ValueRO, aim), aim,
-                    math.up(), float3.zero, fromCockpit: false);
+                    math.up(), float3.zero, fromCockpit: false, own: false);
             }
 
             // Swap, so despawned choppers drop out.
@@ -122,7 +122,7 @@ namespace Chopper.Presentation.Effects
 
         private void DrawShots(CombatEffectsSettings settings, IAudioService audio, SoundCue gunSound, CollisionWorld world, float now,
             Entity entity, uint count, in HitscanWeaponConfig config, float3 muzzle, float3 forward, float3 up, float3 shooterVelocity,
-            bool fromCockpit)
+            bool fromCockpit, bool own)
         {
             _seen[entity] = count;
             // First sight of this shooter: remember its count, draw nothing.
@@ -141,6 +141,9 @@ namespace Chopper.Presentation.Effects
             audio.Play(look != null && look.FireCue != null ? look.FireCue : gunSound, muzzle);
 
             var shots = math.min(count - last, MaxShotsPerFrame);
+            // Own gun: the family's kick (small for the minigun, large for the railgun).
+            if (own && look != null && look.CameraKick > 0f && _context.CameraRig != null)
+                _context.CameraRig.AddShake(look.CameraKick * shots);
             var bulletSpeed = config.BulletSpeed;
             if (Ballistics.IsInstant(bulletSpeed))
             {
