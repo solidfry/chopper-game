@@ -74,6 +74,8 @@ namespace Chopper.Presentation.Flow
         {
             Idle,
             Covering,
+            /// <summary>Covered: runs the prepare step once per frame until it says done, then loads.</summary>
+            Preparing,
             Loading,
             Waiting,
             Revealing,
@@ -89,6 +91,7 @@ namespace Chopper.Presentation.Flow
         private float _phaseTime;
         private string _target;
         private Action _whenCovered;
+        private Func<bool> _prepare;
         private AsyncOperation _loading;
         private bool _ready;
         private bool _attached;
@@ -145,7 +148,12 @@ namespace Chopper.Presentation.Flow
         /// once it is ready. False (nothing happens) while another transition runs or the scene is not in the build.
         /// </summary>
         /// <param name="label">Shown on the overlay; empty = the scene name.</param>
-        public bool Load(string scene, Action whenCovered = null, string label = null, MatchBriefing briefing = null)
+        /// <param name="prepare">
+        /// Heavy set-up split over frames (the match worlds: one per frame, so the covered screen never freezes for long).
+        /// Called once per frame after <paramref name="whenCovered"/> until it returns true; then the scene loads.
+        /// </param>
+        public bool Load(string scene, Action whenCovered = null, string label = null, MatchBriefing briefing = null,
+            Func<bool> prepare = null)
         {
             if (Busy || IsDisposed) return false;
             if (string.IsNullOrEmpty(scene) || !Application.CanStreamedLevelBeLoaded(scene))
@@ -156,6 +164,7 @@ namespace Chopper.Presentation.Flow
 
             _target = scene;
             _whenCovered = whenCovered;
+            _prepare = prepare;
             Model.Label = string.IsNullOrEmpty(label) ? Pretty(scene) : label.ToUpperInvariant();
             Model.Seed = ++_seed;
             Model.Time = 0f;
@@ -195,6 +204,7 @@ namespace Chopper.Presentation.Flow
             if (Busy || IsDisposed) return false;
             _target = null;
             _whenCovered = null;
+            _prepare = null;
             Model.Label = "PREVIEW";
             Model.Seed = ++_seed;
             Model.Time = 0f;
@@ -241,6 +251,23 @@ namespace Chopper.Presentation.Flow
                     Model.Cover = Ease(_phaseTime / CoverSeconds);
                     Model.Status = "LINK OUT";
                     if (_phaseTime >= CoverSeconds) StartLoad();
+                    break;
+                case Phase.Preparing:
+                    Model.Cover = 1f;
+                    var done = true;
+                    try
+                    {
+                        done = _prepare == null || _prepare();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
+                    if (done)
+                    {
+                        _prepare = null;
+                        BeginSceneLoad();
+                    }
                     break;
                 case Phase.Loading:
                     Model.Cover = 1f;
@@ -311,6 +338,16 @@ namespace Chopper.Presentation.Flow
                 Debug.LogException(e);
             }
 
+            if (_prepare != null)
+            {
+                Enter(Phase.Preparing);
+                return;
+            }
+            BeginSceneLoad();
+        }
+
+        private void BeginSceneLoad()
+        {
             _attached = false;
             _loading = SceneManager.LoadSceneAsync(_target, LoadSceneMode.Single);
             Enter(Phase.Loading);

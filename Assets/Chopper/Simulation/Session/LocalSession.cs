@@ -14,6 +14,45 @@ namespace Chopper.Simulation.Session
     /// </summary>
     public static class LocalSession
     {
+        /// <summary>
+        /// <see cref="Start"/> in two steps for <c>SceneFlow</c> (one per frame under the cover): the server world, then the
+        /// client world. Making both in one frame froze the load screen for about 0.5 s (profiled 27 Nov). Returns a step
+        /// function: true when done. Does nothing if a server or client world already runs.
+        /// </summary>
+        public static System.Func<bool> StartInSteps(ushort port = ChopperBootstrap.LocalPort)
+        {
+            var step = 0;
+            World server = null;
+            return () =>
+            {
+                if (step == 0)
+                {
+                    step = 1;
+                    foreach (var world in World.All)
+                        if (world.IsServer() || world.IsClient()) return true;
+                    ClientServerBootstrap.AutoConnectPort = 0;
+                    server = ClientServerBootstrap.CreateServerWorld("ServerWorld");
+                    var listen = server.EntityManager.CreateEntity(typeof(NetworkStreamRequestListen));
+                    server.EntityManager.SetComponentData(listen, new NetworkStreamRequestListen { Endpoint = NetworkEndpoint.AnyIpv4.WithPort(port) });
+                    return false;
+                }
+                if (step == 1)
+                {
+                    step = 2;
+                    var menuWorlds = new List<World>();
+                    foreach (var world in World.All)
+                        if ((world.Flags & WorldFlags.Game) == WorldFlags.Game && world != server) menuWorlds.Add(world);
+                    var client = ClientServerBootstrap.CreateClientWorld("ClientWorld");
+                    foreach (var world in menuWorlds) world.Dispose();
+                    var connect = client.EntityManager.CreateEntity(typeof(NetworkStreamRequestConnect));
+                    client.EntityManager.SetComponentData(connect, new NetworkStreamRequestConnect { Endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port) });
+                    AddThinClients(port);
+                    World.DefaultGameObjectInjectionWorld = server;
+                }
+                return true;
+            };
+        }
+
         /// <summary>False if a server or client world is already running (nothing is changed then).</summary>
         public static bool Start(ushort port = ChopperBootstrap.LocalPort)
         {

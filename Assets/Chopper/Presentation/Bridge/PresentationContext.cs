@@ -182,21 +182,34 @@ namespace Chopper.Presentation.Bridge
 
         /// <summary>Starts a local training match on <paramref name="scene"/> (worlds start once the screen is covered).</summary>
         public bool StartTraining(string scene, string label = null) =>
-            !string.IsNullOrEmpty(scene) && LoadMatch(scene, true, () => Simulation.Session.LocalSession.Start(), label);
+            !string.IsNullOrEmpty(scene) && LoadMatch(scene, true, null, label, Simulation.Session.LocalSession.StartInSteps());
 
         /// <summary>
         /// Loads a match scene with a briefing on the load screen (map, mode, rules, a tip; the time and weather follow
         /// when the server announces them, see <c>BriefingConditionsSystem</c>). Training: the local training rules;
         /// otherwise the mode saved in <see cref="LoadoutChoices"/>.
         /// </summary>
-        public bool LoadMatch(string scene, bool training, Action whenCovered = null, string label = null)
+        /// <param name="prepare">Set-up split over frames under the cover (<see cref="SceneFlow.Load"/>).</param>
+        public bool LoadMatch(string scene, bool training, Action whenCovered = null, string label = null, Func<bool> prepare = null)
         {
-            if (_flow == null || _flow.IsDisposed) return LoadScene(scene, whenCovered, label);
+            if (_flow == null || _flow.IsDisposed)
+            {
+                if (prepare == null) return LoadScene(scene, whenCovered, label);
+                return LoadScene(scene, () => { whenCovered?.Invoke(); RunAll(prepare); }, label);
+            }
             if (_flow.Busy) return false;
-            if (_flow.Load(scene, whenCovered, label, MakeBriefing(scene, training))) return true;
+            if (_flow.Load(scene, whenCovered, label, MakeBriefing(scene, training), prepare)) return true;
             whenCovered?.Invoke();
+            RunAll(prepare);
             UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
             return true;
+        }
+
+        /// <summary>No flow to spread it over frames: all steps now.</summary>
+        private static void RunAll(Func<bool> prepare)
+        {
+            if (prepare == null) return;
+            for (var i = 0; i < 16 && !prepare(); i++) { }
         }
 
         /// <summary>The match's time and weather on the load screen's briefing (client, once the server says).</summary>

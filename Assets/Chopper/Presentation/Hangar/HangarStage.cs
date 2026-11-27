@@ -1147,7 +1147,7 @@ namespace Chopper.Presentation.Hangar
             var label = training && _model.TrainingMapIndex < names.Count ? $"TRAINING // {names[_model.TrainingMapIndex]}" : null;
             // The local session starts once the screen is covered (false when worlds already run: a match scene opened
             // the hangar), then the scene loads behind the transition.
-            _launching = _context.LoadMatch(scene, training, () => LocalSession.Start(), label);
+            _launching = _context.LoadMatch(scene, training, null, label, LocalSession.StartInSteps());
         }
 
         private void OnMatchRequested() => FindMatchAsync().Forget();
