@@ -54,6 +54,7 @@ namespace Chopper.Presentation.Bridge
         {
             Config = config;
             _scene = root != null ? root.gameObject.scene : default;
+            WarmBindings();
             CameraRig = cameraRig;
             Events = new PresentationEvents();
             _audio = new AudioService(config != null ? config.Audio : null, root);
@@ -203,6 +204,19 @@ namespace Chopper.Presentation.Bridge
             RunAll(prepare);
             UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
             return true;
+        }
+
+        /// <summary>Leaving this scene and the load screen covers at least <paramref name="share"/> of the view.</summary>
+        public bool ScreenCovered(float share = 1f) => _flow != null && !_flow.IsDisposed && _flow.Leaving && _flow.Model.Cover >= share;
+
+        /// <summary>
+        /// Builds the UI data-binding property bags of the HUD models now (cheap after the first time). The cockpit
+        /// screens' first binding cost 144 ms in the match-load frame (profiled 27 Nov); this moves it to Home start.
+        /// </summary>
+        private static void WarmBindings()
+        {
+            Unity.Properties.PropertyBag.GetPropertyBag(typeof(Hud.ChopperHudModel));
+            Unity.Properties.PropertyBag.GetPropertyBag(typeof(Hud.MatchHudModel));
         }
 
         /// <summary>No flow to spread it over frames: all steps now.</summary>

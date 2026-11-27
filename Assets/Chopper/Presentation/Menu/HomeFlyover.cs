@@ -219,6 +219,7 @@ namespace Chopper.Presentation.Menu
 
         private void LateUpdate()
         {
+            ClearSprawlWhenCovered();
             if (_flying)
             {
                 Place(snap: false);
@@ -437,6 +438,7 @@ namespace Chopper.Presentation.Menu
             {
                 if (x == 0 && z == 0) continue;
                 var copy = Instantiate(core);
+                _sprawl.Add(copy);
                 copy.name = $"{focusRoot} Sprawl {x},{z}";
                 SceneManager.MoveGameObjectToScene(copy, scene);
                 copy.transform.RotateAround(_centre, Vector3.up, 90f * (turn++ % 4));
@@ -499,6 +501,20 @@ namespace Chopper.Presentation.Menu
                 }
             }
             return true;
+        }
+
+        private readonly System.Collections.Generic.List<GameObject> _sprawl = new();
+
+        /// <summary>
+        /// Under the load cover (85 % across: the backdrop is hidden): destroys the city copies one per frame, before the scene unload does them all at once
+        /// (the Home teardown frame took 172 ms, mostly these 64,000 renderers; profiled 27 Nov).
+        /// </summary>
+        private void ClearSprawlWhenCovered()
+        {
+            if (_sprawl.Count == 0 || bridge == null || !bridge.Context.ScreenCovered(0.85f)) return;
+            var last = _sprawl.Count - 1;
+            if (_sprawl[last] != null) Destroy(_sprawl[last]);
+            _sprawl.RemoveAt(last);
         }
 
         private static float Median(System.Collections.Generic.List<Vector3> points, System.Func<Vector3, float> axis)

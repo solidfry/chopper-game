@@ -132,6 +132,9 @@ namespace Chopper.Presentation.Flow
         public NotificationFeed Notices { get; }
         /// <summary>A transition runs: a new <see cref="Load"/> is ignored.</summary>
         public bool Busy => _phase != Phase.Idle;
+
+        /// <summary>Leaving the current scene: covering it, preparing or loading the next (not the reveal).</summary>
+        public bool Leaving => _phase is Phase.Covering or Phase.Preparing or Phase.Loading;
         public bool IsDisposed { get; private set; }
 
         /// <summary>A scene's bridge joined (its sound library sets the music output and the mixer).</summary>
