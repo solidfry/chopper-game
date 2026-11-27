@@ -139,6 +139,7 @@ namespace Chopper.Presentation.Effects
             }
 
             audio.Play(look != null && look.FireCue != null ? look.FireCue : gunSound, muzzle);
+            if (look != null && look.TailCue != null) audio.Play(look.TailCue, muzzle);
 
             var shots = math.min(count - last, MaxShotsPerFrame);
             // Own gun: the family's kick (small for the minigun, large for the railgun).
@@ -181,7 +182,9 @@ namespace Chopper.Presentation.Effects
         private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, float speed,
             bool hit, SurfaceKind surface, bool castEachFrame, Entity shooter, WeaponLook look)
         {
-            var visual = _effects.SpawnTracer(settings.GunBulletFor(look), muzzle, rotation, muteAudio: !settings.GunBulletAudio);
+            var visual = _effects.SpawnTracer(settings.GunBulletFor(look), muzzle, rotation, muteAudio: !settings.GunBulletAudio,
+                    scale: CombatEffectsSettings.TracerScaleFor(look),
+                    brightness: CombatEffectsSettings.TracerBrightnessFor(look));
             // No bullet visual set: an instant gun shows the impact at once; a round with travel time still flies unseen,
             // so its impact shows when it arrives.
             if (visual == null && !castEachFrame)

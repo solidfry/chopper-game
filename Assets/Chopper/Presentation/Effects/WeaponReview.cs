@@ -241,10 +241,13 @@ namespace Chopper.Presentation.Effects
             }
             var cue = entry.Look != null && entry.Look.FireCue != null ? entry.Look.FireCue : sounds != null ? sounds.GunFire : null;
             if (cue != null) _audio.Play(cue, muzzle);
+            if (entry.Look != null && entry.Look.TailCue != null) _audio.Play(entry.Look.TailCue, muzzle);
             var speed = gun.BulletSpeed > 0f ? gun.BulletSpeed : settings.GunBulletSpeed;
             _rounds.Add(new Round
             {
-                Visual = _effects.SpawnTracer(settings.GunBulletFor(entry.Look), muzzle, rotation, muteAudio: !settings.GunBulletAudio),
+                Visual = _effects.SpawnTracer(settings.GunBulletFor(entry.Look), muzzle, rotation, muteAudio: !settings.GunBulletAudio,
+                    scale: CombatEffectsSettings.TracerScaleFor(entry.Look),
+                    brightness: CombatEffectsSettings.TracerBrightnessFor(entry.Look)),
                 Position = muzzle, Velocity = direction * speed, Remaining = distance, Look = entry.Look, Bullet = true,
                 Impact = settings.GunImpactFor(entry.Look), Blast = sounds != null ? sounds.SurfaceHit(SurfaceKind.Concrete) : null,
             });

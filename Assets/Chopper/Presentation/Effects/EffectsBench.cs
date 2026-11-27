@@ -390,9 +390,12 @@ namespace Chopper.Presentation.Effects
                 _effects.SpawnOneShot(settings.GunMuzzleFlashFor(_burstLook), muzzle, rotation);
                 var cue = _burstLook != null && _burstLook.FireCue != null ? _burstLook.FireCue : sounds != null ? sounds.GunFire : null;
                 if (cue != null) _audio.Play(cue, muzzle);
+                if (_burstLook != null && _burstLook.TailCue != null) _audio.Play(_burstLook.TailCue, muzzle);
                 _rounds.Add(new BenchRound
                 {
-                    Visual = _effects.SpawnTracer(settings.GunBulletFor(_burstLook), muzzle, rotation, muteAudio: !settings.GunBulletAudio),
+                    Visual = _effects.SpawnTracer(settings.GunBulletFor(_burstLook), muzzle, rotation, muteAudio: !settings.GunBulletAudio,
+                    scale: CombatEffectsSettings.TracerScaleFor(_burstLook),
+                    brightness: CombatEffectsSettings.TracerBrightnessFor(_burstLook)),
                     Position = muzzle, Direction = direction, DistanceLeft = Vector3.Distance(muzzle, aim), Look = _burstLook,
                 });
             }

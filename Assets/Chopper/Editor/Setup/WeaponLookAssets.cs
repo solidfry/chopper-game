@@ -29,10 +29,18 @@ namespace Chopper.Editor.Setup
             public string Projectile, Flash, Impact;
             public System.Func<AudioMixerGroup, SoundCue> Cue;
             public float Kick;
+            /// <summary>Guns: tracer size (owner 27 Nov: thinner than the pack's).</summary>
+            public float Tracer = 1f;
+            /// <summary>Guns: tracer brightness (owner 27 Nov: the pack's read too faint).</summary>
+            public float Bright = 1.8f;
+            /// <summary>Guns: the echo after a shot.</summary>
+            public System.Func<AudioMixerGroup, SoundCue> Tail;
             /// <summary>Rockets: a sound that follows the round (bomb whistle).</summary>
             public System.Func<AudioMixerGroup, SoundCue> Flight;
             /// <summary>Rockets: a prefab built by setup (true-size model), instead of a path.</summary>
             public System.Func<GameObject> BuildProjectile;
+            /// <summary>A blast prefab built by setup, instead of a path.</summary>
+            public System.Func<GameObject> BuildImpact;
             public bool ScaleWithBlast = true;
             public bool Dropped;
             /// <summary>Cluster missiles: bomblet model, split flash and split sound.</summary>
@@ -64,6 +72,22 @@ namespace Chopper.Editor.Setup
                     group, 0.8f, blend: 1f, voices: 3, muffle: CueMuffle.Outside),
             };
         }
+
+        private const string Tails = "Assets/Chopper/Audio/SFX/Guns/Tails/";
+
+        /// <summary>Open-air echo after light shots: short gun tails, one at most every 0.5 s.</summary>
+        internal static SoundCue TailLight(AudioMixerGroup group) => AudioAssets.Cue("Gun_TailLight",
+            AudioAssets.Clips(Tails + "Gun Tail 05.wav", Tails + "Gun Tail 06.wav", Tails + "Gun Tail 07.wav", Tails + "Gun Tail 09.wav"),
+            group, 0.45f, blend: 1f, voices: 2, cooldown: 0.5f, muffle: CueMuffle.Outside);
+
+        /// <summary>Heavier echo for cannons: one at most every 0.6 s.</summary>
+        internal static SoundCue TailHeavy(AudioMixerGroup group) => AudioAssets.Cue("Gun_TailHeavy",
+            AudioAssets.Clips(Tails + "Tail Small 01.wav", Tails + "Tail Small 02.wav", Tails + "Gun Tail 03.wav"),
+            group, 0.6f, blend: 1f, voices: 2, cooldown: 0.6f, muffle: CueMuffle.Outside);
+
+        /// <summary>The railgun's long rumble: one at a time.</summary>
+        internal static SoundCue TailRail(AudioMixerGroup group) => AudioAssets.Cue("Gun_TailRail",
+            AudioAssets.Clips(Tails + "Tail Big 02.wav"), group, 0.6f, blend: 1f, voices: 1, cooldown: 1.5f, muffle: CueMuffle.Outside);
 
         private const string RocketPrefabs = "Assets/Chopper/Prefabs/Weapons";
         private const string Incoming = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_Incoming_";
@@ -108,7 +132,7 @@ namespace Chopper.Editor.Setup
             {
                 Name = "Air Mines", Modules = new[] { "Pylon_AirMines" },
                 BuildProjectile = BuildMine,
-                Impact = SciFi + "Explosions/Spheres/v1/RedSphereImpact.prefab",
+                BuildImpact = BuildMineBlast,
                 ScaleWithBlast = false, Dropped = true,
             };
         }
@@ -125,7 +149,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Bullet/BulletImpactYellow.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Minigun", AudioAssets.ClipsIn(Guns + "Minigun"), group, 0.7f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.012f,
+                Kick = 0.012f, Tracer = 0.4f, Tail = TailLight,
             };
             // Thump: red tracer, big fire flash, more kick.
             yield return new GunFamily
@@ -136,7 +160,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Bullet/BulletImpactRed.prefab",
                 Cue = group => AudioAssets.Cue("Gun_HeavyMG", AudioAssets.ClipsIn(Guns + "HeavyMG"), group, 0.8f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.025f,
+                Kick = 0.025f, Tracer = 0.55f, Tail = TailLight,
             };
             // Slow, heavy rounds: fat orange tracer, fire blast on impact, strong kick.
             yield return new GunFamily
@@ -147,7 +171,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Fire/V2/YellowFireImpactV2.prefab",
                 Cue = group => AudioAssets.Cue("Gun_ChainGun", AudioAssets.ClipsIn(Guns + "ChainGun"), group, 0.9f, blend: 1f, voices: 4,
                     muffle: CueMuffle.Outside),
-                Kick = 0.07f,
+                Kick = 0.07f, Tracer = 0.6f, Tail = TailHeavy,
             };
             // Cannon shells: fireball flash, flak-like red puffs.
             yield return new GunFamily
@@ -158,7 +182,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Fire/V2/RedFireImpactV2.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Autocannon", AudioAssets.ClipsIn(Guns + "Autocannon"), group, 0.8f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.04f,
+                Kick = 0.04f, Tracer = 0.6f, Tail = TailHeavy,
             };
             // One heavy blue bolt, sharp crack, big kick.
             yield return new GunFamily
@@ -169,7 +193,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/LaserBolt/BlueLaserBoltImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Railgun", AudioAssets.Clips(SciFiGuns + "Weapon 09 Shoot 1.wav", SciFiGuns + "Weapon 09 Shoot 2.wav"),
                     group, 0.9f, blend: 1f, voices: 2, muffle: CueMuffle.Outside),
-                Kick = 0.3f,
+                Kick = 0.3f, Tracer = 0.6f, Tail = TailRail,
             };
             // Green bolts, no shells, zap.
             yield return new GunFamily
@@ -180,7 +204,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/LaserSmall/GreenLaserSmallImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_PulseLaser", AudioAssets.Clips(SciFiGuns + "Weapon 07 Shoot 1.wav", SciFiGuns + "Weapon 02 Shoot 1.wav"),
                     group, 0.6f, blend: 1f, voices: 6, muffle: CueMuffle.Outside),
-                Kick = 0.008f,
+                Kick = 0.008f, Tracer = 0.5f, Tail = TailLight,
             };
         }
 
@@ -220,9 +244,12 @@ namespace Chopper.Editor.Setup
                 if (fresh)
                 {
                     var projectile = family.BuildProjectile != null ? family.BuildProjectile() : Prefab(family.Projectile);
-                    look.Initialise(projectile, Prefab(family.Flash), Prefab(family.Impact),
+                    look.Initialise(projectile, Prefab(family.Flash), family.BuildImpact != null ? family.BuildImpact() : Prefab(family.Impact),
                         effects != null && family.Cue != null ? family.Cue(effects) : null, family.Kick,
                         effects != null && family.Flight != null ? family.Flight(effects) : null, family.ScaleWithBlast, family.Dropped);
+                    look.SetTracerScale(family.Tracer);
+                    look.SetTracerBrightness(family.Bright);
+                    if (effects != null && family.Tail != null) look.SetTail(family.Tail(effects));
                     if (family.Bomblet != null || family.SplitFlash != null)
                         look.SetCluster(Prefab(family.Bomblet), Prefab(family.SplitFlash),
                             effects != null && family.SplitCue != null ? family.SplitCue(effects) : null);
@@ -305,6 +332,42 @@ namespace Chopper.Editor.Setup
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        /// <summary>
+        /// The air mine's blast (owner 27 Nov: too small): the red sphere burst at 2.8x, every layer following the scale, so
+        /// the sparks reach the 14 m damage radius, over a fire blast core at 1.5x.
+        /// </summary>
+        internal static GameObject BuildMineBlast()
+        {
+            var path = RocketPrefabs + "/MineBlast.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+            System.IO.Directory.CreateDirectory(RocketPrefabs);
+            var root = new GameObject("MineBlast");
+            Layer(root.transform, SciFi + "Explosions/Spheres/v1/RedSphereImpact.prefab", 2.8f);
+            Layer(root.transform, SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab", 1.5f);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static void Layer(Transform parent, string prefabPath, float scale)
+        {
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (source == null)
+            {
+                Debug.LogWarning($"Weapon looks: no prefab at {prefabPath}.");
+                return;
+            }
+            var layer = Object.Instantiate(source, parent);
+            layer.name = source.name;
+            layer.transform.localScale = Vector3.one * scale;
+            foreach (var system in layer.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = system.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            }
         }
 
         private static GameObject Primitive(PrimitiveType type, Transform parent, string name, Vector3 position, Vector3 scale,

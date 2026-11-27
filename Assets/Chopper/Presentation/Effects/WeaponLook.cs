@@ -23,6 +23,9 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Fire sound (guns: per shot; rockets: on top of the launch flash). Empty = the shared " +
                                  "gun cue for guns, none for rockets.")]
         private SoundCue fireCue;
+        [SerializeField, Tooltip("Guns: the shot's echo in open air (owner 27 Nov: shots felt flat next to blasts). Played " +
+                                 "with a shot; the cue's cooldown keeps a burst to a rolling echo. Empty = none.")]
+        private SoundCue tailCue;
         [SerializeField, Tooltip("Rockets, bombs, mines: a looping sound that follows the round in flight (bomb whistle). " +
                                  "Empty = none (the projectile prefab's own sound plays).")]
         private SoundCue flightLoop;
@@ -42,12 +45,30 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(0f, 0.5f), Tooltip("Camera shake added per shot of your own gun (trauma, 0..1; the shake " +
                                                   "grows with its square). 0 = none.")]
         private float cameraKick;
+        [SerializeField, Range(0.1f, 2f), Tooltip("Guns: tracer size (1 = the prefab's own; owner 27 Nov: the pack's tracers " +
+                                                  "read too fat). Rockets use Scale With Blast instead.")]
+        private float tracerScale = 1f;
+        [SerializeField, Range(0.5f, 4f), Tooltip("Guns: tracer colour and opacity, times the prefab's (1 = as made; owner " +
+                                                  "27 Nov: the pack's tracers read too faint).")]
+        private float tracerBrightness = 1f;
 
         public GameObject Projectile => projectile;
         public float CameraKick => cameraKick;
+        public float TracerScale => tracerScale;
+        public float TracerBrightness => tracerBrightness;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetTracerBrightness(float brightness) => tracerBrightness = brightness;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetTracerScale(float scale) => tracerScale = scale;
         public GameObject MuzzleFlash => muzzleFlash;
         public GameObject Impact => impact;
         public SoundCue FireCue => fireCue;
+        public SoundCue TailCue => tailCue;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetTail(SoundCue cue) => tailCue = cue;
         public SoundCue FlightLoop => flightLoop;
         public bool ScaleWithBlast => scaleWithBlast;
         public bool NoMuzzleFlash => noMuzzleFlash;

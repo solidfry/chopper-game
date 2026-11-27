@@ -285,6 +285,12 @@ namespace Chopper.Presentation.Effects
         public static GameObject Pick(GameObject lookSlot, GameObject shared) => lookSlot != null ? lookSlot : shared;
 
         public GameObject GunBulletFor(WeaponLook look) => Pick(look != null ? look.Projectile : null, gunBullet);
+        /// <summary>Tracer size for a gun's look (1 when it has none).</summary>
+        public static float TracerScaleFor(WeaponLook look) => look != null ? look.TracerScale : 1f;
+
+        /// <summary>Tracer brightness for a gun's look (1 when it has none).</summary>
+        public static float TracerBrightnessFor(WeaponLook look) => look != null ? look.TracerBrightness : 1f;
+
         public GameObject GunMuzzleFlashFor(WeaponLook look) => Pick(look != null ? look.MuzzleFlash : null, gunMuzzleFlash);
         public GameObject GunImpactFor(WeaponLook look) => Pick(look != null ? look.Impact : null, gunImpact);
         public GameObject RocketFor(WeaponLook look) => Pick(look != null ? look.Projectile : null, rocket);

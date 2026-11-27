@@ -181,14 +181,45 @@ namespace Chopper.Presentation.Effects
         /// only (10-20 a second), so a fast round showed nothing for its first 0.05-0.1 s: 45 m out, or not at all for a
         /// short cannon shot (owner, 27 Nov).
         /// </summary>
-        public GameObject SpawnTracer(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
+        public GameObject SpawnTracer(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false, float scale = 1f,
+            float brightness = 1f)
         {
             var instance = SpawnPooled(prefab, position, rotation, muteAudio);
             if (instance == null) return null;
-            instance.GetComponentsInChildren(false, _systemBuffer);
-            foreach (var system in _systemBuffer) system.Emit(1);
+            // Set on every spawn: the object comes from a pool.
+            instance.transform.localScale = Vector3.one * scale;
+            instance.GetComponentsInChildren(true, _systemBuffer);
+            if (!Mathf.Approximately(brightness, 1f) || _brightened.Contains(instance))
+            {
+                // From the prefab's colours each time, so a pooled tracer never compounds.
+                prefab.GetComponentsInChildren(true, _prefabSystems);
+                for (var i = 0; i < _systemBuffer.Count && i < _prefabSystems.Count; i++)
+                {
+                    var main = _systemBuffer[i].main;
+                    main.startColor = Brighten(_prefabSystems[i].main.startColor, brightness);
+                }
+                _prefabSystems.Clear();
+                _brightened.Add(instance);
+            }
+            foreach (var system in _systemBuffer)
+                if (system.gameObject.activeInHierarchy) system.Emit(1);
             _systemBuffer.Clear();
             return instance;
+        }
+
+        private readonly List<ParticleSystem> _prefabSystems = new();
+        private readonly HashSet<GameObject> _brightened = new();
+
+        /// <summary>Colour and opacity times <paramref name="factor"/> (opacity capped at 1). Gradients are left as made.</summary>
+        private static ParticleSystem.MinMaxGradient Brighten(ParticleSystem.MinMaxGradient colour, float factor)
+        {
+            static Color Scale(Color c, float f) => new(c.r * f, c.g * f, c.b * f, Mathf.Min(1f, c.a * f));
+            return colour.mode switch
+            {
+                ParticleSystemGradientMode.Color => new ParticleSystem.MinMaxGradient(Scale(colour.color, factor)),
+                ParticleSystemGradientMode.TwoColors => new ParticleSystem.MinMaxGradient(Scale(colour.colorMin, factor), Scale(colour.colorMax, factor)),
+                _ => colour,
+            };
         }
 
         public GameObject SpawnPooled(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
