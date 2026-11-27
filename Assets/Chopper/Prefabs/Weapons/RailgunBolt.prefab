@@ -5650,6 +5650,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2482826190929157670}
   - component: {fileID: 6865451763890050881}
+  - component: {fileID: 2283509295531724533}
   m_Layer: 0
   m_Name: Tail
   m_TagString: Untagged
@@ -5721,7 +5722,7 @@ TrailRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Time: 0.5
+  m_Time: 1.5
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -5740,7 +5741,7 @@ TrailRenderer:
         outWeight: 0
       - serializedVersion: 3
         time: 1
-        value: 0
+        value: 0.05
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -5753,8 +5754,8 @@ TrailRenderer:
     colorGradient:
       serializedVersion: 2
       key0: {r: 1, g: 1, b: 1, a: 1}
-      key1: {r: 0.3, g: 0.6, b: 1, a: 0.6}
-      key2: {r: 0.1, g: 0.3, b: 1, a: 0}
+      key1: {r: 0.3, g: 0.6, b: 1, a: 0.8}
+      key2: {r: 0.1, g: 0.3, b: 1, a: 0.6}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
       key5: {r: 0, g: 0, b: 0, a: 0}
@@ -5769,7 +5770,7 @@ TrailRenderer:
       ctime6: 0
       ctime7: 0
       atime0: 0
-      atime1: 26214
+      atime1: 32768
       atime2: 65535
       atime3: 0
       atime4: 0
@@ -5791,6 +5792,19 @@ TrailRenderer:
   m_Autodestruct: 0
   m_Emitting: 1
   m_ApplyActiveColorSpace: 1
+--- !u!114 &2283509295531724533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5206516825398582918}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4734719662a43ff47a37ad7095543d9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Effects.FadingTrail
+  seconds: 1.5
 --- !u!1 &7371215193553209771
 GameObject:
   m_ObjectHideFlags: 0

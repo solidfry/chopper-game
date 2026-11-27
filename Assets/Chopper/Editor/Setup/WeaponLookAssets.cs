@@ -232,7 +232,7 @@ namespace Chopper.Editor.Setup
             yield return new GunFamily
             {
                 Name = "Railgun", Modules = new[] { "Nose_Railgun" },
-                BuildProjectile = BuildRailBolt, Linger = 0.5f,
+                BuildProjectile = BuildRailBolt, Linger = 1.6f,
                 Flash = SciFi + "MuzzleFlash/Laser/LaserMuzzleFlashBlue.prefab",
                 Impact = SciFi + "Explosions/LaserBolt/BlueLaserBoltImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Railgun", AudioAssets.Clips(SciFiGuns + "Weapon 09 Shoot 1.wav", SciFiGuns + "Weapon 09 Shoot 2.wav"),
@@ -461,7 +461,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>
-        /// Railgun round (owner 27 Nov): the blue bolt with a long white-to-blue trail that hangs for about half a second
+        /// Railgun round (owner 27 Nov): the blue bolt with a long white-to-blue trail that hangs for 1.5 s and fades out
         /// (the look's trail linger keeps it after the hit).
         /// </summary>
         internal static GameObject BuildRailBolt()
@@ -471,9 +471,9 @@ namespace Chopper.Editor.Setup
             Layer(root.transform, SciFi + "Missiles/Laserbolt/BlueLaserBoltMissile.prefab", 1f);
             var tail = new GameObject("Tail").AddComponent<TrailRenderer>();
             tail.transform.SetParent(root.transform, false);
-            tail.time = 0.5f;
+            tail.time = 1.5f;
             tail.minVertexDistance = 0.5f;
-            tail.widthCurve = new AnimationCurve(new Keyframe(0f, 0.35f), new Keyframe(1f, 0f));
+            tail.widthCurve = new AnimationCurve(new Keyframe(0f, 0.35f), new Keyframe(1f, 0.05f));
             tail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             tail.receiveShadows = false;
             tail.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
@@ -481,8 +481,10 @@ namespace Chopper.Editor.Setup
             var gradient = new Gradient();
             gradient.SetKeys(
                 new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(0.3f, 0.6f, 1f), 0.25f), new GradientColorKey(new Color(0.1f, 0.3f, 1f), 1f) },
-                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.6f, 0.4f), new GradientAlphaKey(0f, 1f) });
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.8f, 0.5f), new GradientAlphaKey(0.6f, 1f) });
             tail.colorGradient = gradient;
+            // Fades over time (the whole path at once), not along its length.
+            tail.gameObject.AddComponent<FadingTrail>().Initialise(tail.time);
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, RocketPrefabs + "/RailgunBolt.prefab");
             Object.DestroyImmediate(root);
             return prefab;
