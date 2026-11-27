@@ -279,12 +279,7 @@ namespace Chopper.Presentation.Menu
                 var side = Vector3.Cross(Vector3.up, forward).normalized * (Random.value < 0.5f ? 1f : -1f);
                 _flyByPoint = p + v * Random.Range(1.6f, 2.4f) + side * Random.Range(30f, 60f) + Vector3.down * 12f;
             }
-            if (_shot == Shot.Tower && _towers.Count > 0)
-            {
-                _tower = _towers[Random.Range(0, _towers.Count)];
-                var angle = Random.value * Mathf.PI * 2f;
-                _towerSide = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-            }
+            if (_shot == Shot.Tower && !PickTowerView(_shotEnd - t)) _shot = Shot.Orbit;
             (bridge != null ? bridge.Context.Home : null)?.NotifyCut();
         }
 
@@ -338,8 +333,7 @@ namespace Chopper.Presentation.Menu
                     break;
                 case Shot.Tower when _towers.Count > 0:
                     // Beside a tall tower, rising slowly, looking up its face.
-                    var reach = Mathf.Max(_tower.extents.x, _tower.extents.z) + 90f;
-                    wanted = new Vector3(_tower.center.x, _tower.min.y + 40f + age * 18f, _tower.center.z) + _towerSide * reach;
+                    wanted = TowerCamera(age);
                     aim = new Vector3(_tower.center.x, Mathf.Min(_tower.max.y, wanted.y + 160f), _tower.center.z);
                     fov = 62f;
                     offset = 0.3f;
@@ -458,6 +452,55 @@ namespace Chopper.Presentation.Menu
                 }
             }
         }
+        /// <summary>Where the tower shot's camera is <paramref name="age"/> seconds in: beside the tower, rising.</summary>
+        private Vector3 TowerCamera(float age) =>
+            new Vector3(_tower.center.x, _tower.min.y + 40f + age * TowerRise, _tower.center.z) + _towerSide * _towerReach;
+
+        private const float TowerRise = 18f;
+        private float _towerReach;
+
+        /// <summary>
+        /// Picks a tower, a side and a distance whose whole rising path stays clear of every other building (the camera
+        /// started inside a neighbour: owner, 26 Nov). Tries a few towers, 12 sides and three distances. False = none.
+        /// </summary>
+        private bool PickTowerView(float seconds)
+        {
+            if (_towers.Count == 0) return false;
+            for (var attempt = 0; attempt < 4; attempt++)
+            {
+                _tower = _towers[Random.Range(0, _towers.Count)];
+                var start = Random.value * Mathf.PI * 2f;
+                foreach (var extra in TowerReaches)
+                for (var i = 0; i < 12; i++)
+                {
+                    var angle = start + i * Mathf.PI / 6f;
+                    _towerSide = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                    _towerReach = Mathf.Max(_tower.extents.x, _tower.extents.z) + extra;
+                    if (TowerPathClear(seconds)) return true;
+                }
+            }
+            return false;
+        }
+
+        private static readonly float[] TowerReaches = { 90f, 130f, 180f };
+
+        private bool TowerPathClear(float seconds)
+        {
+            for (var step = 0; step <= 8; step++)
+            {
+                var point = TowerCamera(seconds * step / 8f);
+                foreach (var b in _buildings)
+                {
+                    // City-wide layers (roads, utilities) are single wide boxes: not walls.
+                    if (b.size.x > 400f || b.size.z > 400f) continue;
+                    var wall = b;
+                    wall.Expand(clearance * 2f);
+                    if (wall.Contains(point)) return false;
+                }
+            }
+            return true;
+        }
+
         private static float Median(System.Collections.Generic.List<Vector3> points, System.Func<Vector3, float> axis)
         {
             var values = new System.Collections.Generic.List<float>(points.Count);
