@@ -123,6 +123,19 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
   - **Owner checks:** fly with Bombs (listen to the whistle) and Air Mines (does the blink read at range?); fire Light,
     Heavy and Flak Rockets.
 
+- **Step 4 done** (`9f81a6cf`). `GuidedMissile.ModuleId` (ghost field) and `ClusterSplitRpc.ModuleId`. The missile
+  visual, launch flash, launch sound and flight loop come from the family look.
+  - **Homing Missiles:** keep the guided default (red).
+  - **Ground Seeker:** orange missile and flash.
+  - **Cluster Missiles:** green carrier, its own heavier launch sound.
+  - **Cluster split:** yellow glowing bomblets. One yellow fireball flash and one pop sound play per split (before,
+    every bomblet showed a rocket launch flash). New look slots: bomblet, split flash, split cue.
+  - Played: a test split in training (screenshot `Docs/WeaponFeel/cluster_bomblets.png`).
+  - **Not seen in play:** a real guided missile with its new look; the bots did not fire one in the test window.
+  - **Owner checks:** fire Homing, Ground Seeker and Cluster; watch the split.
+- **Step 6 (hand-over):** Handoff row written. Waiting on the owner's review. **Rebuild the server and client** (RPCs
+  and a ghost field changed).
+
 ## Risks / open questions
 
 - Voice count: many guns at 1,000+ rpm. Keep the fire sound a loop per gun, not a one-shot per round.
