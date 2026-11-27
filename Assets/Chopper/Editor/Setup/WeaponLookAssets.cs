@@ -99,9 +99,9 @@ namespace Chopper.Editor.Setup
         private static (SoundCue, SoundCue, SoundCue) SpinSet(AudioMixerGroup group, string name, string folder) => (
             AudioAssets.Cue($"Gun_{name}Loop", AudioAssets.Clips(folder + "FireLoop.wav"), group, 0.75f, blend: 1f, voices: 4,
                 muffle: CueMuffle.Outside),
-            AudioAssets.Cue($"Gun_{name}SpinUp", AudioAssets.Clips(folder + "SpinUp.wav"), group, 0.45f, blend: 1f, voices: 2,
+            AudioAssets.Cue($"Gun_{name}SpinUp", AudioAssets.Clips(folder + "SpinUp.wav"), group, 0.75f, blend: 1f, voices: 2,
                 muffle: CueMuffle.Outside),
-            AudioAssets.Cue($"Gun_{name}SpinDown", AudioAssets.Clips(folder + "SpinDown.wav"), group, 0.4f, blend: 1f, voices: 2,
+            AudioAssets.Cue($"Gun_{name}SpinDown", AudioAssets.Clips(folder + "SpinDown.wav"), group, 0.75f, blend: 1f, voices: 2,
                 muffle: CueMuffle.Outside));
 
         /// <summary>The minigun's burst end: the pack's loop tails (the burst rings out).</summary>

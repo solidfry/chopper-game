@@ -12,6 +12,11 @@ namespace Chopper.Presentation.Effects
     {
         /// <summary>The fire loop stops this long after the last shot was due.</summary>
         private const float LoopGrace = 0.06f;
+        /// <summary>Seconds the fire loop fades in over the spin-up's end, and out under the spin-down's start.</summary>
+        private const float FadeIn = 0.1f, FadeOut = 0.15f;
+
+        private float _volume;
+        private bool _fadingOut;
 
         private float _spin = -1f;
         private bool _rising;
@@ -22,6 +27,12 @@ namespace Chopper.Presentation.Effects
         public void Update(IAudioService audio, WeaponLook look, float spin, bool fired, float fireInterval, Vector3 position, float now)
         {
             if (audio == null || look == null) return;
+            try { Step(audio, look, spin, fired, fireInterval, position, now); }
+            finally { Mark(now); }
+        }
+
+        private void Step(IAudioService audio, WeaponLook look, float spin, bool fired, float fireInterval, Vector3 position, float now)
+        {
             // Spin sounds: on the turn from still or falling to rising, and from full or rising to falling.
             if (_spin >= 0f)
             {
@@ -42,16 +53,40 @@ namespace Chopper.Presentation.Effects
             if (look.FireLoop == null) return;
             if (fired) _lastShot = now;
             var firing = now - _lastShot <= fireInterval + LoopGrace;
-            if (firing && _loop == null) _loop = audio.StartLoop(look.FireLoop, position);
-            if (_loop != null) _loop.Set(position);
-            if (!firing && _loop != null) Stop(audio, look, position);
+            if (firing && (_loop == null || _fadingOut))
+            {
+                if (_loop == null)
+                {
+                    _loop = audio.StartLoop(look.FireLoop, position);
+                    _volume = 0f;
+                }
+                _fadingOut = false;
+            }
+            if (!firing && _loop != null && !_fadingOut)
+            {
+                _fadingOut = true;
+                if (look.TailCue != null) audio.Play(look.TailCue, position);
+            }
+            if (_loop == null) return;
+            // First frame or a pause: a normal frame, not a jump.
+            var dt = Mathf.Clamp(now - _lastFrame, 0f, 0.05f);
+            _volume = _fadingOut ? _volume - dt / FadeOut : _volume + dt / FadeIn;
+            _volume = Mathf.Clamp01(_volume);
+            _loop.Set(position, _volume);
+            if (_fadingOut && _volume <= 0f) Drop(audio);
         }
+
+        private float _lastFrame;
+
+        /// <summary>Call at the end of each frame's update (keeps the fade clock).</summary>
+        private void Mark(float now) => _lastFrame = now;
 
         public void Stop(IAudioService audio, WeaponLook look, Vector3 position)
         {
             if (_loop == null) return;
             audio?.StopLoop(_loop);
             _loop = null;
+            _fadingOut = false;
             if (look != null && look.TailCue != null) audio?.Play(look.TailCue, position);
         }
 
@@ -60,6 +95,7 @@ namespace Chopper.Presentation.Effects
         {
             if (_loop != null) audio?.StopLoop(_loop);
             _loop = null;
+            _fadingOut = false;
         }
     }
 }
