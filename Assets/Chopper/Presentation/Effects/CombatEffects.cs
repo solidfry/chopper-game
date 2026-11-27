@@ -52,6 +52,13 @@ namespace Chopper.Presentation.Effects
         /// destroyed after its life. Not pooled (rare: one per chopper death).
         /// </summary>
         /// <param name="muteAudio">True when a sound cue plays instead of the prefab's own audio (the wreck blast).</param>
+        /// <summary>The shared blast shock bubble, sized to the blast's damage radius (none for 0).</summary>
+        public void SpawnShock(Vector3 position, float radius)
+        {
+            if (Settings == null || Settings.BlastShock == null || radius <= 0f) return;
+            SpawnLayer(new BlastLayer { Prefab = Settings.BlastShock, Scale = radius * Settings.BlastShockSize, LifeSeconds = 1f }, position, true);
+        }
+
         /// <summary>Every layer at once, at <paramref name="position"/> (a weapon look's impact layers).</summary>
         public void SpawnLayers(System.Collections.Generic.IReadOnlyList<BlastLayer> layers, Vector3 position, bool muteAudio = false)
         {

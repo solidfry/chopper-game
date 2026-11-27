@@ -463,6 +463,7 @@ namespace Chopper.Presentation.Effects
                 var back = round.Velocity.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(-round.Velocity) : Quaternion.identity;
                 _effects.SpawnOneShot(round.Impact, round.Position, back, muteAudio: round.Blast != null);
                 if (!round.Bullet && round.Look != null) _effects.SpawnLayers(round.Look.ImpactLayers, round.Position, muteAudio: true);
+                if (!round.Bullet) _effects.SpawnShock(round.Position, round.SplashRadius > 0f ? round.SplashRadius : settings.MissileShockRadius);
                 if (round.Blast != null) _audio.Play(round.Blast, round.Position);
             }
             if (round.Loop != null) _audio.StopLoop(round.Loop);

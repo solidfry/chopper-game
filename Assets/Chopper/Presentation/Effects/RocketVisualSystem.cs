@@ -34,6 +34,7 @@ namespace Chopper.Presentation.Effects
             public float Gravity;
             public float Drag;
             public float ProximityFuse;
+            public float SplashRadius;
             public TargetClass FuseTargets;
             /// <summary>The pylon family's look (blast); null = shared.</summary>
             public WeaponLook Look;
@@ -127,6 +128,7 @@ namespace Chopper.Presentation.Effects
                 Gravity = launch.Gravity,
                 Drag = launch.Drag,
                 ProximityFuse = launch.ProximityFuse,
+                SplashRadius = launch.SplashRadius,
                 FuseTargets = launch.FuseTargets,
                 Look = look,
                 Loop = loop,
@@ -217,6 +219,7 @@ namespace Chopper.Presentation.Effects
                     var blast = context.Sounds != null ? context.Sounds.RocketBlast : null;
                     effects.SpawnOneShot(effects.Settings.RocketImpactFor(rocket.Look), impact, back, muteAudio: blast != null);
                     if (rocket.Look != null) effects.SpawnLayers(rocket.Look.ImpactLayers, impact, muteAudio: true);
+                    effects.SpawnShock(impact, rocket.SplashRadius);
                     if (blast != null) context.Audio?.Play(blast, (Vector3)impact);
                     heat.AddTimed(impact, VisionMath.BlastHeat, VisionMath.BlastSeconds);
                     Finish(effects, i, impact);

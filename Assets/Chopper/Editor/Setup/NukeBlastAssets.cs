@@ -37,6 +37,67 @@ namespace Chopper.Editor.Setup
             if (Build(true) != null) Debug.Log($"Nuke blast rebuilt: {PrefabPath}");
         }
 
+        public const string ShockBubblePath = "Assets/Chopper/Prefabs/Effects/ShockBubble.prefab";
+
+        /// <summary>
+        /// The nuke's shock front made small for weapon blasts (owner 27 Nov): a bubble that bends the view, running out
+        /// over 0.45 s, and a white condensation flash. 1 m across at full size: the spawner scales it to the blast.
+        /// Same materials as the nuke. Rebuilt each call.
+        /// </summary>
+        public static GameObject EnsureShockBubble()
+        {
+            var shock = Mat("NukeShock", "Chopper/ShockShell", false, m =>
+            {
+                m.SetFloat("_Distort", 0.06f);
+                m.SetColor("_Tint", Color.clear);
+                m.SetFloat("_RimPower", 5f);
+                m.SetFloat("_Fill", 0.02f);
+            });
+            var flash = Mat("NukeCondensation", "Chopper/ShockShell", false, m =>
+            {
+                m.SetFloat("_Distort", 0.015f);
+                m.SetColor("_Tint", new Color(0.9f, 0.92f, 0.95f, 1f));
+                m.SetFloat("_RimPower", 2.2f);
+                m.SetFloat("_Fill", 0.08f);
+            });
+            if (shock == null || flash == null) return null;
+            var sphere = SphereMesh();
+            var root = new GameObject("ShockBubble");
+            try
+            {
+                var front = Make(root.transform, "Front", shock, ParticleSystemSimulationSpace.Local, out var frontRenderer);
+                var main = front.main;
+                main.duration = 0.5f;
+                main.startLifetime = 0.45f;
+                main.startSize = 1f;
+                main.startSpeed = 0f;
+                Burst(front, 0f, 1);
+                Shape(front, ParticleSystemShapeType.Sphere, 0.01f);
+                Size(front, Curve((0f, 0.05f), (0.3f, 0.7f), (1f, 1f)));
+                Colour(front, Gradient(new[] { (0f, Color.white), (1f, Color.white) }, new[] { (0f, 1f), (0.6f, 0.5f), (1f, 0f) }));
+                MeshShell(frontRenderer, sphere);
+
+                var shell = Make(root.transform, "Flash", flash, ParticleSystemSimulationSpace.Local, out var shellRenderer);
+                main = shell.main;
+                main.duration = 0.5f;
+                main.startLifetime = 0.25f;
+                main.startSize = 0.6f;
+                main.startSpeed = 0f;
+                Burst(shell, 0f, 1);
+                Shape(shell, ParticleSystemShapeType.Sphere, 0.01f);
+                Size(shell, Curve((0f, 0.2f), (1f, 1f)));
+                Colour(shell, Gradient(new[] { (0f, Color.white), (1f, Color.white) }, new[] { (0f, 0f), (0.15f, 0.8f), (1f, 0f) }));
+                MeshShell(shellRenderer, sphere);
+
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ShockBubblePath)!);
+                return PrefabUtility.SaveAsPrefabAsset(root, ShockBubblePath);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
         /// <summary>White additive material for the screen flash (the system puts a quad in front of the camera).</summary>
         public static Material EnsureScreenFlash()
         {

@@ -139,6 +139,15 @@ namespace Chopper.Presentation.Effects
         private float nukeEmpRadius = 900f;
         [SerializeField, Tooltip("White additive material for the screen flash (a quad in front of the camera). Empty: none.")]
         private Material nukeScreenFlash;
+
+        [Header("Blast shock (every explosive weapon)")]
+        [SerializeField, Tooltip("The nuke's shock front made small (owner 27 Nov): a bubble that bends the view and a white " +
+                                 "flash, 1 m across at full size. Spawned at each rocket, bomb, mine and missile blast.")]
+        private GameObject blastShock;
+        [SerializeField, Min(0f), Tooltip("Bubble size, metres across per metre of damage radius (2 = it ends at the radius).")]
+        private float blastShockSize = 2.2f;
+        [SerializeField, Min(0f), Tooltip("Damage radius used for guided missile blasts (the detonation message has no radius).")]
+        private float missileShockRadius = 10f;
         [SerializeField, Tooltip("Lens flare on the blast's lights (Editor/Setup/LensFlareAssets). Empty: none.")]
         private UnityEngine.Rendering.LensFlareDataSRP nukeFlare;
         [SerializeField, Min(0f), Tooltip("Lens flare strength at the flash; the fire in the cap keeps a share of it.")]
@@ -347,6 +356,15 @@ namespace Chopper.Presentation.Effects
         public float NukeFlashIntensity => nukeFlashIntensity;
         public float NukeFlashRange => nukeFlashRange;
         public float NukeFlashSeconds => nukeFlashSeconds;
+        public GameObject BlastShock => blastShock;
+        public float BlastShockSize => blastShockSize;
+        public float MissileShockRadius => missileShockRadius;
+
+        /// <summary>Editor only: sets the blast shock prefab if empty.</summary>
+        public void FillBlastShock(GameObject prefab)
+        {
+            if (blastShock == null) blastShock = prefab;
+        }
 
         /// <summary>Editor only: fills the nuke blast layers if empty (or always, with <paramref name="replace"/>).</summary>
         public void FillNukeBlast(BlastLayer[] layers, GameObject blast, Material screenFlash, bool replace = false)

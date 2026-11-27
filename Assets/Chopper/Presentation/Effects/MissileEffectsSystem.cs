@@ -99,6 +99,7 @@ namespace Chopper.Presentation.Effects
             {
                 effects.SpawnOneShot(settings.MissileImpact, position, Quaternion.identity, muteAudio: sounds != null && sounds.MissileBlast != null);
                 if (audio != null && sounds != null) audio.Play(sounds.MissileBlast, position);
+                effects.SpawnShock(position, settings.MissileShockRadius);
                 context.HeatMarks.AddTimed(position, VisionMath.BlastHeat, VisionMath.BlastSeconds);
             }
             _detonations.Clear();

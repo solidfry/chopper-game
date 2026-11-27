@@ -158,7 +158,7 @@ namespace Chopper.Editor.Setup
                 settings.FillDownwash(EnsureDownwashMaterial());
                 settings.FillMissileSmoke(EnsureMissileSmokeMaterial());
                 settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-                settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
+                settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke()); settings.FillBlastShock(NukeBlastAssets.EnsureShockBubble());
                 DressExhaustSmoke();
                 settings.SetWeaponLooks(WeaponLookAssets.Ensure(mixer)); // Adds missing gun families.
                 EditorUtility.SetDirty(settings);
@@ -180,7 +180,7 @@ namespace Chopper.Editor.Setup
             settings.FillDownwash(EnsureDownwashMaterial());
             settings.FillMissileSmoke(EnsureMissileSmokeMaterial());
             settings.FillDamage(EnsureSparkMaterial(), EnsureSmokeMaterial(), EnsureFlameMaterial());
-            settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke());
+            settings.FillExplosionLayers(ExplosionLayers()); settings.FillNukeBlast(NukeBlastLayers(), NukeBlastAssets.Ensure(), NukeBlastAssets.EnsureScreenFlash()); settings.FillNukeFlare(LensFlareAssets.EnsureNuke()); settings.FillBlastShock(NukeBlastAssets.EnsureShockBubble());
             if (mixer != null) settings.SetEffectsMixerGroup(AudioAssets.Group(mixer, "Effects"));
             settings.SetWeaponLooks(WeaponLookAssets.Ensure(mixer));
 
