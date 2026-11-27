@@ -56,8 +56,6 @@ namespace Chopper.UI.Hangar
         private const float CalloutGap = 6f;
         /// <summary>Pixels the side columns take (margin + 380 px column + a gap): cards stay between them.</summary>
         private const float SideColumn = 418f;
-        /// <summary>Card movement smoothing (per second); cards glide when the chopper turns.</summary>
-        private const float CalloutFollowRate = 10f;
         /// <summary>Gamepad right stick dead zone for turning the chopper.</summary>
         private const float StickDeadZone = 0.15f;
 
@@ -94,6 +92,7 @@ namespace Chopper.UI.Hangar
         private VisualElement _weightDelta;
         private Label _weightText;
         private VisualElement _skins;
+        private Button _wireframe;
         private Label _tilesTitle;
         private VisualElement _tiles;
         private Label _error;
@@ -118,11 +117,10 @@ namespace Chopper.UI.Hangar
         private sealed class Callout
         {
             public Button Card;
-            public Vector2 Socket;
+            /// <summary>The socket on screen at the turntable's starting pose (panel space).</summary>
+            public Vector2 Rest;
             public Vector2 Position;
-            public Vector2 Target;
             public bool Visible;
-            public bool Placed;
             public bool Right;
         }
 
@@ -199,6 +197,8 @@ namespace Chopper.UI.Hangar
             _weightDelta = _root.Q("weight-delta");
             _weightText = _root.Q<Label>("weight-text");
             _skins = _root.Q("skins");
+            _wireframe = _root.Q<Button>("wireframe");
+            if (_wireframe != null) _wireframe.clicked += OnWireframe;
             _tilesTitle = _root.Q<Label>("tiles-title");
             _tiles = _root.Q("tiles");
             _error = _root.Q<Label>("error");
@@ -232,6 +232,7 @@ namespace Chopper.UI.Hangar
         {
             if (_root == null) return;
             _preset.UnregisterValueChangedCallback(OnPresetChanged);
+            if (_wireframe != null) _wireframe.clicked -= OnWireframe;
             _presetSave.clicked -= OnPresetSave;
             _presetRename.clicked -= OnPresetRename;
             _presetDelete.clicked -= OnPresetDelete;
@@ -263,7 +264,7 @@ namespace Chopper.UI.Hangar
             }
             TickSearchTime();
             TurnChopper();
-            PlaceCallouts(Time.unscaledDeltaTime);
+            PlaceCallouts();
         }
 
         /// <summary>
@@ -471,10 +472,12 @@ namespace Chopper.UI.Hangar
         }
 
         /// <summary>
-        /// Cards in two columns beside the chopper: a socket left of its centre gets a card on the left, else on the
-        /// right; each column keeps the sockets' top-to-bottom order without overlap. Cards glide to their place.
+        /// Cards in two columns beside the chopper, laid out for the turntable's starting pose, so they stay still
+        /// while the chopper turns (owner): only the lines move, from each card to its socket now. A socket left of
+        /// the centre (at rest) gets a card on the left, else on the right; each column keeps the sockets'
+        /// top-to-bottom order without overlap. A socket behind the camera hides only its line.
         /// </summary>
-        private void PlaceCallouts(float deltaTime)
+        private void PlaceCallouts()
         {
             if (_root == null || _calloutLines == null) return;
             _calloutLines.ClearLines();
@@ -489,28 +492,17 @@ namespace Chopper.UI.Hangar
             for (var i = 0; i < _cards.Count; i++)
             {
                 var callout = _cards[i];
-                callout.Visible = stage.TryGetSlotViewportPoint(i, out var viewport);
+                callout.Visible = stage.TryGetSlotRestViewportPoint(i, out var rest);
                 if (!callout.Visible) continue;
-                callout.Socket = ToPanel(viewport, size);
-                reach = Mathf.Max(reach, Mathf.Abs(callout.Socket.x - centre.x));
-                callout.Right = callout.Socket.x >= centre.x;
+                callout.Rest = ToPanel(rest, size);
+                reach = Mathf.Max(reach, Mathf.Abs(callout.Rest.x - centre.x));
+                callout.Right = callout.Rest.x >= centre.x;
                 (callout.Right ? _right : _left).Add(i);
             }
             reach += CalloutReach;
 
             Stack(_left, centre, reach, size);
             Stack(_right, centre, reach, size);
-
-            var blend = 1f - Mathf.Exp(-CalloutFollowRate * deltaTime);
-            foreach (var callout in _cards)
-            {
-                if (!callout.Visible) continue;
-                callout.Position = callout.Placed ? Vector2.Lerp(callout.Position, callout.Target, blend) : callout.Target;
-                callout.Placed = true;
-            }
-            // Gliding cards can meet (one moves up as the next moves down): keep the gap while they move too.
-            Separate(_left);
-            Separate(_right);
 
             foreach (var callout in _cards)
             {
@@ -521,31 +513,19 @@ namespace Chopper.UI.Hangar
                 card.style.top = callout.Position.y;
                 card.EnableInClassList(CalloutRightClass, callout.Right);
 
+                if (!stage.TryGetSlotViewportPoint(_cards.IndexOf(callout), out var socket)) continue;
                 var height = card.layout.height > 0f ? card.layout.height : 0f;
                 var width = card.layout.width > 0f ? card.layout.width : 0f;
                 var edge = new Vector2(callout.Right ? callout.Position.x : callout.Position.x + width, callout.Position.y + height * 0.5f);
-                _calloutLines.AddLine(callout.Socket, edge, false);
+                _calloutLines.AddLine(ToPanel(socket, size), edge, false);
             }
             _calloutLines.Commit();
         }
 
-        /// <summary>One column (already in socket order): each card at least a gap below the card above it.</summary>
-        private void Separate(List<int> column)
-        {
-            var next = float.MinValue;
-            foreach (var index in column)
-            {
-                var callout = _cards[index];
-                if (callout.Position.y < next) callout.Position = new Vector2(callout.Position.x, next);
-                var height = callout.Card.layout.height > 0f ? callout.Card.layout.height : 0f;
-                next = callout.Position.y + height + CalloutGap;
-            }
-        }
-
-        /// <summary>One column: cards in socket order, pushed down so they do not overlap, kept on screen.</summary>
+        /// <summary>One column: cards in rest-socket order, pushed down so they do not overlap, kept on screen.</summary>
         private void Stack(List<int> column, Vector2 centre, float reach, Vector2 size)
         {
-            column.Sort((a, b) => _cards[a].Socket.y.CompareTo(_cards[b].Socket.y));
+            column.Sort((a, b) => _cards[a].Rest.y.CompareTo(_cards[b].Rest.y));
             var next = float.MinValue;
             foreach (var index in column)
             {
@@ -554,13 +534,21 @@ namespace Chopper.UI.Hangar
                 var width = card.width > 0f ? card.width : 0f;
                 var height = card.height > 0f ? card.height : 0f;
                 var x = callout.Right ? centre.x + reach : centre.x - reach - width;
-                var y = Mathf.Max(callout.Socket.y - height * 0.5f, next);
+                var y = Mathf.Max(callout.Rest.y - height * 0.5f, next);
                 var min = Mathf.Min(SideColumn, size.x * 0.5f - width);
                 x = Mathf.Clamp(x, Mathf.Max(0f, min), Mathf.Max(min, size.x - min - width));
                 y = Mathf.Clamp(y, 0f, Mathf.Max(0f, size.y - height));
-                callout.Target = new Vector2(x, y);
+                callout.Position = new Vector2(x, y);
                 next = y + height + CalloutGap;
             }
+        }
+
+        /// <summary>Wireframe over the paint on or off.</summary>
+        private void OnWireframe()
+        {
+            if (stage == null) return;
+            stage.WireframeShown = !stage.WireframeShown;
+            _wireframe.text = stage.WireframeShown ? "WIREFRAME: ON" : "WIREFRAME: OFF";
         }
 
         private static Vector2 ToPanel(Vector2 viewport, Vector2 size) => new(viewport.x * size.x, (1f - viewport.y) * size.y);

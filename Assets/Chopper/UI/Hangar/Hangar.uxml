@@ -19,33 +19,43 @@
       <ui:Label text="{Back} = BACK" class="hangar__bar-text input-prompt" />
     </ui:VisualElement>
 
+    <!-- Overview header across the page (owner, 27 Nov): chassis name, chassis cards, pilot and builds side by side,
+         so the chopper has room left and right. -->
+    <ui:VisualElement name="overview-panel" class="hangar__block hangar__header">
+      <ui:VisualElement class="hangar__header-group hangar__header-group--name">
+        <ui:Label name="chassis-name" text="CHASSIS" class="hangar__title chopper-title" />
+        <ui:Label name="chassis-description" class="hangar__description chopper-body" />
+      </ui:VisualElement>
+      <ui:VisualElement class="hangar__header-group hangar__header-group--chassis">
+        <ui:Label text="// CHASSIS" class="hangar__section chopper-title" />
+        <ui:VisualElement name="chassis-grid" class="hangar__chassis-grid" />
+      </ui:VisualElement>
+      <ui:VisualElement class="hangar__header-group hangar__header-group--pilot">
+        <ui:Label text="// PILOT" class="hangar__section chopper-title" />
+        <!-- The locked-in pilot; click opens the pilot select screen (PilotSelectView) -->
+        <ui:Button name="pilot-card" class="hangar-pilot">
+          <ui:Label name="pilot-card-mono" class="hangar-pilot__mono chopper-title" picking-mode="Ignore" />
+          <ui:VisualElement class="hangar-pilot__text" picking-mode="Ignore">
+            <ui:Label name="pilot-card-sign" class="hangar-pilot__sign chopper-title" picking-mode="Ignore" />
+            <ui:Label name="pilot-card-role" class="hangar-pilot__role" picking-mode="Ignore" />
+          </ui:VisualElement>
+          <ui:Label text="CHANGE &gt;" class="hangar-pilot__change" picking-mode="Ignore" />
+        </ui:Button>
+      </ui:VisualElement>
+      <ui:VisualElement class="hangar__header-group hangar__header-group--builds">
+        <ui:Label text="// BUILDS" class="hangar__section chopper-title" />
+        <ui:DropdownField name="preset" label="BUILD" class="hangar__row" />
+        <ui:TextField name="preset-name" label="NAME" max-length="24" class="hangar__row hangar__name-field" />
+        <ui:VisualElement class="hangar__preset-buttons">
+          <ui:Button name="preset-save" text="SAVE" class="hangar__small-button" />
+          <ui:Button name="preset-rename" text="RENAME" class="hangar__small-button" />
+          <ui:Button name="preset-delete" text="DELETE" class="hangar__small-button" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
     <ui:VisualElement class="hangar__main" picking-mode="Ignore">
       <ui:VisualElement class="hangar__column hangar__column--left" picking-mode="Ignore">
-        <ui:VisualElement name="overview-panel" class="hangar__block">
-          <ui:Label name="chassis-name" text="CHASSIS" class="hangar__title chopper-title" />
-          <ui:Label name="chassis-description" class="hangar__description chopper-body" />
-          <ui:Label text="// CHASSIS" class="hangar__section chopper-title" />
-          <ui:VisualElement name="chassis-grid" class="hangar__chassis-grid" />
-          <ui:Label text="// PILOT" class="hangar__section chopper-title" />
-          <!-- The locked-in pilot; click opens the pilot select screen (PilotSelectView) -->
-          <ui:Button name="pilot-card" class="hangar-pilot">
-            <ui:Label name="pilot-card-mono" class="hangar-pilot__mono chopper-title" picking-mode="Ignore" />
-            <ui:VisualElement class="hangar-pilot__text" picking-mode="Ignore">
-              <ui:Label name="pilot-card-sign" class="hangar-pilot__sign chopper-title" picking-mode="Ignore" />
-              <ui:Label name="pilot-card-role" class="hangar-pilot__role" picking-mode="Ignore" />
-            </ui:VisualElement>
-            <ui:Label text="CHANGE &gt;" class="hangar-pilot__change" picking-mode="Ignore" />
-          </ui:Button>
-          <ui:Label text="// BUILDS" class="hangar__section chopper-title" />
-          <ui:DropdownField name="preset" label="BUILD" class="hangar__row" />
-          <ui:TextField name="preset-name" label="NAME" max-length="24" class="hangar__row hangar__name-field" />
-          <ui:VisualElement class="hangar__preset-buttons">
-            <ui:Button name="preset-save" text="SAVE" class="hangar__small-button" />
-            <ui:Button name="preset-rename" text="RENAME" class="hangar__small-button" />
-            <ui:Button name="preset-delete" text="DELETE" class="hangar__small-button" />
-          </ui:VisualElement>
-        </ui:VisualElement>
-
         <ui:VisualElement name="focus-panel" class="hangar__focus">
           <ui:VisualElement class="hangar__focus-header">
             <ui:Button name="back" text="&lt;" class="hangar__back chopper-title" />
@@ -78,6 +88,8 @@
           </ui:VisualElement>
           <ui:Label text="// PAINT" class="hangar__section chopper-title" />
           <ui:VisualElement name="skins" class="hangar__skins" />
+          <!-- Wireframe over the paint on or off, to see the skin clearly (owner, 27 Nov) -->
+          <ui:Button name="wireframe" text="WIREFRAME: ON" class="hangar__small-button hangar__wire-toggle" />
         </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>

@@ -163,6 +163,13 @@ namespace Chopper.Presentation.Audio
 
         public void SetMusicLevel(float level, float seconds) => _music.SetLevel(level, seconds);
 
+        /// <summary>The world (Effects, Ambient) at the end of a match, 0..1; see <see cref="MixerVolumes.MatchFade"/>.</summary>
+        public float MatchFade
+        {
+            get => _volumes.MatchFade;
+            set => _volumes.MatchFade = value;
+        }
+
         public float GetVolume(AudioChannel channel) => _volumes.Get(channel);
 
         public void SetVolume(AudioChannel channel, float volume) => _volumes.Set(channel, volume);

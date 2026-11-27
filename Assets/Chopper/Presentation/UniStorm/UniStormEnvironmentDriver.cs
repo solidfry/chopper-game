@@ -46,6 +46,8 @@ namespace Chopper.Presentation.Sky
         private Color starTint = new(0.75f, 1f, 0.9f, 1f);
 
         private UniStormSystem _system;
+        private LightShadows _moonShadow;
+        private bool _moonShadowKnown;
         private EnvironmentRequest _pending;
         private bool _hasPending;
         private Camera _camera;
@@ -108,6 +110,25 @@ namespace Chopper.Presentation.Sky
             manager.SetTime(Hour(request.Time), 0);
             var type = TypeFor(request.Weather);
             if (type != null) manager.ChangeWeatherInstantly(type);
+            NightShadows(request.Time == Chopper.Simulation.Visuals.TimeOfDay.Night);
+        }
+
+        /// <summary>
+        /// Night (owner, 26 Nov): the sun and moon cast no shadows. They are faint at night, and the cascaded shadow
+        /// pass of a city is a large share of the CPU frame. Day keeps UniStorm's sun shadows.
+        /// </summary>
+        private void NightShadows(bool night)
+        {
+            if (_system.m_SunLight != null) _system.m_SunLight.shadows = night ? LightShadows.None : _system.SunShadowType;
+            if (_system.m_MoonLight != null)
+            {
+                if (!_moonShadowKnown)
+                {
+                    _moonShadow = _system.m_MoonLight.shadows;
+                    _moonShadowKnown = true;
+                }
+                _system.m_MoonLight.shadows = night ? LightShadows.None : _moonShadow;
+            }
         }
 
         public override void Follow(Camera camera)

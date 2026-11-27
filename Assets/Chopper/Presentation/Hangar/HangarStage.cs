@@ -131,7 +131,22 @@ namespace Chopper.Presentation.Hangar
         private const float BackOffset = 0.5f;
         /// <summary>Lowest point of the rotor modules (turntable space); null when no rotor is fitted.</summary>
         private float? _rotorBottom;
-        private float _yaw = 150f;
+        /// <summary>The turntable's starting yaw: the pose the callout cards are laid out for.</summary>
+        private const float RestYaw = 150f;
+
+        /// <summary>The faint wireframe over the paint (off: see the skin clearly). Scan and focus lines still show.</summary>
+        public bool WireframeShown
+        {
+            get => _wireframeShown;
+            set
+            {
+                if (_wireframeShown == value) return;
+                _wireframeShown = value;
+                if (_settings != null) ApplyPartLooks(Time.unscaledTime);
+            }
+        }
+        private bool _wireframeShown = true;
+        private float _yaw = RestYaw;
         /// <summary>Idle spin now (degrees per second); eases between the setting and 0.</summary>
         private float _spin;
         private MaterialPropertyBlock _block;
@@ -198,6 +213,22 @@ namespace Chopper.Presentation.Hangar
             point = default;
             if (slot < 0 || slot >= _slotSockets.Count || _slotSockets[slot] == null || viewCamera == null) return false;
             var viewport = viewCamera.WorldToViewportPoint(_slotSockets[slot].transform.position);
+            point = new Vector2(viewport.x, viewport.y);
+            return viewport.z > 0f;
+        }
+
+        /// <summary>
+        /// Where slot <paramref name="slot"/>'s socket would be on screen with the turntable at its starting yaw
+        /// (viewport space). The callout cards use it, so they stay still while the chopper turns.
+        /// </summary>
+        public bool TryGetSlotRestViewportPoint(int slot, out Vector2 point)
+        {
+            point = default;
+            if (slot < 0 || slot >= _slotSockets.Count || _slotSockets[slot] == null || viewCamera == null || turntable == null) return false;
+            var offset = Quaternion.Inverse(turntable.rotation) * (_slotSockets[slot].transform.position - turntable.position);
+            var parent = turntable.parent != null ? turntable.parent.rotation : Quaternion.identity;
+            var world = turntable.position + parent * Quaternion.Euler(0f, RestYaw, 0f) * offset;
+            var viewport = viewCamera.WorldToViewportPoint(world);
             point = new Vector2(viewport.x, viewport.y);
             return viewport.z > 0f;
         }
@@ -782,7 +813,7 @@ namespace Chopper.Presentation.Hangar
                 var scanning = !hidden && time < part.GlowUntil && _settings.Scan != null;
                 var focused = part.Slot >= 0 && part.Slot == _model.FocusedSlot;
                 part.Wire.sharedMaterial = scanning ? _settings.Scan : focused ? _settings.Highlight : _settings.Overlay;
-                part.Wire.enabled = !hidden && (scanning || focused || _settings.Overlay != null);
+                part.Wire.enabled = !hidden && (scanning || focused || (WireframeShown && _settings.Overlay != null));
             }
         }
 

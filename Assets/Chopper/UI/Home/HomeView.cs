@@ -230,7 +230,6 @@ namespace Chopper.UI.Home
             _profileXp = _root.Q<SegmentBar>("profile-xp");
             if (_profile != null) _profile.clicked += OpenProfile;
 
-            foreach (var (button, _, _) in _nav) AddGlass(button);
             if (_profile != null) AddGlass(_profile);
 
             _codexList = _root.Q<ScrollView>("codex-list");
@@ -339,6 +338,7 @@ namespace Chopper.UI.Home
             var start = gamepad != null && gamepad.startButton.wasPressedThisFrame;
             if (back) Back();
             else if (start) OpenOptions();
+            else if (_ready && !OptionsOpen && NavKeyPressed(keyboard, gamepad) && !HasFocus()) FocusPage();
 
             if (OptionsOpen || (_model.Page != HomePage.Pilots && _model.Page != HomePage.Modes)) return;
             var previous = (keyboard != null && keyboard.qKey.wasPressedThisFrame) || (gamepad != null && gamepad.leftShoulder.wasPressedThisFrame);
@@ -354,6 +354,44 @@ namespace Chopper.UI.Home
         }
 
         private bool OptionsOpen => options != null && options.IsOpen;
+
+        /// <summary>Arrows, WASD, Enter, Space, Tab or the D-pad / stick: a key that should move or press a menu item.</summary>
+        private static bool NavKeyPressed(Keyboard keyboard, Gamepad gamepad)
+        {
+            if (keyboard != null && (keyboard.upArrowKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame ||
+                                     keyboard.leftArrowKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame ||
+                                     keyboard.wKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame ||
+                                     keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame ||
+                                     keyboard.tabKey.wasPressedThisFrame))
+                return true;
+            return gamepad != null && (gamepad.dpad.up.wasPressedThisFrame || gamepad.dpad.down.wasPressedThisFrame ||
+                                       gamepad.leftStick.up.wasPressedThisFrame || gamepad.leftStick.down.wasPressedThisFrame ||
+                                       gamepad.buttonSouth.wasPressedThisFrame);
+        }
+
+        /// <summary>True when a visible element of this view holds focus (a mouse click on empty space clears it).</summary>
+        private bool HasFocus()
+        {
+            var focused = _root?.panel?.focusController?.focusedElement as VisualElement;
+            return focused != null && focused.resolvedStyle.display != DisplayStyle.None && _root.Contains(focused);
+        }
+
+        /// <summary>Gives the keyboard back to the shown page: its default item.</summary>
+        private void FocusPage()
+        {
+            switch (_model.Page)
+            {
+                case HomePage.Main: if (_nav.Count > 0) _nav[0].Button.Focus(); break;
+                case HomePage.Modes: _modesPage?.FocusShown(); break;
+                case HomePage.Unlocks: _unlocksPage?.Back?.Focus(); break;
+                case HomePage.Controls: _controlsPage?.Back?.Focus(); break;
+                case HomePage.Profile: _profilePage?.Back?.Focus(); break;
+                case HomePage.Pilots:
+                    var shown = _model.ShownPilot;
+                    if (shown >= 0 && shown < _rows.Count) _rows[shown].Focus();
+                    break;
+            }
+        }
 
         // ---- Boot, title glitch, clock ----
 

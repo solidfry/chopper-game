@@ -33,9 +33,9 @@ namespace Chopper.Presentation.Hangar
 
         [Header("Camera")]
         [SerializeField, Tooltip("Overview: camera distance from the chopper's centre, in chopper lengths.")]
-        private float overviewDistance = 1.8f;
+        private float overviewDistance = 1.2f;
         [SerializeField, Tooltip("Overview: camera height above the centre, in chopper lengths.")]
-        private float overviewHeight = 0.3f;
+        private float overviewHeight = 0.2f;
         [SerializeField] private float overviewFieldOfView = 40f;
         [SerializeField, Tooltip("Turntable speed in the overview (degrees per second).")]
         private float idleSpin = 12f;

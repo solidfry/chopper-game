@@ -17,6 +17,7 @@ namespace Chopper.Presentation.Audio
 
         private AudioMixer _mixer;
         private float _worldFade = 1f;
+        private float _matchFade = 1f;
 
         public AudioMixer Mixer => _mixer;
 
@@ -37,6 +38,23 @@ namespace Chopper.Presentation.Audio
                 value = Mathf.Clamp01(value);
                 if (Mathf.Approximately(value, _worldFade)) return;
                 _worldFade = value;
+                Apply(AudioChannel.Effects);
+                Apply(AudioChannel.Ambient);
+            }
+        }
+
+        /// <summary>
+        /// 0..1 on Effects and Ambient at the end of a match (owner, 26 Nov): the world fades down under the results
+        /// music. Kept apart from <see cref="WorldFade"/> (scene changes), which the scene flow sets every frame.
+        /// </summary>
+        public float MatchFade
+        {
+            get => _matchFade;
+            set
+            {
+                value = Mathf.Clamp01(value);
+                if (Mathf.Approximately(value, _matchFade)) return;
+                _matchFade = value;
                 Apply(AudioChannel.Effects);
                 Apply(AudioChannel.Ambient);
             }
@@ -69,7 +87,7 @@ namespace Chopper.Presentation.Audio
         {
             if (_mixer == null) return;
             var volume = Get(channel);
-            if (channel is AudioChannel.Effects or AudioChannel.Ambient) volume *= _worldFade;
+            if (channel is AudioChannel.Effects or AudioChannel.Ambient) volume *= _worldFade * _matchFade;
             if (!_mixer.SetFloat(channel + "Volume", ToDecibels(volume)))
                 Debug.LogWarning($"Audio mixer '{_mixer.name}' has no exposed parameter '{channel}Volume'.");
         }

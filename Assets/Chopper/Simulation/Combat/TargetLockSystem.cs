@@ -170,6 +170,9 @@ namespace Chopper.Simulation.Combat
             var candidates = new NativeList<Candidate>(32, Allocator.Temp);
             foreach (var (targetable, pose, entity) in SystemAPI.Query<RefRO<Targetable>, RefRO<LocalToWorld>>().WithEntityAccess())
             {
+                // Destroyed: not a target (owner, 26 Nov: a downed turret could still be locked).
+                if (SystemAPI.HasComponent<Health>(entity) && SystemAPI.GetComponent<Health>(entity).IsDead) continue;
+                if (SystemAPI.HasComponent<TurretState>(entity) && SystemAPI.GetComponent<TurretState>(entity).Down) continue;
                 var team = TeamOf(ref state, entity);
                 if (SystemAPI.HasComponent<CountermeasureState>(entity))
                 {

@@ -102,6 +102,9 @@ namespace Chopper.Presentation.Camera
         /// <summary>Alt / R3 held on a mounted view: flight turn input must be neutral (see <c>InputSettingsSystem</c>).</summary>
         public bool HeadLookActive { get; private set; }
 
+        /// <summary>True while Alt / R3 is held on a chase view: the camera sits ahead of the chopper and looks back.</summary>
+        public bool LookBackActive { get; private set; }
+
         private CameraSettings Settings
         {
             get
@@ -199,6 +202,8 @@ namespace Chopper.Presentation.Camera
             var altHeld = keyboard != null && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed);
             var stickHeld = gamepad != null && gamepad.rightStickButton.isPressed;
             HeadLookActive = IsMounted && !_menuOpen && (altHeld || stickHeld);
+            // Chase views (owner, 26 Nov): the same button looks backwards (the flight input stays live).
+            LookBackActive = !IsMounted && !_menuOpen && (altHeld || stickHeld);
 
             if (HeadLookActive)
             {
@@ -397,7 +402,7 @@ namespace Chopper.Presentation.Camera
                 ? EvaluateMounted(view, targetPosition, targetRotation, Quaternion.Euler(_headPitch, _headYaw, 0f),
                     view.FixedEye ? null : _eye)
                 : EvaluateChase(view, ref _states[index], targetPosition, targetRotation, deltaTime, speed01,
-                    Settings.BoostPullBack * Mathf.Max(_boost, 0f));
+                    Settings.BoostPullBack * Mathf.Max(_boost, 0f), LookBackActive);
             pose.FieldOfView = Mathf.Lerp(view.FieldOfView, view.MaxFieldOfView, speed01) + view.BoostFieldOfView * _boost;
             pose.NearClip = view.NearClip;
             pose.Position += _lag * view.Inertia;
@@ -407,7 +412,7 @@ namespace Chopper.Presentation.Camera
 
         /// <summary>Behind the chopper. Only orientation is smoothed: smoothing position against a moving target jitters.</summary>
         private static Pose EvaluateChase(CameraView view, ref ViewState state, Vector3 targetPosition, Quaternion targetRotation,
-            float deltaTime, float speed01, float boostPullBack)
+            float deltaTime, float speed01, float boostPullBack, bool lookBack = false)
         {
             var forward = targetRotation * Vector3.forward;
             // Near-vertical noses have no stable heading; keep the last one.
@@ -428,9 +433,11 @@ namespace Chopper.Presentation.Camera
                 state.Up = Vector3.Slerp(state.Up, rolledUp, 1f - Mathf.Exp(-view.RollSharpness * deltaTime)).normalized;
             }
 
-            var frame = Quaternion.LookRotation(state.Forward, state.Up);
+            // Looking back: the same view turned round, so the camera is ahead and sees what follows the chopper.
+            var heading = lookBack ? -state.Forward : state.Forward;
+            var frame = Quaternion.LookRotation(heading, state.Up);
             var position = targetPosition + frame * (view.Offset * (1f + view.PullBack * speed01 + boostPullBack));
-            var lookPoint = targetPosition + state.Forward * view.LookAhead;
+            var lookPoint = targetPosition + heading * view.LookAhead;
             return new Pose { Position = position, Rotation = Quaternion.LookRotation(lookPoint - position, state.Up) };
         }
 

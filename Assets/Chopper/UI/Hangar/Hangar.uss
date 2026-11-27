@@ -1112,3 +1112,54 @@
   padding: 3px 0 4px 0;
   background-color: rgba(2, 8, 4, 0.78);
 }
+
+/* Wireframe toggle under the paint tiles (owner, 27 Nov). */
+.hangar__wire-toggle {
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
+/* Overview header: one row across the page under the bar (owner, 27 Nov). */
+.hangar__header {
+  flex-direction: row;
+  align-items: flex-start;
+  margin: 12px 28px 0 28px;
+  padding: 10px 16px 10px 16px;
+}
+
+.hangar__header-group {
+  margin-right: 24px;
+}
+
+.hangar__header-group > .hangar__section {
+  margin-top: 0;
+}
+
+.hangar__header-group--name {
+  width: 260px;
+}
+
+.hangar__header-group--chassis {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 360px;
+}
+
+/* The four chassis cards in one row. */
+.hangar__header-group--chassis .hangar__chassis-grid {
+  flex-wrap: nowrap;
+}
+
+.hangar__header-group--chassis .hangar-chassis {
+  width: 24%;
+  margin-bottom: 0;
+}
+
+.hangar__header-group--pilot {
+  width: 240px;
+}
+
+.hangar__header-group--builds {
+  width: 300px;
+  margin-right: 0;
+}

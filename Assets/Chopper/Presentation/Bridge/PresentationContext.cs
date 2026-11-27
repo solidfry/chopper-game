@@ -39,6 +39,9 @@ namespace Chopper.Presentation.Bridge
         /// <summary>Seconds of steady flight before the music ducks, and without a chopper before it comes back up.</summary>
         private const float MusicDuckAfter = 2f;
         private const float MusicRiseAfter = 1.5f;
+        /// <summary>End of a match (owner, 26 Nov): the world sounds go down to this share in this many seconds, and the music comes up.</summary>
+        private const float EndWorldLevel = 0.2f;
+        private const float EndFadeSeconds = 3f;
         private SoundLoop _ambience;
         /// <summary>0 = chase view, 1 = cockpit view; moves slowly, so the sound changes with the camera blend.</summary>
         private float _cockpitMuffle;
@@ -385,10 +388,19 @@ namespace Chopper.Presentation.Bridge
                     _musicStateFor = 0f;
                 }
             }
-            var level = _musicSet == MusicLibrary.Set.Menu ? music.MenuLevel : _musicFlying ? music.CombatLevel : music.IdleLevel;
+            // Results: the music comes up to the menu level.
+            var level = _musicSet == MusicLibrary.Set.Menu || Match.BannerVisible ? music.MenuLevel
+                : _musicFlying ? music.CombatLevel : music.IdleLevel;
             if (Mathf.Approximately(level, _musicLevel)) return;
             _musicLevel = level;
             _audio.SetMusicLevel(level, music.LevelFadeSeconds);
+        }
+
+        /// <summary>The world sounds fade down while the results show, and back up when a match starts again.</summary>
+        private void UpdateMatchFade(float deltaTime)
+        {
+            var target = Match.BannerVisible ? EndWorldLevel : 1f;
+            _audio.MatchFade = Mathf.MoveTowards(_audio.MatchFade, target, (1f - EndWorldLevel) / EndFadeSeconds * deltaTime);
         }
 
         /// <summary>In a cockpit view, sounds are heard from inside (<see cref="CueMuffle"/>). Blends in log steps, as hearing does.</summary>
@@ -409,6 +421,7 @@ namespace Chopper.Presentation.Bridge
             _audio.Tick(unscaledDeltaTime);
             if (_linkLost && !_leftAfterLinkLost) _leftAfterLinkLost = LeaveAfterLinkLost();
             UpdateMusicLevel(unscaledDeltaTime);
+            UpdateMatchFade(unscaledDeltaTime);
             UpdateOutsideSounds(unscaledDeltaTime);
             // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.
             if (_flow != null && _flow.WaitingFor(_scene) && (!IsMatchScene || Hud.HasChopper)) _flow.SceneReady(_scene);
@@ -467,6 +480,8 @@ namespace Chopper.Presentation.Bridge
             Events.Dispose();
             Effects.Dispose();
             ModuleVisuals.Dispose();
+            // The mixer lives across scenes: the next scene starts with the world at full.
+            _audio.MatchFade = 1f;
             _audio.Dispose();
             _controls.Flight.Scoreboard.Disable();
             _controls.Flight.Zoom.Disable();
