@@ -41,6 +41,10 @@ namespace Chopper.Editor.Setup
             public System.Func<GameObject> BuildProjectile;
             /// <summary>A blast prefab built by setup, instead of a path.</summary>
             public System.Func<GameObject> BuildImpact;
+            /// <summary>Guns: seconds the trail stays after the hit.</summary>
+            public float Linger;
+            /// <summary>Rockets: realistic blast layers with the impact.</summary>
+            public System.Func<BlastLayer[]> Layers;
             public bool ScaleWithBlast = true;
             public bool Dropped;
             /// <summary>Cluster missiles: bomblet model, split flash and split sound.</summary>
@@ -107,7 +111,7 @@ namespace Chopper.Editor.Setup
             yield return new GunFamily
             {
                 Name = "Heavy Rockets", Modules = new[] { "Pylon_HeavyRockets" },
-                Impact = SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab",
+                BuildImpact = BuildHeavyBlast, ScaleWithBlast = false, Layers = HeavyLayers,
             };
             // Purple rockets that burst in a sphere at the fuse.
             yield return new GunFamily
@@ -115,7 +119,7 @@ namespace Chopper.Editor.Setup
                 Name = "Flak Rockets", Modules = new[] { "Pylon_FlakRockets" },
                 Projectile = SciFi + "Missiles/Rockets/PurpleRocketMissile.prefab",
                 Flash = SciFi + "MuzzleFlash/Rocket/RocketMuzzleFlashPurple.prefab",
-                Impact = SciFi + "Explosions/Spheres/v1/YellowSphereImpact.prefab",
+                BuildImpact = BuildFlakBlast, ScaleWithBlast = false, Layers = FlakLayers,
             };
             // A real bomb model (PolygonMilitary jet bomb), dropped with no flash, whistles as it falls.
             yield return new GunFamily
@@ -188,7 +192,7 @@ namespace Chopper.Editor.Setup
             yield return new GunFamily
             {
                 Name = "Railgun", Modules = new[] { "Nose_Railgun" },
-                Projectile = SciFi + "Missiles/Laserbolt/BlueLaserBoltMissile.prefab",
+                BuildProjectile = BuildRailBolt, Linger = 0.5f,
                 Flash = SciFi + "MuzzleFlash/Laser/LaserMuzzleFlashBlue.prefab",
                 Impact = SciFi + "Explosions/LaserBolt/BlueLaserBoltImpact.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Railgun", AudioAssets.Clips(SciFiGuns + "Weapon 09 Shoot 1.wav", SciFiGuns + "Weapon 09 Shoot 2.wav"),
@@ -248,6 +252,8 @@ namespace Chopper.Editor.Setup
                         effects != null && family.Cue != null ? family.Cue(effects) : null, family.Kick,
                         effects != null && family.Flight != null ? family.Flight(effects) : null, family.ScaleWithBlast, family.Dropped);
                     look.SetTracerScale(family.Tracer);
+                    look.SetTrailLinger(family.Linger);
+                    look.SetImpactLayers(family.Layers != null ? family.Layers() : null);
                     look.SetTracerBrightness(family.Bright);
                     if (effects != null && family.Tail != null) look.SetTail(family.Tail(effects));
                     if (family.Bomblet != null || family.SplitFlash != null)
@@ -338,27 +344,112 @@ namespace Chopper.Editor.Setup
         /// The air mine's blast (owner 27 Nov: too small): the red sphere burst at 2.8x, every layer following the scale, so
         /// the sparks reach the 14 m damage radius, over a fire blast core at 1.5x.
         /// </summary>
-        internal static GameObject BuildMineBlast()
+        internal static GameObject BuildMineBlast() => Blast("MineBlast",
+            (SciFi + "Explosions/Spheres/v1/RedSphereImpact.prefab", 2.8f),
+            (SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab", 1.5f));
+
+        /// <summary>
+        /// Heavy rocket impact prefab: flying sparks and a shock ring sized for its 14 m radius. The fire and smoke come
+        /// from <see cref="HeavyLayers"/>.
+        /// </summary>
+        internal static GameObject BuildHeavyBlast() => Blast("HeavyRocketBlast",
+            (SciFi + "Explosions/Spheres/v1/YellowSphereImpact.prefab", 2.2f),
+            (SciFi + "Explosions/Shockwave/YellowShockwaveImpact.prefab", 3f));
+
+        /// <summary>
+        /// The heavy rocket's body of the blast, from the wreck explosion's parts (owner 27 Nov: realistic, dangerous): two
+        /// bright pops, embers, a swelling fireball and a short dark smoke column.
+        /// </summary>
+        internal static BlastLayer[] HeavyLayers() => Present(new[]
         {
-            var path = RocketPrefabs + "/MineBlast.prefab";
-            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            EffectsAssets.Layer(EffectsAssets.SmallBlast, 2.6f, 0f, 0f, 3f, 0f),
+            EffectsAssets.Layer(EffectsAssets.SmallBlast, 1.8f, 0f, 0f, 3f, 0.8f, spread: 2f),
+            EffectsAssets.Layer(EffectsAssets.Embers, 2f, 0f, 0.5f, 5f, 0.5f),
+            EffectsAssets.Layer(EffectsAssets.Fireball, 3.5f, 0f, 0.6f, 7f, 0.5f, startScale: 1.5f, grow: 0.6f),
+            EffectsAssets.Layer(EffectsAssets.Column, 1.6f, 0f, 2f, 12f, 1.5f, startScale: 0.8f, grow: 2f, tint: EffectsAssets.ColumnTint),
+        });
+
+        /// <summary>Flak: a bright pop and the black puff of a real flak burst that hangs in the air.</summary>
+        internal static BlastLayer[] FlakLayers() => Present(new[]
+        {
+            EffectsAssets.Layer(EffectsAssets.SmallBlast, 1.6f, 0f, 0f, 3f, 0f),
+            EffectsAssets.Layer(EffectsAssets.Fireball, 2.4f, 0f, 0.3f, 5f, 0f, startScale: 1f, grow: 0.4f, tint: new Color(0.12f, 0.11f, 0.1f, 1f)),
+        });
+
+        /// <summary>All layers, or none when a pack is missing (NatureManufacture is git-ignored).</summary>
+        private static BlastLayer[] Present(BlastLayer[] layers) =>
+            System.Array.TrueForAll(layers, l => l.Prefab != null) ? layers : System.Array.Empty<BlastLayer>();
+
+        /// <summary>Flak airburst: a sharp yellow flash, a sphere of shrapnel and a shock ring, sized for its 9 m radius.</summary>
+        internal static GameObject BuildFlakBlast() => Blast("FlakBlast",
+            (SciFi + "Explosions/Spheres/v1/YellowSphereImpact.prefab", 2.2f),
+            (SciFi + "Explosions/Sharp/YellowSharpImpact.prefab", 2f),
+            (SciFi + "Explosions/Shockwave/YellowShockwaveImpact.prefab", 2f));
+
+        private const string FireAndSmoke = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Prefabs";
+
+        /// <summary>
+        /// A blast prefab from layers (path, scale); every layer's particles follow its scale. A negative scale marks a
+        /// looping pack effect (the fireball emits 1 a second): it becomes a one-time burst of 4 at that size. Rebuilt each run.
+        /// </summary>
+        private static GameObject Blast(string name, params (string Path, float Scale)[] layers)
+        {
             System.IO.Directory.CreateDirectory(RocketPrefabs);
-            var root = new GameObject("MineBlast");
-            Layer(root.transform, SciFi + "Explosions/Spheres/v1/RedSphereImpact.prefab", 2.8f);
-            Layer(root.transform, SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab", 1.5f);
-            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            var root = new GameObject(name);
+            foreach (var (path, scale) in layers)
+            {
+                var layer = Layer(root.transform, path, Mathf.Abs(scale));
+                if (scale >= 0f || layer == null) continue;
+                foreach (var system in layer.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = system.main;
+                    main.loop = false;
+                    main.duration = 1f;
+                    var emission = system.emission;
+                    emission.rateOverTime = 0f;
+                    emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 4) });
+                }
+            }
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, RocketPrefabs + "/" + name + ".prefab");
             Object.DestroyImmediate(root);
             return prefab;
         }
 
-        private static void Layer(Transform parent, string prefabPath, float scale)
+        /// <summary>
+        /// Railgun round (owner 27 Nov): the blue bolt with a long white-to-blue trail that hangs for about half a second
+        /// (the look's trail linger keeps it after the hit).
+        /// </summary>
+        internal static GameObject BuildRailBolt()
+        {
+            System.IO.Directory.CreateDirectory(RocketPrefabs);
+            var root = new GameObject("RailgunBolt");
+            Layer(root.transform, SciFi + "Missiles/Laserbolt/BlueLaserBoltMissile.prefab", 1f);
+            var tail = new GameObject("Tail").AddComponent<TrailRenderer>();
+            tail.transform.SetParent(root.transform, false);
+            tail.time = 0.5f;
+            tail.minVertexDistance = 0.5f;
+            tail.widthCurve = new AnimationCurve(new Keyframe(0f, 0.35f), new Keyframe(1f, 0f));
+            tail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            tail.receiveShadows = false;
+            tail.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Materials/Trails/trailblue.mat");
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(0.3f, 0.6f, 1f), 0.25f), new GradientColorKey(new Color(0.1f, 0.3f, 1f), 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.6f, 0.4f), new GradientAlphaKey(0f, 1f) });
+            tail.colorGradient = gradient;
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, RocketPrefabs + "/RailgunBolt.prefab");
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject Layer(Transform parent, string prefabPath, float scale)
         {
             var source = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (source == null)
             {
                 Debug.LogWarning($"Weapon looks: no prefab at {prefabPath}.");
-                return;
+                return null;
             }
             var layer = Object.Instantiate(source, parent);
             layer.name = source.name;
@@ -368,6 +459,7 @@ namespace Chopper.Editor.Setup
                 var main = system.main;
                 main.scalingMode = ParticleSystemScalingMode.Hierarchy;
             }
+            return layer;
         }
 
         private static GameObject Primitive(PrimitiveType type, Transform parent, string name, Vector3 position, Vector3 scale,

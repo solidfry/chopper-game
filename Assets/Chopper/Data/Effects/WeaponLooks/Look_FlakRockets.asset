@@ -14,9 +14,43 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Effects.WeaponLook
   projectile: {fileID: 179474, guid: 7cf300278f38d194dad6c5dea8dba2eb, type: 3}
   muzzleFlash: {fileID: 132766, guid: 288e25d9282842947834636a195a00a7, type: 3}
-  impact: {fileID: 106912, guid: 93116fb37275dab45b9fa58b00aef4fd, type: 3}
+  impact: {fileID: 6789207865729393472, guid: b020c50964b08af47abb4d144e781cee, type: 3}
   fireCue: {fileID: 0}
+  tailCue: {fileID: 0}
   flightLoop: {fileID: 0}
-  scaleWithBlast: 1
+  scaleWithBlast: 0
   noMuzzleFlash: 0
+  bomblet: {fileID: 0}
+  splitFlash: {fileID: 0}
+  splitCue: {fileID: 0}
   cameraKick: 0
+  tracerScale: 1
+  impactLayers:
+  - Prefab: {fileID: 167312, guid: c06575f5b5642894da5e0448519f93ab, type: 3}
+    Scale: 1.6
+    Delay: 0
+    EmitSeconds: 0
+    LifeSeconds: 3
+    Up: 0
+    StartScale: 0
+    GrowSeconds: 0
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 6769930234933627840, guid: 3f0349e99f23c0f438d614f2b3adb4b3, type: 3}
+    Scale: 2.4
+    Delay: 0
+    EmitSeconds: 0.3
+    LifeSeconds: 5
+    Up: 0
+    StartScale: 1
+    GrowSeconds: 0.4
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0.12, g: 0.11, b: 0.1, a: 1}
+  trailLinger: 0
+  tracerBrightness: 1

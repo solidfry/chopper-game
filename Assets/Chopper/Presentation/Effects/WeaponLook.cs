@@ -48,6 +48,13 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(0.1f, 2f), Tooltip("Guns: tracer size (1 = the prefab's own; owner 27 Nov: the pack's tracers " +
                                                   "read too fat). Rockets use Scale With Blast instead.")]
         private float tracerScale = 1f;
+        [SerializeField, Tooltip("Rockets: realistic blast layers spawned with the impact (the wreck blast's parts: fireball, " +
+                                 "embers, smoke). Delays are ignored: all start at the hit. Owner 27 Nov: heavy rockets did not " +
+                                 "look dangerous.")]
+        private BlastLayer[] impactLayers = System.Array.Empty<BlastLayer>();
+        [SerializeField, Range(0f, 2f), Tooltip("Guns: seconds the round's trail stays after it hits (owner 27 Nov: the railgun " +
+                                                "tail should hang for about half a second). 0 = gone at once.")]
+        private float trailLinger;
         [SerializeField, Range(0.5f, 4f), Tooltip("Guns: tracer colour and opacity, times the prefab's (1 = as made; owner " +
                                                   "27 Nov: the pack's tracers read too faint).")]
         private float tracerBrightness = 1f;
@@ -55,6 +62,11 @@ namespace Chopper.Presentation.Effects
         public GameObject Projectile => projectile;
         public float CameraKick => cameraKick;
         public float TracerScale => tracerScale;
+        public System.Collections.Generic.IReadOnlyList<BlastLayer> ImpactLayers => impactLayers ?? System.Array.Empty<BlastLayer>();
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetImpactLayers(BlastLayer[] layers) => impactLayers = layers ?? System.Array.Empty<BlastLayer>();
+        public float TrailLinger => trailLinger;
         public float TracerBrightness => tracerBrightness;
 
         /// <summary>Editor only: used by the setup tool.</summary>
@@ -62,6 +74,9 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetTracerScale(float scale) => tracerScale = scale;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetTrailLinger(float seconds) => trailLinger = seconds;
         public GameObject MuzzleFlash => muzzleFlash;
         public GameObject Impact => impact;
         public SoundCue FireCue => fireCue;

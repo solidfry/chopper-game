@@ -14,9 +14,82 @@ MonoBehaviour:
   m_EditorClassIdentifier: Chopper.Presentation::Chopper.Presentation.Effects.WeaponLook
   projectile: {fileID: 0}
   muzzleFlash: {fileID: 0}
-  impact: {fileID: 181688, guid: f692b408398ac4f429430d854fe5be95, type: 3}
+  impact: {fileID: 3467744635950905594, guid: 5256752147d7f1b4382f421d458724e6, type: 3}
   fireCue: {fileID: 0}
+  tailCue: {fileID: 0}
   flightLoop: {fileID: 0}
-  scaleWithBlast: 1
+  scaleWithBlast: 0
   noMuzzleFlash: 0
+  bomblet: {fileID: 0}
+  splitFlash: {fileID: 0}
+  splitCue: {fileID: 0}
   cameraKick: 0
+  tracerScale: 1
+  impactLayers:
+  - Prefab: {fileID: 167312, guid: c06575f5b5642894da5e0448519f93ab, type: 3}
+    Scale: 2.6
+    Delay: 0
+    EmitSeconds: 0
+    LifeSeconds: 3
+    Up: 0
+    StartScale: 0
+    GrowSeconds: 0
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 167312, guid: c06575f5b5642894da5e0448519f93ab, type: 3}
+    Scale: 1.8
+    Delay: 0
+    EmitSeconds: 0
+    LifeSeconds: 3
+    Up: 0.8
+    StartScale: 0
+    GrowSeconds: 0
+    Spread: 2
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 7193847681280014771, guid: e7ad534d1a8a8d04aa0d7d09e4cb38e1, type: 3}
+    Scale: 2
+    Delay: 0
+    EmitSeconds: 0.5
+    LifeSeconds: 5
+    Up: 0.5
+    StartScale: 0
+    GrowSeconds: 0
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 6769930234933627840, guid: 3f0349e99f23c0f438d614f2b3adb4b3, type: 3}
+    Scale: 3.5
+    Delay: 0
+    EmitSeconds: 0.6
+    LifeSeconds: 7
+    Up: 0.5
+    StartScale: 1.5
+    GrowSeconds: 0.6
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0, g: 0, b: 0, a: 0}
+  - Prefab: {fileID: 6324079421089622289, guid: 4f3cd9903c6228d4e9e12c44e70645b3, type: 3}
+    Scale: 1.6
+    Delay: 0
+    EmitSeconds: 2
+    LifeSeconds: 12
+    Up: 1.5
+    StartScale: 0.8
+    GrowSeconds: 2
+    Spread: 0
+    Material: {fileID: 0}
+    LifeColour: {r: 0, g: 0, b: 0, a: 0}
+    Ground: 0
+    Tint: {r: 0.3, g: 0.29, b: 0.28, a: 1}
+  trailLinger: 0
+  tracerBrightness: 1

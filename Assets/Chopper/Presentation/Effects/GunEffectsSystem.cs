@@ -220,7 +220,7 @@ namespace Chopper.Presentation.Effects
                     RayCast(world, _surfaces, bullet.Shooter, bullet.Position, bullet.Direction, move, out var hitDistance, out var surface))
                 {
                     Impact(settings, bullet.Position + bullet.Direction * hitDistance, bullet.Direction, surface, bullet.Look);
-                    if (bullet.Visual != null) _effects.Release(bullet.Visual);
+                    if (bullet.Visual != null) _effects.Release(bullet.Visual, bullet.Look != null ? bullet.Look.TrailLinger : 0f);
                     _bullets.RemoveAt(i);
                     continue;
                 }
@@ -236,7 +236,7 @@ namespace Chopper.Presentation.Effects
 
                 if (bullet.Impact)
                     Impact(settings, bullet.Position, bullet.Direction, bullet.Surface, bullet.Look);
-                if (bullet.Visual != null) _effects.Release(bullet.Visual);
+                if (bullet.Visual != null) _effects.Release(bullet.Visual, bullet.Look != null ? bullet.Look.TrailLinger : 0f);
                 _bullets.RemoveAt(i);
             }
         }

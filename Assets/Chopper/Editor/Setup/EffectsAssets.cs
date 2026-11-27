@@ -85,14 +85,14 @@ namespace Chopper.Editor.Setup
             AssetDatabase.SaveAssets();
         }
 
-        private const string Fireball = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Explosion_Normal_Based_Lit.prefab";
+        internal const string Fireball = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Explosion_Normal_Based_Lit.prefab";
         private const string Flames = FireAndSmoke + "/Other/Prefab_Fire_Huge_Flames_01.prefab";
-        private const string Embers = FireAndSmoke + "/Other/Prefab_Fire_Embers_01.prefab";
-        private const string Column = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Smoke_Normal_Based_Lit_3.prefab";
+        internal const string Embers = FireAndSmoke + "/Other/Prefab_Fire_Embers_01.prefab";
+        internal const string Column = FireAndSmoke + "/Smoke_Lit_Normal/Prefab_Smoke_Normal_Based_Lit_3.prefab";
         /// <summary>The yellow rocket impact: the red one made the whole blast too red (owner).</summary>
-        private const string SmallBlast = SciFi + "/Explosions/Rockets/Impact v3/YellowFireRocketImpactV3.prefab";
+        internal const string SmallBlast = SciFi + "/Explosions/Rockets/Impact v3/YellowFireRocketImpactV3.prefab";
 
-        private static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
+        internal static BlastLayer Layer(string path, float scale, float delay, float emit, float life, float up,
             float startScale = 0f, float grow = 0f, float spread = 0f, Material material = null, Color lifeColour = default,
             bool ground = false, Color tint = default) => new()
         {
@@ -102,7 +102,7 @@ namespace Chopper.Editor.Setup
             Ground = ground, Tint = tint,
         };
 
-        private static readonly Color ColumnTint = new(0.3f, 0.29f, 0.28f, 1f);
+        internal static readonly Color ColumnTint = new(0.3f, 0.29f, 0.28f, 1f);
 
         private const string WreckFlameMaterialPath = "Assets/Chopper/Data/Effects/WreckFlames.mat";
         private const string PackFlameMaterial = "Assets/ThirdParty/NatureManufacture/Fire and Smoke Particles/Materials/Others/M_fire_flipbook_big_01.mat";

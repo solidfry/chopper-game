@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Chopper.Presentation.Audio;
+using Chopper.Presentation.Camera;
 using Chopper.Simulation.Combat;
 using Chopper.Simulation.Definitions;
 using Chopper.Simulation.Loadout;
@@ -26,8 +27,7 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Range(0.05f, 1f)] private float timeScale = 1f;
         [SerializeField, Tooltip("Its cockpit model and eye give the cockpit view.")] private ChassisDefinition chassis;
         [SerializeField, Tooltip("Start in the cockpit (C switches to the orbit camera).")] private bool cockpitView = true;
-        [SerializeField, Tooltip("Degrees of shake at full trauma (cockpit view).")] private float shakeDegrees = 4f;
-        [SerializeField, Tooltip("Trauma lost per second.")] private float shakeDecay = 1.5f;
+        [SerializeField, Tooltip("The game's chopper camera, used for the cockpit view.")] private ChopperCameraRig rig;
 
         private sealed class Entry
         {
@@ -71,9 +71,6 @@ namespace Chopper.Presentation.Effects
         private GUIStyle _style;
         private GameObject _cockpit;
         private Renderer[] _body = System.Array.Empty<Renderer>();
-        private float _trauma;
-        private float _gunKick;
-        private float _gunKickShown;
         private float _orbitNear = 0.3f;
 
         /// <summary>Own gun from the cockpit, as in a match (<c>GunEffectsSystem.CockpitBulletStart</c>): no muzzle
@@ -82,9 +79,10 @@ namespace Chopper.Presentation.Effects
 
         /// <summary>Editor only: the scene builder links the config parts and the stage.</summary>
         public void Configure(CombatEffectsSettings effectSettings, SoundLibrary soundLibrary, LoadoutCatalog loadout, Transform from,
-            Transform at, ChassisDefinition cockpitChassis)
+            Transform at, ChassisDefinition cockpitChassis, ChopperCameraRig cameraRig)
         {
             chassis = cockpitChassis;
+            rig = cameraRig;
             settings = effectSettings;
             sounds = soundLibrary;
             catalog = loadout;
@@ -110,32 +108,44 @@ namespace Chopper.Presentation.Effects
             if (UnityEngine.Camera.main != null) _orbitNear = UnityEngine.Camera.main.nearClipPlane;
         }
 
-        /// <summary>Cockpit view: the camera at the chassis eye, looking along the chopper, shaken by the gun kick.
-        /// The body is hidden and the cockpit model shown, as for your own chopper in a match.</summary>
+        /// <summary>
+        /// Cockpit view: the game's own <see cref="ChopperCameraRig"/> on its "Cockpit" view (owner 27 Nov: same camera as the
+        /// real cockpit), so the field of view, near clip, noise and gun kick are the match's. The body is hidden and the
+        /// cockpit model shown, as for your own chopper. The rig is off in orbit view.
+        /// </summary>
         private void LateUpdate()
         {
             var camera = UnityEngine.Camera.main;
             if (camera == null || shooter == null) return;
             var orbit = camera.GetComponent<BenchOrbitCamera>();
             if (orbit != null) orbit.enabled = !cockpitView;
+            if (rig != null && rig.enabled != cockpitView)
+            {
+                rig.enabled = cockpitView;
+                if (cockpitView)
+                {
+                    // Menu-free mode keeps the rig's own C key (view cycle) off: C here switches cockpit and orbit.
+                    rig.SetCursorFree(true);
+                    var views = rig.ActiveSettings.Views;
+                    for (var i = 0; i < views.Count; i++)
+                        if (views[i] != null && views[i].Name == "Cockpit") rig.SetView(i);
+                }
+            }
             foreach (var body in _body) if (body != null) body.enabled = !cockpitView;
             if (_cockpit != null) _cockpit.SetActive(cockpitView);
-            _trauma = Mathf.Max(0f, _trauma - shakeDecay * Time.deltaTime);
-            _gunKick = Chopper.Presentation.Camera.ChopperCameraRig.FadeGunKick(_gunKick, Time.deltaTime);
-            _gunKickShown = Chopper.Presentation.Camera.ChopperCameraRig.EaseGunKick(_gunKickShown, _gunKick, Time.deltaTime);
             if (!cockpitView)
             {
                 camera.nearClipPlane = _orbitNear;
                 return;
             }
-            camera.nearClipPlane = 0.05f;
-            var eye = chassis != null ? chassis.CockpitEye : new Vector3(0f, 1f, 1.15f);
-            var shake = _trauma * _trauma * shakeDegrees;
-            var t = Time.time * 25f;
-            var wobble = Quaternion.Euler((Mathf.PerlinNoise(t, 0.1f) - 0.5f) * 2f * shake, (Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2f * shake,
-                (Mathf.PerlinNoise(t, 3.3f) - 0.5f) * shake);
-            camera.transform.SetPositionAndRotation(shooter.TransformPoint(eye), shooter.rotation * wobble *
-                Chopper.Presentation.Camera.ChopperCameraRig.GunKickRotation(_gunKickShown, Time.time));
+            if (rig == null) return;
+            rig.Follow(new CameraTarget
+            {
+                Position = shooter.position,
+                Rotation = shooter.rotation,
+                HasEye = chassis != null,
+                Eye = chassis != null ? chassis.CockpitEye : Vector3.zero,
+            }, Time.deltaTime);
         }
 
         private void OnDestroy()
@@ -234,7 +244,7 @@ namespace Chopper.Presentation.Effects
             if (cockpitView)
             {
                 // As in a match: the family's kick on your own gun; rounds start ahead of the nose, no flash.
-                if (entry.Look != null) _gunKick = Mathf.Min(1f, _gunKick + entry.Look.CameraKick);
+                if (entry.Look != null && rig != null) rig.AddGunKick(entry.Look.CameraKick);
                 var start = Mathf.Min(CockpitBulletStart, distance);
                 muzzle += direction * start;
                 distance -= start;
@@ -434,10 +444,11 @@ namespace Chopper.Presentation.Effects
             {
                 var back = round.Velocity.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(-round.Velocity) : Quaternion.identity;
                 _effects.SpawnOneShot(round.Impact, round.Position, back, muteAudio: round.Blast != null);
+                if (!round.Bullet && round.Look != null) _effects.SpawnLayers(round.Look.ImpactLayers, round.Position, muteAudio: true);
                 if (round.Blast != null) _audio.Play(round.Blast, round.Position);
             }
             if (round.Loop != null) _audio.StopLoop(round.Loop);
-            if (round.Visual != null) _effects.Release(round.Visual, round.Bullet ? 0f : settings.RocketTrailLinger);
+            if (round.Visual != null) _effects.Release(round.Visual, round.Bullet ? (round.Look != null ? round.Look.TrailLinger : 0f) : settings.RocketTrailLinger);
             _rounds.RemoveAt(index);
         }
 

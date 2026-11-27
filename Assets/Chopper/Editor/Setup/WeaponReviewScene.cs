@@ -49,6 +49,17 @@ namespace Chopper.Editor.Setup
             }
         }
 
+        /// <summary>The stage's camera in the new scene (Camera.main can find a camera in another open scene).</summary>
+        private static UnityEngine.Camera StageCamera(Transform inScene)
+        {
+            foreach (var root in inScene.gameObject.scene.GetRootGameObjects())
+            {
+                var found = root.GetComponentInChildren<UnityEngine.Camera>(true);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         private static void Populate()
         {
             // The camera looks at the middle of the range: shooter at -Z, target at +Z.
@@ -66,13 +77,25 @@ namespace Chopper.Editor.Setup
             shooter.SetPositionAndRotation(from, Quaternion.LookRotation(target.position - from));
 
             var config = ConfigAssets.Load();
+            // The game's chopper camera on the bench camera, for the cockpit view: the config's camera settings, no cursor lock.
+            Chopper.Presentation.Camera.ChopperCameraRig rig = null;
+            var mainCamera = StageCamera(focus);
+            if (mainCamera != null)
+            {
+                rig = mainCamera.gameObject.AddComponent<Chopper.Presentation.Camera.ChopperCameraRig>();
+                var serialized = new SerializedObject(rig);
+                serialized.FindProperty("settings").objectReferenceValue = config != null ? config.Camera : null;
+                serialized.FindProperty("lockCursor").boolValue = false;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                rig.enabled = false;
+            }
             var review = new GameObject("Weapon Review").AddComponent<WeaponReview>();
             review.Configure(config != null ? config.Effects : null, config != null ? config.Audio : null,
                 config != null ? config.LoadoutCatalog : null, shooter, target,
-                AssetDatabase.LoadAssetAtPath<Chopper.Simulation.Loadout.ChassisDefinition>("Assets/Chopper/Data/Loadout/Chassis_Gunship.asset"));
+                AssetDatabase.LoadAssetAtPath<Chopper.Simulation.Loadout.ChassisDefinition>("Assets/Chopper/Data/Loadout/Chassis_Gunship.asset"), rig);
 
             // Start the camera from the side of the range.
-            var camera = UnityEngine.Camera.main;
+            var camera = StageCamera(focus);
             if (camera != null)
                 camera.transform.SetPositionAndRotation(new Vector3(-45f, 22f, -20f), Quaternion.LookRotation(focus.position - new Vector3(-45f, 22f, -20f)));
         }

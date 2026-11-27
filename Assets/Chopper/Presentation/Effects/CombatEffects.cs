@@ -52,6 +52,13 @@ namespace Chopper.Presentation.Effects
         /// destroyed after its life. Not pooled (rare: one per chopper death).
         /// </summary>
         /// <param name="muteAudio">True when a sound cue plays instead of the prefab's own audio (the wreck blast).</param>
+        /// <summary>Every layer at once, at <paramref name="position"/> (a weapon look's impact layers).</summary>
+        public void SpawnLayers(System.Collections.Generic.IReadOnlyList<BlastLayer> layers, Vector3 position, bool muteAudio = false)
+        {
+            if (layers == null) return;
+            for (var i = 0; i < layers.Count; i++) SpawnLayer(layers[i], position, muteAudio);
+        }
+
         public void SpawnLayer(in BlastLayer layer, Vector3 position, bool muteAudio = false)
         {
             if (layer.Prefab == null || Settings == null) return;
