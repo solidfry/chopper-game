@@ -189,7 +189,7 @@ namespace Chopper.Presentation.Events
                 {
                     var velocity = Cluster.Direction(split.Forward, split.ConeCos, split.Seed, i) * split.Speed;
                     events.Publish(new RocketLaunched(split.Position, velocity, split.Lifetime, split.ShooterNetworkId,
-                        splashRadius: split.SplashRadius));
+                        splashRadius: split.SplashRadius, moduleId: split.ModuleId, submunition: true, firstOfSplit: i == 0));
                 }
             }
         }

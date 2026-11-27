@@ -247,6 +247,7 @@ namespace Chopper.Simulation.Combat
                 Seed = seed,
                 Count = (byte)count,
                 ShooterNetworkId = shooterId,
+                ModuleId = missile.ModuleId,
             });
             ecb.AddComponent<SendRpcCommandRequest>(rpc);
         }

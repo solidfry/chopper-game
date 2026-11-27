@@ -131,9 +131,16 @@ namespace Chopper.Presentation.Events
         public readonly float SplashRadius;
         /// <summary>Pylon module id, for the weapon's look (0 = rocket kind default: cluster bomblets).</summary>
         public readonly ushort ModuleId;
+        /// <summary>A cluster bomblet: <see cref="ModuleId"/> is the carrier missile's module (its look's bomblet).</summary>
+        public readonly bool Submunition;
+        /// <summary>The first bomblet of a split: it also plays the split flash and sound (once per split).</summary>
+        public readonly bool FirstOfSplit;
         public RocketLaunched(Vector3 position, Vector3 velocity, float lifetime, int shooter, float gravity = 0f, float drag = 0f,
-            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None, float splashRadius = 0f, ushort moduleId = 0)
+            float proximityFuse = 0f, TargetClass fuseTargets = TargetClass.None, float splashRadius = 0f, ushort moduleId = 0,
+            bool submunition = false, bool firstOfSplit = false)
         {
+            Submunition = submunition;
+            FirstOfSplit = firstOfSplit;
             ModuleId = moduleId;
             SplashRadius = splashRadius;
             Position = position;

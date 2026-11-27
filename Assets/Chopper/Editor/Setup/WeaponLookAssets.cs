@@ -35,6 +35,34 @@ namespace Chopper.Editor.Setup
             public System.Func<GameObject> BuildProjectile;
             public bool ScaleWithBlast = true;
             public bool Dropped;
+            /// <summary>Cluster missiles: bomblet model, split flash and split sound.</summary>
+            public string Bomblet, SplitFlash;
+            public System.Func<AudioMixerGroup, SoundCue> SplitCue;
+        }
+
+        /// <summary>Step 4 guided families. Homing Missiles keep the guided default (red missile).</summary>
+        private static IEnumerable<GunFamily> GuidedFamilies()
+        {
+            // Orange missile for the ground seeker, so it reads apart from the homing missile.
+            yield return new GunFamily
+            {
+                Name = "Ground Seeker", Modules = new[] { "Pylon_GroundSeeker" },
+                Projectile = SciFi + "Missiles/Rockets/OrangeRocketMissile.prefab",
+                Flash = SciFi + "MuzzleFlash/Rocket/RocketMuzzleFlashOrange.prefab",
+            };
+            // Green carrier with a heavier launch; at the split a yellow fireball pops and yellow bomblets spread.
+            yield return new GunFamily
+            {
+                Name = "Cluster Missiles", Modules = new[] { "Pylon_ClusterMissiles" },
+                Projectile = SciFi + "Missiles/Rockets/GreenRocketMissile.prefab",
+                Flash = SciFi + "MuzzleFlash/Rocket/RocketMuzzleFlashGreen.prefab",
+                Cue = group => AudioAssets.Cue("Missile_ClusterLaunch", AudioAssets.Clips(SciFiGuns + "Weapon 15 Shoot 1.wav", SciFiGuns + "Weapon 15 Shoot 2.wav"),
+                    group, 0.8f, blend: 1f, voices: 4, muffle: CueMuffle.Outside),
+                Bomblet = SciFi + "Missiles/Spheres/v1/YellowSphereMissile.prefab",
+                SplitFlash = SciFi + "MuzzleFlash/FireBall/FireBallMuzzleFlashYellow.prefab",
+                SplitCue = group => AudioAssets.Cue("Missile_ClusterSplit", AudioAssets.Clips(SciFiGuns + "Additional Weapon Sounds 3_1.wav"),
+                    group, 0.8f, blend: 1f, voices: 3, muffle: CueMuffle.Outside),
+            };
         }
 
         private const string RocketPrefabs = "Assets/Chopper/Prefabs/Weapons";
@@ -176,6 +204,7 @@ namespace Chopper.Editor.Setup
             var effects = mixer != null ? AudioAssets.Group(mixer, "Effects") : null;
             if (AddMissingFamilies(library, GunFamilies(), effects)) EditorUtility.SetDirty(library);
             if (AddMissingFamilies(library, RocketFamilies(), effects)) EditorUtility.SetDirty(library);
+            if (AddMissingFamilies(library, GuidedFamilies(), effects)) EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
             return library;
         }
@@ -194,6 +223,9 @@ namespace Chopper.Editor.Setup
                     look.Initialise(projectile, Prefab(family.Flash), Prefab(family.Impact),
                         effects != null && family.Cue != null ? family.Cue(effects) : null, family.Kick,
                         effects != null && family.Flight != null ? family.Flight(effects) : null, family.ScaleWithBlast, family.Dropped);
+                    if (family.Bomblet != null || family.SplitFlash != null)
+                        look.SetCluster(Prefab(family.Bomblet), Prefab(family.SplitFlash),
+                            effects != null && family.SplitCue != null ? family.SplitCue(effects) : null);
                     EditorUtility.SetDirty(look);
                 }
                 var members = new List<ModuleDefinition>();

@@ -332,6 +332,7 @@ namespace Chopper.Simulation.Combat
                 Lifetime = weapon.Lifetime,
                 FullSpeed = fullSpeed,
                 WeavePhase = MissileArcMath.Phase(shooterId, shot),
+                ModuleId = weapon.ModuleId,
             });
         }
 

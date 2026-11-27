@@ -57,15 +57,15 @@ namespace Chopper.Presentation.Effects
             var smoke = MissileSmokeTrails<Entity>.Enabled(settings);
             if (smoke) _smoke.Begin();
             _seen.Clear();
-            foreach (var (pose, entity) in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<GuidedMissile>().WithEntityAccess())
+            foreach (var (pose, missile, entity) in SystemAPI.Query<RefRO<LocalToWorld>, RefRO<GuidedMissile>>().WithEntityAccess())
             {
                 _seen.Add(entity);
                 Vector3 position = pose.ValueRO.Position;
                 Quaternion rotation = pose.ValueRO.Rotation;
                 if (!_visuals.TryGetValue(entity, out var visual))
                 {
-                    // Guided kind default for now: the missile ghost carries no module id yet (WeaponFeelPlan step 4).
-                    var look = settings.Look(0, WeaponKind.Guided);
+                    // The missile family's look (Docs/WeaponFeelPlan.md step 4); empty slots use the shared ones.
+                    var look = settings.Look(missile.ValueRO.ModuleId, WeaponKind.Guided);
                     effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), position, rotation);
                     visual = effects.SpawnPooled(CombatEffectsSettings.Pick(look != null ? look.Projectile : null, settings.Missile),
                         position, rotation, muteAudio: true);
@@ -73,7 +73,7 @@ namespace Chopper.Presentation.Effects
                     if (audio != null && sounds != null)
                     {
                         audio.Play(look != null && look.FireCue != null ? look.FireCue : sounds.MissileLaunch, position);
-                        var loop = audio.StartLoop(sounds.MissileFlight, position);
+                        var loop = audio.StartLoop(look != null && look.FlightLoop != null ? look.FlightLoop : sounds.MissileFlight, position);
                         if (loop != null) _loops[entity] = loop;
                     }
                 }

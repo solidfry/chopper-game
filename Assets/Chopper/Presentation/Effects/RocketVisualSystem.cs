@@ -102,8 +102,13 @@ namespace Chopper.Presentation.Effects
         private void Spawn(CombatEffects effects, in RocketLaunched launch)
         {
             var settings = effects.Settings;
-            var look = settings.Look(launch.ModuleId, WeaponLookLibrary.RocketKind(launch.Gravity, launch.Drag));
             var rotation = Quaternion.LookRotation(launch.Velocity);
+            if (launch.Submunition)
+            {
+                SpawnBomblet(effects, launch, rotation);
+                return;
+            }
+            var look = settings.Look(launch.ModuleId, WeaponLookLibrary.RocketKind(launch.Gravity, launch.Drag));
             effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), launch.Position, rotation);
             if (look != null && look.FireCue != null) _context?.Audio?.Play(look.FireCue, launch.Position);
             var visual = effects.SpawnPooled(settings.RocketFor(look), launch.Position, rotation);
@@ -125,6 +130,32 @@ namespace Chopper.Presentation.Effects
                 FuseTargets = launch.FuseTargets,
                 Look = look,
                 Loop = loop,
+            });
+        }
+
+        /// <summary>
+        /// A cluster bomblet: the carrier family's bomblet model (else the shared rocket), no launch flash; the first of
+        /// a split plays the split flash and sound once. The blast is the shared rocket blast.
+        /// </summary>
+        private void SpawnBomblet(CombatEffects effects, in RocketLaunched launch, Quaternion rotation)
+        {
+            var settings = effects.Settings;
+            var carrier = settings.Look(launch.ModuleId, WeaponKind.Guided);
+            if (launch.FirstOfSplit && carrier != null)
+            {
+                effects.SpawnOneShot(carrier.SplitFlash, launch.Position, rotation);
+                if (carrier.SplitCue != null) _context?.Audio?.Play(carrier.SplitCue, launch.Position);
+            }
+            var model = carrier != null ? carrier.Bomblet : null;
+            var visual = effects.SpawnPooled(model != null ? model : settings.Rocket, launch.Position, rotation);
+            if (visual != null) visual.transform.localScale = Vector3.one * (model != null ? 1f : RocketScale(launch.SplashRadius));
+            _rockets.Add(new RocketVisual
+            {
+                GameObject = visual,
+                Position = launch.Position,
+                Velocity = launch.Velocity,
+                Remaining = launch.Lifetime,
+                ShooterNetworkId = launch.ShooterNetworkId,
             });
         }
 

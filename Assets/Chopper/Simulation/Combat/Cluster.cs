@@ -40,6 +40,8 @@ namespace Chopper.Simulation.Combat
         public uint Seed;
         public byte Count;
         public int ShooterNetworkId;
+        /// <summary>The carrier's pylon module id (bomblet look).</summary>
+        public ushort ModuleId;
     }
 
     /// <summary>Cluster maths shared by the server (real submunitions), clients (visuals) and tests. Burst friendly.</summary>

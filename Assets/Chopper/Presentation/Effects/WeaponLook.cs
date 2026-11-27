@@ -31,6 +31,14 @@ namespace Chopper.Presentation.Effects
         private bool scaleWithBlast = true;
         [SerializeField, Tooltip("No flash at launch (a bomb or mine is dropped, not fired).")]
         private bool noMuzzleFlash;
+
+        [Header("Cluster missiles")]
+        [SerializeField, Tooltip("Bomblet model after the split. Empty = the shared rocket.")]
+        private GameObject bomblet;
+        [SerializeField, Tooltip("Flash where the carrier splits (once per split).")]
+        private GameObject splitFlash;
+        [SerializeField, Tooltip("Sound where the carrier splits (once per split).")]
+        private SoundCue splitCue;
         [SerializeField, Range(0f, 0.5f), Tooltip("Camera shake added per shot of your own gun (trauma, 0..1; the shake " +
                                                   "grows with its square). 0 = none.")]
         private float cameraKick;
@@ -43,10 +51,21 @@ namespace Chopper.Presentation.Effects
         public SoundCue FlightLoop => flightLoop;
         public bool ScaleWithBlast => scaleWithBlast;
         public bool NoMuzzleFlash => noMuzzleFlash;
+        public GameObject Bomblet => bomblet;
+        public GameObject SplitFlash => splitFlash;
+        public SoundCue SplitCue => splitCue;
 
         public void CollectProblems(List<string> problems)
         {
             // Every slot may be empty (falls back); nothing to check yet.
+        }
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetCluster(GameObject bombletModel, GameObject flash, SoundCue cue)
+        {
+            bomblet = bombletModel;
+            splitFlash = flash;
+            splitCue = cue;
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>

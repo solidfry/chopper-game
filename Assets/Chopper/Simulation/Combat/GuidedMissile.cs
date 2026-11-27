@@ -36,6 +36,9 @@ namespace Chopper.Simulation.Combat
         /// <summary>Fooled: it chases the target's flare cloud, and loses the target when the flares burn out. Sent to
         /// clients: the target's missile warning stops once the flares fooled it (owner bug, 18 Nov 2026).</summary>
         [GhostField] public bool Decoyed;
+        /// <summary>Pylon module id, for the client's look and sound (Docs/WeaponFeelPlan.md). Set once at launch; a ghost
+        /// field so other players' clients see it too.</summary>
+        [GhostField] public ushort ModuleId;
         /// <summary>Server: short name of the weapon that fired it, for the match log.</summary>
         public Unity.Collections.FixedString32Bytes Weapon;
 
