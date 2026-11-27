@@ -246,6 +246,27 @@ namespace Chopper.Presentation.Camera
         /// <summary>Adds camera shake. 0..1; trauma is capped at 1 and the shake grows with its square.</summary>
         public void AddShake(float trauma) => _trauma = Mathf.Clamp01(_trauma + trauma);
 
+        /// <summary>
+        /// Own gun recoil (owner 27 Nov: the squared trauma shake hid small gun kicks). Linear, not squared: a nose-up
+        /// jolt plus a fast jitter, gone in about a quarter second. Shares the view's shake share.
+        /// </summary>
+        public void AddGunKick(float kick) => _gunKick = Mathf.Min(1f, _gunKick + kick);
+
+        private float _gunKick;
+        /// <summary>Degrees at full gun kick; kick lost per second.</summary>
+        public const float GunKickDegrees = 6f, GunKickRecovery = 8f;
+
+        /// <summary>The recoil rotation for a kick level (shared with the weapon review scene).</summary>
+        public static Quaternion GunKickRotation(float kick, float time)
+        {
+            if (kick <= 0f) return Quaternion.identity;
+            var degrees = kick * GunKickDegrees;
+            var t = time * 40f;
+            return Quaternion.Euler(-degrees * (0.6f + 0.4f * Mathf.PerlinNoise(t, 0.2f)),
+                degrees * 0.5f * (Mathf.PerlinNoise(0.5f, t) * 2f - 1f),
+                degrees * 0.3f * (Mathf.PerlinNoise(t, 0.9f) * 2f - 1f));
+        }
+
         public void Follow(in CameraTarget target, float deltaTime)
         {
             var settingsAsset = Settings;
@@ -487,12 +508,14 @@ namespace Chopper.Presentation.Camera
         /// <param name="share">The view's shake share (<see cref="CameraView.Shake"/>).</param>
         private Quaternion Shake(float deltaTime, CameraSettings settingsAsset, float share)
         {
-            if (_trauma <= 0f) return Quaternion.identity;
+            _gunKick = Mathf.Max(0f, _gunKick - GunKickRecovery * deltaTime);
+            var kick = Quaternion.Slerp(Quaternion.identity, GunKickRotation(_gunKick, Time.time), share);
+            if (_trauma <= 0f) return kick;
             _trauma = Mathf.Max(0f, _trauma - settingsAsset.ShakeRecovery * deltaTime);
 
             var amount = _trauma * _trauma * settingsAsset.MaxShakeDegrees * share;
             var t = Time.time * settingsAsset.ShakeFrequency;
-            return Quaternion.Euler(
+            return kick * Quaternion.Euler(
                 amount * (Mathf.PerlinNoise(t, 0.1f) * 2f - 1f),
                 amount * (Mathf.PerlinNoise(0.3f, t) * 2f - 1f),
                 amount * 0.5f * (Mathf.PerlinNoise(t, 0.7f) * 2f - 1f));

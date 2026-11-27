@@ -144,7 +144,7 @@ namespace Chopper.Presentation.Effects
             var shots = math.min(count - last, MaxShotsPerFrame);
             // Own gun: the family's kick (small for the minigun, large for the railgun).
             if (own && look != null && look.CameraKick > 0f && _context.CameraRig != null)
-                _context.CameraRig.AddShake(look.CameraKick * shots);
+                _context.CameraRig.AddGunKick(look.CameraKick * shots);
             var bulletSpeed = config.BulletSpeed;
             if (Ballistics.IsInstant(bulletSpeed))
             {

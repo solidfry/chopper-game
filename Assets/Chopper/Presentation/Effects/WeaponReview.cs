@@ -72,6 +72,7 @@ namespace Chopper.Presentation.Effects
         private GameObject _cockpit;
         private Renderer[] _body = System.Array.Empty<Renderer>();
         private float _trauma;
+        private float _gunKick;
         private float _orbitNear = 0.3f;
 
         /// <summary>Own gun from the cockpit, as in a match (<c>GunEffectsSystem.CockpitBulletStart</c>): no muzzle
@@ -119,6 +120,7 @@ namespace Chopper.Presentation.Effects
             foreach (var body in _body) if (body != null) body.enabled = !cockpitView;
             if (_cockpit != null) _cockpit.SetActive(cockpitView);
             _trauma = Mathf.Max(0f, _trauma - shakeDecay * Time.deltaTime);
+            _gunKick = Mathf.Max(0f, _gunKick - Chopper.Presentation.Camera.ChopperCameraRig.GunKickRecovery * Time.deltaTime);
             if (!cockpitView)
             {
                 camera.nearClipPlane = _orbitNear;
@@ -130,7 +132,8 @@ namespace Chopper.Presentation.Effects
             var t = Time.time * 25f;
             var wobble = Quaternion.Euler((Mathf.PerlinNoise(t, 0.1f) - 0.5f) * 2f * shake, (Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2f * shake,
                 (Mathf.PerlinNoise(t, 3.3f) - 0.5f) * shake);
-            camera.transform.SetPositionAndRotation(shooter.TransformPoint(eye), shooter.rotation * wobble);
+            camera.transform.SetPositionAndRotation(shooter.TransformPoint(eye), shooter.rotation * wobble *
+                Chopper.Presentation.Camera.ChopperCameraRig.GunKickRotation(_gunKick, Time.time));
         }
 
         private void OnDestroy()
@@ -229,7 +232,7 @@ namespace Chopper.Presentation.Effects
             if (cockpitView)
             {
                 // As in a match: the family's kick on your own gun; rounds start ahead of the nose, no flash.
-                if (entry.Look != null) _trauma = Mathf.Min(1f, _trauma + entry.Look.CameraKick);
+                if (entry.Look != null) _gunKick = Mathf.Min(1f, _gunKick + entry.Look.CameraKick);
                 var start = Mathf.Min(CockpitBulletStart, distance);
                 muzzle += direction * start;
                 distance -= start;
