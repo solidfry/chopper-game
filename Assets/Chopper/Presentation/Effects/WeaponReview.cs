@@ -73,6 +73,7 @@ namespace Chopper.Presentation.Effects
         private Renderer[] _body = System.Array.Empty<Renderer>();
         private float _trauma;
         private float _gunKick;
+        private float _gunKickShown;
         private float _orbitNear = 0.3f;
 
         /// <summary>Own gun from the cockpit, as in a match (<c>GunEffectsSystem.CockpitBulletStart</c>): no muzzle
@@ -120,7 +121,8 @@ namespace Chopper.Presentation.Effects
             foreach (var body in _body) if (body != null) body.enabled = !cockpitView;
             if (_cockpit != null) _cockpit.SetActive(cockpitView);
             _trauma = Mathf.Max(0f, _trauma - shakeDecay * Time.deltaTime);
-            _gunKick = Mathf.Max(0f, _gunKick - Chopper.Presentation.Camera.ChopperCameraRig.GunKickRecovery * Time.deltaTime);
+            _gunKick = Chopper.Presentation.Camera.ChopperCameraRig.FadeGunKick(_gunKick, Time.deltaTime);
+            _gunKickShown = Chopper.Presentation.Camera.ChopperCameraRig.EaseGunKick(_gunKickShown, _gunKick, Time.deltaTime);
             if (!cockpitView)
             {
                 camera.nearClipPlane = _orbitNear;
@@ -133,7 +135,7 @@ namespace Chopper.Presentation.Effects
             var wobble = Quaternion.Euler((Mathf.PerlinNoise(t, 0.1f) - 0.5f) * 2f * shake, (Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2f * shake,
                 (Mathf.PerlinNoise(t, 3.3f) - 0.5f) * shake);
             camera.transform.SetPositionAndRotation(shooter.TransformPoint(eye), shooter.rotation * wobble *
-                Chopper.Presentation.Camera.ChopperCameraRig.GunKickRotation(_gunKick, Time.time));
+                Chopper.Presentation.Camera.ChopperCameraRig.GunKickRotation(_gunKickShown, Time.time));
         }
 
         private void OnDestroy()

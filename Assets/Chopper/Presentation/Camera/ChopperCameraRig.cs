@@ -253,18 +253,31 @@ namespace Chopper.Presentation.Camera
         public void AddGunKick(float kick) => _gunKick = Mathf.Min(1f, _gunKick + kick);
 
         private float _gunKick;
-        /// <summary>Degrees at full gun kick; kick lost per second.</summary>
-        public const float GunKickDegrees = 6f, GunKickRecovery = 8f;
+        /// <summary>Degrees at full gun kick; recovery rate (kick halves about every 0.7 / rate seconds).</summary>
+        public const float GunKickDegrees = 10f, GunKickRecovery = 5f;
+
+        /// <summary>The kick after <paramref name="deltaTime"/>: an exponential fade, so a jolt reads for about 0.4 s.</summary>
+        public static float FadeGunKick(float kick, float deltaTime) => kick * Mathf.Exp(-GunKickRecovery * deltaTime);
+
+        /// <summary>
+        /// The kick the camera shows: eases toward the kick (owner 27 Nov: a snap per shot read too sudden), so each shot
+        /// rises over about 0.05 s and the fade stays smooth.
+        /// </summary>
+        public static float EaseGunKick(float shown, float kick, float deltaTime) =>
+            Mathf.Lerp(shown, kick, 1f - Mathf.Exp(-GunKickEase * deltaTime));
+
+        public const float GunKickEase = 30f;
+        private float _gunKickShown;
 
         /// <summary>The recoil rotation for a kick level (shared with the weapon review scene).</summary>
         public static Quaternion GunKickRotation(float kick, float time)
         {
             if (kick <= 0f) return Quaternion.identity;
             var degrees = kick * GunKickDegrees;
-            var t = time * 40f;
+            var t = time * 14f;
             return Quaternion.Euler(-degrees * (0.6f + 0.4f * Mathf.PerlinNoise(t, 0.2f)),
-                degrees * 0.5f * (Mathf.PerlinNoise(0.5f, t) * 2f - 1f),
-                degrees * 0.3f * (Mathf.PerlinNoise(t, 0.9f) * 2f - 1f));
+                degrees * 0.3f * (Mathf.PerlinNoise(0.5f, t) * 2f - 1f),
+                degrees * 0.2f * (Mathf.PerlinNoise(t, 0.9f) * 2f - 1f));
         }
 
         public void Follow(in CameraTarget target, float deltaTime)
@@ -508,8 +521,9 @@ namespace Chopper.Presentation.Camera
         /// <param name="share">The view's shake share (<see cref="CameraView.Shake"/>).</param>
         private Quaternion Shake(float deltaTime, CameraSettings settingsAsset, float share)
         {
-            _gunKick = Mathf.Max(0f, _gunKick - GunKickRecovery * deltaTime);
-            var kick = Quaternion.Slerp(Quaternion.identity, GunKickRotation(_gunKick, Time.time), share);
+            _gunKick = FadeGunKick(_gunKick, deltaTime);
+            _gunKickShown = EaseGunKick(_gunKickShown, _gunKick, deltaTime);
+            var kick = Quaternion.Slerp(Quaternion.identity, GunKickRotation(_gunKickShown, Time.time), share);
             if (_trauma <= 0f) return kick;
             _trauma = Mathf.Max(0f, _trauma - settingsAsset.ShakeRecovery * deltaTime);
 
