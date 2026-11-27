@@ -288,7 +288,8 @@ namespace Chopper.Presentation.Effects
         public GameObject GunMuzzleFlashFor(WeaponLook look) => Pick(look != null ? look.MuzzleFlash : null, gunMuzzleFlash);
         public GameObject GunImpactFor(WeaponLook look) => Pick(look != null ? look.Impact : null, gunImpact);
         public GameObject RocketFor(WeaponLook look) => Pick(look != null ? look.Projectile : null, rocket);
-        public GameObject RocketMuzzleFlashFor(WeaponLook look) => Pick(look != null ? look.MuzzleFlash : null, rocketMuzzleFlash);
+        public GameObject RocketMuzzleFlashFor(WeaponLook look) =>
+            look != null && look.NoMuzzleFlash ? null : Pick(look != null ? look.MuzzleFlash : null, rocketMuzzleFlash);
         public GameObject RocketImpactFor(WeaponLook look) => Pick(look != null ? look.Impact : null, rocketImpact);
 
         public GameObject GunBullet => gunBullet;

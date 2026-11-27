@@ -37,6 +37,8 @@ namespace Chopper.Presentation.Effects
             public TargetClass FuseTargets;
             /// <summary>The pylon family's look (blast); null = shared.</summary>
             public WeaponLook Look;
+            /// <summary>The look's flight loop (bomb whistle) while it flies; null = none.</summary>
+            public Chopper.Presentation.Audio.SoundLoop Loop;
         }
 
         private struct FuseTarget
@@ -88,6 +90,8 @@ namespace Chopper.Presentation.Effects
         {
             if (_context == context) return;
             _subscription?.Dispose();
+            foreach (var rocket in _rockets)
+                if (rocket.Loop != null) _context?.Audio?.StopLoop(rocket.Loop);
             _rockets.Clear();
             _launches.Clear();
             _context = context;
@@ -103,9 +107,11 @@ namespace Chopper.Presentation.Effects
             effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), launch.Position, rotation);
             if (look != null && look.FireCue != null) _context?.Audio?.Play(look.FireCue, launch.Position);
             var visual = effects.SpawnPooled(settings.RocketFor(look), launch.Position, rotation);
-            // One rocket model for every type: its size follows the blast, so a bomb reads bigger than a light rocket.
-            // Set on every spawn: the object comes from a pool.
-            if (visual != null) visual.transform.localScale = Vector3.one * RocketScale(launch.SplashRadius);
+            // The shared rocket model serves every type: its size follows the blast, so a bomb reads bigger than a light
+            // rocket. A family with a true-size model (bomb, mine) keeps its size. Set on every spawn: pooled.
+            var scale = look == null || look.ScaleWithBlast ? RocketScale(launch.SplashRadius) : 1f;
+            if (visual != null) visual.transform.localScale = Vector3.one * scale;
+            var loop = look != null && look.FlightLoop != null ? _context?.Audio?.StartLoop(look.FlightLoop, launch.Position) : null;
             _rockets.Add(new RocketVisual
             {
                 GameObject = visual,
@@ -118,6 +124,7 @@ namespace Chopper.Presentation.Effects
                 ProximityFuse = launch.ProximityFuse,
                 FuseTargets = launch.FuseTargets,
                 Look = look,
+                Loop = loop,
             });
         }
 
@@ -192,6 +199,7 @@ namespace Chopper.Presentation.Effects
                     continue;
                 }
                 heat.AddFrame(end, VisionMath.RocketHeat, math.length(rocket.Velocity));
+                rocket.Loop?.Set(end, 1f, 1f);
                 if (rocket.GameObject != null)
                 {
                     rocket.GameObject.transform.position = end;
@@ -206,6 +214,8 @@ namespace Chopper.Presentation.Effects
         private void Finish(CombatEffects effects, int index, float3 position)
         {
             var visual = _rockets[index].GameObject;
+            var loop = _rockets[index].Loop;
+            if (loop != null) _context?.Audio?.StopLoop(loop);
             if (visual != null)
             {
                 visual.transform.position = position;

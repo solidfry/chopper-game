@@ -29,6 +29,60 @@ namespace Chopper.Editor.Setup
             public string Projectile, Flash, Impact;
             public System.Func<AudioMixerGroup, SoundCue> Cue;
             public float Kick;
+            /// <summary>Rockets: a sound that follows the round (bomb whistle).</summary>
+            public System.Func<AudioMixerGroup, SoundCue> Flight;
+            /// <summary>Rockets: a prefab built by setup (true-size model), instead of a path.</summary>
+            public System.Func<GameObject> BuildProjectile;
+            public bool ScaleWithBlast = true;
+            public bool Dropped;
+        }
+
+        private const string RocketPrefabs = "Assets/Chopper/Prefabs/Weapons";
+        private const string Incoming = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_Incoming_";
+
+        /// <summary>Step 3 pylon families. Pods (Rocket Pod, Mk II, Salvo, Swarm) keep the rocket default.</summary>
+        private static IEnumerable<GunFamily> RocketFamilies()
+        {
+            // Thin yellow rockets, small yellow blast.
+            yield return new GunFamily
+            {
+                Name = "Light Rockets", Modules = new[] { "Pylon_LightRockets" },
+                Projectile = SciFi + "Missiles/Rockets/YellowRocketMissile.prefab",
+                Flash = SciFi + "MuzzleFlash/Rocket/RocketMuzzleFlashYellow.prefab",
+                Impact = SciFi + "Explosions/Rockets/Impact v1/YellowRocketImpact.prefab",
+            };
+            // The standard rocket with a bigger fire blast.
+            yield return new GunFamily
+            {
+                Name = "Heavy Rockets", Modules = new[] { "Pylon_HeavyRockets" },
+                Impact = SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab",
+            };
+            // Purple rockets that burst in a sphere at the fuse.
+            yield return new GunFamily
+            {
+                Name = "Flak Rockets", Modules = new[] { "Pylon_FlakRockets" },
+                Projectile = SciFi + "Missiles/Rockets/PurpleRocketMissile.prefab",
+                Flash = SciFi + "MuzzleFlash/Rocket/RocketMuzzleFlashPurple.prefab",
+                Impact = SciFi + "Explosions/Spheres/v1/YellowSphereImpact.prefab",
+            };
+            // A real bomb model (PolygonMilitary jet bomb), dropped with no flash, whistles as it falls.
+            yield return new GunFamily
+            {
+                Name = "Bombs", Modules = new[] { "Pylon_Bombs" },
+                BuildProjectile = BuildBomb,
+                Impact = SciFi + "Explosions/Rockets/Impact v2/RedFireRocketImpact.prefab",
+                Flight = group => AudioAssets.Cue("Bomb_Whistle", AudioAssets.Clips(Incoming + "12.wav"), group, 0.7f, blend: 1f, voices: 4,
+                    muffle: CueMuffle.Outside),
+                ScaleWithBlast = false, Dropped = true,
+            };
+            // A dark spiked sphere with a blinking red light; a red sphere burst.
+            yield return new GunFamily
+            {
+                Name = "Air Mines", Modules = new[] { "Pylon_AirMines" },
+                BuildProjectile = BuildMine,
+                Impact = SciFi + "Explosions/Spheres/v1/RedSphereImpact.prefab",
+                ScaleWithBlast = false, Dropped = true,
+            };
         }
 
         /// <summary>Step 2 gun families (owner can merge or retune: plain more / less).</summary>
@@ -121,6 +175,7 @@ namespace Chopper.Editor.Setup
 
             var effects = mixer != null ? AudioAssets.Group(mixer, "Effects") : null;
             if (AddMissingFamilies(library, GunFamilies(), effects)) EditorUtility.SetDirty(library);
+            if (AddMissingFamilies(library, RocketFamilies(), effects)) EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
             return library;
         }
@@ -135,8 +190,10 @@ namespace Chopper.Editor.Setup
                 var look = Look("Look_" + family.Name.Replace(" ", ""), out var fresh);
                 if (fresh)
                 {
-                    look.Initialise(Prefab(family.Projectile), Prefab(family.Flash), Prefab(family.Impact),
-                        effects != null ? family.Cue(effects) : null, family.Kick);
+                    var projectile = family.BuildProjectile != null ? family.BuildProjectile() : Prefab(family.Projectile);
+                    look.Initialise(projectile, Prefab(family.Flash), Prefab(family.Impact),
+                        effects != null && family.Cue != null ? family.Cue(effects) : null, family.Kick,
+                        effects != null && family.Flight != null ? family.Flight(effects) : null, family.ScaleWithBlast, family.Dropped);
                     EditorUtility.SetDirty(look);
                 }
                 var members = new List<ModuleDefinition>();
@@ -155,9 +212,97 @@ namespace Chopper.Editor.Setup
 
         private static GameObject Prefab(string path)
         {
+            if (string.IsNullOrEmpty(path)) return null;
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) Debug.LogWarning($"Weapon looks: no prefab at {path}.");
             return prefab;
+        }
+
+        // ---- Built projectile models (step 3) ----
+
+        private const string BombModel = "Assets/ThirdParty/PolygonMilitary/Prefabs/Vehicles/SM_Veh_Jet_Attach_Bomb_01.prefab";
+
+        /// <summary>The jet bomb (3 m, nose +Z) at 0.6 scale: about 1.8 m, so it reads at range.</summary>
+        private static GameObject BuildBomb()
+        {
+            var path = RocketPrefabs + "/Bomb.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+            System.IO.Directory.CreateDirectory(RocketPrefabs);
+            var root = new GameObject("Bomb");
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(BombModel);
+            if (model != null)
+            {
+                var body = Object.Instantiate(model, root.transform);
+                body.name = "Body";
+                body.transform.localScale = Vector3.one * 0.6f;
+                StripColliders(body);
+            }
+            else Debug.LogWarning($"Weapon looks: no bomb model at {BombModel}.");
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        /// <summary>An air mine: dark sphere with six spikes, a red glow and a blinking red light (<see cref="BlinkLight"/>).</summary>
+        private static GameObject BuildMine()
+        {
+            var path = RocketPrefabs + "/AirMine.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+            System.IO.Directory.CreateDirectory(RocketPrefabs);
+            var bodyMaterial = MakeMaterial(RocketPrefabs + "/Mat_AirMine_Body.mat", "Universal Render Pipeline/Lit", new Color(0.12f, 0.13f, 0.12f), 0.6f);
+            var glowMaterial = MakeMaterial(RocketPrefabs + "/Mat_AirMine_Glow.mat", "Universal Render Pipeline/Unlit", new Color(1f, 0.1f, 0.05f), 0f);
+
+            var root = new GameObject("AirMine");
+            var shell = Primitive(PrimitiveType.Sphere, root.transform, "Shell", Vector3.zero, Vector3.one * 0.7f, Quaternion.identity, bodyMaterial);
+            var axes = new[] { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+            foreach (var axis in axes)
+                Primitive(PrimitiveType.Cylinder, shell.transform, "Spike", axis * 0.55f, new Vector3(0.08f, 0.15f, 0.08f),
+                    Quaternion.FromToRotation(Vector3.up, axis), bodyMaterial);
+            var glow = Primitive(PrimitiveType.Sphere, root.transform, "Glow", new Vector3(0f, 0.3f, 0f), Vector3.one * 0.14f, Quaternion.identity, glowMaterial);
+            var lightObject = new GameObject("BlinkLight");
+            lightObject.transform.SetParent(root.transform, false);
+            lightObject.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.15f, 0.08f);
+            light.range = 8f;
+            light.shadows = LightShadows.None;
+            root.AddComponent<BlinkLight>().Initialise(light, glow, 2.5f, 6f);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static GameObject Primitive(PrimitiveType type, Transform parent, string name, Vector3 position, Vector3 scale,
+            Quaternion rotation, Material material)
+        {
+            var part = GameObject.CreatePrimitive(type);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localRotation = rotation;
+            part.transform.localScale = scale;
+            StripColliders(part);
+            part.GetComponent<Renderer>().sharedMaterial = material;
+            return part;
+        }
+
+        private static void StripColliders(GameObject root)
+        {
+            foreach (var collider in root.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(collider);
+        }
+
+        private static Material MakeMaterial(string path, string shaderName, Color colour, float smoothness)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            material = new Material(Shader.Find(shaderName)) { color = colour };
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0.7f);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static WeaponLook Look(string assetName, out bool created)

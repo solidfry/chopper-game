@@ -23,6 +23,14 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Fire sound (guns: per shot; rockets: on top of the launch flash). Empty = the shared " +
                                  "gun cue for guns, none for rockets.")]
         private SoundCue fireCue;
+        [SerializeField, Tooltip("Rockets, bombs, mines: a looping sound that follows the round in flight (bomb whistle). " +
+                                 "Empty = none (the projectile prefab's own sound plays).")]
+        private SoundCue flightLoop;
+        [SerializeField, Tooltip("Rockets: the round's model grows with the blast radius (one model reads light or heavy). " +
+                                 "Off for a family with its own true-size model (bomb, mine).")]
+        private bool scaleWithBlast = true;
+        [SerializeField, Tooltip("No flash at launch (a bomb or mine is dropped, not fired).")]
+        private bool noMuzzleFlash;
         [SerializeField, Range(0f, 0.5f), Tooltip("Camera shake added per shot of your own gun (trauma, 0..1; the shake " +
                                                   "grows with its square). 0 = none.")]
         private float cameraKick;
@@ -32,6 +40,9 @@ namespace Chopper.Presentation.Effects
         public GameObject MuzzleFlash => muzzleFlash;
         public GameObject Impact => impact;
         public SoundCue FireCue => fireCue;
+        public SoundCue FlightLoop => flightLoop;
+        public bool ScaleWithBlast => scaleWithBlast;
+        public bool NoMuzzleFlash => noMuzzleFlash;
 
         public void CollectProblems(List<string> problems)
         {
@@ -39,8 +50,12 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Editor only: used by the setup tool.</summary>
-        public void Initialise(GameObject projectilePrefab, GameObject flash, GameObject hit, SoundCue fire, float kick = 0f)
+        public void Initialise(GameObject projectilePrefab, GameObject flash, GameObject hit, SoundCue fire, float kick = 0f,
+            SoundCue flight = null, bool scaleModel = true, bool dropped = false)
         {
+            scaleWithBlast = scaleModel;
+            noMuzzleFlash = dropped;
+            flightLoop = flight;
             cameraKick = kick;
             projectile = projectilePrefab;
             muzzleFlash = flash;
