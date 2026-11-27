@@ -86,6 +86,11 @@
             </ui:VisualElement>
             <ui:Label name="weight-text" class="hangar-stat__text" />
           </ui:VisualElement>
+          <!-- Weapon numbers for the open weapon slot (hovered option, else fitted). Weapon feel plan step 5. -->
+          <ui:VisualElement name="weapon-block" class="hangar__weapon" picking-mode="Ignore">
+            <ui:Label name="weapon-title" class="hangar__section chopper-title" />
+            <ui:VisualElement name="weapon-stats" class="hangar__stats" picking-mode="Ignore" />
+          </ui:VisualElement>
           <ui:Label text="// PAINT" class="hangar__section chopper-title" />
           <ui:VisualElement name="skins" class="hangar__skins" />
           <!-- Wireframe over the paint on or off, to see the skin clearly (owner, 27 Nov) -->

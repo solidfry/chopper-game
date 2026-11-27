@@ -91,6 +91,9 @@ namespace Chopper.UI.Hangar
         private Label _detailWeight;
         private VisualElement _headline;
         private VisualElement _stats;
+        private VisualElement _weaponBlock;
+        private VisualElement _weaponStats;
+        private Label _weaponTitle;
         private VisualElement _weightRow;
         private VisualElement _weightFill;
         private VisualElement _weightDelta;
@@ -202,6 +205,9 @@ namespace Chopper.UI.Hangar
             _detailWeight = _root.Q<Label>("detail-weight");
             _headline = _root.Q("stats-headline");
             _stats = _root.Q("stats");
+            _weaponBlock = _root.Q("weapon-block");
+            _weaponStats = _root.Q("weapon-stats");
+            _weaponTitle = _root.Q<Label>("weapon-title");
             _weightRow = _root.Q("weight-track").parent;
             _weightFill = _root.Q("weight-fill");
             _weightDelta = _root.Q("weight-delta");
@@ -748,7 +754,36 @@ namespace Chopper.UI.Hangar
             SetBar(_weightFill, _weightDelta, _model.WeightFraction, _model.PreviewWeightFraction, higherIsBetter: false);
             _weightRow.EnableInClassList(OverClass, _model.OverWeight);
             _weightText.text = _model.WeightText;
+            RefreshWeaponStats();
             RefreshDetail();
+        }
+
+        /// <summary>The open weapon slot's numbers: rebuilt each time (the row set changes between guns and rockets).</summary>
+        private void RefreshWeaponStats()
+        {
+            if (_weaponBlock == null) return;
+            var rows = _model.WeaponStats;
+            _weaponBlock.style.display = rows.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            _weaponTitle.text = $"// {_model.WeaponTitle}";
+            _weaponStats.Clear();
+            foreach (var stat in rows)
+            {
+                var row = new VisualElement { pickingMode = PickingMode.Ignore };
+                row.AddToClassList("hangar-stat");
+                row.Add(Text(stat.Label, "hangar-stat__label"));
+                var track = new VisualElement();
+                track.AddToClassList("hangar-stat__track");
+                var fill = new VisualElement();
+                fill.AddToClassList("hangar-stat__fill");
+                var delta = new VisualElement();
+                delta.AddToClassList("hangar-stat__delta");
+                track.Add(fill);
+                track.Add(delta);
+                row.Add(track);
+                row.Add(Text(stat.Text.Trim(), "hangar-stat__text"));
+                _weaponStats.Add(row);
+                SetBar(fill, delta, stat.Fraction, stat.PreviewFraction, higherIsBetter: true);
+            }
         }
 
         /// <summary>Fill to the smaller value; the part between now and the preview is green (better) or red (worse).</summary>

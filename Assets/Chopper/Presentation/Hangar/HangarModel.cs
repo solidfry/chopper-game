@@ -157,6 +157,8 @@ namespace Chopper.Presentation.Hangar
         private readonly List<HangarSlotRow> _slotRows = new();
         private readonly List<HangarOptionRow> _optionRows = new();
         private readonly List<HangarStatRow> _statRows = new();
+        private readonly List<HangarStatRow> _weaponRows = new();
+        private readonly List<Chopper.Simulation.Definitions.WeaponDefinition> _slotWeapons = new();
         private readonly float _maxHealth;
         private float _maxSpeed = 1f;
         private float _maxTurn = 1f;
@@ -224,6 +226,10 @@ namespace Chopper.Presentation.Hangar
         public IReadOnlyList<HangarSlotRow> Slots => _slotRows;
         public IReadOnlyList<HangarOptionRow> Options => _optionRows;
         public IReadOnlyList<HangarStatRow> Stats => _statRows;
+        /// <summary>The open weapon slot's numbers (hovered option, else the fitted one); empty for other slots.</summary>
+        public IReadOnlyList<HangarStatRow> WeaponStats => _weaponRows;
+        /// <summary>Name of the weapon <see cref="WeaponStats"/> shows ("" when none).</summary>
+        public string WeaponTitle { get; private set; } = "";
         public string FocusTitle => FocusedSlot == Overview ? "" : _slotRows[FocusedSlot].Label;
         /// <summary>The option the detail block shows: the hovered one, else the fitted one; -1 in the overview.</summary>
         public int DetailOption
@@ -597,6 +603,8 @@ namespace Chopper.Presentation.Hangar
         private void RefreshStats()
         {
             _statRows.Clear();
+            _weaponRows.Clear();
+            WeaponTitle = "";
             var chassis = Chassis;
             if (chassis == null || !_catalog.TryGetChassis(chassis.Id, out var spec))
             {
@@ -637,8 +645,24 @@ namespace Chopper.Presentation.Hangar
             WeightText = $"{preview.Weight:0} / {preview.WeightBudget:0} KG";
             OverWeight = now.Weight > now.WeightBudget;
 
+            RefreshWeaponStats(fitted);
+
             var result = LoadoutRules.Validate(selection, _catalog, _unlocks);
             Error = result.IsValid ? "" : Describe(result);
+        }
+
+        /// <summary>Weapon numbers for the open slot: the hovered option, else the fitted module (plan step 5).</summary>
+        private void RefreshWeaponStats(ModuleDefinition[] fitted)
+        {
+            if (FocusedSlot == Overview || FocusedSlot >= fitted.Length) return;
+            var fittedModule = fitted[FocusedSlot];
+            var shown = _hovered >= 0 && _hovered < _options.Count ? _options[_hovered] : fittedModule;
+            if (shown == null || shown.Weapon == null) return;
+            _slotWeapons.Clear();
+            foreach (var option in _options)
+                if (option != null && option.Weapon != null) _slotWeapons.Add(option.Weapon);
+            WeaponStatRows.Build(shown.Weapon, fittedModule != null ? fittedModule.Weapon : null, _slotWeapons, _weaponRows);
+            if (_weaponRows.Count > 0) WeaponTitle = shown.DisplayName.ToUpperInvariant();
         }
 
         private void AddStat(string label, float now, float preview, string value, string unit, bool headline) =>
