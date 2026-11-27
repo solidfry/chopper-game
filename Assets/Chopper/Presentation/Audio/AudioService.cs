@@ -157,6 +157,8 @@ namespace Chopper.Presentation.Audio
 
         public void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f) => _music.Play(clip, fadeSeconds);
 
+        public AudioClip CurrentMusic => _music.Current;
+
         public void PlayPlaylist(IReadOnlyList<AudioClip> clips, float fadeSeconds = 3f) => _music.PlayPlaylist(clips, fadeSeconds);
 
         public void StopMusic(float fadeSeconds = 1.5f) => _music.Stop(fadeSeconds);

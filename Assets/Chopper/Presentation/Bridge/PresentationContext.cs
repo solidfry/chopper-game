@@ -348,6 +348,20 @@ namespace Chopper.Presentation.Bridge
             _ambience = _audio.StartLoop(Sounds.CityAmbience, Vector3.zero);
         }
 
+        /// <summary>
+        /// Menus: the match search started or stopped. Searching plays the queue track (it carries on through the
+        /// loading screen into the match scene); stopping goes back to the menu track.
+        /// </summary>
+        public void SetSearching(bool searching)
+        {
+            var music = Config != null ? Config.Music : null;
+            if (music == null || music.Queue == null || _musicSet != MusicLibrary.Set.Menu || _musicOverride != null) return;
+            _audio.PlayMusic(searching ? music.Queue : music.Menu, music.CrossFadeSeconds);
+        }
+
+        /// <summary>True while a match scene holds its playlist back for the queue track to finish the loading screen.</summary>
+        private bool _playlistAfterCover;
+
         private void StartMusic()
         {
             _musicLevel = -1f;
@@ -359,6 +373,8 @@ namespace Chopper.Presentation.Bridge
             if (_musicOverride != null) _audio.PlayMusic(_musicOverride, fade);
             else if (music == null) return;
             else if (_musicSet == MusicLibrary.Set.Menu) _audio.PlayMusic(music.Menu, fade);
+            // From a match search: the queue track plays on through the loading screen; the playlist starts after it.
+            else if (music.Queue != null && _audio.CurrentMusic == music.Queue && _flow != null) _playlistAfterCover = true;
             else _audio.PlayPlaylist(music.Match, music.CrossFadeSeconds);
             UpdateMusicLevel();
         }
@@ -421,6 +437,12 @@ namespace Chopper.Presentation.Bridge
             _audio.Tick(unscaledDeltaTime);
             if (_linkLost && !_leftAfterLinkLost) _leftAfterLinkLost = LeaveAfterLinkLost();
             UpdateMusicLevel(unscaledDeltaTime);
+            if (_playlistAfterCover && _flow != null && _flow.Model.Cover <= 0.001f)
+            {
+                _playlistAfterCover = false;
+                var music = Config != null ? Config.Music : null;
+                if (music != null) _audio.PlayPlaylist(music.Match, music.CrossFadeSeconds);
+            }
             UpdateMatchFade(unscaledDeltaTime);
             UpdateOutsideSounds(unscaledDeltaTime);
             // The scene flow keeps the screen covered until this scene is ready: a match scene once your chopper spawned.

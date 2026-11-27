@@ -84,6 +84,9 @@ namespace Chopper.Presentation.Audio
         /// <summary>Cross-fades to <paramref name="clip"/> (looping). Same clip again does nothing. Ends a playlist.</summary>
         void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f);
 
+        /// <summary>The music clip playing (or fading in) now; null when none.</summary>
+        AudioClip CurrentMusic { get; }
+
         /// <summary>
         /// Plays the clips shuffled, each to its end, cross-fading <paramref name="fadeSeconds"/> into the next; shuffles
         /// again after the last. One clip = it loops.

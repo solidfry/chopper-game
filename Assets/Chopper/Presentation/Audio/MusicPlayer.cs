@@ -47,6 +47,9 @@ namespace Chopper.Presentation.Audio
             }
         }
 
+        /// <summary>The clip playing (or fading in) now; null when stopped.</summary>
+        public AudioClip Current => _sources[_current] != null && _fadeTarget[_current] > 0f ? _sources[_current].clip : null;
+
         /// <summary>The music level now (0..1), before the player's music volume.</summary>
         public float Level => _level;
 

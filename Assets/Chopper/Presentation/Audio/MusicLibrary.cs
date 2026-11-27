@@ -20,7 +20,10 @@ namespace Chopper.Presentation.Audio
             Menu = 1,
         }
 
-        [SerializeField, Tooltip("Identity track: hangar and menus. Loops.")] private AudioClip menu;
+        [SerializeField, Tooltip("Hangar and menus: a calm track under the menus. Loops.")] private AudioClip menu;
+        [SerializeField, Tooltip("Match search: plays from FIND MATCH through the loading screen; the match playlist starts " +
+                                 "after the loading screen (owner, 27 Nov). Empty = the menu track stays.")]
+        private AudioClip queue;
         [SerializeField, Tooltip("Matches: shuffled, each track plays to its end, then cross-fades to the next.")]
         private AudioClip[] match = Array.Empty<AudioClip>();
         [SerializeField, Tooltip("Seconds of cross-fade between playlist tracks.")] private float crossFadeSeconds = 3f;
@@ -37,6 +40,7 @@ namespace Chopper.Presentation.Audio
         private float levelFadeSeconds = 4f;
 
         public AudioClip Menu => menu;
+        public AudioClip Queue => queue;
         public IReadOnlyList<AudioClip> Match => match;
         public float CrossFadeSeconds => crossFadeSeconds;
         public float SceneCrossFadeSeconds => sceneCrossFadeSeconds;

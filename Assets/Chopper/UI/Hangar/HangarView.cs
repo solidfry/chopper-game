@@ -54,8 +54,12 @@ namespace Chopper.UI.Hangar
         /// <summary>Pixels between the chopper's widest socket and the card column.</summary>
         private const float CalloutReach = 70f;
         private const float CalloutGap = 6f;
+        /// <summary>Pixels between the chopper's outline and the card columns.</summary>
+        private const float CalloutClearance = 16f;
         /// <summary>Pixels the side columns take (margin + 380 px column + a gap): cards stay between them.</summary>
         private const float SideColumn = 418f;
+        /// <summary>Pixels the cards keep from the left edge (the page margin).</summary>
+        private const float LeftMargin = 28f;
         /// <summary>Gamepad right stick dead zone for turning the chopper.</summary>
         private const float StickDeadZone = 0.15f;
 
@@ -111,6 +115,12 @@ namespace Chopper.UI.Hangar
         private readonly List<(VisualElement Fill, VisualElement Delta, Label Text)> _bars = new();
         private readonly List<(Label Value, Label Unit)> _headlines = new();
         private readonly List<Callout> _cards = new();
+        /// <summary>Overview slot tiles by slot index (empty when a slot is open).</summary>
+        private readonly List<VisualElement> _slotTiles = new();
+        /// <summary>The slot whose tile or card is hovered or focused: both light up, with its line (-1 = none).</summary>
+        private int _linkedSlot = -1;
+        private const string CalloutLinkedClass = "hangar-callout--linked";
+        private const string TileLinkedClass = "hangar-tile--linked";
         private readonly List<int> _left = new();
         private readonly List<int> _right = new();
 
@@ -468,7 +478,9 @@ namespace Chopper.UI.Hangar
                 card.style.visibility = Visibility.Hidden;
                 _callouts.Add(card);
                 _cards.Add(new Callout { Card = card });
+                LinkSlot(card, slot);
             }
+            ShowLinkedSlot(_linkedSlot);
         }
 
         /// <summary>
@@ -500,9 +512,17 @@ namespace Chopper.UI.Hangar
                 (callout.Right ? _right : _left).Add(i);
             }
             reach += CalloutReach;
+            // Off the chopper where the screen allows (owner): columns just outside its outline at any yaw.
+            var leftEdge = centre.x - reach;
+            var rightEdge = centre.x + reach;
+            if (stage.TryGetChopperViewportSpan(out var spanLeft, out var spanRight))
+            {
+                leftEdge = spanLeft * size.x - CalloutClearance;
+                rightEdge = spanRight * size.x + CalloutClearance;
+            }
 
-            Stack(_left, centre, reach, size);
-            Stack(_right, centre, reach, size);
+            Stack(_left, leftEdge, size);
+            Stack(_right, rightEdge, size);
 
             foreach (var callout in _cards)
             {
@@ -517,13 +537,13 @@ namespace Chopper.UI.Hangar
                 var height = card.layout.height > 0f ? card.layout.height : 0f;
                 var width = card.layout.width > 0f ? card.layout.width : 0f;
                 var edge = new Vector2(callout.Right ? callout.Position.x : callout.Position.x + width, callout.Position.y + height * 0.5f);
-                _calloutLines.AddLine(ToPanel(socket, size), edge, false);
+                _calloutLines.AddLine(ToPanel(socket, size), edge, _cards.IndexOf(callout) == _linkedSlot);
             }
             _calloutLines.Commit();
         }
 
         /// <summary>One column: cards in rest-socket order, pushed down so they do not overlap, kept on screen.</summary>
-        private void Stack(List<int> column, Vector2 centre, float reach, Vector2 size)
+        private void Stack(List<int> column, float edge, Vector2 size)
         {
             column.Sort((a, b) => _cards[a].Rest.y.CompareTo(_cards[b].Rest.y));
             var next = float.MinValue;
@@ -533,10 +553,11 @@ namespace Chopper.UI.Hangar
                 var card = callout.Card.layout;
                 var width = card.width > 0f ? card.width : 0f;
                 var height = card.height > 0f ? card.height : 0f;
-                var x = callout.Right ? centre.x + reach : centre.x - reach - width;
+                var x = callout.Right ? edge : edge - width;
                 var y = Mathf.Max(callout.Rest.y - height * 0.5f, next);
-                var min = Mathf.Min(SideColumn, size.x * 0.5f - width);
-                x = Mathf.Clamp(x, Mathf.Max(0f, min), Mathf.Max(min, size.x - min - width));
+                // Left: only the page margin (the chassis panel is a header now); right: the stats column.
+                var right = Mathf.Max(LeftMargin, size.x - Mathf.Min(SideColumn, size.x * 0.5f) - width);
+                x = Mathf.Clamp(x, LeftMargin, right);
                 y = Mathf.Clamp(y, 0f, Mathf.Max(0f, size.y - height));
                 callout.Position = new Vector2(x, y);
                 next = y + height + CalloutGap;
@@ -551,6 +572,22 @@ namespace Chopper.UI.Hangar
             _wireframe.text = stage.WireframeShown ? "WIREFRAME: ON" : "WIREFRAME: OFF";
         }
 
+        /// <summary>Hover or focus on a slot tile or callout card lights up the other one too (owner, 27 Nov).</summary>
+        private void LinkSlot(VisualElement element, int slot)
+        {
+            element.RegisterCallback<PointerEnterEvent>(_ => ShowLinkedSlot(slot));
+            element.RegisterCallback<FocusInEvent>(_ => ShowLinkedSlot(slot));
+            element.RegisterCallback<PointerLeaveEvent>(_ => { if (_linkedSlot == slot) ShowLinkedSlot(-1); });
+            element.RegisterCallback<FocusOutEvent>(_ => { if (_linkedSlot == slot) ShowLinkedSlot(-1); });
+        }
+
+        private void ShowLinkedSlot(int slot)
+        {
+            _linkedSlot = slot;
+            for (var i = 0; i < _cards.Count; i++) _cards[i].Card.EnableInClassList(CalloutLinkedClass, i == slot);
+            for (var i = 0; i < _slotTiles.Count; i++) _slotTiles[i].EnableInClassList(TileLinkedClass, i == slot);
+        }
+
         private static Vector2 ToPanel(Vector2 viewport, Vector2 size) => new(viewport.x * size.x, (1f - viewport.y) * size.y);
 
         // ---- Tiles: slots in the overview, the slot's modules when a slot is open ----
@@ -558,6 +595,7 @@ namespace Chopper.UI.Hangar
         private void BuildTiles()
         {
             _tiles.Clear();
+            _slotTiles.Clear();
             var focused = _model.FocusedSlot != HangarModel.Overview;
             _tilesTitle.text = focused ? $"// {_model.FocusTitle}" : "// SLOTS";
             if (!focused)
@@ -571,7 +609,10 @@ namespace Chopper.UI.Hangar
                         : Tile(i, row.Label, "", null, row.Module, () => _model.FocusSlot(slot));
                     tile.EnableInClassList(EmptyClass, row.Empty);
                     _tiles.Add(tile);
+                    _slotTiles.Add(tile);
+                    LinkSlot(tile, slot);
                 }
+                ShowLinkedSlot(_linkedSlot);
                 return;
             }
 

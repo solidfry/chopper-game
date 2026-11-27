@@ -348,7 +348,7 @@
   right: 0;
   bottom: 0;
   --line-color: rgba(0, 255, 148, 0.55);
-  --line-highlight: #ff4289;
+  --line-highlight: rgb(0, 255, 148); /* the linked slot (hovered tile or card): full green, as the card border */
 }
 
 .hangar-callout {
@@ -367,7 +367,8 @@
 }
 
 .hangar-callout:hover,
-.hangar-callout:focus {
+.hangar-callout:focus,
+.hangar-callout--linked {
   background-color: var(--chopper-green-faint);
   border-color: var(--chopper-green);
 }
@@ -605,7 +606,8 @@
 }
 
 .hangar-tile:hover,
-.hangar-tile:focus {
+.hangar-tile:focus,
+.hangar-tile--linked {
   background-color: var(--chopper-green-faint);
   border-color: var(--chopper-green);
 }
@@ -1120,11 +1122,14 @@
 }
 
 /* Overview header: one row across the page under the bar (owner, 27 Nov). */
+/* No box round the header (owner, 27 Nov): only BUILDS keeps the panel box. */
 .hangar__header {
   flex-direction: row;
   align-items: flex-start;
   margin: 12px 28px 0 28px;
-  padding: 10px 16px 10px 16px;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0);
+  border-width: 0;
 }
 
 .hangar__header-group {
@@ -1162,4 +1167,8 @@
 .hangar__header-group--builds {
   width: 300px;
   margin-right: 0;
+  padding: 10px 14px 12px 14px;
+  background-color: var(--chopper-panel);
+  border-width: var(--chopper-border-width);
+  border-color: var(--chopper-green-dim);
 }

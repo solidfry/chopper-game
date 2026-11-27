@@ -33,10 +33,15 @@ namespace Chopper.Presentation.Hangar
 
         [Header("Camera")]
         [SerializeField, Tooltip("Overview: camera distance from the chopper's centre, in chopper lengths.")]
-        private float overviewDistance = 1.2f;
+        private float overviewDistance = 1.0f;
         [SerializeField, Tooltip("Overview: camera height above the centre, in chopper lengths.")]
         private float overviewHeight = 0.2f;
         [SerializeField] private float overviewFieldOfView = 40f;
+        [SerializeField, Tooltip("Overview: the chopper size (metres, rotor disc included) the distance is measured for.")]
+        private float overviewReferenceSize = 15.5f;
+        [SerializeField, Range(0f, 1f), Tooltip("Overview: 0 = the camera stays at one distance for every chassis (a large " +
+                                                "chopper looks large), 1 = the camera moves back to fit each chopper the same.")]
+        private float overviewSizeFollow = 0.55f;
         [SerializeField, Tooltip("Turntable speed in the overview (degrees per second).")]
         private float idleSpin = 12f;
         [SerializeField, Tooltip("The idle spin stops while the mouse is this close to the chopper on screen (part of the " +
@@ -47,6 +52,9 @@ namespace Chopper.Presentation.Hangar
         [SerializeField, Tooltip("Where the chopper (overview) or the module (slot) shows on screen (viewport, y up): the " +
                                  "middle of the gap between the hangar panels.")]
         private Vector2 viewCentre = new(0.47f, 0.47f);
+        [SerializeField, Tooltip("Overview: where the chopper shows (viewport, y up): the middle of the space between the " +
+                                 "left edge, the header, the stats column and the slot tiles.")]
+        private Vector2 overviewViewCentre = new(0.39f, 0.5f);
         [SerializeField, Tooltip("Slot focus: part of the view height the module fills. The camera looks at the module " +
                                  "from the side it sits on.")]
         private float focusFill = 0.45f;
@@ -114,6 +122,8 @@ namespace Chopper.Presentation.Hangar
         public float CreaseDegrees => creaseDegrees;
         public float LinePush => linePush;
         public float OverviewDistance => overviewDistance;
+        public float OverviewReferenceSize => overviewReferenceSize;
+        public float OverviewSizeFollow => overviewSizeFollow;
         public float OverviewHeight => overviewHeight;
         public float OverviewFieldOfView => overviewFieldOfView;
         public string MatchQueue => matchQueue;
@@ -125,6 +135,7 @@ namespace Chopper.Presentation.Hangar
         public float FocusElevationBelow => focusElevationBelow;
         public float RotorFill => rotorFill;
         public Vector2 ViewCentre => viewCentre;
+        public Vector2 OverviewViewCentre => overviewViewCentre;
         public float FocusFill => focusFill;
         public float FocusMinRadius => focusMinRadius;
         public float FocusMinRadiusFraction => focusMinRadiusFraction;

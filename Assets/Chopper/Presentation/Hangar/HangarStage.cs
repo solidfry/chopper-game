@@ -101,6 +101,8 @@ namespace Chopper.Presentation.Hangar
         private ChassisDefinition _builtChassis;
         private ModuleDefinition[] _builtModules = System.Array.Empty<ModuleDefinition>();
         private float _size = 10f;
+        /// <summary>The chopper's reach from the turntable axis (metres), for any yaw.</summary>
+        private float _radius = 5f;
         /// <summary>Half the chopper's height (metres), measured on the turntable.</summary>
         private float _halfHeight = 1f;
         /// <summary>
@@ -233,6 +235,31 @@ namespace Chopper.Presentation.Hangar
             return viewport.z > 0f;
         }
 
+        /// <summary>
+        /// The chopper's outline on screen for any yaw (viewport x, 0..1): the cylinder of <see cref="_radius"/> round
+        /// the turntable axis, its top and bottom. The callout cards sit outside it.
+        /// </summary>
+        public bool TryGetChopperViewportSpan(out float left, out float right)
+        {
+            left = right = 0.5f;
+            if (viewCamera == null || turntable == null || _parts.Count == 0) return false;
+            var side = viewCamera.transform.right;
+            side.y = 0f;
+            if (side.sqrMagnitude < 1e-4f) return false;
+            side = side.normalized * _radius;
+            left = 1f;
+            right = 0f;
+            for (var i = 0; i < 4; i++)
+            {
+                var point = turntable.position + ((i & 1) == 0 ? -side : side) + Vector3.up * ((i & 2) == 0 ? -_halfHeight : _halfHeight);
+                var viewport = viewCamera.WorldToViewportPoint(point);
+                if (viewport.z <= 0f) return false;
+                left = Mathf.Min(left, viewport.x);
+                right = Mathf.Max(right, viewport.x);
+            }
+            return true;
+        }
+
         /// <summary>The chopper's centre in viewport space (callout cards sit outward from it).</summary>
         public Vector2 CentreViewportPoint
         {
@@ -273,6 +300,7 @@ namespace Chopper.Presentation.Hangar
             _model.Launched += OnLaunched;
             _model.MatchRequested += OnMatchRequested;
             _model.SearchCancelled += OnSearchCancelled;
+            _model.MatchStatusChanged += OnMatchStatusChanged;
             OnChanged();
             SnapCamera();
             AutoStartAsync().Forget();
@@ -322,6 +350,7 @@ namespace Chopper.Presentation.Hangar
             _model.Launched -= OnLaunched;
             _model.MatchRequested -= OnMatchRequested;
             _model.SearchCancelled -= OnSearchCancelled;
+            _model.MatchStatusChanged -= OnMatchStatusChanged;
             OnSearchCancelled();
         }
 
@@ -343,6 +372,16 @@ namespace Chopper.Presentation.Hangar
             }
             ApplyLook();
         }
+
+        /// <summary>The queue track while searching for a match, the menu track again when the search ends.</summary>
+        private void OnMatchStatusChanged()
+        {
+            if (_model.Searching == _searchMusic) return;
+            _searchMusic = _model.Searching;
+            _context?.SetSearching(_searchMusic);
+        }
+
+        private bool _searchMusic;
 
         private void Play(Audio.SoundCue cue)
         {
@@ -559,7 +598,29 @@ namespace Chopper.Presentation.Hangar
             _chopper.transform.localPosition -= centre;
             _size = Mathf.Max(1f, Mathf.Max(bounds.size.x, bounds.size.z));
             _halfHeight = Mathf.Max(0.5f, bounds.extents.y);
+            MeasureRadius();
             MeasureSlots();
+        }
+
+        /// <summary>
+        /// The chopper's reach from the turntable axis (metres, rotor included): its outline at any yaw stays inside
+        /// this cylinder. Each mesh's own bounds corners, in turntable space.
+        /// </summary>
+        private void MeasureRadius()
+        {
+            var radius = 0f;
+            foreach (var part in _parts)
+            {
+                if (part.Renderer == null || !part.Renderer.TryGetComponent<MeshFilter>(out var filter) || filter.sharedMesh == null) continue;
+                var b = filter.sharedMesh.bounds;
+                for (var i = 0; i < 8; i++)
+                {
+                    var corner = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    var local = turntable.InverseTransformPoint(filter.transform.TransformPoint(corner));
+                    radius = Mathf.Max(radius, new Vector2(local.x, local.z).magnitude);
+                }
+            }
+            _radius = radius > 0f ? radius : 0.5f * _size;
         }
 
         /// <summary>
@@ -945,7 +1006,9 @@ namespace Chopper.Presentation.Hangar
             if (focus == null)
             {
                 lookAt = centre;
-                position = centre + new Vector3(0f, _size * _settings.OverviewHeight, -_size * _settings.OverviewDistance);
+                // A larger chopper looks larger: the camera follows the size only in part (owner, 27 Nov).
+                var framed = Mathf.Lerp(_settings.OverviewReferenceSize, _size, _settings.OverviewSizeFollow);
+                position = centre + new Vector3(0f, framed * _settings.OverviewHeight, -framed * _settings.OverviewDistance);
                 fieldOfView = _settings.OverviewFieldOfView;
                 rotation = Frame(Quaternion.LookRotation(lookAt - position), fieldOfView);
                 return;
@@ -989,7 +1052,8 @@ namespace Chopper.Presentation.Hangar
         /// </summary>
         private Quaternion Frame(Quaternion look, float fieldOfView)
         {
-            var point = _settings.ViewCentre;
+            // The overview has no left panel (the chassis panel is a header): it uses the wider gap's centre.
+            var point = _model != null && _model.FocusedSlot == HangarModel.Overview ? _settings.OverviewViewCentre : _settings.ViewCentre;
             var halfV = Mathf.Tan(0.5f * fieldOfView * Mathf.Deg2Rad);
             var halfH = halfV * viewCamera.aspect;
             // Left of centre = turn right; below centre = pitch up (negative x).

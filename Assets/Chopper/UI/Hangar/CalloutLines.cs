@@ -16,6 +16,7 @@ namespace Chopper.UI.Hangar
         private static readonly CustomStyleProperty<Color> HighlightProperty = new("--line-highlight");
         private const float DotSize = 6f;
         private const float LineWidth = 1f;
+        private const float HighlightWidth = 2f;
 
         private readonly List<(Vector2 From, Vector2 To, bool Highlight)> _lines = new();
         private Color _line = new(0f, 1f, 0.58f, 0.6f);
@@ -50,10 +51,10 @@ namespace Chopper.UI.Hangar
         private void Draw(MeshGenerationContext context)
         {
             var painter = context.painter2D;
-            painter.lineWidth = LineWidth;
             foreach (var (from, to, highlight) in _lines)
             {
                 var color = highlight ? _highlight : _line;
+                painter.lineWidth = highlight ? HighlightWidth : LineWidth;
                 painter.strokeColor = color;
                 painter.BeginPath();
                 painter.MoveTo(from);

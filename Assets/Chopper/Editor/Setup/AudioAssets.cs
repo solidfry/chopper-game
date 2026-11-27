@@ -67,7 +67,7 @@ namespace Chopper.Editor.Setup
                 AssetDatabase.CreateAsset(library, MusicPath);
             }
 
-            foreach (var clip in library.Match.Append(library.Menu).Where(c => c != null)) Stream(clip);
+            foreach (var clip in library.Match.Append(library.Menu).Append(library.Queue).Where(c => c != null)) Stream(clip);
             return library;
         }
 
