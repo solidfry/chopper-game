@@ -75,6 +75,29 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
 - Owner listens and looks per family; tune with plain more / less choices.
 - Handoff row, `Docs/WeaponFeel` notes in the plan file, commit. If a ghost changed: rebuild server and client.
 
+## Progress (owner away 27 Nov: run by /loop; owner reviews on return)
+
+- **Step 1 done** (`a740674a`). `ModuleId` on `HitscanWeaponConfig`, `PylonWeapon`, `RocketLaunchRpc`, `LocalRocketLaunch`
+  (not on the server-only `Rocket`: the RPC carries it). `WeaponLook` / `WeaponLookLibrary`
+  (`Data/Effects/WeaponLooks`), linked from `CombatEffectsSettings.WeaponLooks` (not a new `GameConfig` field: the
+  effects settings already own the shared prefabs, so the fallback lives in one place). Every empty look slot uses the
+  shared prefab or cue. Turrets and cluster bomblets send id 0 and get the kind default. Guided missiles use the
+  guided default until step 4 (the missile ghost has no module id). Checked: 7 tests; in training, bots fired 116
+  rounds and a test rocket flew, with 0 errors.
+  **`RocketLaunchRpc` changed: rebuild the server and client before online tests.**
+- **Step 2 done** (`a14bcc95`). Six gun families, each with its own tracer, flash, impact, fire sound and camera kick
+  (own gun only): Minigun (M134 + Mk II, yellow), Heavy MG (red, deep thump), Chain Gun (orange, heaviest shot, strong
+  kick), Autocannon (20mm + Rotary, fireball flash, red fire puffs), Railgun (blue bolt, crack, big kick), Pulse Laser
+  (green bolts, zap). Gun sounds were copied from the git-ignored bundle to `Audio/SFX/Guns` (tracked); the laser and
+  railgun use `ThirdParty/Sci-Fi Gun Sounds`. Bench: **G** (or "Next gun family") fires an 8-round burst of each family
+  in turn. Screenshots: `Docs/WeaponFeel/gun_*.png`.
+  - Not done, and why: the loop fire sound (start, loop, tail). The fastest gun is 1,500 rpm (25 shots a second), so
+    the one-shot cues with voice caps (2 to 6) stay within limits. Railgun beam line: it uses a fast bolt (3,000 m/s)
+    for now.
+  - **Owner checks:** in the bench, press G six times and listen. In a match, try each nose gun. Answer with plain
+    more / less per family (louder, deeper, more kick, different colour). Sounds were picked by measurement, not by
+    ear: tone (bright or deep) and ring length.
+
 ## Risks / open questions
 
 - Voice count: many guns at 1,000+ rpm. Keep the fire sound a loop per gun, not a one-shot per round.
