@@ -190,6 +190,8 @@ namespace Chopper.Simulation.Loadout
                         HeatPerShot = gun.HeatPerShot,
                         CoolRate = gun.CoolRate,
                         BulletSpeed = gun.BulletSpeed,
+                        SpinUpRate = gun.SpinUpRate,
+                        SpinDownRate = gun.SpinDownRate,
                         Name = ShortName(module),
                         ModuleId = module.Id,
                     };

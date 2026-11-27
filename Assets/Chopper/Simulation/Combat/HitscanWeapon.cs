@@ -29,6 +29,10 @@ namespace Chopper.Simulation.Combat
         /// each round (<see cref="ActiveBullet"/>, <see cref="BulletStepSystem"/>) and players must lead the target.
         /// </summary>
         public float BulletSpeed;
+        /// <summary>Spin gained per second while the trigger is held (<see cref="GunSpin"/>). 0 = no spin-up.</summary>
+        public float SpinUpRate;
+        /// <summary>Spin lost per second after the trigger is let go.</summary>
+        public float SpinDownRate;
         /// <summary>The gun module's short name, for the match log (server only).</summary>
         public Unity.Collections.FixedString32Bytes Name;
         /// <summary>The gun module's id (<see cref="Loadout.ModuleDefinition.Id"/>), for the client's look and sound.
@@ -77,6 +81,8 @@ namespace Chopper.Simulation.Combat
         [GhostField] public float CoolDelay;
         /// <summary>Reached full heat: no fire until it cools to <see cref="GunHeat.ResumeHeat"/>.</summary>
         [GhostField] public bool Overheated;
+        /// <summary>Barrel spin, 0 (still) to 1 (firing speed). Guns with no spin-up stay at 1. Sent to everyone for the spin sounds.</summary>
+        [GhostField(Quantization = 0)] public float Spin;
     }
 
     /// <summary>Gun damage maths shared by the fire system, the hangar and tests. Pure, Burst friendly.</summary>

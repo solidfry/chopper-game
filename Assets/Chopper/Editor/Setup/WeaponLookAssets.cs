@@ -45,6 +45,8 @@ namespace Chopper.Editor.Setup
             public float Linger;
             /// <summary>Rockets: realistic blast layers with the impact.</summary>
             public System.Func<BlastLayer[]> Layers;
+            /// <summary>Guns: fire loop, spin-up and spin-down cues (the minigun).</summary>
+            public System.Func<AudioMixerGroup, (SoundCue Loop, SoundCue Up, SoundCue Down)> Spin;
             public bool ScaleWithBlast = true;
             public bool Dropped;
             /// <summary>Cluster missiles: bomblet model, split flash and split sound.</summary>
@@ -78,6 +80,23 @@ namespace Chopper.Editor.Setup
         }
 
         private const string Tails = "Assets/Chopper/Audio/SFX/Guns/Tails/";
+        private const string Spin = "Assets/Chopper/Audio/SFX/Guns/MinigunSpin/";
+
+        /// <summary>
+        /// The minigun (owner 27 Nov: sound like a real one): a fast continuous gun loop in place of single shots, a motor
+        /// whine up (0.5 s) and down. The loop is the gun pack's fastest burst (about 2,500 rounds a minute).
+        /// </summary>
+        internal static (SoundCue, SoundCue, SoundCue) MinigunSpin(AudioMixerGroup group) => (
+            AudioAssets.Cue("Gun_MinigunLoop", AudioAssets.Clips(Spin + "FireLoop.wav"), group, 0.75f, blend: 1f, voices: 4,
+                muffle: CueMuffle.Outside),
+            AudioAssets.Cue("Gun_MinigunSpinUp", AudioAssets.Clips(Spin + "SpinUp.wav"), group, 0.45f, blend: 1f, voices: 2,
+                muffle: CueMuffle.Outside),
+            AudioAssets.Cue("Gun_MinigunSpinDown", AudioAssets.Clips(Spin + "SpinDown.wav"), group, 0.4f, blend: 1f, voices: 2,
+                muffle: CueMuffle.Outside));
+
+        /// <summary>The minigun's burst end: the pack's loop tails (the burst rings out).</summary>
+        internal static SoundCue MinigunTail(AudioMixerGroup group) => AudioAssets.Cue("Gun_MinigunTail",
+            AudioAssets.Clips(Spin + "LoopTail1.wav", Spin + "LoopTail2.wav"), group, 0.6f, blend: 1f, voices: 2, muffle: CueMuffle.Outside);
 
         /// <summary>Open-air echo after light shots: short gun tails, one at most every 0.5 s.</summary>
         internal static SoundCue TailLight(AudioMixerGroup group) => AudioAssets.Cue("Gun_TailLight",
@@ -153,7 +172,7 @@ namespace Chopper.Editor.Setup
                 Impact = SciFi + "Explosions/Bullet/BulletImpactYellow.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Minigun", AudioAssets.ClipsIn(Guns + "Minigun"), group, 0.7f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
-                Kick = 0.05f, Tracer = 0.4f, Tail = TailLight,
+                Kick = 0.05f, Tracer = 0.4f, Tail = MinigunTail, Spin = MinigunSpin,
             };
             // Thump: red tracer, big fire flash, more kick.
             yield return new GunFamily
@@ -253,6 +272,11 @@ namespace Chopper.Editor.Setup
                         effects != null && family.Flight != null ? family.Flight(effects) : null, family.ScaleWithBlast, family.Dropped);
                     look.SetTracerScale(family.Tracer);
                     look.SetTrailLinger(family.Linger);
+                    if (effects != null && family.Spin != null)
+                    {
+                        var (loop, up, down) = family.Spin(effects);
+                        look.SetSpin(loop, up, down);
+                    }
                     look.SetImpactLayers(family.Layers != null ? family.Layers() : null);
                     look.SetTracerBrightness(family.Bright);
                     if (effects != null && family.Tail != null) look.SetTail(family.Tail(effects));

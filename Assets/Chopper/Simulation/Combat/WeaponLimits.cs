@@ -6,6 +6,21 @@ namespace Chopper.Simulation.Combat
     /// Heat of a nose gun. Each shot adds heat; it cools when the gun stops. At full heat the gun locks out until it has
     /// cooled to <see cref="ResumeHeat"/>. Shared by the fire system and tests; client and server run the same maths.
     /// </summary>
+    public static class GunSpin
+    {
+        /// <summary>
+        /// The barrel spin after <paramref name="deltaTime"/> (owner 27 Nov: the minigun spins up for half a second before it
+        /// fires). Rises while the trigger is held, falls after. A gun with no spin-up is always at 1.
+        /// </summary>
+        public static float Step(float spin, bool trigger, float upRate, float downRate, float deltaTime)
+        {
+            if (upRate <= 0f) return 1f;
+            return trigger ? math.min(1f, spin + upRate * deltaTime) : math.max(0f, spin - downRate * deltaTime);
+        }
+
+        public static bool Ready(float spin) => spin >= 1f;
+    }
+
     public static class GunHeat
     {
         /// <summary>An overheated gun fires again at this heat (0..1).</summary>

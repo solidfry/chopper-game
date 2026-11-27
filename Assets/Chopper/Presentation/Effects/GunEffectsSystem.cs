@@ -52,6 +52,9 @@ namespace Chopper.Presentation.Effects
         }
 
         private readonly Dictionary<Entity, uint> _lastShotCount = new();
+        /// <summary>Spin and fire-loop sound per gun that has them (minigun).</summary>
+        private readonly Dictionary<Entity, GunSpinSound> _spinSounds = new();
+        private readonly List<Entity> _spinGone = new();
         private readonly Dictionary<Entity, uint> _seen = new();
         private readonly Dictionary<Entity, float> _lastFlashTime = new();
         private readonly List<Bullet> _bullets = new();
@@ -99,10 +102,25 @@ namespace Chopper.Presentation.Effects
                 var velocity = Ballistics.IsInstant(config.ValueRO.BulletSpeed)
                     ? float3.zero
                     : ObservedVelocity.Of(entity, SystemAPI.GetComponentLookup<ObservedVelocity>(true), SystemAPI.GetComponentLookup<PhysicsVelocity>(true));
+                var muzzlePoint = math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset);
+                var fired = _lastShotCount.TryGetValue(entity, out var before) && weapon.ValueRO.ShotCount > before;
                 DrawShots(settings, audio, gunSound, world, now, entity, weapon.ValueRO.ShotCount, config.ValueRO,
-                    math.transform(pose.ValueRO.Value, config.ValueRO.MuzzleOffset), pose.ValueRO.Forward, pose.ValueRO.Up,
-                    velocity, fromCockpit, own);
+                    muzzlePoint, pose.ValueRO.Forward, pose.ValueRO.Up, velocity, fromCockpit, own);
+                var spinLook = settings.Look(config.ValueRO.ModuleId, WeaponKind.Gun);
+                if (spinLook != null && (spinLook.FireLoop != null || spinLook.SpinUpCue != null))
+                {
+                    if (!_spinSounds.TryGetValue(entity, out var spinSound)) _spinSounds[entity] = spinSound = new GunSpinSound();
+                    spinSound.Update(audio, spinLook, weapon.ValueRO.Spin, fired, config.ValueRO.FireInterval, muzzlePoint, now);
+                }
             }
+            // Guns gone (chopper despawned): stop their loops.
+            foreach (var pair in _spinSounds) if (!_seen.ContainsKey(pair.Key)) _spinGone.Add(pair.Key);
+            foreach (var gone in _spinGone)
+            {
+                _spinSounds[gone].Drop(audio);
+                _spinSounds.Remove(gone);
+            }
+            _spinGone.Clear();
 
             // Ground turrets: the same shots, along the replicated barrel aim (the turret does not move).
             foreach (var (turret, config, pose, entity) in SystemAPI
@@ -138,8 +156,12 @@ namespace Chopper.Presentation.Effects
                 _lastFlashTime[entity] = now;
             }
 
-            audio.Play(look != null && look.FireCue != null ? look.FireCue : gunSound, muzzle);
-            if (look != null && look.TailCue != null) audio.Play(look.TailCue, muzzle);
+            // A gun with a fire loop sounds from GunSpinSound (one continuous burst, tail at the end).
+            if (look == null || look.FireLoop == null)
+            {
+                audio.Play(look != null && look.FireCue != null ? look.FireCue : gunSound, muzzle);
+                if (look != null && look.TailCue != null) audio.Play(look.TailCue, muzzle);
+            }
 
             var shots = math.min(count - last, MaxShotsPerFrame);
             // Own gun: the family's kick (small for the minigun, large for the railgun).

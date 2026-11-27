@@ -64,6 +64,9 @@ namespace Chopper.Presentation.Effects
         private AudioService _audio;
         private int _selected;
         private float _gunCooldown;
+        private float _spin;
+        private GunSpinSound _spinSound = new();
+        private Entry _spinEntry;
         private float _lastFlash;
         private int _salvoLeft;
         private float _salvoTimer;
@@ -216,14 +219,26 @@ namespace Chopper.Presentation.Effects
 
             var entry = Selected;
             _gunCooldown -= dt;
+            if (entry != _spinEntry)
+            {
+                _spinSound.Drop(_audio);
+                _spinSound = new GunSpinSound();
+                _spinEntry = entry;
+                _spin = 0f;
+            }
             if (entry.Weapon is HitscanWeaponDefinition gun)
             {
-                // Hold to fire at the gun's real rate.
-                if (keys.spaceKey.isPressed && _gunCooldown <= 0f)
+                // Hold to fire at the gun's real rate, after its spin-up (as in the match: GunSpin).
+                var held = keys.spaceKey.isPressed;
+                _spin = GunSpin.Step(_spin, held, gun.SpinUpRate, gun.SpinDownRate, dt);
+                var fired = false;
+                if (held && _gunCooldown <= 0f && GunSpin.Ready(_spin))
                 {
                     FireGun(entry, gun);
                     _gunCooldown = gun.FireInterval;
+                    fired = true;
                 }
+                _spinSound.Update(_audio, entry.Look, _spin, fired, gun.FireInterval, Muzzle, Time.time);
             }
             else if (keys.spaceKey.wasPressedThisFrame) FirePylon(entry);
         }
@@ -255,8 +270,11 @@ namespace Chopper.Presentation.Effects
                 _lastFlash = Time.time;
             }
             var cue = entry.Look != null && entry.Look.FireCue != null ? entry.Look.FireCue : sounds != null ? sounds.GunFire : null;
-            if (cue != null) _audio.Play(cue, muzzle);
-            if (entry.Look != null && entry.Look.TailCue != null) _audio.Play(entry.Look.TailCue, muzzle);
+            if (entry.Look == null || entry.Look.FireLoop == null)
+            {
+                if (cue != null) _audio.Play(cue, muzzle);
+                if (entry.Look != null && entry.Look.TailCue != null) _audio.Play(entry.Look.TailCue, muzzle);
+            }
             var speed = gun.BulletSpeed > 0f ? gun.BulletSpeed : settings.GunBulletSpeed;
             _rounds.Add(new Round
             {

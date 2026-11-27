@@ -23,6 +23,13 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Fire sound (guns: per shot; rockets: on top of the launch flash). Empty = the shared " +
                                  "gun cue for guns, none for rockets.")]
         private SoundCue fireCue;
+        [SerializeField, Tooltip("Guns: a looping fire sound played while the gun fires, in place of the Fire Cue per shot " +
+                                 "(a minigun's continuous tear). The Tail Cue plays when it stops.")]
+        private SoundCue fireLoop;
+        [SerializeField, Tooltip("Guns with spin-up: the motor whine as the barrels start.")]
+        private SoundCue spinUpCue;
+        [SerializeField, Tooltip("Guns with spin-up: the whine as the barrels run down.")]
+        private SoundCue spinDownCue;
         [SerializeField, Tooltip("Guns: the shot's echo in open air (owner 27 Nov: shots felt flat next to blasts). Played " +
                                  "with a shot; the cue's cooldown keeps a burst to a rolling echo. Empty = none.")]
         private SoundCue tailCue;
@@ -80,6 +87,17 @@ namespace Chopper.Presentation.Effects
         public GameObject MuzzleFlash => muzzleFlash;
         public GameObject Impact => impact;
         public SoundCue FireCue => fireCue;
+        public SoundCue FireLoop => fireLoop;
+        public SoundCue SpinUpCue => spinUpCue;
+        public SoundCue SpinDownCue => spinDownCue;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetSpin(SoundCue loop, SoundCue up, SoundCue down)
+        {
+            fireLoop = loop;
+            spinUpCue = up;
+            spinDownCue = down;
+        }
         public SoundCue TailCue => tailCue;
 
         /// <summary>Editor only: used by the setup tool.</summary>

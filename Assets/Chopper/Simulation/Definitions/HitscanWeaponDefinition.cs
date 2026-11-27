@@ -18,6 +18,13 @@ namespace Chopper.Simulation.Definitions
         [SerializeField, HideInInspector, Tooltip("Setup gave this gun its first round speed. After that, Setup keeps the value, also a hand-set 0.")]
         private bool bulletSpeedSeeded;
 
+        [Header("Spin-up")]
+        [SerializeField, Min(0f), Tooltip("Seconds the barrels spin before the first shot (a minigun: about 0.5). 0 = fires at once.")]
+        private float spinUpSeconds;
+        [SerializeField, Min(0.05f), Tooltip("Seconds the barrels take to stop after the trigger is let go. Fire again before " +
+                                             "they stop and the wait is shorter.")]
+        private float spinDownSeconds = 0.8f;
+
         [Header("Optics")]
         [SerializeField, Min(1f), Tooltip("Highest magnification an optics module gives with this gun. 1 = this gun cannot zoom.")]
         private float maxZoom = 2f;
@@ -28,6 +35,10 @@ namespace Chopper.Simulation.Definitions
         private float coolSeconds = 4f;
 
         public float FireInterval => 60f / Mathf.Max(1f, roundsPerMinute);
+        public float SpinUpSeconds => spinUpSeconds;
+        /// <summary>Spin gained per second while the trigger is held. 0 = no spin-up.</summary>
+        public float SpinUpRate => spinUpSeconds > 0f ? 1f / spinUpSeconds : 0f;
+        public float SpinDownRate => 1f / Mathf.Max(0.05f, spinDownSeconds);
         public float DamagePerShot => damagePerShot;
         public float Range => range;
         public float MaxZoom => Mathf.Max(1f, maxZoom);

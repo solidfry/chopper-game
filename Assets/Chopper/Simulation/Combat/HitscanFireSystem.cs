@@ -93,7 +93,9 @@ namespace Chopper.Simulation.Combat
                 ref var weaponState = ref weapon.ValueRW;
                 weaponState.CooldownRemaining = math.max(0f, weaponState.CooldownRemaining - deltaTime);
                 GunHeat.Tick(ref weaponState, config.ValueRO, deltaTime);
-                if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f || !GunHeat.CanFire(weaponState)) continue;
+                weaponState.Spin = GunSpin.Step(weaponState.Spin, input.ValueRO.Fire, config.ValueRO.SpinUpRate, config.ValueRO.SpinDownRate, deltaTime);
+                if (!input.ValueRO.Fire || weaponState.CooldownRemaining > 0f || !GunHeat.CanFire(weaponState) ||
+                    !GunSpin.Ready(weaponState.Spin)) continue;
                 weaponState.CooldownRemaining = config.ValueRO.FireInterval;
                 weaponState.ShotCount++;
                 GunHeat.AddShot(ref weaponState, config.ValueRO);
