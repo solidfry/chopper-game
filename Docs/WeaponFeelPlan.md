@@ -107,6 +107,22 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
   - **Owner checks:** open NOSE and a pylon slot, hover the options, and check that the numbers and row order read
     well.
 
+- **Step 3 done** (`1e41c121`). Pylon families:
+  - **Light Rockets:** yellow rocket, yellow flash, small yellow blast.
+  - **Heavy Rockets:** the standard rocket with a bigger fire blast.
+  - **Flak Rockets:** purple rocket that bursts in a sphere.
+  - **Bombs:** a real bomb model (PolygonMilitary jet bomb, 1.8 m). No launch flash. A whistle follows it as it falls
+    and stops at impact.
+  - **Air Mines:** a dark spiked sphere with a red light that blinks 2.5 times a second; a red sphere burst.
+  - Pods (Rocket Pod, Mk II, Salvo, Swarm) keep the standard rocket.
+  - New look switches: flight loop sound, "scale with blast" (off for the bomb and mine models), and "no muzzle
+    flash". The prefabs (`Prefabs/Weapons/Bomb`, `AirMine`) are built by Setup.
+  - Screenshots: `Docs/WeaponFeel/pylon_bomb.png`, `pylon_airmine.png`.
+  - Not done: impacts by surface for rockets (the rocket hit test does not classify the surface yet); the mine arm
+    beep; a ripple launch sound for pods.
+  - **Owner checks:** fly with Bombs (listen to the whistle) and Air Mines (does the blink read at range?); fire Light,
+    Heavy and Flak Rockets.
+
 ## Risks / open questions
 
 - Voice count: many guns at 1,000+ rpm. Keep the fire sound a loop per gun, not a one-shot per round.
