@@ -35,4 +35,4 @@ Not profiled yet. Next: a Unity Profiler capture of one detonation in TrainingRa
 ## Open
 
 - Profiler capture in a match (CPU and GPU, near and far) to confirm 2 and 3 and to size 4 and 5.
-- Opus code review of the nuke commits for performance (todo board).
+- Opus code review of the nuke commits for performance: done (owner, 27 Nov).
