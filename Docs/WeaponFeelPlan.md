@@ -98,6 +98,15 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
     more / less per family (louder, deeper, more kick, different colour). Sounds were picked by measurement, not by
     ear: tone (bright or deep) and ring length.
 
+- **Step 5 done** (`1fda8a9b`). When a weapon slot is open, the stats column shows `// <WEAPON NAME>` and rows below
+  the chopper stats. These are the hovered option's numbers, or the fitted weapon's. Guns: DAMAGE, DPS, RATE (rpm),
+  RANGE, HEAT (seconds of steady fire, or NO LIMIT). Rockets and missiles: DAMAGE (direct + splash), BLAST, LOCK
+  (guided only), RATE (seconds between), MAGAZINE, RELOAD, SPEED. Each bar is measured against the best weapon in that
+  slot; green / red shows the change from the fitted weapon. If the fitted weapon is of another kind, no change
+  shows. The maths is pure (`WeaponStatRows`) with 4 tests. Screenshot: `Docs/WeaponFeel/hangar_weapon_stats.png`.
+  - **Owner checks:** open NOSE and a pylon slot, hover the options, and check that the numbers and row order read
+    well.
+
 ## Risks / open questions
 
 - Voice count: many guns at 1,000+ rpm. Keep the fire sound a loop per gun, not a one-shot per round.
