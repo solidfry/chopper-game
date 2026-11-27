@@ -181,7 +181,7 @@ namespace Chopper.Presentation.Effects
         private void Fire(CombatEffectsSettings settings, Vector3 muzzle, Vector3 forward, Quaternion rotation, float distance, float speed,
             bool hit, SurfaceKind surface, bool castEachFrame, Entity shooter, WeaponLook look)
         {
-            var visual = _effects.SpawnPooled(settings.GunBulletFor(look), muzzle, rotation, muteAudio: !settings.GunBulletAudio);
+            var visual = _effects.SpawnTracer(settings.GunBulletFor(look), muzzle, rotation, muteAudio: !settings.GunBulletAudio);
             // No bullet visual set: an instant gun shows the impact at once; a round with travel time still flies unseen,
             // so its impact shows when it arrives.
             if (visual == null && !castEachFrame)

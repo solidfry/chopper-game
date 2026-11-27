@@ -176,6 +176,21 @@ namespace Chopper.Presentation.Effects
         }
 
         /// <summary>Pooled projectile visual. <paramref name="muteAudio"/> silences the prefab's own sounds.</summary>
+        /// <summary>
+        /// A gun tracer: pooled, and each particle system emits one particle at once. The pack's tracers emit by time
+        /// only (10-20 a second), so a fast round showed nothing for its first 0.05-0.1 s: 45 m out, or not at all for a
+        /// short cannon shot (owner, 27 Nov).
+        /// </summary>
+        public GameObject SpawnTracer(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
+        {
+            var instance = SpawnPooled(prefab, position, rotation, muteAudio);
+            if (instance == null) return null;
+            instance.GetComponentsInChildren(false, _systemBuffer);
+            foreach (var system in _systemBuffer) system.Emit(1);
+            _systemBuffer.Clear();
+            return instance;
+        }
+
         public GameObject SpawnPooled(GameObject prefab, Vector3 position, Quaternion rotation, bool muteAudio = false)
         {
             var instance = _pool.Spawn(prefab, position, rotation);

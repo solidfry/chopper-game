@@ -392,7 +392,7 @@ namespace Chopper.Presentation.Effects
                 if (cue != null) _audio.Play(cue, muzzle);
                 _rounds.Add(new BenchRound
                 {
-                    Visual = _effects.SpawnPooled(settings.GunBulletFor(_burstLook), muzzle, rotation, muteAudio: !settings.GunBulletAudio),
+                    Visual = _effects.SpawnTracer(settings.GunBulletFor(_burstLook), muzzle, rotation, muteAudio: !settings.GunBulletAudio),
                     Position = muzzle, Direction = direction, DistanceLeft = Vector3.Distance(muzzle, aim), Look = _burstLook,
                 });
             }

@@ -58,6 +58,7 @@ namespace Chopper.Editor.Setup
             root.Add(configRow);
             root.Add(new Button(SkinPreviewScene.Open) { text = "Open skin preview scene" });
             root.Add(new Button(EffectsBenchScene.Open) { text = "Open effects bench scene" });
+            root.Add(new Button(WeaponReviewScene.Open) { text = "Open weapon review scene" });
             root.Add(new Button(() =>
             {
                 if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() && System.IO.File.Exists(HangarSetup.ScenePath))

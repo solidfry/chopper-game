@@ -55,6 +55,20 @@ namespace Chopper.Editor.Setup
 
         private static void Populate()
         {
+            var point = new GameObject("Blast Point").transform;
+            Stage(point);
+            var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
+            var config = ConfigAssets.Load();
+            bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines(), config != null ? config.Camera : null,
+                config != null ? config.Audio : null, NukeStandIn());
+        }
+
+        /// <summary>
+        /// The shared stage (also <see cref="WeaponReviewScene"/>): sun, ambient, ground, dark blocks, the orbit camera on
+        /// <paramref name="focus"/> and the city post look. Into the active scene.
+        /// </summary>
+        internal static void Stage(Transform focus)
+        {
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.intensity = 1.2f;
@@ -74,12 +88,6 @@ namespace Chopper.Editor.Setup
             Block("Block B", new Vector3(30f, 20f, 26f), new Vector3(14f, 40f, 14f));
             Block("Block C", new Vector3(14f, 3f, -16f), new Vector3(8f, 6f, 5f));
 
-            var point = new GameObject("Blast Point").transform;
-            var bench = new GameObject("Effects Bench").AddComponent<EffectsBench>();
-            var config = ConfigAssets.Load();
-            bench.Configure(config != null ? config.Effects : null, point, StandIn(), Engines(), config != null ? config.Camera : null,
-                config != null ? config.Audio : null, NukeStandIn());
-
             var camera = new GameObject("Bench Camera") { tag = "MainCamera" };
             var cam = camera.AddComponent<UnityEngine.Camera>();
             cam.farClipPlane = 3000f;
@@ -88,7 +96,7 @@ namespace Chopper.Editor.Setup
             var data = camera.AddComponent<UniversalAdditionalCameraData>();
             data.renderPostProcessing = true;
             data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-            camera.AddComponent<BenchOrbitCamera>().Configure(point);
+            camera.AddComponent<BenchOrbitCamera>().Configure(focus);
             camera.transform.SetPositionAndRotation(new Vector3(-30f, 25f, -50f), Quaternion.Euler(15f, 30f, 0f));
 
             var volume = new GameObject("Post (city look)").AddComponent<Volume>();
@@ -97,7 +105,7 @@ namespace Chopper.Editor.Setup
         }
 
         /// <summary>The default kit's gunship model (plain art, not the networked prefab); a box when the kit is missing.</summary>
-        private static Transform StandIn()
+        internal static Transform StandIn()
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(StandInModel);
             GameObject standIn;
@@ -151,7 +159,7 @@ namespace Chopper.Editor.Setup
         private const string EngineModel = KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Engine_Standard.fbx";
         private const string StandInModel =KitAssets.KitsFolder + "/" + KitAssets.DefaultKit + "/Models/Chassis_Gunship.fbx";
 
-        private static void Block(string name, Vector3 position, Vector3 size)
+        internal static void Block(string name, Vector3 position, Vector3 size)
         {
             var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
             block.name = name;
