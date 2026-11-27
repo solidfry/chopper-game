@@ -86,12 +86,22 @@ namespace Chopper.Editor.Setup
         /// The minigun (owner 27 Nov: sound like a real one): a fast continuous gun loop in place of single shots, a motor
         /// whine up (0.5 s) and down. The loop is the gun pack's fastest burst (about 2,500 rounds a minute).
         /// </summary>
-        internal static (SoundCue, SoundCue, SoundCue) MinigunSpin(AudioMixerGroup group) => (
-            AudioAssets.Cue("Gun_MinigunLoop", AudioAssets.Clips(Spin + "FireLoop.wav"), group, 0.75f, blend: 1f, voices: 4,
+        internal static (SoundCue, SoundCue, SoundCue) MinigunSpin(AudioMixerGroup group) => SpinSet(group, "Minigun", Spin);
+
+        /// <summary>The Mk2 (owner 27 Nov: chunkier): the same sounds slower and lower, with more bass and grit.</summary>
+        internal static (SoundCue, SoundCue, SoundCue) MinigunMk2Spin(AudioMixerGroup group) => SpinSet(group, "MinigunMk2", SpinMk2);
+
+        internal static SoundCue MinigunMk2Tail(AudioMixerGroup group) => AudioAssets.Cue("Gun_MinigunMk2Tail",
+            AudioAssets.Clips(SpinMk2 + "LoopTail1.wav", SpinMk2 + "LoopTail2.wav"), group, 0.65f, blend: 1f, voices: 2, muffle: CueMuffle.Outside);
+
+        private const string SpinMk2 = "Assets/Chopper/Audio/SFX/Guns/MinigunMk2Spin/";
+
+        private static (SoundCue, SoundCue, SoundCue) SpinSet(AudioMixerGroup group, string name, string folder) => (
+            AudioAssets.Cue($"Gun_{name}Loop", AudioAssets.Clips(folder + "FireLoop.wav"), group, 0.75f, blend: 1f, voices: 4,
                 muffle: CueMuffle.Outside),
-            AudioAssets.Cue("Gun_MinigunSpinUp", AudioAssets.Clips(Spin + "SpinUp.wav"), group, 0.45f, blend: 1f, voices: 2,
+            AudioAssets.Cue($"Gun_{name}SpinUp", AudioAssets.Clips(folder + "SpinUp.wav"), group, 0.45f, blend: 1f, voices: 2,
                 muffle: CueMuffle.Outside),
-            AudioAssets.Cue("Gun_MinigunSpinDown", AudioAssets.Clips(Spin + "SpinDown.wav"), group, 0.4f, blend: 1f, voices: 2,
+            AudioAssets.Cue($"Gun_{name}SpinDown", AudioAssets.Clips(folder + "SpinDown.wav"), group, 0.4f, blend: 1f, voices: 2,
                 muffle: CueMuffle.Outside));
 
         /// <summary>The minigun's burst end: the pack's loop tails (the burst rings out).</summary>
@@ -166,13 +176,24 @@ namespace Chopper.Editor.Setup
             // Fast buzz, thin yellow tracers, small flash, light kick.
             yield return new GunFamily
             {
-                Name = "Minigun", Modules = new[] { "Nose_M134Minigun", "Nose_MinigunMk2" },
+                Name = "Minigun", Modules = new[] { "Nose_M134Minigun" },
                 Projectile = SciFi + "Missiles/Bullet/v1/BulletYellow.prefab",
                 Flash = SciFi + "MuzzleFlash/FireSmall/YellowFireSmallMuzzleFlash.prefab",
                 Impact = SciFi + "Explosions/Bullet/BulletImpactYellow.prefab",
                 Cue = group => AudioAssets.Cue("Gun_Minigun", AudioAssets.ClipsIn(Guns + "Minigun"), group, 0.7f, blend: 1f, voices: 6,
                     muffle: CueMuffle.Outside),
                 Kick = 0.05f, Tracer = 0.4f, Tail = MinigunTail, Spin = MinigunSpin,
+            };
+            // The Mk2: the same gun, chunkier (owner 27 Nov): lower, heavier sound, thicker tracer, more kick.
+            yield return new GunFamily
+            {
+                Name = "Minigun Mk2", Modules = new[] { "Nose_MinigunMk2" },
+                Projectile = SciFi + "Missiles/Bullet/v1/BulletYellow.prefab",
+                Flash = SciFi + "MuzzleFlash/FireSmall/YellowFireSmallMuzzleFlash.prefab",
+                Impact = SciFi + "Explosions/Bullet/BulletImpactYellow.prefab",
+                Cue = group => AudioAssets.Cue("Gun_Minigun", AudioAssets.ClipsIn(Guns + "Minigun"), group, 0.7f, blend: 1f, voices: 6,
+                    muffle: CueMuffle.Outside),
+                Kick = 0.08f, Tracer = 0.5f, Tail = MinigunMk2Tail, Spin = MinigunMk2Spin,
             };
             // Thump: red tracer, big fire flash, more kick.
             yield return new GunFamily
