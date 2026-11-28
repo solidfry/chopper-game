@@ -15,6 +15,8 @@ namespace Chopper.Simulation.Bots
         /// <summary>Cruise speed to it, m/s. The pilot brakes in time to stop at <see cref="ArriveRadius"/>.</summary>
         public float Speed;
         public float ArriveRadius;
+        /// <summary>Lowest height over the ground for this order, m; 0 = the profile's MinClearance (a carrier setting the nuke down goes lower).</summary>
+        public float FloorClearance;
         /// <summary>
         /// Path length still to go through <see cref="Destination"/> to the end of the path, m (0 = the destination is the
         /// end). The pilot brakes for the end, not for each waypoint.
@@ -183,8 +185,9 @@ namespace Chopper.Simulation.Bots
             desired.y = math.clamp(toDestination.y * handling.AltitudeGain, -handling.MaxSink, handling.MaxClimb);
 
             // Floor: never sink below the minimum clearance over whatever is below.
-            if (sense.Altitude < handling.MinClearance)
-                desired.y = math.max(desired.y, math.min(handling.MaxClimb, (handling.MinClearance - sense.Altitude) * handling.AltitudeGain * 2f));
+            var floor = order.FloorClearance > 0f ? order.FloorClearance : handling.MinClearance;
+            if (sense.Altitude < floor)
+                desired.y = math.max(desired.y, math.min(handling.MaxClimb, (floor - sense.Altitude) * handling.AltitudeGain * 2f));
 
             var obstacle = sense.Obstacle;
             if (obstacle.Hit)

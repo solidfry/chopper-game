@@ -136,6 +136,11 @@ namespace Chopper.Tests
             Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(24, 8, 0), bases), Is.EqualTo(0));
             Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(24, 30, 0), bases), Is.EqualTo(-1), "Too high.");
             Assert.That(NukeZones.DockOf(new Unity.Mathematics.float3(0, 5, 0), bases), Is.EqualTo(-1), "Too far.");
+            var enemy = (byte)(bases[0].Team == 1 ? 2 : 1);
+            Assert.That(NukeZones.DockOf(bases[0].Dock + new Unity.Mathematics.float3(30, 25, 0), bases, enemy), Is.EqualTo(0),
+                "An enemy carrier plants in the large zone.");
+            Assert.That(NukeZones.DockOf(bases[0].Dock + new Unity.Mathematics.float3(30, 5, 0), bases, bases[0].Team), Is.EqualTo(-1),
+                "The home dock stays small.");
             bases.Dispose();
         }
 

@@ -196,12 +196,27 @@ namespace Chopper.Simulation.Match
         public const float DockHeight = 12f;
 
         /// <summary>Index of the base whose dock <paramref name="hang"/> (a carried nuke) is over, low enough; or -1.</summary>
-        public static int DockOf(float3 hang, NativeArray<NukeBase> bases)
+        /// <summary>
+        /// The enemy base's plant zone: much larger than the home dock, so an armed carrier plants on arrival (owner, 28 Nov
+        /// 2026: "the plant zone should be quite large so that it's easier to plant"). Flat radius and height over the dock, m.
+        /// </summary>
+        public const float PlantRadius = 40f;
+        public const float PlantHeight = 30f;
+
+        /// <summary>
+        /// The base whose zone holds <paramref name="hang"/>: the home dock (<see cref="DockRadius"/>) for the carrier's own
+        /// team, the larger plant zone (<see cref="PlantRadius"/>) for the other base. <paramref name="carrierTeam"/> 0 = dock
+        /// size for every base.
+        /// </summary>
+        public static int DockOf(float3 hang, NativeArray<NukeBase> bases, byte carrierTeam = 0)
         {
             for (var i = 0; i < bases.Length; i++)
             {
                 var dock = bases[i].Dock;
-                if (math.distancesq(hang.xz, dock.xz) <= DockRadius * DockRadius && hang.y - dock.y <= DockHeight) return i;
+                var plant = carrierTeam != 0 && bases[i].Team != carrierTeam;
+                var radius = plant ? PlantRadius : DockRadius;
+                var height = plant ? PlantHeight : DockHeight;
+                if (math.distancesq(hang.xz, dock.xz) <= radius * radius && hang.y - dock.y <= height) return i;
             }
             return -1;
         }

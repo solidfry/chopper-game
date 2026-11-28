@@ -245,6 +245,10 @@ namespace Chopper.Simulation.Bots
                     order.AllowBoost = objective != BotObjective.Kind.Hook;
                     // The carrier runs home (or to the enemy dock) with haste, in any fight; flares still fire.
                     if (carrying) order.Speed = handling.CruiseSpeed * BotObjective.CarrierSpeedFactor;
+                    // Over the dock: drop below the normal floor so the nuke hangs low enough to set down (owner, 28 Nov:
+                    // the carrier hovered over the base and never planted; the 22 m floor kept the nuke 17 m up).
+                    if (carrying && math.distance(objectiveGoal.xz, sense.Position.xz) < BotObjective.DockDescentRange)
+                        order.FloorClearance = BotObjective.DockFloorClearance;
                 }
 
                 var goal = intent.Goal;

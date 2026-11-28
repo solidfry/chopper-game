@@ -98,7 +98,7 @@ namespace Chopper.Simulation.Match
                 if (holder != Entity.Null)
                     position = NukeZones.HangPoint(SystemAPI.GetComponent<LocalToWorld>(holder).Position);
 
-                var dock = holder != Entity.Null ? NukeZones.DockOf(position, bases.AsArray()) : -1;
+                var dock = holder != Entity.Null ? NukeZones.DockOf(position, bases.AsArray(), carrierTeam) : -1;
                 var dockTeam = dock >= 0 ? bases[dock].Team : TeamRules.None;
                 var armingTeam = s.Phase == NukePhase.Docked ? s.DockTeam : TeamRules.None;
                 var input = new NukeInputs

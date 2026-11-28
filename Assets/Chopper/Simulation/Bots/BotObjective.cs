@@ -52,6 +52,10 @@ namespace Chopper.Simulation.Bots
         public const float BaseHeight = 25f;
         /// <summary>Carrier hover over a dock: the nuke hangs low enough to set down (NukeZones.DockHeight).</summary>
         public const float DockHoverHeight = Match.NukeZones.HangBelow + 4f;
+        /// <summary>A carrier this near its dock (flat distance, m) may fly down to <see cref="DockFloorClearance"/>.</summary>
+        public const float DockDescentRange = 60f;
+        /// <summary>The carrier's floor over a dock, m: below <see cref="DockHoverHeight"/>, so the hover goal is reached.</summary>
+        public const float DockFloorClearance = DockHoverHeight - 3f;
         /// <summary>An enemy further than this does not pull a bot off the objective, metres.</summary>
         public const float FocusRange = 250f;
         /// <summary>This close to a free nuke, a bot keeps hooking even in a fight, metres.</summary>
@@ -249,7 +253,7 @@ namespace Chopper.Simulation.Bots
             {
                 var armed = info.ArmedBy == team;
                 goal = (armed ? enemy : home) + new float3(0f, DockHoverHeight, 0f);
-                arriveRadius = 4f;
+                arriveRadius = armed ? Match.NukeZones.PlantRadius * 0.5f : 4f;
                 return armed ? Kind.Deliver : Kind.ArmAtHome;
             }
             if (info.Carrier != Entity.Null)
