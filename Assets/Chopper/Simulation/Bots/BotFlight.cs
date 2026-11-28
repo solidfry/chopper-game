@@ -189,7 +189,7 @@ namespace Chopper.Simulation.Bots
             }
             else
             {
-                var contacts = Contacts(chopper, ownerId, sense.Position, choppers, frame.Turrets, frame.World, handling);
+                var contacts = Contacts(chopper, ownerId, sense.Position, choppers, frame.Turrets, frame.World, handling, frame.Objective);
                 var situation = Situation(chopper, transform, velocity, missiles);
                 brain.Think(situation, contacts.AsArray(), handling, frame.Now, frame.DeltaTime, ref order, out var intent);
                 contacts.Dispose();
@@ -219,8 +219,11 @@ namespace Chopper.Simulation.Bots
                 var farFight = brain.Mode == BotMode.Attack && !turretTarget &&
                                (math.distancesq(brain.TargetPosition, sense.Position) > BotObjective.FocusRange * BotObjective.FocusRange ||
                                 (objective == BotObjective.Kind.Hook &&
-                                 math.distance(objectiveGoal, sense.Position) < BotObjective.CommitRange(cover)));
-                if (objective != BotObjective.Kind.None && (intent.Wander || farFight || (carrying && brain.Mode != BotMode.Evade)))
+                                 math.distance(objectiveGoal, sense.Position) <
+                                 BotObjective.CommitRange(cover, frame.Objective.Phase == Match.NukePhase.Dropped)));
+                var holdingHook = BotObjective.HoldsHook(objective, math.distance(frame.Objective.NukePosition, sense.Position));
+                if (objective != BotObjective.Kind.None &&
+                    (intent.Wander || farFight || holdingHook || (carrying && brain.Mode != BotMode.Evade)))
                 {
                     intent.Wander = false;
                     intent.UsePath = true;
@@ -265,7 +268,7 @@ namespace Chopper.Simulation.Bots
 
         /// <summary>Enemy choppers (all others in free for all; the other team in team modes) with distance and line of sight.</summary>
         private static NativeList<BotContact> Contacts(Entity self, int ownerId, float3 position, in NativeArray<BotChopperInfo> choppers,
-            in NativeArray<BotTurretInfo> turrets, in CollisionWorld world, in BotHandling handling)
+            in NativeArray<BotTurretInfo> turrets, in CollisionWorld world, in BotHandling handling, in BotObjectiveInfo objective)
         {
             var contacts = new NativeList<BotContact>(math.max(choppers.Length, 1), Allocator.Temp);
             var selfTeam = Match.TeamRules.None;
@@ -283,6 +286,7 @@ namespace Chopper.Simulation.Bots
                     Health01 = other.Health01,
                     Distance = distance,
                     InSight = distance < handling.VisionRange && BotSensing.InSight(world, position, other.Position),
+                    Objective = BotObjective.OnObjective(objective, other.Entity, other.Position),
                 });
             }
             for (var i = 0; i < turrets.Length; i++)

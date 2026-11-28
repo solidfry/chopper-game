@@ -33,6 +33,8 @@ namespace Chopper.Simulation.Bots
         public bool Ground;
         /// <summary>A ground target's gun range, metres (0 = not known): the bot circles it from outside this.</summary>
         public float Reach;
+        /// <summary>It carries the nuke or hovers to hook it (<see cref="BotObjective.OnObjective"/>): scored first.</summary>
+        public bool Objective;
     }
 
     /// <summary>What the bot knows about itself and the threats on it this tick (gathered by <see cref="BotPilotSystem"/>).</summary>
@@ -305,6 +307,7 @@ namespace Chopper.Simulation.Bots
                 if (!c.InSight && c.Distance > h.HearingRange) continue;
                 var ahead = math.dot(s.Forward, math.normalizesafe(c.Position - s.Position));
                 var score = -c.Distance + (1f - c.Health01) * 150f + ahead * 120f + (c.Entity == Target ? 200f : 0f) + (c.InSight ? 100f : 0f) -
+                            (c.Objective ? BotObjective.ObjectiveTargetBonus : 0f) -
                             (c.Ground ? BotObjective.TurretScorePenalty : 0f) -
                             (turrets && !c.Ground && c.Distance > BotObjective.FocusRange ? BotObjective.FarChopperPenalty : 0f);
                 if (score <= bestScore) continue;

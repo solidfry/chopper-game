@@ -62,8 +62,42 @@ namespace Chopper.Simulation.Bots
         /// </summary>
         public const float OpenHookCommitRange = 150f;
 
+        /// <summary>
+        /// A dropped nuke goes back to the pad after 30 s, so bots this close leave a fight for it, metres. Played 28 Nov:
+        /// after each carrier kill every bot kept fighting 160-560 m away and the drop always reset (3 hooks, no dock).
+        /// </summary>
+        public const float DroppedHookCommitRange = 400f;
+
+        /// <summary>
+        /// Over the nuke (this close to it, metres) a hooking bot stays to finish the hook in any fight, even a missile
+        /// evade (it still fires flares): leaving resets the 10 s hook. Played 28 Nov: the hook flickered on and off every
+        /// 1-2 s over a dropped nuke and never took.
+        /// </summary>
+        public const float HookHoldRange = 30f;
+
         /// <summary>Distance to the hook point inside which a bot keeps to the hook in a fight.</summary>
-        public static float CommitRange(bool turretsCover) => turretsCover ? HookCommitRange : OpenHookCommitRange;
+        public static float CommitRange(bool turretsCover, bool dropped = false) =>
+            turretsCover ? HookCommitRange : dropped ? DroppedHookCommitRange : OpenHookCommitRange;
+
+        /// <summary>
+        /// Target score bonus, metres, for an enemy that carries the nuke or hovers to hook it. Played 28 Nov: the first
+        /// docked nuke was 69 % armed when one enemy hooked it out of the dock in 10 s; the two defenders fought others.
+        /// </summary>
+        public const float ObjectiveTargetBonus = 300f;
+
+        /// <summary>This close to a nuke nobody holds, an enemy counts as hooking it (the base hook reach, plus a margin).</summary>
+        public const float HookThreatRange = Match.NukeHookConfig.BaseRange * 1.5f;
+
+        /// <summary>True when the chopper carries the nuke or is close enough to a free or docked nuke to be hooking it.</summary>
+        public static bool OnObjective(in BotObjectiveInfo info, Entity chopper, float3 position)
+        {
+            if (!info.Active || info.Phase == Match.NukePhase.Detonated) return false;
+            if (info.Carrier != Entity.Null) return info.Carrier == chopper;
+            return math.distance(position, info.NukePosition) < HookThreatRange;
+        }
+
+        /// <summary>True when a hooking bot is over the nuke and must stay to finish the hook, whatever else happens.</summary>
+        public static bool HoldsHook(Kind objective, float distanceToNuke) => objective == Kind.Hook && distanceToNuke < HookHoldRange;
         /// <summary>
         /// Target score cost of a turret against a chopper, metres: an enemy chopper this much further away is still
         /// picked first (owner, 20 Nov: "prioritise the turrets or nearby enemies").

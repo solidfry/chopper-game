@@ -327,6 +327,41 @@ namespace Chopper.Tests
             Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(true), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.HookCommitRange));
             Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(false), Is.GreaterThan(Chopper.Simulation.Bots.BotObjective.HookCommitRange * 2f),
                 "Turrets down: a bot 150 m out leaves the dogfight to hook.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(false, dropped: true),
+                Is.GreaterThan(Chopper.Simulation.Bots.BotObjective.CommitRange(false)), "A drop resets in 30 s: bots come from further.");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.CommitRange(true, dropped: true),
+                Is.EqualTo(Chopper.Simulation.Bots.BotObjective.HookCommitRange), "A turret still covering it: hovering there is death.");
+        }
+
+        [Test]
+        public void BotObjective_OnObjective_MarksTheCarrierAndAHookerOnly()
+        {
+            var carrier = new Unity.Entities.Entity { Index = 5, Version = 1 };
+            var other = new Unity.Entities.Entity { Index = 6, Version = 1 };
+            var nuke = new Unity.Mathematics.float3(0f, 0f, 100f);
+            var carried = new Chopper.Simulation.Bots.BotObjectiveInfo
+                { Active = true, Phase = Chopper.Simulation.Match.NukePhase.Carried, Carrier = carrier, NukePosition = nuke };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke), Is.True, "the carrier");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, other, nuke), Is.False, "an escort next to it is not");
+
+            var docked = new Chopper.Simulation.Bots.BotObjectiveInfo
+                { Active = true, Phase = Chopper.Simulation.Match.NukePhase.Docked, DockTeam = 2, NukePosition = nuke };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 10f, 0f)), Is.True,
+                "hovering over the docked nuke: hooking it out");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 0f, 200f)), Is.False);
+            docked.Active = false;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke), Is.False, "not a nuke match");
+        }
+
+        [Test]
+        public void BotObjective_HoldsHook_OnlyOverTheNukeWhileHooking()
+        {
+            const Chopper.Simulation.Bots.BotObjective.Kind hook = Chopper.Simulation.Bots.BotObjective.Kind.Hook;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.HoldsHook(hook, 10f), Is.True, "over the nuke: finish the hook");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.HoldsHook(hook, 100f), Is.False, "far out: free to fight");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.HoldsHook(Chopper.Simulation.Bots.BotObjective.Kind.Escort, 10f), Is.False);
+            Assert.That(Chopper.Simulation.Bots.BotObjective.HookHoldRange, Is.LessThanOrEqualTo(Chopper.Simulation.Match.NukeHookConfig.BaseRange + 8f),
+                "the hold zone is about the hook's own reach");
         }
 
         [Test]
