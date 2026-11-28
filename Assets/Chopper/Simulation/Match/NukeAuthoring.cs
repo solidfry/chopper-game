@@ -120,6 +120,12 @@ namespace Chopper.Simulation.Match
     public static class NukeBaseSpawn
     {
         public const int MaxSlots = 12;
+        /// <summary>
+        /// While a nuke is planted in a team's base, that team respawns at the map's spawn points at least this far from
+        /// its base, metres (owner, 28 Nov 2026: "the spawn point for each team should be further away from the base after
+        /// the plant").
+        /// </summary>
+        public const float PlantedAwayDistance = 350f;
         public const int WingColumns = 2;
         /// <summary>Metres between bays in a wing: rotors (up to about 14 m across on the Lifter) stay well apart.</summary>
         public const float Spacing = 24f;

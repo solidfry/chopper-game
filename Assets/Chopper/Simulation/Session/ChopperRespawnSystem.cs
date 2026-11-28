@@ -152,9 +152,13 @@ namespace Chopper.Simulation.Session
                 var position = ChopperSpawning.FallbackPosition(spawner, Bots.BotIds.IsBot(id) ? 9 + Bots.BotIds.Slot(id) : id);
                 var rotation = spawner.Rotation;
                 var team = SystemAPI.HasComponent<Match.Team>(connection) ? SystemAPI.GetComponent<Match.Team>(connection).Value : Match.TeamRules.None;
-                var pick = mode == Match.MatchMode.CaptureTheNuke && placement.AtBase(ref position, ref rotation, team)
+                // A nuke planted in this team's base: the defenders come back far from it, not on their base pads
+                // (owner, 28 Nov: defenders respawning beside the planted nuke disarmed every one).
+                var plantedHere = mode == Match.MatchMode.CaptureTheNuke && placement.PlantedIn == team && team != Match.TeamRules.None;
+                var pick = mode == Match.MatchMode.CaptureTheNuke && !plantedHere && placement.AtBase(ref position, ref rotation, team)
                     ? SpawnPick.Safe
-                    : placement.Choose(ref position, ref rotation, team);
+                    : placement.Choose(ref position, ref rotation, team,
+                        plantedHere ? placement.BaseOf(team) : float3.zero, plantedHere ? Match.NukeBaseSpawn.PlantedAwayDistance : 0f);
                 if (pick == SpawnPick.None && placement.Points.Length > 0)
                     UnityEngine.Debug.LogWarning($"[Spawn] Player {id}: no spawn point can be used; the spawner's own point is used.");
                 else if (pick == SpawnPick.Relaxed)
@@ -204,6 +208,9 @@ namespace Chopper.Simulation.Session
                 Threats = new NativeList<SpawnThreat>(16, Allocator.Temp),
                 Bases = new NativeList<Match.NukeBase>(2, Allocator.Temp),
                 PadPosition = SystemAPI.TryGetSingleton<Match.NukePad>(out var pad) ? pad.Position : float3.zero,
+                PlantedIn = SystemAPI.TryGetSingleton<Match.NukeState>(out var nuke) && nuke.Phase == Match.NukePhase.Planted
+                    ? nuke.DockTeam
+                    : Match.TeamRules.None,
             };
             foreach (var zone in SystemAPI.Query<RefRO<Match.NukeBase>>()) placement.Bases.Add(zone.ValueRO);
 
@@ -242,6 +249,16 @@ namespace Chopper.Simulation.Session
             /// <summary>Capture the Nuke: the base zones (team spawns) and the pad they face.</summary>
             public NativeList<Match.NukeBase> Bases;
             public float3 PadPosition;
+            /// <summary>The team whose base holds a planted nuke (None when nothing is planted).</summary>
+            public byte PlantedIn;
+
+            /// <summary>The team's base centre (zero when it has none).</summary>
+            public float3 BaseOf(byte team)
+            {
+                for (var b = 0; b < Bases.Length; b++)
+                    if (Bases[b].Team == team) return Bases[b].Position;
+                return float3.zero;
+            }
 
             /// <summary>
             /// Capture the Nuke: the first free slot of the team's base grid (<see cref="Match.NukeBaseSpawn"/>). False when
@@ -268,7 +285,7 @@ namespace Chopper.Simulation.Session
             /// Sets the place of the best point (no change when none can be used). The chosen point counts as a chopper
             /// for the next spawn of the same tick, so two players never get the same or a near point.
             /// </summary>
-            public SpawnPick Choose(ref float3 position, ref quaternion rotation, byte team)
+            public SpawnPick Choose(ref float3 position, ref quaternion rotation, byte team, float3 avoid = default, float avoidRadius = 0f)
             {
                 for (var i = 0; i < Threats.Length; i++)
                 {
@@ -283,7 +300,20 @@ namespace Chopper.Simulation.Session
                     Candidates[i] = candidate;
                 }
 
-                var best = SpawnScoring.Pick(Candidates.AsArray(), Rules, out var pick);
+                // Points too near <avoid> (a base with a planted nuke) count as out of bounds for this spawn only.
+                var scored = new NativeArray<SpawnCandidate>(Candidates.AsArray(), Allocator.Temp);
+                if (avoidRadius > 0f)
+                    for (var i = 0; i < scored.Length; i++)
+                        if (math.distance(Places[i].Position, avoid) < avoidRadius)
+                        {
+                            var far = scored[i];
+                            far.InBounds = false;
+                            scored[i] = far;
+                        }
+                var best = SpawnScoring.Pick(scored, Rules, out var pick);
+                scored.Dispose();
+                // No point far enough: the best of all points (a spawn always beats none).
+                if (best < 0 && avoidRadius > 0f) return Choose(ref position, ref rotation, team);
                 if (best < 0) return pick;
 
                 position = Places[best].Position;
