@@ -84,6 +84,12 @@ namespace Chopper.Simulation.Combat
         /// <summary>True when the path bends or slows: aim helpers must step it, not use a straight line.</summary>
         public static bool IsBallistic(float gravity, float drag) => gravity > 0f || drag > 0f;
 
+        /// <summary>Speed (m/s) under which a slowing round (air mine) counts as stopped and hanging.</summary>
+        public const float SettleSpeed = 2f;
+
+        /// <summary>True when a round with drag has slowed to a hang (an air mine arms). Straight rockets never settle.</summary>
+        public static bool HasSettled(float drag, float speed) => drag > 0f && speed < SettleSpeed;
+
         /// <summary>
         /// Proximity fuse on one step from <paramref name="start"/> to <paramref name="end"/>: true when the path comes
         /// within <paramref name="fuse"/> of <paramref name="target"/>. <paramref name="point"/> = the closest point

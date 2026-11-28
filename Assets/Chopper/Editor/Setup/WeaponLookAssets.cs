@@ -52,6 +52,8 @@ namespace Chopper.Editor.Setup
             /// <summary>Cluster missiles: bomblet model, split flash and split sound.</summary>
             public string Bomblet, SplitFlash;
             public System.Func<AudioMixerGroup, SoundCue> SplitCue;
+            /// <summary>Rockets: the chirp when a drifting round stops and arms (air mines).</summary>
+            public System.Func<AudioMixerGroup, SoundCue> Arm;
         }
 
         /// <summary>Step 4 guided families. Homing Missiles keep the guided default (red missile).</summary>
@@ -125,9 +127,34 @@ namespace Chopper.Editor.Setup
         private const string RocketPrefabs = "Assets/Chopper/Prefabs/Weapons";
         private const string Incoming = "Assets/Sound/Explosions/TomWinandySFX_Explosions Volume I_Incoming_";
 
-        /// <summary>Step 3 pylon families. Pods (Rocket Pod, Mk II, Salvo, Swarm) keep the rocket default.</summary>
+        private const string SciFiSound = "Assets/ThirdParty/Archanor/Sci-Fi Arsenal/Sci-Fi Effects/Sound/";
+        private const string MissileSfx = "Assets/Chopper/Audio/SFX/Missiles/";
+
+        /// <summary>
+        /// Pods: one launch per rocket, voice-limited with a short gap, so a salvo is a ripple ("fft-fft-fft"), not 6 stacked
+        /// copies of the pack's launch. The rocket model and blast stay the default.
+        /// </summary>
+        internal static SoundCue PodLaunch(AudioMixerGroup group) => AudioAssets.Cue("Rocket_PodLaunch",
+            AudioAssets.Clips(SciFiSound + "Impact/shoot_rocket.wav", MissileSfx + "MissileLaunch_01.wav", MissileSfx + "MissileLaunch_02.wav"),
+            group, 0.6f, blend: 1f, voices: 4, cooldown: 0.05f, pitch: 1.2f, muffle: CueMuffle.Outside);
+
+        /// <summary>Pods: the rocket motor while it flies (replaces the pack's loop; quieter, as a salvo has several).</summary>
+        internal static SoundCue PodFlight(AudioMixerGroup group) => AudioAssets.Cue("Rocket_PodFlight",
+            AudioAssets.Clips(SciFiSound + "Loops/loop_rocket2.wav"), group, 0.35f, blend: 1f, voices: 8, muffle: CueMuffle.Outside);
+
+        /// <summary>Air mines: a short two-tone chirp when the mine stops and arms (MineArm.wav, made for this).</summary>
+        internal static SoundCue MineArm(AudioMixerGroup group) => AudioAssets.Cue("Mine_Arm",
+            AudioAssets.Clips(MissileSfx + "MineArm.wav"), group, 0.55f, blend: 1f, voices: 4, cooldown: 0.1f, muffle: CueMuffle.Outside);
+
+        /// <summary>Step 3 pylon families. Swarm is guided (its missile look).</summary>
         private static IEnumerable<GunFamily> RocketFamilies()
         {
+            // Pods: the standard rocket and blast; a ripple launch sound and a voice-limited motor loop.
+            yield return new GunFamily
+            {
+                Name = "Rocket Pods", Modules = new[] { "Pylon_RocketPod", "Pylon_RocketPodMk2", "Pylon_SalvoPod" },
+                Cue = PodLaunch, Flight = PodFlight,
+            };
             // Thin yellow rockets, small yellow blast.
             yield return new GunFamily
             {
@@ -165,7 +192,7 @@ namespace Chopper.Editor.Setup
             {
                 Name = "Air Mines", Modules = new[] { "Pylon_AirMines" },
                 BuildProjectile = BuildMine,
-                BuildImpact = BuildMineBlast,
+                BuildImpact = BuildMineBlast, Arm = MineArm,
                 ScaleWithBlast = false, Dropped = true,
             };
         }
@@ -273,6 +300,7 @@ namespace Chopper.Editor.Setup
             if (AddMissingFamilies(library, GunFamilies(), effects)) EditorUtility.SetDirty(library);
             if (AddMissingFamilies(library, RocketFamilies(), effects)) EditorUtility.SetDirty(library);
             if (AddMissingFamilies(library, GuidedFamilies(), effects)) EditorUtility.SetDirty(library);
+            if (effects != null) FillLateSlots(effects);
             AssetDatabase.SaveAssets();
             return library;
         }
@@ -301,6 +329,7 @@ namespace Chopper.Editor.Setup
                     look.SetImpactLayers(family.Layers != null ? family.Layers() : null);
                     look.SetTracerBrightness(family.Bright);
                     if (effects != null && family.Tail != null) look.SetTail(family.Tail(effects));
+                    if (effects != null && family.Arm != null) look.SetArmCue(family.Arm(effects));
                     if (family.Bomblet != null || family.SplitFlash != null)
                         look.SetCluster(Prefab(family.Bomblet), Prefab(family.SplitFlash),
                             effects != null && family.SplitCue != null ? family.SplitCue(effects) : null);
@@ -318,6 +347,17 @@ namespace Chopper.Editor.Setup
             }
             if (added) library.SetFamilies(families);
             return added;
+        }
+
+        /// <summary>Slots added after a look was made (28 Nov: the mine arm chirp): filled when empty, never replaced.</summary>
+        private static void FillLateSlots(AudioMixerGroup effects)
+        {
+            var mines = AssetDatabase.LoadAssetAtPath<WeaponLook>($"{Folder}/Look_AirMines.asset");
+            if (mines != null && mines.ArmCue == null)
+            {
+                mines.SetArmCue(MineArm(effects));
+                EditorUtility.SetDirty(mines);
+            }
         }
 
         private static GameObject Prefab(string path)

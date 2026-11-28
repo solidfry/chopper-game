@@ -266,5 +266,21 @@ namespace Chopper.Tests
             var time = 300f / 210f;
             Assert.That(aim.y, Is.EqualTo(0.5f * 10f * time * time).Within(0.05f));
         }
+
+        [Test]
+        public void AirMine_SettlesSoonAfterTheDrop_StraightRocketsNever()
+        {
+            // Weapon_AirMines: 20 m/s, drag 2. The arm chirp plays when it settles.
+            var position = float3.zero;
+            var velocity = new float3(0f, 0f, 20f);
+            var settledAt = -1f;
+            for (var t = 0f; t < 3f; t += 1f / 60f)
+            {
+                position = RocketFlight.Step(position, ref velocity, 0f, 2f, 1f / 60f);
+                if (RocketFlight.HasSettled(2f, math.length(velocity))) { settledAt = t; break; }
+            }
+            Assert.That(settledAt, Is.InRange(0.8f, 1.6f), "the mine hangs about a second after the drop");
+            Assert.That(RocketFlight.HasSettled(0f, 0f), Is.False, "a straight rocket never arms");
+        }
     }
 }

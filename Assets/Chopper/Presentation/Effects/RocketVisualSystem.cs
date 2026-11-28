@@ -41,6 +41,8 @@ namespace Chopper.Presentation.Effects
             public WeaponLook Look;
             /// <summary>The look's flight loop (bomb whistle) while it flies; null = none.</summary>
             public Chopper.Presentation.Audio.SoundLoop Loop;
+            /// <summary>The arm chirp has played (an air mine that has stopped).</summary>
+            public bool Armed;
         }
 
         private struct FuseTarget
@@ -116,9 +118,11 @@ namespace Chopper.Presentation.Effects
                 return;
             }
             var look = settings.Look(launch.ModuleId, WeaponLookLibrary.RocketKind(launch.Gravity, launch.Drag));
-            effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), launch.Position, rotation);
+            // A look with its own launch or flight sound mutes the pack's per-round sounds (flash and projectile).
+            var ownSound = look != null && look.OwnsRoundSound;
+            effects.SpawnOneShot(settings.RocketMuzzleFlashFor(look), launch.Position, rotation, muteAudio: ownSound);
             if (look != null && look.FireCue != null) _context?.Audio?.Play(look.FireCue, launch.Position);
-            var visual = effects.SpawnPooled(settings.RocketFor(look), launch.Position, rotation);
+            var visual = effects.SpawnPooled(settings.RocketFor(look), launch.Position, rotation, muteAudio: ownSound);
             // The shared rocket model serves every type: its size follows the blast, so a bomb reads bigger than a light
             // rocket. A family with a true-size model (bomb, mine) keeps its size. Set on every spawn: pooled.
             var scale = look == null || look.ScaleWithBlast ? RocketScale(launch.SplashRadius) : 1f;
@@ -247,6 +251,13 @@ namespace Chopper.Presentation.Effects
                 }
                 heat.AddFrame(end, VisionMath.RocketHeat, math.length(rocket.Velocity));
                 rocket.Loop?.Set(end, 1f, 1f);
+                // An air mine that has stopped is armed: one chirp.
+                if (!rocket.Armed && rocket.Look != null && rocket.Look.ArmCue != null &&
+                    RocketFlight.HasSettled(rocket.Drag, math.length(rocket.Velocity)))
+                {
+                    rocket.Armed = true;
+                    context.Audio?.Play(rocket.Look.ArmCue, (Vector3)end);
+                }
                 if (rocket.GameObject != null)
                 {
                     rocket.GameObject.transform.position = end;

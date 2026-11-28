@@ -125,9 +125,16 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
     the surface (`Surfaces.Classify`, as guns). One particle set is now shared (`CombatEffects.Particles`): damage,
     crash dust and blasts share their budgets. New falling "Blast Spray" system. Bench key **T** cycles the four
     surfaces. Screenshots: `Docs/WeaponFeel/surface_*.png`. Client-only: no rebuild needed.
-  - Not done: the mine arm beep; a ripple launch sound for pods.
+  - **Mine arm chirp and pod ripple done 28 Nov (/loop):** an air mine chirps once when it stops and hangs
+    (`WeaponLook.ArmCue`, `RocketFlight.HasSettled` under 2 m/s, about 1.2 s after the drop; test; `MineArm.wav` is a
+    made two-tone chirp, as no pack had a beep that is not the nuke or lock warning). New **Rocket Pods** family (Rocket
+    Pod, Mk II, Salvo Pod; Swarm is guided): a voice-limited launch cue with a 0.05 s gap (`Cue_Rocket_PodLaunch`), so a
+    salvo is a ripple, and a quieter motor loop (`Cue_Rocket_PodFlight`). A look with its own launch or flight sound
+    mutes the pack's per-round sounds (`WeaponLook.OwnsRoundSound`). Played in TrainingRange: one launch voice per gap,
+    pack launch muted, mine armed, console clean.
   - **Owner checks:** fly with Bombs (listen to the whistle) and Air Mines (does the blink read at range?); fire Light,
-    Heavy and Flak Rockets. Bench T: rocket on concrete, metal, ground, water (more / less dust, clods, sparks,
+    Heavy and Flak Rockets; fire a Salvo Pod (ripple: more or less gap, louder or quieter?) and drop a mine (arm
+    chirp: louder, quieter, other sound?). Bench T: rocket on concrete, metal, ground, water (more / less dust, clods, sparks,
     spray?).
 
 - **Step 4 done** (`9f81a6cf`). `GuidedMissile.ModuleId` (ghost field) and `ClusterSplitRpc.ModuleId`. The missile

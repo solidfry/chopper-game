@@ -36,6 +36,8 @@ namespace Chopper.Presentation.Effects
         [SerializeField, Tooltip("Rockets, bombs, mines: a looping sound that follows the round in flight (bomb whistle). " +
                                  "Empty = none (the projectile prefab's own sound plays).")]
         private SoundCue flightLoop;
+        [SerializeField, Tooltip("Rockets: plays once when a drifting round stops and hangs (an air mine arms). Empty = none.")]
+        private SoundCue armCue;
         [SerializeField, Tooltip("Rockets: the round's model grows with the blast radius (one model reads light or heavy). " +
                                  "Off for a family with its own true-size model (bomb, mine).")]
         private bool scaleWithBlast = true;
@@ -103,6 +105,16 @@ namespace Chopper.Presentation.Effects
         /// <summary>Editor only: used by the setup tool.</summary>
         public void SetTail(SoundCue cue) => tailCue = cue;
         public SoundCue FlightLoop => flightLoop;
+        public SoundCue ArmCue => armCue;
+
+        /// <summary>
+        /// Rockets: the look brings its own launch or flight sound, so the projectile prefab's own sounds (the pack's launch
+        /// and engine loop, one per round with no voice limit) are muted. A salvo then plays as a ripple, not a pile-up.
+        /// </summary>
+        public bool OwnsRoundSound => fireCue != null || flightLoop != null;
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetArmCue(SoundCue cue) => armCue = cue;
         public bool ScaleWithBlast => scaleWithBlast;
         public bool NoMuzzleFlash => noMuzzleFlash;
         public GameObject Bomblet => bomblet;
