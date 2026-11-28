@@ -74,6 +74,8 @@ namespace Chopper.Simulation.Loadout
     public struct AppliedLoadout : IComponentData
     {
         public LoadoutCode Code;
+        /// <summary>The chassis role, from this world's catalog (bots read it: a scout roams).</summary>
+        public ChassisClass Class;
     }
 
     /// <summary>A socket on the chassis, relative to the chopper root. Baked from <see cref="SocketAuthoring"/>.</summary>

@@ -39,6 +39,8 @@ namespace Chopper.Simulation.Bots
         public float Health01;
         /// <summary><see cref="Match.Team"/> (0 = none). Team mates are not contacts.</summary>
         public byte Team;
+        /// <summary>Chassis role: a scout roams instead of guarding when no enemy is near (<see cref="BotObjective.ScoutRoams"/>).</summary>
+        public Loadout.ChassisClass Class;
     }
 
     /// <summary>A guided missile in flight.</summary>
@@ -198,9 +200,18 @@ namespace Chopper.Simulation.Bots
                 // The match objective (Capture the Nuke): replaces the patrol; the carrier keeps to it in a fight too
                 // (it cannot fire pylons and must bring the nuke home), missile evades too (owner, 28 Nov: home with haste).
                 var selfTeam = Match.TeamRules.None;
+                var selfClass = Loadout.ChassisClass.None;
                 for (var i = 0; i < choppers.Length; i++)
-                    if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
+                    if (choppers[i].Entity == chopper)
+                    {
+                        selfTeam = choppers[i].Team;
+                        selfClass = choppers[i].Class;
+                    }
                 var objective = BotObjective.Choose(frame.Objective, chopper, selfTeam, out var objectiveGoal, out var objectiveRadius);
+                // A scout roams instead of guarding or escorting while no enemy is near the nuke.
+                if (BotObjective.ScoutRoams(selfClass, objective, BotObjective.NearestEnemy(choppers, selfTeam, frame.Objective.NukePosition)))
+                    objective = BotObjective.Kind.None;
+                var guardReturn = BotObjective.GuardReturns(objective, math.distance(frame.Objective.NukePosition, sense.Position));
                 var carrying = objective == BotObjective.Kind.ArmAtHome || objective == BotObjective.Kind.Deliver;
                 var cover = false;
                 if (objective == BotObjective.Kind.Hook)
@@ -223,7 +234,7 @@ namespace Chopper.Simulation.Bots
                                  BotObjective.CommitRange(cover, frame.Objective.Phase == Match.NukePhase.Dropped)));
                 var holdingHook = BotObjective.HoldsHook(objective, math.distance(frame.Objective.NukePosition, sense.Position));
                 if (objective != BotObjective.Kind.None &&
-                    (intent.Wander || farFight || holdingHook || carrying))
+                    (intent.Wander || farFight || holdingHook || guardReturn || carrying))
                 {
                     intent.Wander = false;
                     intent.UsePath = true;

@@ -15,6 +15,8 @@ namespace Chopper.Simulation.Loadout
     {
         public LoadoutCode Code;
         public LoadoutResult Validation;
+        /// <summary>The chassis role (Scout, Gunship, ...): bots fly to it (a scout roams, <see cref="Bots.BotObjective"/>).</summary>
+        public ChassisClass Class;
         public ChopperFlightConfig Flight;
         public float Health;
         public CrashDamageConfig Crash;
@@ -145,6 +147,7 @@ namespace Chopper.Simulation.Loadout
                 return new LoadoutStats(FallbackHealth, 0f, 0f, 1f, 1f, 1f);
             }
 
+            built.Class = chassis.Class;
             var ids = new ushort[chassis.Slots.Count];
             for (var i = 0; i < ids.Length && i < modules.Count; i++)
                 ids[i] = modules[i] != null ? modules[i].Id : LoadoutSelection.EmptySlot;

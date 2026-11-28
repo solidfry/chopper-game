@@ -267,7 +267,7 @@ namespace Chopper.Tests
 
             // Docked and arming in team 1's dock: team 1 guards it, team 2 goes to steal it.
             info.Carrier = Unity.Entities.Entity.Null; info.CarrierTeam = 0; info.ArmedBy = 0; info.Phase = NukePhase.Docked; info.DockTeam = 1;
-            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Escort));
+            Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Guard));
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 2, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.Hook));
             info.Active = false;
             Assert.That(Chopper.Simulation.Bots.BotObjective.Choose(info, self, 1, out _, out _), Is.EqualTo(Chopper.Simulation.Bots.BotObjective.Kind.None));
@@ -366,6 +366,30 @@ namespace Chopper.Tests
             Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 0f, 200f), near), Is.False);
             docked.Active = false;
             Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke, near), Is.False, "not a nuke match");
+        }
+
+        [Test]
+        public void BotObjective_GuardsStayNear_ScoutsRoamUnlessAnEnemyIsClose()
+        {
+            const Chopper.Simulation.Bots.BotObjective.Kind guard = Chopper.Simulation.Bots.BotObjective.Kind.Guard;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.GuardReturns(guard, 300f), Is.True, "strayed: go back to the dock");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.GuardReturns(guard, 80f), Is.False, "near: free to fight");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.GuardReturns(Chopper.Simulation.Bots.BotObjective.Kind.Hook, 300f), Is.False);
+
+            var scout = Chopper.Simulation.Loadout.ChassisClass.Scout;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.ScoutRoams(scout, guard, 800f), Is.True, "no enemy near: a scout roams");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.ScoutRoams(scout, guard, 200f), Is.False, "an enemy near: it defends");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.ScoutRoams(Chopper.Simulation.Loadout.ChassisClass.Gunship, guard, 800f), Is.False,
+                "other types always guard");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.ScoutRoams(scout, Chopper.Simulation.Bots.BotObjective.Kind.Hook, 800f), Is.False,
+                "a scout still hooks");
+
+            var choppers = new Unity.Collections.NativeArray<Chopper.Simulation.Bots.BotChopperInfo>(2, Unity.Collections.Allocator.Temp);
+            choppers[0] = new Chopper.Simulation.Bots.BotChopperInfo { Team = 1, Position = new Unity.Mathematics.float3(10f, 0f, 0f) };
+            choppers[1] = new Chopper.Simulation.Bots.BotChopperInfo { Team = 2, Position = new Unity.Mathematics.float3(300f, 0f, 0f) };
+            Assert.That(Chopper.Simulation.Bots.BotObjective.NearestEnemy(choppers, 1, Unity.Mathematics.float3.zero), Is.EqualTo(300f).Within(1e-3f),
+                "team mates do not count");
+            choppers.Dispose();
         }
 
         [Test]

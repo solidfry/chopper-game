@@ -115,6 +115,9 @@ namespace Chopper.Simulation.Bots
                     Position = pose.ValueRO.Position,
                     Health01 = health.ValueRO.Max > 0f ? health.ValueRO.Current / health.ValueRO.Max : 1f,
                     Team = SystemAPI.HasComponent<Match.Team>(entity) ? SystemAPI.GetComponent<Match.Team>(entity).Value : Match.TeamRules.None,
+                    Class = SystemAPI.HasComponent<Loadout.AppliedLoadout>(entity)
+                        ? SystemAPI.GetComponent<Loadout.AppliedLoadout>(entity).Class
+                        : Loadout.ChassisClass.None,
                 });
                 owned[owner.ValueRO.Value] = entity;
             }

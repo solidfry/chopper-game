@@ -173,7 +173,42 @@ namespace Chopper.Simulation.Bots
             Deliver,
             Escort,
             Chase,
+            /// <summary>Our nuke arming in our dock, or our planted nuke counting down: stay near and keep enemies off it.</summary>
+            Guard,
         }
+
+        /// <summary>
+        /// A guard further than this from the nuke goes back to it, even in a fight, metres; inside it, it fights (owner,
+        /// 28 Nov: "bots should stay to guard"). Played 28 Nov: every docked nuke was hooked out 23-31 s in, before the
+        /// 28 s arm ended, while the defenders fought elsewhere.
+        /// </summary>
+        public const float GuardRadius = 150f;
+
+        /// <summary>
+        /// A scout guards or escorts only while an enemy is this close to the nuke, metres; else it roams and hunts (owner,
+        /// 28 Nov: "scouts types should roam more or defend depending on enemy proximity").
+        /// </summary>
+        public const float ScoutDefendRange = 450f;
+
+        /// <summary>Distance from <paramref name="point"/> to the nearest live enemy of <paramref name="team"/> (MaxValue: none).</summary>
+        public static float NearestEnemy(in NativeArray<BotChopperInfo> choppers, byte team, float3 point)
+        {
+            var nearest = float.MaxValue;
+            for (var i = 0; i < choppers.Length; i++)
+            {
+                if (Match.TeamRules.AreAllies(team, choppers[i].Team)) continue;
+                nearest = math.min(nearest, math.distance(choppers[i].Position, point));
+            }
+            return nearest;
+        }
+
+        /// <summary>True when a scout leaves a guard or escort duty to roam: no enemy near what it would defend.</summary>
+        public static bool ScoutRoams(Loadout.ChassisClass chassisClass, Kind objective, float nearestEnemy) =>
+            chassisClass == Loadout.ChassisClass.Scout && (objective == Kind.Guard || objective == Kind.Escort) &&
+            nearestEnemy > ScoutDefendRange;
+
+        /// <summary>True when a guard has strayed too far from the nuke and must go back, fight or not.</summary>
+        public static bool GuardReturns(Kind objective, float distanceToNuke) => objective == Kind.Guard && distanceToNuke > GuardRadius;
 
         /// <summary>
         /// True when a live enemy turret reaches the nuke (its gun range from the nuke): hovering there to hook is death.
@@ -230,7 +265,7 @@ namespace Chopper.Simulation.Bots
                 // Our own nuke arming in our dock, or our planted nuke counting down: guard it.
                 goal = info.NukePosition + new float3(0f, EscortHeight + Match.NukeZones.HangBelow, 0f);
                 arriveRadius = 20f;
-                return Kind.Escort;
+                return Kind.Guard;
             }
             goal = info.NukePosition + new float3(0f, HookHoverHeight, 0f);
             arriveRadius = HookArriveRadius;

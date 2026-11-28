@@ -83,7 +83,7 @@ namespace Chopper.Simulation.Loadout
 
             Write(entity, built, isServer);
             WriteExhausts(entity, ModulesFor(chassis, wanted), sockets);
-            EntityManager.SetComponentData(entity, new AppliedLoadout { Code = isServer ? built.Code : wanted });
+            EntityManager.SetComponentData(entity, new AppliedLoadout { Code = isServer ? built.Code : wanted, Class = built.Class });
         }
 
         private ModuleDefinition[] ModulesFor(ChassisDefinition chassis, in LoadoutCode code)
