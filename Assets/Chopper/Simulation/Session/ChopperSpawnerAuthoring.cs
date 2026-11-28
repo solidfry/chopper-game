@@ -167,8 +167,46 @@ namespace Chopper.Simulation.Session
                 var buffer = AddBuffer<ChassisPrefab>(entity);
                 foreach (var prefab in prefabs) buffer.Add(prefab);
 
+                // Bot builds: every chassis preset (or its default loadout), and the Capture the Nuke class mix.
+                var options = new System.Collections.Generic.List<Bots.BotLoadoutOption>();
+                if (authoring.catalog != null)
+                    foreach (var chassis in authoring.catalog.Chassis)
+                    {
+                        if (chassis == null) continue;
+                        DependsOn(chassis);
+                        var added = false;
+                        foreach (var preset in chassis.Presets)
+                        {
+                            if (preset == null) continue;
+                            options.Add(new Bots.BotLoadoutOption { Class = chassis.Class, Code = preset.ToCode(chassis) });
+                            added = true;
+                        }
+                        if (!added)
+                            options.Add(new Bots.BotLoadoutOption
+                                { Class = chassis.Class, Code = new Loadout.ChassisPreset("DEFAULT", ToArray(chassis.DefaultModules)).ToCode(chassis) });
+                    }
+                var shares = new System.Collections.Generic.List<Bots.BotClassShare>();
+                if (authoring.botSettings != null)
+                    foreach (var share in authoring.botSettings.CtnClassMix)
+                        if (share != null && share.Weight > 0)
+                            shares.Add(new Bots.BotClassShare { Class = share.Class, Weight = (byte)share.Weight });
+
                 var roster = AddBuffer<Bots.BotRosterEntry>(entity);
                 foreach (var row in rosterRows) roster.Add(row);
+                if (options.Count > 0 && shares.Count > 0)
+                {
+                    var optionBuffer = AddBuffer<Bots.BotLoadoutOption>(entity);
+                    foreach (var option in options) optionBuffer.Add(option);
+                    var shareBuffer = AddBuffer<Bots.BotClassShare>(entity);
+                    foreach (var share in shares) shareBuffer.Add(share);
+                }
+            }
+
+            private static ModuleDefinition[] ToArray(System.Collections.Generic.IReadOnlyList<ModuleDefinition> modules)
+            {
+                var array = new ModuleDefinition[modules.Count];
+                for (var i = 0; i < array.Length; i++) array[i] = modules[i];
+                return array;
             }
         }
     }

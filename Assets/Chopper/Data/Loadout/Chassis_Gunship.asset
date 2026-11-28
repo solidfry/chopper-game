@@ -25,6 +25,7 @@ MonoBehaviour:
     CollectiveUp: 12.84
     CollectiveDown: 18
     CollectiveResponse: 6
+    CollectiveLevel: 0
     DiveLiftCut: 1
     DiveResponse: 16
     GravityScale: 1.6
@@ -54,6 +55,15 @@ MonoBehaviour:
     SafeLandingSpeed: 7
     LethalImpactSpeed: 32
     Curve: 1.7
+    ToppleUpY: 0.5
+    ToppleMaxSpeed: 4
+    ToppleGrace: 1.5
+    ToppleDamagePerSecond: 0.2
+    InvertedUpY: -0.3
+    InvertedGrace: 0.5
+    InvertedDamagePerSecond: 0.5
+    RotorStrikeShare: 0.2
+    RotorScrapeDamagePerSecond: 0.35
   repair:
     Seconds: 10
     InterruptCooldown: 5
@@ -65,5 +75,33 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
   - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
   - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  presets:
+  - Name: STRIKE
+    Modules:
+    - {fileID: 11400000, guid: 1b915674bb412374eaf47267790f05eb, type: 2}
+    - {fileID: 11400000, guid: f34fdca821ad3ae49955e4c385332d07, type: 2}
+    - {fileID: 11400000, guid: 58d5a341792308048b91356cfd0b0fbd, type: 2}
+    - {fileID: 11400000, guid: 7f74b3fd5bb633f4c9b232e0b4500493, type: 2}
+    - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
+    - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
+    - {fileID: 11400000, guid: 8c9a88710fc2d3b4bacffc423564400b, type: 2}
+  - Name: BRAWLER
+    Modules:
+    - {fileID: 11400000, guid: d8d766ed0cba0064a9a22be19b665316, type: 2}
+    - {fileID: 11400000, guid: 256865a958c8dc74ebe19d6511fea1b5, type: 2}
+    - {fileID: 11400000, guid: 416a7169450263748ba5490618544086, type: 2}
+    - {fileID: 11400000, guid: 7f74b3fd5bb633f4c9b232e0b4500493, type: 2}
+    - {fileID: 11400000, guid: 7c655f22dc20f6944941992e1c0b4591, type: 2}
+    - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
+    - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  - Name: SIEGE
+    Modules:
+    - {fileID: 11400000, guid: fc2fa2b27623e2447ba4c114a194d1fd, type: 2}
+    - {fileID: 11400000, guid: b36e91d80d004304b8051b3e168f2655, type: 2}
+    - {fileID: 11400000, guid: f34fdca821ad3ae49955e4c385332d07, type: 2}
+    - {fileID: 11400000, guid: d9cbc9255aaf4004d9bd6d5d942ff89e, type: 2}
+    - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
+    - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
+    - {fileID: 11400000, guid: 8c9a88710fc2d3b4bacffc423564400b, type: 2}
   cockpit: {fileID: 919132149155446097, guid: 0eb6ce6454abd364d9216e532823fa47, type: 3}
   cockpitEye: {x: 0, y: 1, z: 1.15}

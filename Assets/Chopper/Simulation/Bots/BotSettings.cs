@@ -66,6 +66,25 @@ namespace Chopper.Simulation.Bots
         private string nameTag = "[BOT]";
         [SerializeField, Tooltip("Bot number 1 is row 1, and so on. More bots than rows: the rows start again.")]
         private List<BotRosterRow> roster = new();
+        [SerializeField, Tooltip("Capture the Nuke: each new bot takes the class its team is shortest of, by these weights " +
+                                 "(people counted too), then a random preset of that chassis. Empty = the roster loadouts.")]
+        private List<ClassShareRow> ctnClassMix = new()
+        {
+            new ClassShareRow { Class = ChassisClass.Gunship, Weight = 2 },
+            new ClassShareRow { Class = ChassisClass.Lifter, Weight = 1 },
+            new ClassShareRow { Class = ChassisClass.Assault, Weight = 1 },
+            new ClassShareRow { Class = ChassisClass.Scout, Weight = 1 },
+        };
+
+        /// <summary>One class of the Capture the Nuke mix.</summary>
+        [Serializable]
+        public sealed class ClassShareRow
+        {
+            public ChassisClass Class;
+            [Range(0, 9)] public int Weight = 1;
+        }
+
+        public IReadOnlyList<ClassShareRow> CtnClassMix => ctnClassMix;
 
         public bool FillEmptySlots => fillEmptySlots;
         public int TargetPlayers => targetPlayers;

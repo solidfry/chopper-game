@@ -135,7 +135,7 @@ namespace Chopper.Simulation.Session
 
             foreach (var (timer, playerId, connection) in SystemAPI.Query<RefRW<RespawnTimer>, RefRO<PlayerId>>()
                          // Team: MatchScoreSystem gives it on join (0 in Free For All); the first chopper waits for it.
-                         .WithAll<Match.Team>().WithNone<Progression.LoadoutPending>().WithEntityAccess())
+                         .WithAll<Match.Team>().WithNone<Progression.LoadoutPending, Bots.BotClassPick>().WithEntityAccess())
             {
                 timer.ValueRW.Remaining -= deltaTime;
                 if (falling.Contains(playerId.ValueRO.Value)) timer.ValueRW.Remaining = math.max(timer.ValueRO.Remaining, KillCamHold);

@@ -55,6 +55,15 @@ MonoBehaviour:
     SafeLandingSpeed: 7
     LethalImpactSpeed: 32
     Curve: 1.7
+    ToppleUpY: 0.5
+    ToppleMaxSpeed: 4
+    ToppleGrace: 1.5
+    ToppleDamagePerSecond: 0.2
+    InvertedUpY: -0.3
+    InvertedGrace: 0.5
+    InvertedDamagePerSecond: 0.5
+    RotorStrikeShare: 0.2
+    RotorScrapeDamagePerSecond: 0.35
   repair:
     Seconds: 10
     InterruptCooldown: 5
@@ -65,5 +74,30 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
   - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
   - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  presets:
+  - Name: INTERCEPTOR
+    Modules:
+    - {fileID: 11400000, guid: a31b908562008584d859f247a3d005c0, type: 2}
+    - {fileID: 11400000, guid: 58d5a341792308048b91356cfd0b0fbd, type: 2}
+    - {fileID: 11400000, guid: 7f74b3fd5bb633f4c9b232e0b4500493, type: 2}
+    - {fileID: 11400000, guid: 7c655f22dc20f6944941992e1c0b4591, type: 2}
+    - {fileID: 11400000, guid: bc59082504cdd54408abc9a990b4e167, type: 2}
+    - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  - Name: RAIDER
+    Modules:
+    - {fileID: 11400000, guid: ca25cd34eb7f04741a50531a5c6b5e34, type: 2}
+    - {fileID: 11400000, guid: 70a2b90a36da7484498019de088c99ff, type: 2}
+    - {fileID: 11400000, guid: 1b2cf81af7a50264cab2f7c5f4aa141c, type: 2}
+    - {fileID: 11400000, guid: 7c655f22dc20f6944941992e1c0b4591, type: 2}
+    - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
+    - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  - Name: SPOTTER
+    Modules:
+    - {fileID: 11400000, guid: d8d766ed0cba0064a9a22be19b665316, type: 2}
+    - {fileID: 11400000, guid: 416a7169450263748ba5490618544086, type: 2}
+    - {fileID: 11400000, guid: d9cbc9255aaf4004d9bd6d5d942ff89e, type: 2}
+    - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
+    - {fileID: 11400000, guid: bc59082504cdd54408abc9a990b4e167, type: 2}
+    - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
   cockpit: {fileID: 919132149155446097, guid: ef6fafe7053d7084992c8e7163ae56a9, type: 3}
   cockpitEye: {x: 0, y: 0.58, z: 1.1}

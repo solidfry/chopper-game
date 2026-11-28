@@ -113,6 +113,10 @@ namespace Chopper.Simulation.Bots
             manager.AddComponentData(bot, new PlayerId { Value = id });
             manager.AddComponentData(bot, new BotSkill { Value = handling });
             manager.AddComponentData(bot, new RequestedLoadout { Code = loadout });
+            // Capture the Nuke: the class mix picks this bot's build once it has a team (BotClassPickSystem).
+            if (SystemAPI.TryGetSingleton<Match.MatchState>(out var match) && match.Mode == Match.MatchMode.CaptureTheNuke &&
+                SystemAPI.HasBuffer<BotClassShare>(spawner))
+                manager.AddComponent<BotClassPick>(bot);
             manager.AddComponentData(bot, new RespawnTimer { Remaining = 0f });
             // The bot itself first: destroying the bot destroys the group (its chopper).
             manager.AddBuffer<LinkedEntityGroup>(bot).Add(new LinkedEntityGroup { Value = bot });

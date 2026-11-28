@@ -34,6 +34,9 @@ namespace Chopper.Simulation.Loadout
         [SerializeField, Tooltip("Hold-to-repair: time to full health, lock after a hit.")] private RepairTuning repair = new();
         [SerializeField, Tooltip("Loadout used when a player has not chosen one, or theirs is not valid. One module per slot.")]
         private ModuleDefinition[] defaultModules = System.Array.Empty<ModuleDefinition>();
+        [SerializeField, Tooltip("Ready-made builds for this chassis (bots fly them; Capture the Nuke picks the class mix). " +
+                                 "Empty = only the default loadout.")]
+        private ChassisPreset[] presets = System.Array.Empty<ChassisPreset>();
 
         [Header("Cockpit (client only: your own chopper, in cockpit views)")]
         [SerializeField, Tooltip("Interior model in chassis space (kit model Cockpit_<chassis>). Empty = no interior.")]
@@ -51,6 +54,10 @@ namespace Chopper.Simulation.Loadout
         public RepairTuning Repair => repair ??= new RepairTuning();
         public IReadOnlyList<SlotType> Slots => slots;
         public IReadOnlyList<ModuleDefinition> DefaultModules => defaultModules;
+        public IReadOnlyList<ChassisPreset> Presets => presets ?? System.Array.Empty<ChassisPreset>();
+
+        /// <summary>Editor only: used by the setup tool.</summary>
+        public void SetPresets(ChassisPreset[] value) => presets = value ?? System.Array.Empty<ChassisPreset>();
         public GameObject Cockpit => cockpit;
         public Vector3 CockpitEye => cockpitEye;
 
@@ -79,6 +86,9 @@ namespace Chopper.Simulation.Loadout
             if (prefab == null) problems.Add($"{name}: no chassis ghost prefab.");
             if (defaultModules == null || defaultModules.Length != (slots?.Length ?? 0))
                 problems.Add($"{name}: default loadout needs one entry per slot ({slots?.Length ?? 0}).");
+            foreach (var preset in Presets)
+                if (preset == null || preset.Modules == null || preset.Modules.Length != (slots?.Length ?? 0))
+                    problems.Add($"{name}: preset {preset?.Name} needs one entry per slot ({slots?.Length ?? 0}).");
         }
 
         public ChassisSpec ToSpec() => new(id, displayName, baseHealth, weightBudget, slots, unlockLevel, chassisClass);

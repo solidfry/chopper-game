@@ -25,6 +25,7 @@ MonoBehaviour:
     CollectiveUp: 16.05
     CollectiveDown: 18
     CollectiveResponse: 3.8999999
+    CollectiveLevel: 0
     DiveLiftCut: 1
     DiveResponse: 16
     GravityScale: 1.9
@@ -54,6 +55,15 @@ MonoBehaviour:
     SafeLandingSpeed: 7
     LethalImpactSpeed: 32
     Curve: 1.7
+    ToppleUpY: 0.5
+    ToppleMaxSpeed: 4
+    ToppleGrace: 1.5
+    ToppleDamagePerSecond: 0.2
+    InvertedUpY: -0.3
+    InvertedGrace: 0.5
+    InvertedDamagePerSecond: 0.5
+    RotorStrikeShare: 0.2
+    RotorScrapeDamagePerSecond: 0.35
   repair:
     Seconds: 10
     InterruptCooldown: 5
@@ -66,5 +76,26 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
   - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
   - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
+  presets:
+  - Name: HAULER
+    Modules:
+    - {fileID: 11400000, guid: d8d766ed0cba0064a9a22be19b665316, type: 2}
+    - {fileID: 11400000, guid: 416a7169450263748ba5490618544086, type: 2}
+    - {fileID: 11400000, guid: 7f74b3fd5bb633f4c9b232e0b4500493, type: 2}
+    - {fileID: 11400000, guid: 1b2cf81af7a50264cab2f7c5f4aa141c, type: 2}
+    - {fileID: 11400000, guid: 1bfb4afa4f5abc445a21546a4053007f, type: 2}
+    - {fileID: 11400000, guid: 8723ad57147892a49a0631b2a7778170, type: 2}
+    - {fileID: 11400000, guid: 8f6d9fe428c20e74b82e1cd58672dbc0, type: 2}
+    - {fileID: 11400000, guid: 8c9a88710fc2d3b4bacffc423564400b, type: 2}
+  - Name: RUNNER
+    Modules:
+    - {fileID: 11400000, guid: d8d766ed0cba0064a9a22be19b665316, type: 2}
+    - {fileID: 11400000, guid: 58d5a341792308048b91356cfd0b0fbd, type: 2}
+    - {fileID: 11400000, guid: 7f74b3fd5bb633f4c9b232e0b4500493, type: 2}
+    - {fileID: 0}
+    - {fileID: 11400000, guid: 1bfb4afa4f5abc445a21546a4053007f, type: 2}
+    - {fileID: 11400000, guid: bea5bea4bf9021648915a6e5216ede5c, type: 2}
+    - {fileID: 11400000, guid: bc59082504cdd54408abc9a990b4e167, type: 2}
+    - {fileID: 11400000, guid: e5fe920bcc278ec42b840e5a86e928f1, type: 2}
   cockpit: {fileID: 919132149155446097, guid: 6e24b02131e0b3f49a798c76580a2404, type: 3}
   cockpitEye: {x: 0, y: 0.744, z: 2.85}

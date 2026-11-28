@@ -37,6 +37,7 @@ namespace Chopper.Editor.Setup
             {
                 EnsureClasses(existing);
                 EnsureWinchStats();
+                EnsurePresets(existing);
                 return existing;
             }
             System.IO.Directory.CreateDirectory(Folder);
@@ -203,6 +204,83 @@ namespace Chopper.Editor.Setup
             flight.BoostDuration = handling.BoostSeconds;
             flight.BoostRechargeTime = handling.Refill;
             return flight;
+        }
+
+        /// <summary>
+        /// Built-in builds per chassis class (owner, 28 Nov 2026: "multiple preset builds per chassis"; bots in Capture the
+        /// Nuke fly them by class). Module asset names in slot order; "" = an empty slot. Balance is the owner's: tune here
+        /// or on the chassis asset.
+        /// </summary>
+        private static readonly Dictionary<ChassisClass, (string Name, string[] Modules)[]> PresetTable = new()
+        {
+            // Nose, Pylon, Utility, Rotor, Engine, Armour
+            [ChassisClass.Scout] = new[]
+            {
+                ("INTERCEPTOR", new[] { "Nose_MinigunMk2", "Pylon_HomingMissiles", "Utility_Flares", "Rotor_AgileRotor", "Engine_BoostEngine", "Armour_LightArmour" }),
+                ("RAIDER", new[] { "Nose_HeavyMG", "Pylon_LightRockets", "Utility_Smoke", "Rotor_AgileRotor", "Engine_StandardEngine", "Armour_LightArmour" }),
+                ("SPOTTER", new[] { "Nose_M134Minigun", "Pylon_RocketPod", "Utility_TargetingOptics", "Rotor_StandardRotor", "Engine_BoostEngine", "Armour_LightArmour" }),
+            },
+            // Nose, Pylon, Pylon, Utility, Rotor, Engine, Armour
+            [ChassisClass.Gunship] = new[]
+            {
+                ("STRIKE", new[] { "Nose_RotaryCannon", "Pylon_HeavyRockets", "Pylon_HomingMissiles", "Utility_Flares", "Rotor_StandardRotor", "Engine_StandardEngine", "Armour_MediumArmour" }),
+                ("BRAWLER", new[] { "Nose_M134Minigun", "Pylon_SalvoPod", "Pylon_RocketPod", "Utility_Flares", "Rotor_AgileRotor", "Engine_StandardEngine", "Armour_LightArmour" }),
+                ("SIEGE", new[] { "Nose_20mmAutocannon", "Pylon_GroundSeeker", "Pylon_HeavyRockets", "Utility_TargetingOptics", "Rotor_StandardRotor", "Engine_StandardEngine", "Armour_MediumArmour" }),
+            },
+            // Nose, Pylon, Pylon, Turret, Utility, Rotor, Engine, Armour
+            [ChassisClass.Assault] = new[]
+            {
+                ("LINE", new[] { "Nose_M134Minigun", "Pylon_RocketPod", "Pylon_HomingMissiles", "Turret_FlakTurret", "Utility_Flares", "Rotor_StandardRotor", "Engine_StandardEngine", "Armour_LightArmour" }),
+                ("HEAVY", new[] { "Nose_RotaryCannon", "Pylon_HeavyRockets", "Pylon_ClusterMissiles", "Turret_FlakTurret", "Utility_Flares", "Rotor_Heavy-LiftRotor", "Engine_StandardEngine", "Armour_MediumArmour" }),
+                ("FORTRESS", new[] { "Nose_HeavyMG", "Pylon_RocketPodMk2", "Pylon_HomingMissiles", "Turret_FlakTurret", "Utility_RepairDrone", "Rotor_StandardRotor", "Engine_StandardEngine", "Armour_HeavyArmour" }),
+            },
+            // Nose, Pylon, Utility, Utility, Winch, Rotor, Engine, Armour
+            [ChassisClass.Lifter] = new[]
+            {
+                ("HAULER", new[] { "Nose_M134Minigun", "Pylon_RocketPod", "Utility_Flares", "Utility_Smoke", "Winch_HeavyWinch", "Rotor_Heavy-LiftRotor", "Engine_StandardEngine", "Armour_MediumArmour" }),
+                ("RUNNER", new[] { "Nose_M134Minigun", "Pylon_HomingMissiles", "Utility_Flares", "", "Winch_HeavyWinch", "Rotor_StandardRotor", "Engine_BoostEngine", "Armour_LightArmour" }),
+            },
+        };
+
+        /// <summary>No unlock limits: built-in builds are checked for slots and weight only.</summary>
+        private sealed class AllUnlocked : IPlayerUnlocks
+        {
+            public int Level => int.MaxValue;
+            public bool Owns(ushort moduleId) => true;
+        }
+
+        /// <summary>Chassis with no presets get the built-in builds (<see cref="PresetTable"/>); a build that fails the rules is skipped.</summary>
+        private static void EnsurePresets(LoadoutCatalog catalog)
+        {
+            var byName = new Dictionary<string, ModuleDefinition>();
+            foreach (var module in catalog.Modules)
+                if (module != null) byName[module.name] = module;
+            foreach (var chassis in catalog.Chassis)
+            {
+                if (chassis == null || chassis.Presets.Count > 0 || !PresetTable.TryGetValue(chassis.Class, out var rows)) continue;
+                var presets = new List<ChassisPreset>();
+                foreach (var (presetName, names) in rows)
+                {
+                    var modules = new ModuleDefinition[chassis.Slots.Count];
+                    var missing = false;
+                    for (var i = 0; i < modules.Length && i < names.Length; i++)
+                    {
+                        if (string.IsNullOrEmpty(names[i])) continue;
+                        if (!byName.TryGetValue(names[i], out modules[i]) || modules[i].Slot != chassis.Slots[i]) missing = true;
+                    }
+                    var preset = new ChassisPreset(presetName, modules);
+                    var result = LoadoutRules.Validate(preset.ToCode(chassis).ToSelection(chassis.Slots.Count), catalog, new AllUnlocked());
+                    if (missing || !result.IsValid)
+                    {
+                        Debug.LogWarning($"Setup: {chassis.name} preset {presetName} skipped ({(missing ? "module missing or wrong slot" : result.ToString())}).");
+                        continue;
+                    }
+                    presets.Add(preset);
+                }
+                chassis.SetPresets(presets.ToArray());
+                EditorUtility.SetDirty(chassis);
+                Debug.Log($"Setup: {chassis.name} has {presets.Count} preset(s).");
+            }
         }
 
         /// <summary>Old chassis assets have no class: take it from the display name (Scout, Gunship, Assault, Lifter).</summary>
