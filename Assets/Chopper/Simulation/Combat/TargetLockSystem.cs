@@ -38,10 +38,13 @@ namespace Chopper.Simulation.Combat
             public bool Flares;
             /// <summary><see cref="Match.Team"/> of the target (0 = none); team mates are never locked.</summary>
             public byte Team;
+            /// <summary>An air target under the lock floor (<see cref="LockFloor"/>): seen, but it cannot be locked.</summary>
+            public bool TooLow;
         }
 
         private ComponentLookup<ThreatState> _threats;
         private ComponentLookup<AbilityState> _abilities;
+        private ComponentLookup<Visuals.PhysicsSurface> _surfaces;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -49,6 +52,7 @@ namespace Chopper.Simulation.Combat
             state.RequireForUpdate<PhysicsWorldSingleton>();
             _threats = state.GetComponentLookup<ThreatState>();
             _abilities = state.GetComponentLookup<AbilityState>(isReadOnly: true);
+            _surfaces = state.GetComponentLookup<Visuals.PhysicsSurface>(isReadOnly: true);
         }
 
         [BurstCompile]
@@ -58,8 +62,9 @@ namespace Chopper.Simulation.Combat
             var world = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
             _threats.Update(ref state);
             _abilities.Update(ref state);
+            _surfaces.Update(ref state);
 
-            var candidates = CollectCandidates(ref state);
+            var candidates = CollectCandidates(ref state, world);
 
             foreach (var threat in SystemAPI.Query<RefRW<ThreatState>>())
                 threat.ValueRW = default;
@@ -93,19 +98,33 @@ namespace Chopper.Simulation.Combat
                 var currentInSight = false;
                 var currentDistance = 0f;
                 var currentLockScale = 1f;
+                var low = Entity.Null;
+                var lowScore = 0f;
                 foreach (var candidate in candidates)
                 {
                     if (candidate.Entity == self || (candidate.Class & weapon.Targets) == 0) continue;
                     if (Match.TeamRules.AreAllies(selfTeam, candidate.Team)) continue;
                     var isCurrent = candidate.Entity == current && current != Entity.Null && candidate.Flares == lockState.OnFlares;
                     var inCone = Seeker.InCone(origin, forward, candidate.Position, weapon.LockConeCos, weapon.LockRange, out var distance, out var alignment);
-                    if (isCurrent)
+                    if (isCurrent && !candidate.TooLow)
                     {
                         currentSeen = true;
                         currentDistance = distance;
                         currentLockScale = candidate.LockScale;
                     }
                     if (!inCone) continue;
+
+                    if (candidate.TooLow)
+                    {
+                        // Under the lock floor: no lock, but the marker shows the cross on the best one in sight.
+                        var lowCandidateScore = Seeker.Score(candidate.Heat, alignment, distance);
+                        if (lowCandidateScore > lowScore && HasLineOfSight(world, self, candidate.Entity, origin, candidate.Position))
+                        {
+                            low = candidate.Entity;
+                            lowScore = lowCandidateScore;
+                        }
+                        continue;
+                    }
 
                     var score = Seeker.Score(candidate.Heat, alignment, distance);
                     if (!isCurrent && score <= bestScore) continue;
@@ -134,6 +153,7 @@ namespace Chopper.Simulation.Combat
                 else if (best == Entity.Null)
                 {
                     lockState = default;
+                    lockState.LowTarget = low;
                     continue;
                 }
                 else
@@ -146,6 +166,7 @@ namespace Chopper.Simulation.Combat
                 if (currentInSight)
                     lockState.Progress = math.saturate(lockState.Progress + deltaTime / math.max(weapon.LockTime * bestLockScale, 0.01f));
                 lockState.Locked = lockState.Progress >= 1f;
+                lockState.LowTarget = low;
 
                 // A seeker on the flares is no threat to the pilot: the warning stops, so they know the flares worked.
                 if (!lockState.OnFlares && _threats.HasComponent(best))
@@ -165,7 +186,7 @@ namespace Chopper.Simulation.Combat
         /// (much hotter), so a seeker on it, or looking that way, goes for the flares; when they burn out that lock breaks.
         /// A chopper in a decoy window without flares (Ghost ability) is left out.
         /// </summary>
-        private NativeList<Candidate> CollectCandidates(ref SystemState state)
+        private NativeList<Candidate> CollectCandidates(ref SystemState state, in CollisionWorld world)
         {
             var candidates = new NativeList<Candidate>(32, Allocator.Temp);
             foreach (var (targetable, pose, entity) in SystemAPI.Query<RefRO<Targetable>, RefRO<LocalToWorld>>().WithEntityAccess())
@@ -174,6 +195,8 @@ namespace Chopper.Simulation.Combat
                 if (SystemAPI.HasComponent<Health>(entity) && SystemAPI.GetComponent<Health>(entity).IsDead) continue;
                 if (SystemAPI.HasComponent<TurretState>(entity) && SystemAPI.GetComponent<TurretState>(entity).Down) continue;
                 var team = TeamOf(ref state, entity);
+                var tooLow = (targetable.ValueRO.Class & TargetClass.Air) != 0 &&
+                             LockFloor.TooLow(world, _surfaces, entity, pose.ValueRO.Position);
                 if (SystemAPI.HasComponent<CountermeasureState>(entity))
                 {
                     var flares = SystemAPI.GetComponent<CountermeasureState>(entity);
@@ -187,6 +210,7 @@ namespace Chopper.Simulation.Combat
                             LockScale = targetable.ValueRO.LockScale,
                             Flares = true,
                             Team = team,
+                            TooLow = tooLow,
                         });
                     if (flares.FlaresInAir || flares.DecoyRemaining > 0f) continue;
                 }
@@ -207,6 +231,7 @@ namespace Chopper.Simulation.Combat
                     Heat = Seeker.Heat(targetable.ValueRO, speed, dashing),
                     LockScale = targetable.ValueRO.LockScale,
                     Team = team,
+                    TooLow = tooLow,
                 });
             }
             return candidates;

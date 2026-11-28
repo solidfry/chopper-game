@@ -38,6 +38,7 @@ namespace Chopper.UI.Hud
         private const string DamageHiddenClass = "hud-damage--hidden";
         private const string LockHiddenClass = "hud-lock--hidden";
         private const string LockedClass = "hud-lock--locked";
+        private const string LockLowClass = "hud-lock--low";
         private const string ThreatHiddenClass = "hud-threat--hidden";
         private const string ThreatsDimClass = "hud-threats--dim";
         private const string PylonNeedsLockClass = "hud-pylon--needs-lock";
@@ -65,6 +66,7 @@ namespace Chopper.UI.Hud
         private VisualElement _damageRing;
         private VisualElement _frame;
         private VisualElement _lock;
+        private Label _lockLabel;
         private VisualElement _threats;
         private Label _missileWarning;
         private Label _lockWarning;
@@ -171,6 +173,7 @@ namespace Chopper.UI.Hud
             _damageRing = _chopper.Q("damage-ring");
             _frame = _chopper.Q("frame");
             _lock = _chopper.Q("lock");
+            _lockLabel = _chopper.Q<Label>("lock-label");
             _threats = _chopper.Q("threats");
             _missileWarning = _chopper.Q<Label>("missile-warning");
             _lockWarning = _chopper.Q<Label>("lock-warning");
@@ -390,7 +393,8 @@ namespace Chopper.UI.Hud
             else if (args.propertyName == nameof(ChopperHudModel.LockViewport) ||
                      args.propertyName == nameof(ChopperHudModel.LockProgress) ||
                      args.propertyName == nameof(ChopperHudModel.LockVisible) ||
-                     args.propertyName == nameof(ChopperHudModel.Locked))
+                     args.propertyName == nameof(ChopperHudModel.Locked) ||
+                     args.propertyName == nameof(ChopperHudModel.LockTooLow))
                 RefreshLock();
             else if (args.propertyName == nameof(ChopperHudModel.MissileInbound) ||
                      args.propertyName == nameof(ChopperHudModel.MissileDirectionDegrees) ||
@@ -480,6 +484,8 @@ namespace Chopper.UI.Hud
             RefreshWeapons();
             _lock.EnableInClassList(LockHiddenClass, !_model.LockVisible);
             _lock.EnableInClassList(LockedClass, _model.Locked);
+            _lock.EnableInClassList(LockLowClass, _model.LockTooLow);
+            if (_lockLabel != null) _lockLabel.text = _model.LockTooLow ? "TOO LOW" : "LOCK";
             if (!_model.LockVisible) return;
 
             var viewport = bridge.Context.HudLook.ToHud(_model.LockViewport);

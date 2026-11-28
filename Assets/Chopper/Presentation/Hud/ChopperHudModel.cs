@@ -262,6 +262,10 @@ namespace Chopper.Presentation.Hud
 
         [CreateProperty] public bool Locked { get => _locked; private set => Set(ref _locked, value, nameof(Locked)); }
 
+        private bool _lockTooLow;
+        /// <summary>The box is on a target under the lock floor (Combat.LockFloor): it shows a cross and cannot lock.</summary>
+        [CreateProperty] public bool LockTooLow { get => _lockTooLow; private set => Set(ref _lockTooLow, value, nameof(LockTooLow)); }
+
         /// <summary>Selected pylon weapon, e.g. "ROCKET POD"; empty with no pylon weapons.</summary>
         [CreateProperty] public string PylonText { get => _pylonText; private set => Set(ref _pylonText, value, nameof(PylonText)); }
 
@@ -334,13 +338,14 @@ namespace Chopper.Presentation.Hud
 
         /// <param name="lockViewport">Lock target in viewport space; z below 0 = behind the camera (lock hidden).</param>
         public void UpdateTargeting(bool hasLockTarget, Vector3 lockViewport, float progress, bool locked, string pylonName, bool needsLock,
-            bool flaresReady)
+            bool flaresReady, bool tooLow = false)
         {
             LockVisible = hasLockTarget && lockViewport.z > 0f;
+            LockTooLow = hasLockTarget && tooLow;
             if (LockVisible)
                 LockViewport = new Vector2(MathF.Round(lockViewport.x * 1000f) / 1000f, MathF.Round(lockViewport.y * 1000f) / 1000f);
             LockProgress = hasLockTarget ? MathF.Round(Math.Clamp(progress, 0f, 1f) * 20f) / 20f : 0f;
-            Locked = hasLockTarget && locked;
+            Locked = hasLockTarget && locked && !tooLow;
             PylonText = pylonName ?? "";
             PylonNeedsLock = needsLock;
             FlaresReady = flaresReady;

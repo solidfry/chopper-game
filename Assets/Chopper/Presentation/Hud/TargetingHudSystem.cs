@@ -109,13 +109,18 @@ namespace Chopper.Presentation.Hud
                 pylonReload, flareReload);
 
             var hasTarget = targetLock.Target != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.Target) && camera != null;
+            // No lock, but a target in the cone is under the lock floor: the box sits on it with a cross.
+            var tooLow = !hasTarget && targetLock.LowTarget != Entity.Null && SystemAPI.HasComponent<LocalToWorld>(targetLock.LowTarget) &&
+                         camera != null;
             // A seeker fooled by flares: the lock box sits on the flare cloud, not the chopper.
-            float3 lockPoint = hasTarget ? SystemAPI.GetComponent<LocalToWorld>(targetLock.Target).Position : float3.zero;
+            float3 lockPoint = hasTarget ? SystemAPI.GetComponent<LocalToWorld>(targetLock.Target).Position
+                : tooLow ? SystemAPI.GetComponent<LocalToWorld>(targetLock.LowTarget).Position : float3.zero;
             if (hasTarget && targetLock.OnFlares && SystemAPI.HasComponent<CountermeasureState>(targetLock.Target))
                 lockPoint = FlareFlight.Position(SystemAPI.GetComponent<CountermeasureState>(targetLock.Target));
-            var viewport = hasTarget ? camera.WorldToViewportPoint(lockPoint) : Vector3.back;
+            var viewport = hasTarget || tooLow ? camera.WorldToViewportPoint(lockPoint) : Vector3.back;
             model.SetReticle(reticle);
-            model.UpdateTargeting(hasTarget, viewport, targetLock.Progress, targetLock.Locked, pylonName, needsLock, flaresReady);
+            model.UpdateTargeting(hasTarget || tooLow, viewport, tooLow ? 0f : targetLock.Progress, targetLock.Locked, pylonName, needsLock,
+                flaresReady, tooLow);
         }
 
         private void UpdateThreats(ChopperHudModel model, UnityEngine.Camera camera, Entity self, in ThreatState threat, float3 position)

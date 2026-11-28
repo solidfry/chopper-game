@@ -92,6 +92,8 @@
         <ui:VisualElement name="gun-lead" class="hud-gun-lead hud-gun-lead--hidden" picking-mode="Ignore" />
         <!-- Seeker lock: brackets close in on the target as the lock builds -->
         <ui:VisualElement name="lock" class="hud-lock hud-lock--hidden" picking-mode="Ignore">
+          <ui:VisualElement class="hud-lock__cross hud-lock__cross--a" picking-mode="Ignore" />
+          <ui:VisualElement class="hud-lock__cross hud-lock__cross--b" picking-mode="Ignore" />
           <ui:Label name="lock-label" text="LOCK" class="hud-lock__label" />
         </ui:VisualElement>
         <ui:VisualElement name="aim" class="hud-aim" picking-mode="Ignore">

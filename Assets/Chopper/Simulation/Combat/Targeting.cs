@@ -47,6 +47,8 @@ namespace Chopper.Simulation.Combat
         [GhostField] public bool Locked;
         /// <summary>The seeker is on the target's burning flares, not the target (see <see cref="FlareFlight"/>).</summary>
         [GhostField] public bool OnFlares;
+        /// <summary>The best target in the cone that is under the lock floor (<see cref="LockFloor"/>): the HUD crosses it out.</summary>
+        [GhostField] public Entity LowTarget;
         /// <summary>Server only (not sent): seconds the lock still holds with the target out of the cone or sight.</summary>
         public float Grace;
     }
