@@ -88,11 +88,58 @@ namespace Chopper.Simulation.Bots
         /// <summary>This close to a nuke nobody holds, an enemy counts as hooking it (the base hook reach, plus a margin).</summary>
         public const float HookThreatRange = Match.NukeHookConfig.BaseRange * 1.5f;
 
-        /// <summary>True when the chopper carries the nuke or is close enough to a free or docked nuke to be hooking it.</summary>
-        public static bool OnObjective(in BotObjectiveInfo info, Entity chopper, float3 position)
+        /// <summary>
+        /// Carrier run speed, times cruise (owner, 28 Nov: "the carrier should try to get back to the base as a priority
+        /// with haste"). It also may boost and holds its course through missile evades (flares still fire).
+        /// </summary>
+        public const float CarrierSpeedFactor = 1.5f;
+
+        /// <summary>A chaser in gun reach of the carrier's path this far out can stop it, metres.</summary>
+        public const float InterceptReach = 200f;
+
+        /// <summary>A chaser flies this much faster than the slowed carrier (the nuke cuts its top speed to 0.75).</summary>
+        public const float InterceptSpeedRatio = 1.1f;
+
+        /// <summary>Points checked along the carrier's way to its dock.</summary>
+        private const int InterceptSamples = 6;
+
+        /// <summary>Where the carrier is going: its home dock to arm, or the enemy dock once armed.</summary>
+        public static float3 CarrierGoal(in BotObjectiveInfo info)
+        {
+            var armed = info.ArmedBy != 0 && info.ArmedBy == info.CarrierTeam;
+            var home = info.CarrierTeam == 1 ? info.Base1 : info.Base2;
+            var enemy = info.CarrierTeam == 1 ? info.Base2 : info.Base1;
+            return armed ? enemy : home;
+        }
+
+        /// <summary>
+        /// True when a chopper at <paramref name="from"/> can reach the carrier's way to its dock in time: some point on
+        /// the way that it gets into gun reach of before the carrier passes (owner, 28 Nov: "attack the carrier if they
+        /// are reasonably able to stop them getting back to the base, otherwise they prioritise the next best target").
+        /// </summary>
+        public static bool CanIntercept(in BotObjectiveInfo info, float3 from)
+        {
+            if (info.Carrier == Entity.Null) return false;
+            var start = info.NukePosition;
+            var goal = CarrierGoal(info);
+            for (var i = 0; i <= InterceptSamples; i++)
+            {
+                var point = math.lerp(start, goal, i / (float)InterceptSamples);
+                var carrierTime = math.distance(start, point);
+                var chaserTime = math.max(0f, math.distance(from, point) - InterceptReach) / InterceptSpeedRatio;
+                if (chaserTime <= carrierTime) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// True when the chopper is the first target for a bot at <paramref name="observer"/>: it carries the nuke and the
+        /// bot can stop it (<see cref="CanIntercept"/>), or it is close enough to a free or docked nuke to be hooking it.
+        /// </summary>
+        public static bool OnObjective(in BotObjectiveInfo info, Entity chopper, float3 position, float3 observer)
         {
             if (!info.Active || info.Phase == Match.NukePhase.Detonated) return false;
-            if (info.Carrier != Entity.Null) return info.Carrier == chopper;
+            if (info.Carrier != Entity.Null) return info.Carrier == chopper && CanIntercept(info, observer);
             return math.distance(position, info.NukePosition) < HookThreatRange;
         }
 

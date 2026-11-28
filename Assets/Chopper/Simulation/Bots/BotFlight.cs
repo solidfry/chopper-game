@@ -196,7 +196,7 @@ namespace Chopper.Simulation.Bots
                 actions = intent.Actions;
 
                 // The match objective (Capture the Nuke): replaces the patrol; the carrier keeps to it in a fight too
-                // (it cannot fire pylons and must bring the nuke home), only a missile breaks it off.
+                // (it cannot fire pylons and must bring the nuke home), missile evades too (owner, 28 Nov: home with haste).
                 var selfTeam = Match.TeamRules.None;
                 for (var i = 0; i < choppers.Length; i++)
                     if (choppers[i].Entity == chopper) selfTeam = choppers[i].Team;
@@ -223,7 +223,7 @@ namespace Chopper.Simulation.Bots
                                  BotObjective.CommitRange(cover, frame.Objective.Phase == Match.NukePhase.Dropped)));
                 var holdingHook = BotObjective.HoldsHook(objective, math.distance(frame.Objective.NukePosition, sense.Position));
                 if (objective != BotObjective.Kind.None &&
-                    (intent.Wander || farFight || holdingHook || (carrying && brain.Mode != BotMode.Evade)))
+                    (intent.Wander || farFight || holdingHook || carrying))
                 {
                     intent.Wander = false;
                     intent.UsePath = true;
@@ -232,6 +232,8 @@ namespace Chopper.Simulation.Bots
                     order.Aim = false;
                     order.Face = false;
                     order.AllowBoost = objective != BotObjective.Kind.Hook;
+                    // The carrier runs home (or to the enemy dock) with haste, in any fight; flares still fire.
+                    if (carrying) order.Speed = handling.CruiseSpeed * BotObjective.CarrierSpeedFactor;
                 }
 
                 var goal = intent.Goal;
@@ -286,7 +288,7 @@ namespace Chopper.Simulation.Bots
                     Health01 = other.Health01,
                     Distance = distance,
                     InSight = distance < handling.VisionRange && BotSensing.InSight(world, position, other.Position),
-                    Objective = BotObjective.OnObjective(objective, other.Entity, other.Position),
+                    Objective = BotObjective.OnObjective(objective, other.Entity, other.Position, position),
                 });
             }
             for (var i = 0; i < turrets.Length; i++)

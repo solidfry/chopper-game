@@ -334,23 +334,38 @@ namespace Chopper.Tests
         }
 
         [Test]
-        public void BotObjective_OnObjective_MarksTheCarrierAndAHookerOnly()
+        public void BotObjective_OnObjective_MarksACarrierWeCanStopAndAHooker()
         {
             var carrier = new Unity.Entities.Entity { Index = 5, Version = 1 };
             var other = new Unity.Entities.Entity { Index = 6, Version = 1 };
-            var nuke = new Unity.Mathematics.float3(0f, 0f, 100f);
+            var nuke = new Unity.Mathematics.float3(0f, 0f, 0f);
+            // Team 1 carries it home to Base1, 800 m north.
             var carried = new Chopper.Simulation.Bots.BotObjectiveInfo
-                { Active = true, Phase = Chopper.Simulation.Match.NukePhase.Carried, Carrier = carrier, NukePosition = nuke };
-            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke), Is.True, "the carrier");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, other, nuke), Is.False, "an escort next to it is not");
+            {
+                Active = true, Phase = Chopper.Simulation.Match.NukePhase.Carried, Carrier = carrier, CarrierTeam = 1,
+                NukePosition = nuke, Base1 = new Unity.Mathematics.float3(0f, 0f, 800f), Base2 = new Unity.Mathematics.float3(0f, 0f, -800f),
+            };
+            var near = new Unity.Mathematics.float3(150f, 0f, 0f);
+            var ahead = new Unity.Mathematics.float3(300f, 0f, 600f);
+            var farBehind = new Unity.Mathematics.float3(0f, 0f, -900f);
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke, near), Is.True, "close by: go for the carrier");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke, ahead), Is.True, "ahead on its way home: cut it off");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke, farBehind), Is.False,
+                "far behind it: cannot catch it, take the next best target");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, other, nuke, near), Is.False, "an escort next to it is not");
+
+            carried.ArmedBy = 1;
+            Assert.That(Chopper.Simulation.Bots.BotObjective.CarrierGoal(carried), Is.EqualTo(carried.Base2), "armed: it heads for the enemy dock");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(carried, carrier, nuke, farBehind), Is.True,
+                "now it flies towards that bot");
 
             var docked = new Chopper.Simulation.Bots.BotObjectiveInfo
                 { Active = true, Phase = Chopper.Simulation.Match.NukePhase.Docked, DockTeam = 2, NukePosition = nuke };
-            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 10f, 0f)), Is.True,
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 10f, 0f), farBehind), Is.True,
                 "hovering over the docked nuke: hooking it out");
-            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 0f, 200f)), Is.False);
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke + new Unity.Mathematics.float3(0f, 0f, 200f), near), Is.False);
             docked.Active = false;
-            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke), Is.False, "not a nuke match");
+            Assert.That(Chopper.Simulation.Bots.BotObjective.OnObjective(docked, other, nuke, near), Is.False, "not a nuke match");
         }
 
         [Test]
