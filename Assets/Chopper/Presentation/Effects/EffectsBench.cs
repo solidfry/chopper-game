@@ -108,8 +108,7 @@ namespace Chopper.Presentation.Effects
 
         private void OnDestroy()
         {
-            _effects?.Dispose();
-            _damage?.Dispose();
+            _effects?.Dispose(); // Also its particles (_damage).
             _boost.Clear();
             _nuke.Clear();
             _nukeSound.Clear();
@@ -257,7 +256,7 @@ namespace Chopper.Presentation.Effects
         private void Create()
         {
             _effects = new CombatEffects(settings, transform);
-            _damage = new DamageParticles(settings, transform);
+            _damage = _effects.Particles; // The game's shared set, as in a match.
             _effects.Debris.SetTrails(_damage.DebrisSmoke, _damage.DebrisFlames, _damage.DebrisSparks);
         }
 
@@ -419,10 +418,28 @@ namespace Chopper.Presentation.Effects
 
         public void MissileImpact() => Run(() => _effects.SpawnOneShot(settings.MissileImpact, Point + Vector3.up, Quaternion.identity));
         public void RocketImpact() => Run(() => _effects.SpawnOneShot(settings.RocketImpact, Point + Vector3.up, Quaternion.identity));
+        /// <summary>
+        /// The standard rocket's blast on the next surface in turn (ground, concrete, metal, water): its impact plus what
+        /// that surface throws up (<see cref="SurfaceBlast"/>), as in a match. The bench uses the downwash colour for ground.
+        /// </summary>
+        public void SurfaceRocket()
+        {
+            var surface = (Chopper.Simulation.Visuals.SurfaceKind)(_nextSurface % 4);
+            _nextSurface++;
+            Debug.Log($"Effects bench: rocket blast on {surface}");
+            Run(() =>
+            {
+                _effects.SpawnOneShot(settings.RocketImpact, Point + Vector3.up * 0.3f, Quaternion.identity);
+                _damage.EmitSurfaceBlast(Point, Vector3.up, SurfaceBlast.For(surface, SurfaceBlast.StandardRadius), settings.DownwashColour);
+            });
+        }
+
         public void GunImpact() => Run(() => _effects.SpawnOneShot(settings.GunImpact, Point + Vector3.up * 0.2f, Quaternion.LookRotation(Vector3.up)));
 
         /// <summary>One explosion layer alone at the ground point (its Up offset still applies).</summary>
         public void Layer(int index) => Run(() => _sequence.StartLayer(index, Point, Time.time));
+
+        private int _nextSurface;
 
         public void NextLayer()
         {
@@ -442,8 +459,7 @@ namespace Chopper.Presentation.Effects
             _boost.Clear();
             _rounds.Clear();
             _burstLeft = 0;
-            _effects?.Dispose();
-            _damage?.Dispose();
+            _effects?.Dispose(); // Also its particles (_damage).
             Create();
         }
 
@@ -476,6 +492,7 @@ namespace Chopper.Presentation.Effects
             if (keys.uKey.wasPressedThisFrame) ToggleCarry();
             if (keys.bKey.wasPressedThisFrame) Boost();
             if (keys.gKey.wasPressedThisFrame) GunBurst();
+            if (keys.tKey.wasPressedThisFrame) SurfaceRocket();
             if (keys.eKey.wasPressedThisFrame) NextEngine();
             if (keys.hKey.wasPressedThisFrame) Health = health > 0.75f ? 0.5f : health > 0.4f ? 0.25f : health > 0.15f ? 0.1f : 1f;
             if (keys.fKey.wasPressedThisFrame) CircleRadius = circleRadius > 0.5f ? 0f : 30f;

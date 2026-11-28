@@ -48,8 +48,13 @@ namespace Chopper.Presentation.Effects
                 Smoke = Create("Smoke", settings.DamageSmokeMaterial, 2000, ParticleSystemRenderMode.Billboard, gravity: -0.03f,
                     Fade(Color.white, Color.white, 0.6f), grow: 3f, drag: 0.08f, sheet: true);
             if (settings.DownwashMaterial != null)
+            {
                 Dust = Create("Crash Dust", settings.DownwashMaterial, 400, ParticleSystemRenderMode.Billboard, gravity: 0.05f,
                     Fade(Color.white, Color.white, 0.5f), grow: 2f, drag: 0.12f, sheet: true);
+                // Heavy bits a blast throws up: clods, chips, water. They arc and fall (full gravity), and spread a little.
+                Spray = Create("Blast Spray", settings.DownwashMaterial, 900, ParticleSystemRenderMode.Billboard, gravity: 1f,
+                    Fade(Color.white, Color.white, 0.75f), grow: 1.5f, drag: 0.04f, sheet: true);
+            }
         }
 
         /// <summary>Null when the settings have no spark material (also used for repair, heal and status looks).</summary>
@@ -57,6 +62,8 @@ namespace Chopper.Presentation.Effects
         public ParticleSystem Flames { get; }
         public ParticleSystem Smoke { get; }
         public ParticleSystem Dust { get; }
+        /// <summary>Falling blast throw-up (clods, chips, water spray). Null without the downwash material.</summary>
+        public ParticleSystem Spray { get; }
 
         /// <summary>A hit: sparks in a cone round <paramref name="normal"/>, some skimming along the hull.</summary>
         public void EmitSparks(Vector3 point, Vector3 normal, int count)
@@ -136,6 +143,69 @@ namespace Chopper.Presentation.Effects
                 emit.rotation = Random.Range(0f, 360f);
                 Dust.Emit(emit, 1);
             }
+        }
+
+        /// <summary>
+        /// A blast on a surface (<see cref="SurfaceBlast"/>): a dust plume up and out from the hit, heavy spray thrown along
+        /// <paramref name="normal"/> that arcs and falls, and sparks. <paramref name="mapDust"/>: the map's sand or ash.
+        /// </summary>
+        public void EmitSurfaceBlast(Vector3 point, Vector3 normal, in SurfaceBlast blast, Color mapDust)
+        {
+            if (normal.sqrMagnitude < 1e-4f) normal = Vector3.up;
+            normal.Normalize();
+            var scale = blast.Scale;
+            if (Dust != null && blast.Dust > 0)
+            {
+                var colour = blast.UseMapDust ? new Color(mapDust.r, mapDust.g, mapDust.b, blast.DustColour.a) : blast.DustColour;
+                var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+                for (var i = 0; i < blast.Dust; i++)
+                {
+                    // Half rolls out along the surface, half climbs with the blast: a plume, not a flat ring.
+                    var outward = Vector3.ProjectOnPlane(Random.onUnitSphere, normal).normalized;
+                    var lift = Random.Range(0.15f, 1.1f);
+                    emit.position = point + normal * 0.4f + outward * Random.Range(0.2f, 1.5f) * scale;
+                    emit.velocity = (outward * Random.Range(3f, 11f) + normal * Random.Range(2f, 9f) * lift) * Mathf.Sqrt(scale);
+                    emit.startLifetime = Random.Range(1.6f, 3.2f);
+                    emit.startSize = Random.Range(2f, 4f) * scale;
+                    emit.rotation = Random.Range(0f, 360f);
+                    emit.startColor = Shade(colour, 0.12f);
+                    Dust.Emit(emit, 1);
+                }
+            }
+            if (Spray != null && blast.Spray > 0)
+            {
+                var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+                for (var i = 0; i < blast.Spray; i++)
+                {
+                    var direction = (normal + Random.insideUnitSphere * (blast.SpraySpread * 1.6f)).normalized;
+                    // Bits thrown into the surface bounce off it: keep them on the open side.
+                    if (Vector3.Dot(direction, normal) < 0.1f) direction = Vector3.Reflect(direction, normal);
+                    emit.position = point + normal * 0.2f + Random.insideUnitSphere * 0.6f * scale;
+                    emit.velocity = direction * (blast.SpraySpeed * Random.Range(0.35f, 1f));
+                    emit.startLifetime = Random.Range(0.9f, 1.8f);
+                    emit.startSize = blast.SpraySize * Random.Range(0.5f, 1.4f);
+                    emit.rotation = Random.Range(0f, 360f);
+                    emit.startColor = Shade(blast.SprayColour, 0.15f);
+                    Spray.Emit(emit, 1);
+                }
+            }
+            if (blast.Sparks > 0) EmitSparks(point, normal, blast.Sparks);
+        }
+
+        /// <summary>A colour a little lighter or darker at random, so a cloud of one colour has depth.</summary>
+        private static Color Shade(Color colour, float amount)
+        {
+            var factor = 1f + Random.Range(-amount, amount);
+            return new Color(colour.r * factor, colour.g * factor, colour.b * factor, colour.a);
+        }
+
+        /// <summary>The map's dust colour: a city's height fog colour (its sand or ash, as the downwash), else the settings' colour.</summary>
+        public static Color MapDust(CombatEffectsSettings settings, bool hasAtmosphere, Unity.Mathematics.float3 fogColour)
+        {
+            var colour = settings != null ? settings.DownwashColour : new Color(0.6f, 0.55f, 0.45f, 0.6f);
+            if (!hasAtmosphere) return colour;
+            var fog = new Color(fogColour.x, fogColour.y, fogColour.z).gamma;
+            return new Color(fog.r, fog.g, fog.b, colour.a);
         }
 
         /// <summary>Debris trails (<see cref="WreckDebris.SetTrails"/>): heavy smoke and flames going up, sparks along the flight.</summary>

@@ -34,7 +34,7 @@ namespace Chopper.Editor.Tools
                 var orbit = FindAnyObjectByType<BenchOrbitCamera>();
                 if (orbit != null) orbit.FarView();
             })));
-            effects.Add(Row(("Missile impact", bench.MissileImpact), ("Rocket impact", bench.RocketImpact), ("Gun impact", bench.GunImpact),
+            effects.Add(Row(("Missile impact", bench.MissileImpact), ("Rocket impact", bench.RocketImpact), ("Rocket on surface (T)", bench.SurfaceRocket), ("Gun impact", bench.GunImpact),
                 ("Next gun family (G)", bench.GunBurst)));
             effects.Add(Row(("Carry nuke (cable)", bench.ToggleCarry)));
             effects.Add(new Label("Damaged chopper (health drives smoke and fire as in a match):") { style = { marginTop = 6 } });

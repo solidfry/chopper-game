@@ -9,6 +9,7 @@ using Unity.NetCode;
 using Unity.Physics;
 using Unity.Transforms;
 using Chopper.Simulation.Combat;
+using Chopper.Simulation.Visuals;
 using UnityEngine;
 
 namespace Chopper.Presentation.Effects
@@ -55,6 +56,8 @@ namespace Chopper.Presentation.Effects
         private readonly List<RocketLaunched> _launches = new();
         private PresentationContext _context;
         private IDisposable _subscription;
+        /// <summary>This frame's map dust colour (sand or ash) for blasts on the ground.</summary>
+        private Color _mapDust;
 
         protected override void OnCreate()
         {
@@ -82,8 +85,11 @@ namespace Chopper.Presentation.Effects
 
             if (!SystemAPI.TryGetSingleton<PhysicsWorldSingleton>(out var physics)) return;
             var owners = SystemAPI.GetComponentLookup<GhostOwner>(isReadOnly: true);
+            var surfaces = SystemAPI.GetComponentLookup<PhysicsSurface>(isReadOnly: true);
             CollectFuseTargets(owners);
-            MoveRockets(effects, physics.CollisionWorld, owners, UnityEngine.Time.deltaTime, context.HeatMarks, context);
+            var hasAtmosphere = SystemAPI.TryGetSingleton<CityAtmosphere>(out var atmosphere);
+            _mapDust = DamageParticles.MapDust(effects.Settings, hasAtmosphere, atmosphere.Colour);
+            MoveRockets(effects, physics.CollisionWorld, owners, surfaces, UnityEngine.Time.deltaTime, context.HeatMarks, context);
         }
 
         /// <summary>Subscribes to the context's launches; a new context (scene change) drops the old rockets.</summary>
@@ -203,7 +209,8 @@ namespace Chopper.Presentation.Effects
             return false;
         }
 
-        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners, float deltaTime,
+        private void MoveRockets(CombatEffects effects, in CollisionWorld world, ComponentLookup<GhostOwner> owners,
+            ComponentLookup<PhysicsSurface> surfaces, float deltaTime,
             Chopper.Presentation.Camera.HeatMarks heat, PresentationContext context)
         {
             for (var i = _rockets.Count - 1; i >= 0; i--)
@@ -213,8 +220,13 @@ namespace Chopper.Presentation.Effects
                 // A mine that has stopped has no heading: keep the effect upright.
                 var back = math.lengthsq(rocket.Velocity) > 1e-4f ? Quaternion.LookRotation(-rocket.Velocity) : Quaternion.identity;
 
-                if (TryHit(world, owners, rocket.ShooterNetworkId, rocket.Position, end, out var impact) || TryFuse(rocket, end, out impact))
+                var struck = TryHit(world, owners, surfaces, rocket.ShooterNetworkId, rocket.Position, end, out var impact, out var normal,
+                    out var surface);
+                if (struck || TryFuse(rocket, end, out impact))
                 {
+                    // A blast on a surface throws it up (dirt, concrete dust, sparks, water); an air burst throws nothing.
+                    if (struck)
+                        effects.Particles.EmitSurfaceBlast(impact, normal, SurfaceBlast.For(surface, rocket.SplashRadius), _mapDust);
                     // The blast sound comes from the cue (place rules: far and hidden blasts are duller), not the prefab.
                     var blast = context.Sounds != null ? context.Sounds.RocketBlast : null;
                     effects.SpawnOneShot(effects.Settings.RocketImpactFor(rocket.Look), impact, back, muteAudio: blast != null);
@@ -259,13 +271,17 @@ namespace Chopper.Presentation.Effects
             _rockets.RemoveAt(index);
         }
 
-        private static bool TryHit(in CollisionWorld world, ComponentLookup<GhostOwner> owners, int shooterNetworkId,
-            float3 start, float3 end, out float3 impact)
+        /// <summary>The nearest hit on the step that is not the shooter, with its surface normal and what it is made of.</summary>
+        private static bool TryHit(in CollisionWorld world, ComponentLookup<GhostOwner> owners, in ComponentLookup<PhysicsSurface> surfaces,
+            int shooterNetworkId, float3 start, float3 end, out float3 impact, out float3 normal, out SurfaceKind surface)
         {
             var ray = new RaycastInput { Start = start, End = end, Filter = CollisionFilter.Default };
             var hits = new NativeList<Unity.Physics.RaycastHit>(8, Allocator.Temp);
             var closest = float.MaxValue;
             impact = end;
+            normal = math.up();
+            surface = SurfaceKind.Concrete;
+            var nearest = default(Unity.Physics.RaycastHit);
 
             if (world.CastRay(ray, ref hits))
             {
@@ -275,10 +291,14 @@ namespace Chopper.Presentation.Effects
                     if (owners.TryGetComponent(hit.Entity, out var owner) && owner.NetworkId == shooterNetworkId) continue;
                     closest = hit.Fraction;
                     impact = hit.Position;
+                    normal = hit.SurfaceNormal;
+                    nearest = hit;
                 }
             }
             hits.Dispose();
-            return closest < float.MaxValue;
+            if (closest == float.MaxValue) return false;
+            surface = Surfaces.Classify(world, nearest, surfaces);
+            return true;
         }
     }
 }

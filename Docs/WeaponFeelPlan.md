@@ -118,10 +118,17 @@ Cyberpunk Audio Processor (`Tools/Audio`), same chain as the current SFX. Tail c
   - New look switches: flight loop sound, "scale with blast" (off for the bomb and mine models), and "no muzzle
     flash". The prefabs (`Prefabs/Weapons/Bomb`, `AirMine`) are built by Setup.
   - Screenshots: `Docs/WeaponFeel/pylon_bomb.png`, `pylon_airmine.png`.
-  - Not done: impacts by surface for rockets (the rocket hit test does not classify the surface yet); the mine arm
-    beep; a ripple launch sound for pods.
+  - **Impacts by surface done 28 Nov (/loop):** a rocket, bomb or mine that hits a surface throws it up on top of its
+    own blast (`SurfaceBlast`, pure, 3 tests; emitted by `DamageParticles.EmitSurfaceBlast`). Ground: a plume in the
+    map's dust colour and dark clods that arc and fall. Concrete: grey dust, chips, a few sparks. Metal: a shower of
+    sparks. Water: a white spray column and mist. Air bursts (fuse) throw nothing. The rocket hit test now classifies
+    the surface (`Surfaces.Classify`, as guns). One particle set is now shared (`CombatEffects.Particles`): damage,
+    crash dust and blasts share their budgets. New falling "Blast Spray" system. Bench key **T** cycles the four
+    surfaces. Screenshots: `Docs/WeaponFeel/surface_*.png`. Client-only: no rebuild needed.
+  - Not done: the mine arm beep; a ripple launch sound for pods.
   - **Owner checks:** fly with Bombs (listen to the whistle) and Air Mines (does the blink read at range?); fire Light,
-    Heavy and Flak Rockets.
+    Heavy and Flak Rockets. Bench T: rocket on concrete, metal, ground, water (more / less dust, clods, sparks,
+    spray?).
 
 - **Step 4 done** (`9f81a6cf`). `GuidedMissile.ModuleId` (ghost field) and `ClusterSplitRpc.ModuleId`. The missile
   visual, launch flash, launch sound and flight loop come from the family look.

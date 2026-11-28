@@ -462,13 +462,8 @@ namespace Chopper.Presentation.Effects
         {
             if (_particles == null || count <= 0) return;
             // The map's dust: city maps carry a height fog whose colour is their sand or ash (as the downwash).
-            var colour = settings.DownwashColour;
-            if (SystemAPI.TryGetSingleton<CityAtmosphere>(out var atmosphere))
-            {
-                var fog = new Color(atmosphere.Colour.x, atmosphere.Colour.y, atmosphere.Colour.z).gamma;
-                colour = new Color(fog.r, fog.g, fog.b, colour.a);
-            }
-            _particles.EmitDust(point, colour, count);
+            var hasAtmosphere = SystemAPI.TryGetSingleton<CityAtmosphere>(out var atmosphere);
+            _particles.EmitDust(point, DamageParticles.MapDust(settings, hasAtmosphere, atmosphere.Colour), count);
         }
 
         /// <summary>New context (scene change): new subscription and new particle systems.</summary>
@@ -478,7 +473,7 @@ namespace Chopper.Presentation.Effects
             Clear();
             _context = context;
             _subscription = context.Events.Subscribe<ChopperHit>(_pending.Add);
-            _particles = new DamageParticles(context.Effects.Settings);
+            _particles = context.Effects.Particles;
             _debris = context.Effects.Debris;
             _debris.SetTrails(_particles.DebrisSmoke, _particles.DebrisFlames, _particles.DebrisSparks);
             _wreckSubscription = context.Events.Subscribe<WreckExploded>(_blasts.Add);
@@ -507,8 +502,7 @@ namespace Chopper.Presentation.Effects
             _debris = null;
             _damaged.Clear();
             _pending.Clear();
-            _particles?.Dispose();
-            _particles = null;
+            _particles = null; // Owned by CombatEffects.
             _context = null;
         }
     }

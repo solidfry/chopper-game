@@ -29,7 +29,14 @@ namespace Chopper.Presentation.Effects
             _root.SetParent(parent, false);
             _pool = new EffectPool(_root);
             Debris = new WreckDebris(_root);
+            Particles = new DamageParticles(settings, _root);
         }
+
+        /// <summary>
+        /// The shared emitted particles (sparks, flames, smoke, dust, spray): one set for every system, so damage, crash
+        /// dust and rocket surface blasts share their particle budgets.
+        /// </summary>
+        public DamageParticles Particles { get; }
 
         /// <summary>The wreck break-up pieces (Docs/ChopperDeathDesign.md step 2).</summary>
         public WreckDebris Debris { get; }
@@ -273,6 +280,7 @@ namespace Chopper.Presentation.Effects
         {
             _pool.Dispose();
             Debris.Dispose();
+            Particles.Dispose();
             if (_root != null) Object.Destroy(_root.gameObject);
         }
 
