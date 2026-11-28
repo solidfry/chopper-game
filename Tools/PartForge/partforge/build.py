@@ -13,7 +13,7 @@ import os
 import bpy
 from mathutils import Vector
 
-from . import kits, palette, parts, runtime, skins, styles, texture
+from . import geo, kits, palette, parts, runtime, skins, styles, texture
 from .geo import to_blender
 
 EXPORT_COLLECTION = "PartForge: export parts"
@@ -80,15 +80,21 @@ def generate(style, kit=None):
     built = {}
     for part in ([parts.chassis(spec, style) for spec in specs] + parts.cockpits(specs, style)
                  + parts.all_modules()):
-        detail = (part.seed, style.get("detail")) if part.kind == "chassis" and style.get("detail") else None
+        values = part.detail if part.detail is not None else style.get("detail")
+        detail = (part.seed, values) if part.kind == "chassis" and values else None
         # Cockpit: a chamfer per edge, sized to its room (fine on switches, wide on the seat and consoles).
         cockpit = part.kind == "cockpit"
         bevel = COCKPIT_CHAMFER if cockpit else MODULE_BEVEL if part.kind == "module" else None
         # Landing gear legs leave the hull mesh before it is baked into an object: each is a child of its own.
         legs = part.builder.split_off([leg.faces for leg in part.gear_legs], [leg.hinge for leg in part.gear_legs]) \
             if part.gear_legs else []
+        # A maker's part (sleek.py) keeps its own form for the bevel and normals.
+        if part.form is not None:
+            geo.configure({"form": part.form})
         obj = part.builder.to_object(part.name, export_collection, bevel_width=bevel, detail=detail,
                                      bevel_fine=COCKPIT_BEVEL if cockpit else None)
+        if part.form is not None:
+            geo.configure(style)
         if part.kind == "cockpit":
             texture.mark_baked(obj, emissive)
         palette.apply_uvs(obj, palette_only=part.kind == "cockpit")

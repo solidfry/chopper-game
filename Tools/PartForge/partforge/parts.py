@@ -64,6 +64,11 @@ class Part:
         self.slot = slot
         self.module_ids = list(module_ids)
         self.sockets = list(sockets)
+        # A maker's own look (sleek.py): its form and surface detail replace the kit style's for this part.
+        self.form = None
+        self.detail = None
+        # Panel lines designed into the mesh (sleek.py skins): the bake adds no seam grid or rivets on top.
+        self.planned_lines = False
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -97,7 +102,11 @@ def chassis(spec, style):
     Body types (spec "body"): "utility" (one rounded hull, glass or visor canopy, skids), "attack" (chunky slab
     core, stepped two-seat cockpit, cheek pods, side engine nacelles, nose sensor, wheels, open tail rotor) and "heavy"
     (portly armoured-trooper hull: barrel torso, helmet face, armour bands, huge shoulder pods, legs with boots;
-    optional twin rotors) and "assault" (stacked blocks that taper to the top, beastly grille snout)."""
+    optional twin rotors) and "assault" (stacked blocks that taper to the top, beastly grille snout). The Arcus bodies
+    (wisp, lance, aegis, halo) are in sleek.py."""
+    from . import sleek
+    if spec.get("body") in sleek.BODIES:
+        return sleek.chassis(spec, style)
     rng = random.Random(spec["seed"])
     b = Builder()
     W, H = spec["width"], spec["height"]
@@ -390,7 +399,11 @@ def cockpit(spec, style):
     the busy 80s cabin dash. The socket "Eye" is the pilot's eye (the cockpit camera view)."""
     H, F = spec["height"], spec["front"]
     body = spec.get("body", "utility")
-    if body in ("attack", "assault"):
+    from . import sleek
+    if body in sleek.BODIES:
+        eye, kind = sleek.cockpit_eye(spec)
+        build = {"military": _military_cockpit, "cabin": _cabin_cockpit, "scout": _scout_cockpit}[kind]
+    elif body in ("attack", "assault"):
         eye, build = (0.0, 0.56 * H + 0.02, F - 2.45), _military_cockpit   # rear (pilot) seat of the tandem canopy
     elif body == "heavy":
         eye, build = (0.0, 0.24 * H, F - 1.75), _cabin_cockpit             # behind the glazed nose

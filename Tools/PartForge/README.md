@@ -57,7 +57,7 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
 
 | File | What |
 |---|---|
-| `Models/Chassis_<Family>.fbx` | Scout, Lifter (utility body); Gunship, Assault (attack body). Origin = centre of mass. Child empties `SOCKET_<Slot>_<Index>` = attach points (same slot order and indices as the game's chassis definitions; Pylon 0 on the right). |
+| `Models/Chassis_<Family>.fbx` | Scout, Lifter (utility body); Gunship, Assault (attack body); the Arcus Aerodyne line Wisp, Lance, Aegis, Halo (one per class, `sleek.py`). Origin = centre of mass. Child empties `SOCKET_<Slot>_<Index>` = attach points (same slot order and indices as the game's chassis definitions; Pylon 0 on the right). |
 | `Models/<Module>.fbx` | Guns, pods, racks, utilities, turret, winch, rotors, engines. Origin = attach point, points +Z. |
 | `Textures/<kit>_<Set>_Normal.png`, `_Occlusion.png`, `_Emission.png` | Per texture set (each chassis, and `Modules` for all modules): normal map, occlusion, lights. |
 | `Textures/<kit>_<Set>_<skin>_Colour.png`, `_MetalSmooth.png` | The first skin only (the skin shader's base): paint, metallic (R) / smoothness (A). Style `"baked_skins": true` writes every skin (and glow `_Emission.png`). |
@@ -74,6 +74,13 @@ Then in Unity: **Chopper → Setup → 5. Import part kits** (or Do all): textur
   engines), `partforge/palette.py` (swatches). Surface: `partforge/texture.py` (unwrap, bake), `partforge/surface.py`
   (panel lines, rivets, markings), `partforge/skins.py` (paint, wear, grime).
 - Armour modules have no model (stats only, plates are on the chassis).
+- Arcus Aerodyne chassis (`partforge/sleek.py`, a second maker: sleek next to the rugged line; look values in
+  `styles.MAKERS`, laid over the kit style for these parts only). Each hull is one filleted skin (`partforge/skin.py`):
+  2D cross-sections joined by a smooth union (engine humps, pylon, wing gloves and sponsons blend into the hull with
+  real fillets), traced into clean quad rows, then cut with planes for crisp design lines: two-tone split, flush glass
+  in a frame, panel lines, hatches, vents, light lines. No random surface panels on these (the lines are planned).
+  The hulls are drawn to their own shape: the spec's width, height, nose and boom do not reshape them. Concept
+  references: `concepts/README.md` (git-ignored images).
 
 ## Previews
 

@@ -56,6 +56,7 @@ class TextureSet:
         self.height_range = (0.0, 1.0)  # model-space y of the lowest and highest texel (synthwave and livery bands)
         self.markings = None   # chassis: (tail code, unit number) stencilled on the hull (surface.markings)
         self.interior = False  # cockpits: no skin paint; only the faces marked BAKED are in the set (mark_baked)
+        self.seams = True      # the regular seam grid and rivets (surface.apply); off for hulls with planned lines
         self.texel = 0.004     # size of one texel on the surface (m), set by the bake
 
 
@@ -75,6 +76,7 @@ def texture_sets(state):
             for part, obj in chassis]
     for texture_set, (part, _obj) in zip(sets, chassis):
         texture_set.markings = _tail_code(texture_set.name, part.seed)
+        texture_set.seams = not part.planned_lines
     sets.append(TextureSet(MODULES_SET, modules, int(values["module_size"]), scale))
     # Cockpits: the large surfaces (shell, panels, seat, frames) get a baked set each, so the interior has occlusion,
     # worn edges, grime and a normal map; the millimetre parts (switches, lamps, screen graphics) stay on the palette
@@ -549,7 +551,7 @@ def _decode(texture_set, maps, names, style, area):
     texture_set.texel = math.sqrt(area / max(len(valid), 1))
     if texture_set.markings:
         surface.markings(texture_set.surface, names, style.get("hazard", "hazard"), *texture_set.markings)
-    if settings(style)["seams"] and texture_set.size == texture_set.data_size:
+    if settings(style)["seams"] and texture_set.seams and texture_set.size == texture_set.data_size:
         # Panel lines and rivets: into the normal map here, into the dirt and wear masks in skins.prepare.
         normal_b = flat["normal"][valid, :3] * 2.0 - 1.0
         normal_b /= np.maximum(np.linalg.norm(normal_b, axis=1, keepdims=True), 1e-6)

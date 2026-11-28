@@ -89,6 +89,9 @@ def apply_screens(obj, material):
     in UV0. Removes the builder's screen layers from every part."""
     mesh = obj.data
     attribute = mesh.attributes.get("screen")
+    if attribute is not None and attribute.domain != "FACE":
+        # The surface detail nodes (chassis only, which have no screens) turn the face tag into a point attribute.
+        attribute = None
     layer = mesh.uv_layers.get("Screen")
     pages = [poly.index for poly in mesh.polygons if attribute is not None and attribute.data[poly.index].value > 0]
     if pages:

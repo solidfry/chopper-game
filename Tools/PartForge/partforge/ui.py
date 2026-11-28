@@ -79,8 +79,16 @@ class PartForgeChassis(PropertyGroup):
                                           ("attack", "Attack", "Chunky slab core, tandem cockpit, cheek pods, wheels"),
                                           ("assault", "Assault", "Blocks that taper to the top, beastly grille snout"),
                                           ("heavy", "Heavy", "Heavy lifter: cargo hull, sponsons, big engine pods; "
-                                                             "single, tandem, coaxial or quad rotors")],
+                                                             "single, tandem, coaxial or quad rotors"),
+                                          # Arcus Aerodyne line (sleek.py): one filleted skin each, drawn to its own
+                                          # shape (width, height, nose and boom do not reshape these hulls).
+                                          ("wisp", "Arcus Wisp", "Scout: pod, wrap-round glass, fan-in-fin, skids"),
+                                          ("lance", "Arcus Lance", "Gunship: chined stealth hull, tandem glass"),
+                                          ("aegis", "Arcus Aegis", "Assault: broad armoured hull, shoulder pods"),
+                                          ("halo", "Arcus Halo", "Lifter: angular transport, roof nacelles")],
                        update=_changed)
+    maker: StringProperty(name="Maker", description="The company that builds this chassis (styles.MAKERS); empty = "
+                                                    "the kit's own rugged look")
     seed: IntProperty(name="Seed", min=0, update=_changed, description="Details picked by chance (plates, antennas, add-ons)")
     width: FloatProperty(name="Width", min=0.8, max=3.5, step=5, update=_changed)
     height: FloatProperty(name="Height", min=0.8, max=3.5, step=5, update=_changed)
@@ -240,6 +248,7 @@ def load_style(settings, style, name, kit=None):
             item = settings.chassis.add()
             item.name = spec["name"]
             item.body = spec.get("body", "utility")
+            item.maker = spec.get("maker", "")
             item.seed = spec["seed"]
             item.width, item.height, item.front, item.boom = spec["width"], spec["height"], spec["front"], spec["boom"]
             item.wings = spec.get("wings", False)
@@ -281,7 +290,8 @@ def style_from(settings):
         name=item.name, body=item.body, seed=item.seed, width=item.width, height=item.height, front=item.front,
         boom=item.boom, wings=item.wings, wing_span=item.wing_span, engines=item.engines, rotor_layout=item.rotor_layout, snout=item.snout, taper=item.taper,
         sensor=item.sensor,
-        armour=item.armour, skids=item.skids, slots=item.slots.split(",")) for item in settings.chassis]
+        armour=item.armour, skids=item.skids, slots=item.slots.split(","), **({"maker": item.maker} if item.maker else {}))
+        for item in settings.chassis]
     return style
 
 

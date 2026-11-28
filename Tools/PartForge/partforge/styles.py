@@ -74,6 +74,42 @@ STYLES = {
 
 BUILT_IN = tuple(STYLES)
 
+# Makers: a second company's chassis in the same kit (spec "maker", bodies in sleek.py). Its values are laid over the
+# kit style for its chassis only; palette, skins, modules and textures stay the kit's.
+MAKERS = {
+    # Arcus Aerodyne (owner, 28 Nov 2026): sleek and high-tech next to the rugged line. Smooth shells, no wear, no
+    # cages or pipes, clean panels, thin cyan light lines.
+    "arcus": dict(
+        company="Arcus Aerodyne",
+        facet=1.0,
+        top_taper=1.0,
+        nose="round",
+        canopy="bubble",
+        boom="tube",
+        cage=0.0,
+        conduits=0.0,
+        asymmetry=0.0,
+        wear=0.0,
+        armour_layers=1,
+        antennas=(0, 1),
+        neon_strips=False,
+        lights={"nose": "neon_cyan", "right": "neon_green", "left": "warning", "sensor": "neon_cyan"},
+        hazard="hazard",
+        accents={},
+        # No random surface panels: every Arcus hull carries its own planned panel lines (skin.py, sleek.py).
+        detail={},
+        form=dict(corner_segments=5, loft_smooth=3, curve_detail=2.0, edge_radius=0.025, edge_segments=2,
+                  edge_profile=0.5, box_rounding=0.4, box_min=0.05, sharp_angle=40.0),
+    ),
+}
+
+
+def with_maker(style, maker):
+    """The kit style with a maker's look laid over it (a copy)."""
+    merged = json.loads(json.dumps(style))
+    merged.update(json.loads(json.dumps(MAKERS[maker])))
+    return merged
+
 
 def _user_styles():
     styles = {}
